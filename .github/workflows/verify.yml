@@ -75,19 +75,9 @@ jobs:
       - name: Compile release APK
         working-directory: android
         run: |
-          chmod +x ./gradlew
-          # Transient Gradle distribution/CDN failures should not block an APK release.
-          for attempt in 1 2 3; do
-            if ./gradlew --no-daemon assembleRelease; then
-              exit 0
-            fi
-            if [[ "$attempt" -eq 3 ]]; then
-              echo "::error::Android release build failed after 3 attempts."
-              exit 1
-            fi
-            echo "Gradle attempt $attempt failed; retrying after a short delay..."
-            sleep $((attempt * 12))
-          done
+          set -euo pipefail
+          gradle --version
+          gradle --no-daemon assembleRelease
       - name: Verify release APK has valid signature
         run: |
           set -euo pipefail
