@@ -88,13 +88,33 @@ jobs:
           chmod +x ./gradlew
           ./gradlew --no-daemon --stacktrace assembleRelease
 
-      - name: Verify APK signature and prepare release asset
+      - name: Verify APK is signed by the permanent production certificate
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
         shell: bash
         run: |
           set -euo pipefail
           APK="android/app/build/outputs/apk/release/SpaceImpactDefender-release.apk"
           test -s "$APK"
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$APK"
+
+          # Match the actual APK signing certificate to the stored production key.
+          # A debug-signed or differently signed APK must never be published.
+          EXPECTED_CERT="$(
+            keytool -list -v -keystore "$ANDROID_KEYSTORE_PATH" \
+              -alias "$ANDROID_KEY_ALIAS" -storepass:env ANDROID_KEYSTORE_PASSWORD |
+              awk '/SHA256:/ {print $2; exit}' | tr -d ':' | tr '[:upper:]' '[:lower:]'
+          )"
+          ACTUAL_CERT="$(
+            "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --print-certs "$APK" |
+              awk '/Signer #1 certificate SHA-256 digest:/ {print $NF; exit}'
+          )"
+          if [[ -z "$EXPECTED_CERT" || "$EXPECTED_CERT" != "$ACTUAL_CERT" ]]; then
+            echo "::error::Release APK signing certificate differs from configured production keystore."
+            exit 1
+          fi
+
           mkdir -p release-output
           cp "$APK" "release-output/SpaceImpactDefender-v${GITHUB_RUN_NUMBER}-release.apk"
 
