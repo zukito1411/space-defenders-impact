@@ -93,7 +93,38 @@ jobs:
           fi
 
           KEYSTORE_PATH="$RUNNER_TEMP/SpaceImpactDefender-signing.jks"
-          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_PATH"
+          export KEYSTORE_BASE64 KEYSTORE_PATH
+          python3 - <<'PY'
+          import base64
+          import binascii
+          import os
+          import re
+          import sys
+
+          # Normalize pasted formatting without logging private key material.
+          encoded = os.environ["KEYSTORE_BASE64"].strip().lstrip("\ufeff")
+          for prefix in ("ANDROID_DEBUG_KEYSTORE_BASE64=", "ANDROID_KEYSTORE_BASE64="):
+              if encoded.startswith(prefix):
+                  encoded = encoded[len(prefix):]
+          encoded = encoded.strip().strip("'\"")
+          if encoded.startswith("data:") and "base64," in encoded:
+              encoded = encoded.split("base64,", 1)[1]
+          encoded = encoded.replace("\\n", "").replace("\\r", "")
+          encoded = re.sub(r"\s+", "", encoded).rstrip("%")
+          encoded = encoded.replace("-", "+").replace("_", "/")
+          encoded += "=" * (-len(encoded) % 4)
+          try:
+              contents = base64.b64decode(encoded, validate=True)
+          except (ValueError, binascii.Error):
+              print("::error::Android keystore secret is not valid base64. Re-encode the binary keystore and replace the secret value.")
+              sys.exit(1)
+          if len(contents) < 100:
+              print("::error::Decoded Android keystore is empty or too small. Re-encode the .jks file.")
+              sys.exit(1)
+          with open(os.environ["KEYSTORE_PATH"], "wb") as keystore:
+              keystore.write(contents)
+          print("Decoded keystore data; validating alias and certificate.")
+          PY
           chmod 600 "$KEYSTORE_PATH"
 
           if ! ANDROID_KEYSTORE_PASSWORD="$KEYSTORE_PASSWORD" keytool -list \
