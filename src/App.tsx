@@ -18,7 +18,7 @@ import {
   type LanguageCode,
 } from './i18n'
 import { getStoredPlayerName, getStoredRecoveryCode, hasStoredPlayerName, isCreatorPlayerName, registerPlayerName, restorePlayerName, saveStoredPlayerName, uploadPlayerProgress, type PlayerNameRegistrationResult } from './leaderboards'
-import { CORE_LANDER_GOD_GUNDAM_UNLOCK_SCORE, CORE_LANDER_UNLOCK_GRADIUS_ENDLESS_SCORE, getCoreLanderModel, getEquippedShipCosmetics, getMesiahShipColor, getStoredTowerDefenseEndlessUnlock, isCoreLanderUnlocked, isGradiusRaidEndlessUnlocked, isShipCosmeticUnlocked, loadProgress, normalizeProgress, recordRunResult, resetProgressForNewAccount, saveProgress, SHIP_COSMETIC_SINGLE_RUN_SCORE, SHIP_COSMETIC_TOTAL_SCORE, type ProgressState, type ProgressUpdate, type RunResult } from './progression'
+import { CORE_LANDER_GOD_GUNDAM_UNLOCK_SCORE, CORE_LANDER_UNLOCK_GRADIUS_ENDLESS_SCORE, getCoreLanderModel, getEquippedShipCosmetics, getMesiahShipColor, getStoredTowerDefenseEndlessUnlock, isCoreLanderUnlocked, isGradiusRaidEndlessUnlocked, isShipCosmeticUnlocked, loadProgress, normalizeProgress, mergeProgressForSync, markProgressSyncPending, getPendingProgressSyncToken, clearPendingProgressSyncToken, recordRunResult, resetProgressForNewAccount, saveProgress, SHIP_COSMETIC_SINGLE_RUN_SCORE, SHIP_COSMETIC_TOTAL_SCORE, type ProgressState, type ProgressUpdate, type RunResult } from './progression'
 import { useEffect, useMemo, useState, useRef, type CSSProperties } from 'react'
 
 // Placeholder coins (not displayed - kept for prop compatibility)
@@ -220,6 +220,9 @@ function App() {
   const [progress, setProgress] = useState<ProgressState>(() => loadProgress())
   const [lastRunUpdate, setLastRunUpdate] = useState<{ result: RunResult; update: ProgressUpdate } | null>(null)
   const [raidAssetPreload, setRaidAssetPreload] = useState<RaidAssetPreloadState>({ status: 'idle', loaded: 0, total: 1 })
+  const [cloudSyncStatus, setCloudSyncStatus] = useState<'offline' | 'connected' | 'conflict'>('offline')
+  const cloudConnectedRef = useRef(false)
+  const cloudSyncInFlightRef = useRef(false)
 
   const text = useMemo(() => getLanguageText(language), [language])
   const raidText = useMemo(() => getRaidText(language), [language])
@@ -389,8 +392,10 @@ function App() {
     saveLanguage(nextLanguage)
   }
 
-  const syncCloudProgress = (nextProgress: ProgressState) => {
-    void uploadPlayerProgress(nextProgress)
+  const syncCloudProgress = (_nextProgress: ProgressState) => {
+    // Gameplay saves locally first; this merely wakes the asynchronous sync worker.
+    // A failed upload never blocks play and remains pending on disk.
+    if (typeof window !== 'undefined') window.dispatchEvent(new Event('space-defenders:progress-changed'))
   }
 
   const applyRegisteredPlayer = (
@@ -406,12 +411,18 @@ function App() {
     setRecoveryCodeDraft('')
     setPlayerNameRestoreMode(false)
     setShowPlayerNamePrompt(false)
+    cloudConnectedRef.current = !result.offline
+    setCloudSyncStatus(result.offline ? 'offline' : 'connected')
 
-    if (result.progress) {
+    if (result.progress && !result.offline) {
+      const pending = getPendingProgressSyncToken()
       const cloudProgress = normalizeProgress(result.progress)
-      saveProgress(cloudProgress)
-      setProgress(cloudProgress)
-      setEndlessUnlocked(cloudProgress.towerDefenseEndlessUnlocked)
+      const nextProgress = pending ? mergeProgressForSync(loadProgress(), cloudProgress) : cloudProgress
+      // Hydrating cloud state must not itself mark a new local modification.
+      saveProgress(nextProgress, false)
+      setProgress(nextProgress)
+      setEndlessUnlocked(nextProgress.towerDefenseEndlessUnlocked)
+      if (pending) syncCloudProgress(nextProgress)
       return
     }
 
@@ -419,34 +430,94 @@ function App() {
       const freshProgress = resetProgressForNewAccount()
       setProgress(freshProgress)
       setEndlessUnlocked(freshProgress.towerDefenseEndlessUnlocked)
-      syncCloudProgress(freshProgress)
+      if (!result.offline) syncCloudProgress(freshProgress)
       return
     }
 
     const localProgress = loadProgress()
+    setProgress(localProgress)
     setEndlessUnlocked(localProgress.towerDefenseEndlessUnlocked)
-    if (uploadLocalWhenEmpty) syncCloudProgress(localProgress)
+    // A new remote account has no save yet. Queue local state without discarding it.
+    if (!result.offline && uploadLocalWhenEmpty) {
+      if (!getPendingProgressSyncToken()) markProgressSyncPending()
+      syncCloudProgress(localProgress)
+    }
   }
 
   useEffect(() => {
-    if (!hasStoredPlayerName()) return
+    let active = true
 
-    let cancelled = false
-    registerPlayerName(playerName).then((result) => {
-      if (cancelled) return
-      if (result.registered) {
-        applyRegisteredPlayer(result, playerName)
+    const attemptCloudSync = async () => {
+      if (!active || cloudSyncInFlightRef.current || !hasStoredPlayerName()) return
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        setCloudSyncStatus('offline')
+        cloudConnectedRef.current = false
         return
       }
 
-      setPlayerNameDraft(playerName)
-      setPlayerNameRestoreMode(Boolean(result.taken))
-      setPlayerNameError(result.taken ? text.player.nameTakenRecovery : text.player.nameRegisterError)
-      setShowPlayerNamePrompt(true)
-    })
+      cloudSyncInFlightRef.current = true
+      try {
+        if (!cloudConnectedRef.current) {
+          const requestedName = getStoredPlayerName()
+          const result = await registerPlayerName(requestedName)
+          if (!active || getStoredPlayerName() !== requestedName) return
+          if (result.offline || !result.registered) {
+            setCloudSyncStatus(result.taken ? 'conflict' : 'offline')
+            return
+          }
 
+          // Do not overwrite the local run that might have completed while reconnecting.
+          // Pending data is merged before any new cloud upload.
+          const pending = getPendingProgressSyncToken()
+          const cloudProgress = result.progress ? normalizeProgress(result.progress) : null
+          if (cloudProgress) {
+            const nextProgress = pending ? mergeProgressForSync(loadProgress(), cloudProgress) : cloudProgress
+            saveProgress(nextProgress, false)
+            setProgress(nextProgress)
+            setEndlessUnlocked(nextProgress.towerDefenseEndlessUnlocked)
+          } else if (!pending) {
+            markProgressSyncPending()
+          }
+          if (result.recoveryCode) setRecoveryCode(result.recoveryCode)
+          cloudConnectedRef.current = true
+        }
+
+        const token = getPendingProgressSyncToken()
+        if (token) {
+          const requestedName = getStoredPlayerName()
+          const upload = await uploadPlayerProgress(loadProgress())
+          if (!active || getStoredPlayerName() !== requestedName) return
+          if (!upload.saved) {
+            cloudConnectedRef.current = false
+            setCloudSyncStatus('offline')
+            return
+          }
+          // An upload from before a newer local save must not clear its pending marker.
+          clearPendingProgressSyncToken(token)
+        }
+        if (active) setCloudSyncStatus('connected')
+      } finally {
+        cloudSyncInFlightRef.current = false
+      }
+    }
+
+    const retry = () => { void attemptCloudSync() }
+    const retryWhenVisible = () => { if (!document.hidden) retry() }
+    window.addEventListener('online', retry)
+    window.addEventListener('offline', retry)
+    window.addEventListener('focus', retry)
+    window.addEventListener('space-defenders:progress-changed', retry)
+    document.addEventListener('visibilitychange', retryWhenVisible)
+    const interval = window.setInterval(retry, 20000)
+    retry()
     return () => {
-      cancelled = true
+      active = false
+      window.clearInterval(interval)
+      window.removeEventListener('online', retry)
+      window.removeEventListener('offline', retry)
+      window.removeEventListener('focus', retry)
+      window.removeEventListener('space-defenders:progress-changed', retry)
+      document.removeEventListener('visibilitychange', retryWhenVisible)
     }
   }, [])
 
@@ -828,9 +899,11 @@ function App() {
       return
     }
 
+    const preserveUnsyncedPilot = cloudSyncStatus === 'conflict'
     applyRegisteredPlayer(result, playerNameDraft, {
-      resetLocalWhenEmpty: !playerNameRestoreMode,
+      resetLocalWhenEmpty: !playerNameRestoreMode && !preserveUnsyncedPilot,
     })
+    if (!result.offline) syncCloudProgress(loadProgress())
   }
 
   const playerNamePrompt = showPlayerNamePrompt ? (
@@ -957,6 +1030,10 @@ function App() {
               <span>{text.player.commander}</span>
               <strong>{playerName}</strong>
               <button onClick={() => setShowPlayerNamePrompt(true)}>{text.player.change}</button>
+              <span role="status" title={cloudSyncStatus === 'connected' ? 'Cloud profile connected' : cloudSyncStatus === 'conflict' ? 'Name already taken online. Choose a different name to sync.' : 'Offline pilot: progress saved locally and will reconnect automatically.'}
+                style={{ fontSize: '0.7rem', opacity: 0.85 }}>
+                {cloudSyncStatus === 'connected' ? 'Cloud connected' : cloudSyncStatus === 'conflict' ? 'Name conflict · local save safe' : 'Offline · local save'}
+              </span>
             </div>
 
             <div className="start-screen__title-lockup">
