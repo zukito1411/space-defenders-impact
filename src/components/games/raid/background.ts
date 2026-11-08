@@ -884,6 +884,10 @@ export class PixiRaidBackground {
   private baseKey = ''
   private starfieldKey = ''
   private ambientGlowKey = ''
+  // Large Pixi vector layers do not need tessellation on every 60Hz frame.
+  // Moving stars, planets and world sprites still update each display frame.
+  private geometryCacheKey = ''
+  private lastGeometryUpdateMs = Number.NEGATIVE_INFINITY
   private width = 0
   private height = 0
   private dpr = 1
@@ -967,24 +971,47 @@ export class PixiRaidBackground {
         canvas.style.height = `${height}px`
         this.baseKey = ''
         this.starfieldKey = ''
+        this.geometryCacheKey = ''
       }
 
       this.updateBaseGraphics(palette, width, height, quality, dpr)
-      this.updateNebula(width, height, seconds, palette, stageTheme, isLow)
-      this.updateBossTint(width, height, seconds, palette, bossIntensity, devilCorruption, isLow)
-      this.updateAmbientGlows(width, height, isLow, isMedium, palette, stageTheme)
+
+      // Graphics.clear() followed by complex gradients and polygon generation
+      // is expensive on Android WebView. Rebuild these layers at 25 Hz,
+      // without dropping any sprites, particles, effects or render resolution.
+      // Independent Pixi sprite scrolling and the foreground canvas retain
+      // the native requestAnimationFrame cadence.
+      const geometryKey = [
+        width, height, dpr, quality, stageTheme,
+        palette.baseTop, palette.baseMid, palette.baseBottom,
+        palette.surfaceMode, palette.surfaceA, palette.surfaceB, palette.surfaceC,
+        palette.bgA, palette.bgB, palette.nebulaA, palette.nebulaB,
+      ].join('|')
+      const redrawGeometry = geometryKey !== this.geometryCacheKey ||
+        time < this.lastGeometryUpdateMs ||
+        time - this.lastGeometryUpdateMs >= 40
+      if (redrawGeometry) {
+        this.geometryCacheKey = geometryKey
+        this.lastGeometryUpdateMs = time
+        this.updateNebula(width, height, seconds, palette, stageTheme, isLow)
+        this.updateBossTint(width, height, seconds, palette, bossIntensity, devilCorruption, isLow)
+        this.updateAmbientGlows(width, height, isLow, isMedium, palette, stageTheme)
+        this.updateSurface(width, height, seconds, palette, quality, stageTheme)
+        this.updateFinalBattleBackdrop(width, height, seconds, stageTheme, quality, finalBattleIntensity)
+        this.updateFinalBattleLayer(width, height, seconds, stageTheme, quality, finalBattleIntensity)
+        this.updateAmbientExplosions(width, height, seconds, isLow, isMedium, stageTheme)
+      }
+
+      // Cheap GPU-backed movements continue on every frame, so the animated
+      // starfield, scrolling scenery and background ships remain smooth.
       this.updateGalaxies(width, height, seconds, stageTheme, isLow, isMedium)
       this.updateStarfield(width, height, seconds, quality, dpr, palette.starTint, palette.streak, stageRush, stageTheme)
       this.updateSpeedLines(width, height, seconds, palette.streak, isLow, isMedium, stageTheme)
-      this.updateSurface(width, height, seconds, palette, quality, stageTheme)
       this.updatePlanets(width, height, seconds, palette, stageTheme, isLow, isMedium)
       this.updateWrecks(width, height, seconds, stageTheme, isLow, isMedium)
       this.updateScenic(width, height, seconds, stageTheme, isLow, isMedium)
-      this.updateFinalBattleBackdrop(width, height, seconds, stageTheme, quality, finalBattleIntensity)
-      this.updateFinalBattleLayer(width, height, seconds, stageTheme, quality, finalBattleIntensity)
       this.updateRareCometFlyby(width, height, seconds, isLow, isMedium, stageTheme)
       this.updateBackgroundObjects(width, height, seconds, stageTheme, isLow, isMedium)
-      this.updateAmbientExplosions(width, height, seconds, isLow, isMedium, stageTheme)
       app.render()
       return true
     } catch {
