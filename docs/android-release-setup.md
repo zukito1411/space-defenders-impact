@@ -24,7 +24,7 @@ Afterward, encode the **binary** keystore file for the GitHub secret:
 base64 -w 0 SpaceImpactDefender-release.jks
 ```
 
-On macOS, use `base64 < SpaceImpactDefender-release.jks | tr -d '\\n'`. On Windows PowerShell:
+On macOS, use `base64 < SpaceImpactDefender-release.jks | tr -d '\n'`. On Windows PowerShell:
 
 ```powershell
 [Convert]::ToBase64String([IO.File]::ReadAllBytes('SpaceImpactDefender-release.jks'))
