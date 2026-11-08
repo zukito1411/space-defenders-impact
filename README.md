@@ -37,6 +37,10 @@ A polished tower defense game built with React and TypeScript. Defend against wa
 - **Artillery**: Global range with 3-rocket barrage (3500 cost)
 - **Dreadnought**: 2x2 capital ship with global range, AOE lance barrage, 3s attack interval, and scaling returning Gatling drones every 10s (5000 cost)
 
+## Signed Android APK releases
+
+Every push to `main` publishes one production-signed Android APK and automatically keeps only the **three latest Android releases** (after GitHub Actions signing secrets are configured). See [Android release setup](docs/android-release-setup.md) for the one-time signing configuration and update requirements.
+
 ## Getting Started
 
 ### Prerequisites
