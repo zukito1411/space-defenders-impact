@@ -1,7 +1,7 @@
-import { useId } from 'react'
+import { memo, useId } from 'react'
 import type * as React from 'react'
 
-export function TowerShip({ tType, color, size, elite = false }: { tType: string; color: string; size: number; elite?: boolean }) {
+function TowerShipImpl({ tType, color, size, elite = false }: { tType: string; color: string; size: number; elite?: boolean }) {
   const s = size
   const svgId = useId().replace(/:/g, '')
   const paintGrad = `tower-paint-${svgId}`
@@ -475,7 +475,9 @@ export function TowerShip({ tType, color, size, elite = false }: { tType: string
   )
 }
 
-export function AlienShip({ variant, isBoss, isMiniBoss, isFinalBoss, bossKind, miniBossKind, color, size }: { variant: number; isBoss: boolean; isMiniBoss?: boolean; isFinalBoss: boolean; bossKind?: string; miniBossKind?: string; color: string; size: number }) {
+export const TowerShip = memo(TowerShipImpl)
+
+function AlienShipImpl({ variant, isBoss, isMiniBoss, isFinalBoss, bossKind, miniBossKind, color, size }: { variant: number; isBoss: boolean; isMiniBoss?: boolean; isFinalBoss: boolean; bossKind?: string; miniBossKind?: string; color: string; size: number }) {
   const s = Math.max(8, size)
   const svgId = useId().replace(/:/g, '')
   const shellGrad = `alien-shell-${svgId}`
@@ -926,6 +928,8 @@ export function AlienShip({ variant, isBoss, isMiniBoss, isFinalBoss, bossKind, 
       )
   }
 }
+
+export const AlienShip = memo(AlienShipImpl)
 
 export function EarthHQIcon({ size }: { size: number }) {
   return (
