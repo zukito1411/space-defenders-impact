@@ -192,6 +192,12 @@ export function SpaceImpactDefense({ availableCoins, onClose, initialMode = 'nor
   const spawnRRRef = useRef(0)  // round-robin spawn point index
   const frameRef = useRef<number>(0)
   const lastTimeRef = useRef<number>(0)
+  // Frame-accurate actor motion is decoupled from React reconciliation.
+  const lastUiCommitRef = useRef(0)
+  const visualCellRef = useRef(cell)
+  const enemySpriteNodesRef = useRef<Map<number, HTMLDivElement>>(new Map())
+  const bulletSpriteNodesRef = useRef<Map<number, HTMLDivElement>>(new Map())
+  const scoutSpriteNodesRef = useRef<Map<number, HTMLDivElement>>(new Map())
   const graphicsQualityRef = useRef<GraphicsQuality>(graphicsQuality)
 
   // Per-stage dynamic path refs (updated when stage changes)
@@ -278,6 +284,7 @@ export function SpaceImpactDefense({ availableCoins, onClose, initialMode = 'nor
   const coinsRef = useRef(availableCoins)
   useEffect(() => { coinsRef.current = availableCoins }, [availableCoins])
 
+  visualCellRef.current = cell
   const isDesktop = window.innerWidth >= 1024;
 
   // ── Resize ──────────────────────────────────────────────────────────────────
@@ -1278,14 +1285,35 @@ export function SpaceImpactDefense({ availableCoins, onClose, initialMode = 'nor
       t.time += dt
     }
     floatingTextRef.current = floatingTextRef.current.filter(t => t.time < t.maxTime)
-    const shouldCommitUi = true
+    // Simulation and compositor movement still run every display frame.
+    // Only heavyweight React snapshots run at 20 Hz (phones) / 30 Hz (PC).
+    const visualCell = visualCellRef.current
+    for (const enemy of enemiesRef.current) {
+      const el = enemySpriteNodesRef.current.get(enemy.id)
+      if (el) el.style.transform = `translate3d(${(enemy.x + 0.5) * visualCell}px, ${(enemy.y + 0.5) * visualCell}px, 0)`
+    }
+    for (const bullet of bulletsRef.current) {
+      const el = bulletSpriteNodesRef.current.get(bullet.id)
+      if (el) {
+        const angle = Math.atan2(bullet.ty - bullet.y, bullet.tx - bullet.x) * 180 / Math.PI
+        el.style.transform = `translate3d(${bullet.x * visualCell}px, ${bullet.y * visualCell}px, 0) translate(-50%, -50%) rotate(${angle}deg)`
+      }
+    }
+    for (const drone of scoutDronesRef.current) {
+      const el = scoutSpriteNodesRef.current.get(drone.id)
+      if (el) el.style.transform = `translate3d(${drone.x * visualCell}px, ${drone.y * visualCell}px, 0) rotate(${drone.angle}deg)`
+    }
+    const previousUiCommit = lastUiCommitRef.current
+    const shouldCommitUi = ts - previousUiCommit >= (isMobileViewportNow ? 50 : 33)
+    const uiElapsed = previousUiCommit > 0 ? Math.min(0.25, (ts - previousUiCommit) / 1000) : dt
+    if (shouldCommitUi) lastUiCommitRef.current = ts
 
     // ── Update Polish Animations ───────────────────────────────────────────
     // Wave announcement
     if (shouldCommitUi) {
       setWaveAnnouncement(prev => {
         if (!prev) return prev
-        const nextTime = prev.time + dt
+        const nextTime = prev.time + uiElapsed
         if (nextTime >= prev.maxTime) return null
         return { ...prev, time: nextTime }
       })
@@ -1390,7 +1418,7 @@ export function SpaceImpactDefense({ availableCoins, onClose, initialMode = 'nor
     if (shouldCommitUi) {
       setVictoryEffect(prev => {
         if (!prev) return prev
-        const nextTime = prev.time + dt
+        const nextTime = prev.time + uiElapsed
         if (nextTime >= prev.maxTime) return null
         return { ...prev, time: nextTime }
       })
@@ -1995,9 +2023,9 @@ export function SpaceImpactDefense({ availableCoins, onClose, initialMode = 'nor
   const renderedActionBursts = towerActionBursts.slice(-graphicsProfile.maxActionBursts)
   const renderedCoinFlows = coinFlows.slice(-graphicsProfile.maxCoinFlows)
   const victoryConfettiCount = graphicsQuality === 'low' ? (isMobileViewport ? 4 : 6) : isMobileViewport ? 8 : 20
-  const uiPathSet = new Set(uiPaths.flatMap(p => p.map(([c, r]) => `${c},${r}`)))
+  const uiPathSet = useMemo(() => new Set(uiPaths.flatMap(p => p.map(([c, r]) => `${c},${r}`))), [uiPaths])
   // Collect all spawn starts and single finish
-  const uiSpawnCells = new Set(uiPaths.map(p => p.length > 0 ? `${p[0][0]},${p[0][1]}` : ''))
+  const uiSpawnCells = useMemo(() => new Set(uiPaths.map(p => p.length > 0 ? `${p[0][0]},${p[0][1]}` : '')), [uiPaths])
   const uiFinishCell = uiPath.length > 0 ? `${uiPath[uiPath.length - 1][0]},${uiPath[uiPath.length - 1][1]}` : ''
   const hqMaxLives = getHqMaxLives(uiHqLevel)
   const hqUpgradeCost = uiHqLevel >= HQ_MAX_LEVEL ? 0 : 800 + uiHqLevel * 650
@@ -2447,12 +2475,15 @@ export function SpaceImpactDefense({ availableCoins, onClose, initialMode = 'nor
             const hitFlashOpacity = e.hitFlash > 0 ? Math.min(1, e.hitFlash * 10) : 0  // fade out over 100ms
             const freezeOpacity = e.slowTimer > 0 ? Math.min(0.78, e.slowTimer / 2.5) : 0
             return (
-            <div key={e.id} style={{
+            <div key={e.id} ref={node => {
+              if (node) enemySpriteNodesRef.current.set(e.id, node)
+              else enemySpriteNodesRef.current.delete(e.id)
+            }} style={{
               position: 'absolute',
               // Anchor at the exact path center so ship sprite is always on-path
               // Compositor transform avoids layout on every enemy movement tick.
               left: 0, top: 0,
-              transform: `translate(${(e.x + 0.5) * cell}px, ${(e.y + 0.5) * cell}px)`,
+              transform: `translate3d(${(e.x + 0.5) * cell}px, ${(e.y + 0.5) * cell}px, 0)`,
               width: 0, height: 0,
               pointerEvents: 'none',
               overflow: 'visible',
@@ -2554,15 +2585,19 @@ export function SpaceImpactDefense({ availableCoins, onClose, initialMode = 'nor
             return (
               <div
                 key={drone.id}
+                ref={node => {
+                  if (node) scoutSpriteNodesRef.current.set(drone.id, node)
+                  else scoutSpriteNodesRef.current.delete(drone.id)
+                }}
                 style={{
                   position: 'absolute',
-                  left: drone.x * cell,
-                  top: drone.y * cell,
+                  left: 0,
+                  top: 0,
                   width: 0,
                   height: 0,
                   pointerEvents: 'none',
                   zIndex: 5,
-                  transform: `rotate(${drone.angle}deg)`,
+                  transform: `translate3d(${drone.x * cell}px, ${drone.y * cell}px, 0) rotate(${drone.angle}deg)`,
                   filter:
                     drone.state === 'attack'
                       ? `drop-shadow(0 0 8px ${DREADNOUGHT_SCOUT_COLOR})`
@@ -2591,9 +2626,12 @@ export function SpaceImpactDefense({ availableCoins, onClose, initialMode = 'nor
               const isArtillery = tt === 'artillery'
               const isDreadnought = tt === 'dreadnought'
               return (
-                <div key={b.id} style={{
+                <div key={b.id} ref={node => {
+                  if (node) bulletSpriteNodesRef.current.set(b.id, node)
+                  else bulletSpriteNodesRef.current.delete(b.id)
+                }} style={{
                   position: 'absolute',
-                  left: b.x * cell, top: b.y * cell,
+                  left: 0, top: 0,
                   width: isDreadnought ? 22 : isArtillery ? 18 : 14,
                   height: isDreadnought ? 10 : isArtillery ? 8 : 6,
                   background: isDreadnought
@@ -2607,7 +2645,7 @@ export function SpaceImpactDefense({ availableCoins, onClose, initialMode = 'nor
                     : isArtillery
                     ? '0 0 14px 5px #ff880099, 0 0 28px 8px #ff440055'
                     : '0 0 18px 6px #ff000099, 0 0 36px 8px #ff660088',
-                  transform: `translate(-50%,-50%) rotate(${angle}deg)`,
+                  transform: `translate3d(${b.x * cell}px, ${b.y * cell}px, 0) translate(-50%, -50%) rotate(${angle}deg)`,
                   pointerEvents: 'none',
                 }}>
                   {/* flame exhaust */}
@@ -2629,14 +2667,17 @@ export function SpaceImpactDefense({ availableCoins, onClose, initialMode = 'nor
             if (tt === 'sniper') {
               // 🎯 Sniper — thin fast needle
               return (
-                <div key={b.id} style={{
+                <div key={b.id} ref={node => {
+                  if (node) bulletSpriteNodesRef.current.set(b.id, node)
+                  else bulletSpriteNodesRef.current.delete(b.id)
+                }} style={{
                   position: 'absolute',
-                  left: b.x * cell, top: b.y * cell,
+                  left: 0, top: 0,
                   width: 20, height: 3,
                   background: 'linear-gradient(90deg, #7c5dff, #c0aaff)',
                   borderRadius: 2,
                   boxShadow: '0 0 8px 3px #7c5dffaa',
-                  transform: `translate(-50%,-50%) rotate(${angle}deg)`,
+                  transform: `translate3d(${b.x * cell}px, ${b.y * cell}px, 0) translate(-50%, -50%) rotate(${angle}deg)`,
                   pointerEvents: 'none',
                 }} />
               )
@@ -2645,14 +2686,17 @@ export function SpaceImpactDefense({ availableCoins, onClose, initialMode = 'nor
             if (tt === 'gatling') {
               // ⚡ Gatling — tiny fast tracer
               return (
-                <div key={b.id} style={{
+                <div key={b.id} ref={node => {
+                  if (node) bulletSpriteNodesRef.current.set(b.id, node)
+                  else bulletSpriteNodesRef.current.delete(b.id)
+                }} style={{
                   position: 'absolute',
-                  left: b.x * cell, top: b.y * cell,
+                  left: 0, top: 0,
                   width: 10, height: 2,
                   background: 'linear-gradient(90deg, #00ff0d, #aaffaa)',
                   borderRadius: 1,
                   boxShadow: '0 0 5px 2px #00ff0d99',
-                  transform: `translate(-50%,-50%) rotate(${angle}deg)`,
+                  transform: `translate3d(${b.x * cell}px, ${b.y * cell}px, 0) translate(-50%, -50%) rotate(${angle}deg)`,
                   pointerEvents: 'none',
                 }} />
               )
@@ -2661,14 +2705,17 @@ export function SpaceImpactDefense({ availableCoins, onClose, initialMode = 'nor
             if (tt === 'slow') {
               // ❄️ Slow — icy orb with pulse
               return (
-                <div key={b.id} style={{
+                <div key={b.id} ref={node => {
+                  if (node) bulletSpriteNodesRef.current.set(b.id, node)
+                  else bulletSpriteNodesRef.current.delete(b.id)
+                }} style={{
                   position: 'absolute',
-                  left: b.x * cell, top: b.y * cell,
+                  left: 0, top: 0,
                   width: 10, height: 10,
                   borderRadius: '50%',
                   background: 'radial-gradient(circle, #a0d8ff, #fb7185)',
                   boxShadow: '0 0 10px 4px #60a5fa99, 0 0 18px 6px #fb718544',
-                  transform: 'translate(-50%,-50%)',
+                  transform: `translate3d(${b.x * cell}px, ${b.y * cell}px, 0) translate(-50%, -50%)`,
                   pointerEvents: 'none',
                 }} />
               )
@@ -2677,14 +2724,17 @@ export function SpaceImpactDefense({ availableCoins, onClose, initialMode = 'nor
             if (tt === 'aoe') {
               // 💥 AOE — pulsing yellow orb
               return (
-                <div key={b.id} style={{
+                <div key={b.id} ref={node => {
+                  if (node) bulletSpriteNodesRef.current.set(b.id, node)
+                  else bulletSpriteNodesRef.current.delete(b.id)
+                }} style={{
                   position: 'absolute',
-                  left: b.x * cell, top: b.y * cell,
+                  left: 0, top: 0,
                   width: 12, height: 12,
                   borderRadius: '50%',
                   background: 'radial-gradient(circle, #fff176, #ffd666)',
                   boxShadow: '0 0 12px 5px #ffd66699, 0 0 22px 8px #ff990044',
-                  transform: 'translate(-50%,-50%)',
+                  transform: `translate3d(${b.x * cell}px, ${b.y * cell}px, 0) translate(-50%, -50%)`,
                   pointerEvents: 'none',
                 }} />
               )
@@ -2693,14 +2743,17 @@ export function SpaceImpactDefense({ availableCoins, onClose, initialMode = 'nor
             if (tt === 'burst') {
               // 🔥 Burst — big orange blast bolt
               return (
-                <div key={b.id} style={{
+                <div key={b.id} ref={node => {
+                  if (node) bulletSpriteNodesRef.current.set(b.id, node)
+                  else bulletSpriteNodesRef.current.delete(b.id)
+                }} style={{
                   position: 'absolute',
-                  left: b.x * cell, top: b.y * cell,
+                  left: 0, top: 0,
                   width: 16, height: 5,
                   background: 'linear-gradient(90deg, #f99b45, #fff)',
                   borderRadius: '40% 60% 60% 40%',
                   boxShadow: '0 0 14px 5px #f99b4599',
-                  transform: `translate(-50%,-50%) rotate(${angle}deg)`,
+                  transform: `translate3d(${b.x * cell}px, ${b.y * cell}px, 0) translate(-50%, -50%) rotate(${angle}deg)`,
                   pointerEvents: 'none',
                 }} />
               )
@@ -2709,14 +2762,17 @@ export function SpaceImpactDefense({ availableCoins, onClose, initialMode = 'nor
             // Default (fast / unknown) — glowing dot
             const sz = 8
             return (
-              <div key={b.id} style={{
+              <div key={b.id} ref={node => {
+                  if (node) bulletSpriteNodesRef.current.set(b.id, node)
+                  else bulletSpriteNodesRef.current.delete(b.id)
+                }} style={{
                 position: 'absolute',
-                left: b.x * cell, top: b.y * cell,
+                left: 0, top: 0,
                 width: sz, height: sz,
                 borderRadius: '50%',
                 background: b.color,
                 boxShadow: `0 0 8px 3px ${b.color}`,
-                transform: 'translate(-50%,-50%)',
+                transform: `translate3d(${b.x * cell}px, ${b.y * cell}px, 0) translate(-50%, -50%)`,
                 pointerEvents: 'none',
               }} />
             )
