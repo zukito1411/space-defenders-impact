@@ -2196,7 +2196,7 @@ export function GradiusRaid({
 
     const normalEnemyFilter = getNormalEnemyFilter(time)
     for (const enemy of enemiesRef.current) {
-      drawRaidEnemy(ctx, enemy, toX, toY, cssWidth, time, normalEnemyFilter)
+      drawRaidEnemy(ctx, enemy, toX, toY, cssWidth, time, normalEnemyFilter, dpr)
     }
 
     if (godMeleeStrikesRef.current.length > 0) {
