@@ -52,29 +52,61 @@ jobs:
       - name: Copy web assets and sync Capacitor plugins
         run: npx cap sync android
 
-      - name: Restore the persistent release signing key
+      - name: Restore configured APK signing keystore
         env:
-          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          RELEASE_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          DEBUG_KEYSTORE_BASE64: ${{ secrets.ANDROID_DEBUG_KEYSTORE_BASE64 }}
+          RELEASE_STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         shell: bash
         run: |
           set -euo pipefail
-          if [[ -z "$KEYSTORE_BASE64" || -z "$ANDROID_KEYSTORE_PASSWORD" || -z "$ANDROID_KEY_ALIAS" || -z "$ANDROID_KEY_PASSWORD" ]]; then
-            echo "::error::Configure ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS and ANDROID_KEY_PASSWORD in GitHub Actions secrets."
-            exit 1
-          fi
-          if [[ "$ANDROID_KEY_ALIAS" == "androiddebugkey" ]]; then
-            echo "::error::A production release key is required; do not use the Android debug key."
+          # Prefer permanent production signing whenever its four secrets exist.
+          # The single debug-key secret is supported as a DEVELOPMENT fallback.
+          if [[ -n "$RELEASE_KEYSTORE_BASE64" ]]; then
+            if [[ -z "$RELEASE_STORE_PASSWORD" || -z "$RELEASE_KEY_ALIAS" || -z "$RELEASE_KEY_PASSWORD" ]]; then
+              echo "::error::Production keystore is configured but its password or alias secrets are missing."
+              exit 1
+            fi
+            if [[ "$RELEASE_KEY_ALIAS" == "androiddebugkey" ]]; then
+              echo "::error::Production signing must not use the Android debug-key alias."
+              exit 1
+            fi
+            KEYSTORE_BASE64="$RELEASE_KEYSTORE_BASE64"
+            KEYSTORE_PASSWORD="$RELEASE_STORE_PASSWORD"
+            KEY_ALIAS="$RELEASE_KEY_ALIAS"
+            KEY_PASSWORD="$RELEASE_KEY_PASSWORD"
+            SIGNING_KIND="production"
+          elif [[ -n "$DEBUG_KEYSTORE_BASE64" ]]; then
+            # Standard Android debug key: androiddebugkey / android.
+            # The build variant is release, but the certificate is DEBUG.
+            KEYSTORE_BASE64="$DEBUG_KEYSTORE_BASE64"
+            KEYSTORE_PASSWORD="android"
+            KEY_ALIAS="androiddebugkey"
+            KEY_PASSWORD="android"
+            SIGNING_KIND="debug"
+            echo "::warning::Release-variant APK signed with the existing Android DEBUG key. Not production-signed."
+          else
+            echo "::error::Configure ANDROID_KEYSTORE_BASE64 with production credentials, or ANDROID_DEBUG_KEYSTORE_BASE64."
             exit 1
           fi
 
-          KEYSTORE_PATH="$RUNNER_TEMP/SpaceImpactDefender-release.jks"
+          KEYSTORE_PATH="$RUNNER_TEMP/SpaceImpactDefender-signing.jks"
           printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_PATH"
           chmod 600 "$KEYSTORE_PATH"
-          keytool -list -keystore "$KEYSTORE_PATH" -alias "$ANDROID_KEY_ALIAS" -storepass:env ANDROID_KEYSTORE_PASSWORD > /dev/null
+
+          if ! ANDROID_KEYSTORE_PASSWORD="$KEYSTORE_PASSWORD" keytool -list \
+              -keystore "$KEYSTORE_PATH" -alias "$KEY_ALIAS" \
+              -storepass:env ANDROID_KEYSTORE_PASSWORD >/dev/null 2>&1; then
+            echo "::error::Signing keystore cannot be opened. Check the debug secret or supply production credentials."
+            exit 1
+          fi
           echo "ANDROID_KEYSTORE_PATH=$KEYSTORE_PATH" >> "$GITHUB_ENV"
+          echo "ANDROID_KEYSTORE_PASSWORD=$KEYSTORE_PASSWORD" >> "$GITHUB_ENV"
+          echo "ANDROID_KEY_ALIAS=$KEY_ALIAS" >> "$GITHUB_ENV"
+          echo "ANDROID_KEY_PASSWORD=$KEY_PASSWORD" >> "$GITHUB_ENV"
+          echo "ANDROID_SIGNING_KIND=$SIGNING_KIND" >> "$GITHUB_ENV"
 
       - name: Restore cached Gradle 8.14.3 toolchain
         uses: actions/cache@v4
@@ -88,17 +120,11 @@ jobs:
       - name: Build release-signed APK (not debug)
         working-directory: android
         env:
-          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           ANDROID_VERSION_CODE: ${{ github.run_number }}
         shell: bash
         run: "$SPACE_IMPACT_GRADLE --no-daemon --stacktrace assembleRelease"
 
-      - name: Verify APK is signed by the permanent production certificate
-        env:
-          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+      - name: Verify APK certificate matches selected signing keystore
         shell: bash
         run: |
           set -euo pipefail
@@ -106,8 +132,8 @@ jobs:
           test -s "$APK"
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$APK"
 
-          # Match the actual APK signing certificate to the stored production key.
-          # A debug-signed or differently signed APK must never be published.
+          # Verify the APK uses the exact selected certificate, whether the
+          # temporary development fallback or the permanent production key.
           EXPECTED_CERT="$(
             keytool -list -v -keystore "$ANDROID_KEYSTORE_PATH" \
               -alias "$ANDROID_KEY_ALIAS" -storepass:env ANDROID_KEYSTORE_PASSWORD |
@@ -118,14 +144,14 @@ jobs:
               awk '/Signer #1 certificate SHA-256 digest:/ {print $NF; exit}'
           )"
           if [[ -z "$EXPECTED_CERT" || "$EXPECTED_CERT" != "$ACTUAL_CERT" ]]; then
-            echo "::error::Release APK signing certificate differs from configured production keystore."
+            echo "::error::Release APK signing certificate differs from selected keystore."
             exit 1
           fi
 
           mkdir -p release-output
           cp "$APK" "release-output/SpaceImpactDefender-v${GITHUB_RUN_NUMBER}-release.apk"
 
-      - name: Publish exactly one signed APK per release
+      - name: Publish one APK per release with explicit signing status
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -133,6 +159,11 @@ jobs:
           set -euo pipefail
           TAG="android-v${GITHUB_RUN_NUMBER}"
           APK="release-output/SpaceImpactDefender-v${GITHUB_RUN_NUMBER}-release.apk"
+          if [[ "$ANDROID_SIGNING_KIND" == "debug" ]]; then
+            RELEASE_NOTES="Release-variant APK from commit ${GITHUB_SHA}. WARNING: Signed with an Android DEBUG keystore, NOT a production certificate. For development and testing only. Future updates require this same signing key."
+          else
+            RELEASE_NOTES="Production-signed release APK from commit ${GITHUB_SHA}. Future updates use the same permanent production certificate."
+          fi
           if gh release view "$TAG" > /dev/null 2>&1; then
             gh release upload "$TAG" "$APK" --clobber
             gh release edit "$TAG" --latest
@@ -140,7 +171,7 @@ jobs:
             gh release create "$TAG" "$APK" \
               --target "$GITHUB_SHA" \
               --title "Space Impact Defenders Android 1.0.${GITHUB_RUN_NUMBER}" \
-              --notes "Release-signed Android APK from main commit ${GITHUB_SHA}. Install this APK to play. Every future release uses the same production signing key." \
+              --notes "$RELEASE_NOTES" \
               --latest
           fi
 
