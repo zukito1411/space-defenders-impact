@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type * as React from 'react'
 import { getGameAudioMixSettings, getGameSoundEnabled, getGraphicsQuality, playGameSound, setGameAudioMixSettings, setGameSoundEnabled, setGraphicsQuality, startBGM, stopBGM } from './sound'
 import type { AudioMixSettings, GraphicsQuality } from './sound'
@@ -80,7 +80,18 @@ type DefenseGraphicsProfile = {
   useHeavyGlows: boolean
 }
 
+const DEFENSE_GRAPHICS_PROFILE_CACHE = new Map<string, DefenseGraphicsProfile>()
+
 function getDefenseGraphicsProfile(quality: GraphicsQuality, isMobileViewport: boolean): DefenseGraphicsProfile {
+  const key = `${quality}:${isMobileViewport ? 1 : 0}`
+  const cached = DEFENSE_GRAPHICS_PROFILE_CACHE.get(key)
+  if (cached) return cached
+  const profile = buildDefenseGraphicsProfile(quality, isMobileViewport)
+  DEFENSE_GRAPHICS_PROFILE_CACHE.set(key, profile)
+  return profile
+}
+
+function buildDefenseGraphicsProfile(quality: GraphicsQuality, isMobileViewport: boolean): DefenseGraphicsProfile {
   const mobileScale = isMobileViewport ? 0.72 : 1
   if (quality === 'low') {
     return {
@@ -2010,6 +2021,77 @@ export function SpaceImpactDefense({ availableCoins, onClose, initialMode = 'nor
   const dreadnoughtFieldCount = uiTowers.filter(t => t.type === 'dreadnought').length
   const dreadnoughtLimitReached = dreadnoughtFieldCount >= DREADNOUGHT_FIELD_LIMIT
 
+  // Tile and path DOM elements are static for most frames. Reuse them while
+  // enemies, particles and shots continue animating every requestAnimationFrame.
+  const tileOccupancyKey = uiTowers.map(t => `${t.id}:${t.col},${t.row}:${t.type}`).join('|')
+  const gridCells = useMemo(() => (
+    <>
+      {Array.from({ length: ROWS }, (_, r) =>
+        Array.from({ length: COLS }, (_, c) => {
+          const key = `${c},${r}`
+          const isPath = uiPathSet.has(key)
+          const isStart = uiSpawnCells.has(key)
+          const isEnd = key === uiFinishCell
+          const hasTower = findTowerAtCell(c, r) != null
+          const isHovered = hoveredCell?.[0] === c && hoveredCell?.[1] === r
+          const tDef = selectedTowerKey ? TOWER_TYPES.find(t => t.key === selectedTowerKey) ?? null : null
+          const canAfford = tDef != null && goldRef.current >= tDef.cost
+          const selectedFootprint = selectedTowerKey ? getTowerFootprint(selectedTowerKey) : 1
+          const isInPlacementPreview = hoveredCell != null && selectedTowerKey != null && c >= hoveredCell[0] && c < hoveredCell[0] + selectedFootprint && r >= hoveredCell[1] && r < hoveredCell[1] + selectedFootprint
+          const canPlacePreview = hoveredCell != null && selectedTowerKey != null && canPlaceTowerAt(hoveredCell[0], hoveredCell[1], selectedFootprint) && (selectedTowerKey !== 'dreadnought' || !dreadnoughtLimitReached)
+          return (
+            <div
+              key={key}
+              onClick={() => handleCellClick(c, r)}
+              onMouseEnter={() => setHoveredCell([c, r])}
+              onMouseLeave={() => setHoveredCell(null)}
+              style={{
+                position: 'absolute',
+                left: c * cell, top: r * cell,
+                width: cell, height: cell,
+                background: isPath
+                  ? (isStart ? 'rgba(78,255,190,0.18)' : isEnd ? 'rgba(255,127,127,0.18)' : 'rgba(79,137,201,0.13)')
+                  : hasTower ? 'transparent'
+                  : (isHovered || isInPlacementPreview) && !isPath && !hasTower
+                    ? (canAfford && canPlacePreview ? 'rgba(244,63,94,0.18)' : 'rgba(255,0,0,0.14)')
+                    : 'rgba(8,16,30,0.28)',
+                border: '1px solid rgba(66,99,132,0.34)',
+                cursor: isPath ? 'default' : 'pointer',
+                boxSizing: 'border-box',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                zIndex: 1,
+              }}
+            >
+              {isStart && <MothershipSpawnIcon size={Math.max(16, Math.floor(cell * 0.74))} />}
+              {isEnd && <EarthHQIcon size={Math.max(16, Math.floor(cell * 0.74))} />}
+            </div>
+          )
+        })
+      )}
+    </>
+  ), [uiPaths, cell, hoveredCell, selectedTowerKey, selectedTowerKey && hoveredCell ? uiGold : null, tileOccupancyKey, draggedTower?.id, dreadnoughtLimitReached])
+
+  const pathArrows = useMemo(() => (
+    <>
+      {uiPaths.flatMap((path, pi) =>
+        path.slice(0, -1).map(([c, r], i) => {
+          const [nc, nr] = path[i + 1]
+          const dc = nc - c, dr = nr - r
+          const arrow = dc > 0 ? '→' : dc < 0 ? '←' : dr > 0 ? '↓' : '↑'
+          const isTrunk = c >= 7
+          if (isTrunk && pi > 0) return null
+          return (
+            <div key={`arr${pi}-${i}`} style={{
+              position: 'absolute', left: c * cell, top: r * cell,
+              width: cell, height: cell,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: '#1a5e3a', fontSize: cell * 0.45, pointerEvents: 'none',
+            }}>{arrow}</div>
+          )
+        })
+      )}
+    </>
+  ), [uiPaths, cell])
 
   return (
     <>
@@ -2152,49 +2234,8 @@ export function SpaceImpactDefense({ availableCoins, onClose, initialMode = 'nor
             style={{ position: 'absolute', inset: 0, width: boardW, height: boardH, zIndex: 0, pointerEvents: 'none' }}
           />
 
-          {/* Grid cells */}
-          {Array.from({ length: ROWS }, (_, r) =>
-            Array.from({ length: COLS }, (_, c) => {
-              const key = `${c},${r}`
-              const isPath = uiPathSet.has(key)
-              const isStart = uiSpawnCells.has(key)
-              const isEnd = key === uiFinishCell
-              const hasTower = findTowerAtCell(c, r) != null
-              const isHovered = hoveredCell?.[0] === c && hoveredCell?.[1] === r
-              const tDef = selectedTowerKey ? TOWER_TYPES.find(t => t.key === selectedTowerKey) ?? null : null
-              const canAfford = tDef != null && goldRef.current >= tDef.cost
-              const selectedFootprint = selectedTowerKey ? getTowerFootprint(selectedTowerKey) : 1
-              const isInPlacementPreview = hoveredCell != null && selectedTowerKey != null && c >= hoveredCell[0] && c < hoveredCell[0] + selectedFootprint && r >= hoveredCell[1] && r < hoveredCell[1] + selectedFootprint
-              const canPlacePreview = hoveredCell != null && selectedTowerKey != null && canPlaceTowerAt(hoveredCell[0], hoveredCell[1], selectedFootprint) && (selectedTowerKey !== 'dreadnought' || !dreadnoughtLimitReached)
-              return (
-                <div
-                  key={key}
-                  onClick={() => handleCellClick(c, r)}
-                  onMouseEnter={() => setHoveredCell([c, r])}
-                  onMouseLeave={() => setHoveredCell(null)}
-                  style={{
-                    position: 'absolute',
-                    left: c * cell, top: r * cell,
-                    width: cell, height: cell,
-                    background: isPath
-                      ? (isStart ? 'rgba(78,255,190,0.18)' : isEnd ? 'rgba(255,127,127,0.18)' : 'rgba(79,137,201,0.13)')
-                      : hasTower ? 'transparent'
-                      : (isHovered || isInPlacementPreview) && !isPath && !hasTower
-                        ? (canAfford && canPlacePreview ? 'rgba(244,63,94,0.18)' : 'rgba(255,0,0,0.14)')
-                        : 'rgba(8,16,30,0.28)',
-                    border: '1px solid rgba(66,99,132,0.34)',
-                    cursor: isPath ? 'default' : 'pointer',
-                    boxSizing: 'border-box',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    zIndex: 1,
-                  }}
-                >
-                  {isStart && <MothershipSpawnIcon size={Math.max(16, Math.floor(cell * 0.74))} />}
-                  {isEnd && <EarthHQIcon size={Math.max(16, Math.floor(cell * 0.74))} />}
-                </div>
-              )
-            })
-          )}
+          {/* Grid cells — retain element identities between battlefield changes */}
+          {gridCells}
 
           {/* Laser beams */}
           {renderedLaserBeams.length > 0 && (
@@ -2214,25 +2255,8 @@ export function SpaceImpactDefense({ availableCoins, onClose, initialMode = 'nor
             </svg>
           )}
 
-          {/* Path arrows — all paths */}
-          {uiPaths.flatMap((path, pi) =>
-            path.slice(0, -1).map(([c, r], i) => {
-              const [nc, nr] = path[i + 1]
-              const dc = nc - c, dr = nr - r
-              const arrow = dc > 0 ? '→' : dc < 0 ? '←' : dr > 0 ? '↓' : '↑'
-              // trunk cells (after merge col 7) shared across paths — only render once
-              const isTrunk = c >= 7
-              if (isTrunk && pi > 0) return null
-              return (
-                <div key={`arr${pi}-${i}`} style={{
-                  position: 'absolute', left: c * cell, top: r * cell,
-                  width: cell, height: cell,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: '#1a5e3a', fontSize: cell * 0.45, pointerEvents: 'none',
-                }}>{arrow}</div>
-              )
-            })
-          )}
+          {/* Path arrows — cached until a new stage is generated */}
+          {pathArrows}
 
           {uiTowers.map(tower => {
             const footprint = getTowerFootprint(tower.type)
@@ -2426,8 +2450,9 @@ export function SpaceImpactDefense({ availableCoins, onClose, initialMode = 'nor
             <div key={e.id} style={{
               position: 'absolute',
               // Anchor at the exact path center so ship sprite is always on-path
-              left: (e.x + 0.5) * cell,
-              top: (e.y + 0.5) * cell,
+              // Compositor transform avoids layout on every enemy movement tick.
+              left: 0, top: 0,
+              transform: `translate(${(e.x + 0.5) * cell}px, ${(e.y + 0.5) * cell}px)`,
               width: 0, height: 0,
               pointerEvents: 'none',
               overflow: 'visible',

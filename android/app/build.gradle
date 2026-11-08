@@ -1,5 +1,10 @@
 apply plugin: 'com.android.application'
 
+// GitHub Actions sets ANDROID_VERSION_CODE to the monotonically increasing
+// release workflow run number. The offset keeps production versions above
+// the original versionCode 1. Local development defaults to build 1.
+def androidReleaseNumber = (System.getenv('ANDROID_VERSION_CODE') ?: '1').toInteger()
+
 android {
     namespace = "com.zukito.spaceimpactdefender"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -7,8 +12,8 @@ android {
         applicationId "com.zukito.spaceimpactdefender"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode (10000 + androidReleaseNumber)
+        versionName "1.0.${androidReleaseNumber}"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -16,9 +21,22 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        release {
+            // Release credentials must come from private GitHub Actions secrets.
+            // Never check a keystore or its passwords into the repository.
+            def releaseKeystore = System.getenv('ANDROID_KEYSTORE_PATH')
+            if (releaseKeystore) {
+                storeFile file(releaseKeystore)
+                storePassword System.getenv('ANDROID_KEYSTORE_PASSWORD')
+                keyAlias System.getenv('ANDROID_KEY_ALIAS')
+                keyPassword System.getenv('ANDROID_KEY_PASSWORD')
+            }
+        }
+    }
     buildTypes {
         release {
-            signingConfig signingConfigs.debug
+            signingConfig signingConfigs.release
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
