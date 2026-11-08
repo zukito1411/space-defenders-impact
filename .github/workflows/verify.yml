@@ -23,3 +23,58 @@ jobs:
         run: npm ci
       - name: Typecheck and build
         run: npm run build
+
+  android-release-smoke:
+    # Compile a real release variant with an ephemeral CI-only key.
+    # This APK is never uploaded to Releases or distributed to users.
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Use Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+      - name: Install Android platform 36
+        run: sdkmanager --install "platforms;android-36" "build-tools;36.0.0"
+      - name: Build and sync web app
+        run: |
+          npm ci
+          npm run build
+          npx cap sync android
+      - name: Generate temporary CI-only signing key
+        shell: bash
+        run: |
+          set -euo pipefail
+          KEY="$RUNNER_TEMP/ci-only-release.jks"
+          PASSWORD="$(openssl rand -hex 20)"
+          keytool -genkeypair -noprompt -storetype PKCS12 \
+            -keystore "$KEY" -alias "ci-only" -keyalg RSA -keysize 2048 \
+            -validity 7 -dname "CN=CI Verification Only" \
+            -storepass "$PASSWORD" -keypass "$PASSWORD"
+          echo "ANDROID_KEYSTORE_PATH=$KEY" >> "$GITHUB_ENV"
+          echo "ANDROID_KEYSTORE_PASSWORD=$PASSWORD" >> "$GITHUB_ENV"
+          echo "ANDROID_KEY_ALIAS=ci-only" >> "$GITHUB_ENV"
+          echo "ANDROID_KEY_PASSWORD=$PASSWORD" >> "$GITHUB_ENV"
+      - name: Compile release APK
+        working-directory: android
+        run: |
+          chmod +x ./gradlew
+          ./gradlew --no-daemon assembleRelease
+      - name: Verify release APK has valid signature
+        run: |
+          set -euo pipefail
+          APK="android/app/build/outputs/apk/release/SpaceImpactDefender-release.apk"
+          test -s "$APK"
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose "$APK"
