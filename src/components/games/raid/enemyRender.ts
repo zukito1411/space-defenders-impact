@@ -1,5 +1,5 @@
 import { RAID_ALIEN_SPRITE_COUNT, RAID_ELITE_SPRITE_COUNT } from '../RaidShipSprite'
-import { drawCanvasSpriteContain, drawSpriteGlow, getEliteAlienCanvasSprite, getEnemyCanvasSize, getNormalAlienCanvasSprite, getNormalAlienImageFilter } from './assets'
+import { drawCanvasSpriteContain, drawSpriteGlow, getCanvasSpriteDimensions, getEliteAlienCanvasSprite, getEnemyCanvasSize, getNormalAlienCanvasSprite, getNormalAlienImageFilter } from './assets'
 import { DEG, STAGE_CLEAR_SECONDS } from './constants'
 import type { BossKind, Enemy, MirageBossKind } from './types'
 import { clamp } from './utils'
@@ -8,6 +8,88 @@ import { drawDevilGundamBoss } from './devilBossRender'
 import { drawSnakeVenomTelegraph } from './snakeBossRender'
 import { drawSquidWhipStrike } from './squidBossRender'
 import { drawCachedStageBossBody, drawEnemyHitFlash, drawStageBossIntroEffect, getStageBossIntroProgress, hexToRgba } from './stageBossRender'
+
+// Normal enemies change their color grading with the background pulse. Drawing
+// a large original PNG with ctx.filter on every animation frame is costly in
+// Android WebView. Cache the same filter result at the actual screen pixel
+// dimensions instead, and refresh only when the filter or size changes.
+// The cache is bounded and never changes combat state or sprite appearance.
+type NormalEnemyRaster = {
+  canvas: HTMLCanvasElement
+  context: CanvasRenderingContext2D
+  filter: string
+  spriteKey: string
+  width: number
+  height: number
+}
+const normalEnemyRasters = new Map<number, NormalEnemyRaster>()
+const MAX_NORMAL_ENEMY_RASTERS = 96
+
+function drawRasterizedNormalEnemy(
+  ctx: CanvasRenderingContext2D,
+  enemy: Enemy,
+  x: number,
+  y: number,
+  size: number,
+  filter: string,
+  dpr: number,
+) {
+  const sprite = getNormalAlienCanvasSprite(enemy.variant)
+  if (!sprite.loaded || !sprite.image.complete) {
+    drawCanvasSpriteContain(ctx, sprite, x, y, size, filter, 1, 0, 1, enemy.color, false)
+    return
+  }
+
+  const { source, width, height } = getCanvasSpriteDimensions(sprite)
+  if (width <= 0 || height <= 0) {
+    drawCanvasSpriteContain(ctx, sprite, x, y, size, filter, 1, 0, 1, enemy.color, false)
+    return
+  }
+
+  const aspect = width / height
+  const drawWidth = aspect > 1 ? size : size * aspect
+  const drawHeight = aspect > 1 ? size / aspect : size
+  const pixelWidth = Math.max(1, Math.ceil(drawWidth * dpr))
+  const pixelHeight = Math.max(1, Math.ceil(drawHeight * dpr))
+  let cached = normalEnemyRasters.get(enemy.id)
+  if (!cached) {
+    const canvas = document.createElement('canvas')
+    const cachedContext = canvas.getContext('2d', { alpha: true })
+    if (!cachedContext) {
+      drawCanvasSpriteContain(ctx, sprite, x, y, size, filter, 1, 0, 1, enemy.color, false)
+      return
+    }
+    if (normalEnemyRasters.size >= MAX_NORMAL_ENEMY_RASTERS) {
+      const oldest = normalEnemyRasters.keys().next().value
+      if (oldest !== undefined) normalEnemyRasters.delete(oldest)
+    }
+    cached = { canvas, context: cachedContext, filter: '', spriteKey: '', width: 0, height: 0 }
+    normalEnemyRasters.set(enemy.id, cached)
+  }
+
+  if (
+    cached.filter !== filter ||
+    cached.spriteKey !== sprite.cacheKey ||
+    cached.width !== pixelWidth ||
+    cached.height !== pixelHeight
+  ) {
+    if (cached.width !== pixelWidth || cached.height !== pixelHeight) {
+      cached.canvas.width = pixelWidth
+      cached.canvas.height = pixelHeight
+      cached.context.imageSmoothingEnabled = true
+      cached.context.imageSmoothingQuality = 'high'
+    }
+    cached.context.clearRect(0, 0, pixelWidth, pixelHeight)
+    cached.context.filter = filter
+    cached.context.drawImage(source, 0, 0, pixelWidth, pixelHeight)
+    cached.context.filter = 'none'
+    cached.filter = filter
+    cached.spriteKey = sprite.cacheKey
+    cached.width = pixelWidth
+    cached.height = pixelHeight
+  }
+  ctx.drawImage(cached.canvas, x - drawWidth / 2, y - drawHeight / 2, drawWidth, drawHeight)
+}
 
 export function getBossDefeatFade(enemy: Enemy) {
   if (enemy.hp > 0) return 1
@@ -22,6 +104,7 @@ export function drawRaidEnemy(
   viewportWidth: number,
   time: number,
   normalEnemyFilter: string,
+  dpr = 1,
 ) {
   const x = toX(enemy.x)
   const y = toY(enemy.y)
@@ -120,9 +203,8 @@ export function drawRaidEnemy(
     return
   }
 
-  const sprite = getNormalAlienCanvasSprite(enemy.variant)
   drawSpriteGlow(ctx, x, y, size, 'rgba(239,35,60,0.34)', 1)
-  drawCanvasSpriteContain(ctx, sprite, x, y, size, getNormalAlienImageFilter(normalEnemyFilter, enemy), 1, 0, 1, enemy.color, false)
+  drawRasterizedNormalEnemy(ctx, enemy, x, y, size, getNormalAlienImageFilter(normalEnemyFilter, enemy), dpr)
   ctx.save()
   ctx.translate(x, y)
   drawEnemyHitFlash(ctx, size, enemy.hitFlash, enemy.color)
