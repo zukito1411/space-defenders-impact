@@ -15,6 +15,11 @@ release/
 godot/
 *.local
 
+# Never commit the private Android production signing key or secret export
+*.jks
+*.keystore
+github-secrets.txt
+
 # Environment files
 .env
 .env.*
