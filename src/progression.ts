@@ -488,11 +488,34 @@ export function loadProgress(): ProgressState {
   }
 }
 
-export function saveProgress(progress: ProgressState) {
+const PROGRESS_SYNC_PENDING_KEY = 'space-defenders-progress-sync-pending-v1'
+
+export function getPendingProgressSyncToken(): string | null {
+  if (typeof window === 'undefined') return null
+  return window.localStorage.getItem(PROGRESS_SYNC_PENDING_KEY)
+}
+
+export function markProgressSyncPending(): void {
+  if (typeof window === 'undefined') return
+  const token = typeof window.crypto?.randomUUID === 'function'
+    ? window.crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(36).slice(2)}`
+  window.localStorage.setItem(PROGRESS_SYNC_PENDING_KEY, token)
+  window.dispatchEvent(new Event('space-defenders:progress-changed'))
+}
+
+export function clearPendingProgressSyncToken(token: string): boolean {
+  if (typeof window === 'undefined' || window.localStorage.getItem(PROGRESS_SYNC_PENDING_KEY) !== token) return false
+  window.localStorage.removeItem(PROGRESS_SYNC_PENDING_KEY)
+  return true
+}
+
+export function saveProgress(progress: ProgressState, markForCloudSync = true) {
   if (typeof window === 'undefined') return
   const normalized = normalizeProgress(progress)
   syncTowerDefenseEndlessUnlockStorage(normalized.towerDefenseEndlessUnlocked)
   window.localStorage.setItem(PROGRESS_STORAGE_KEY, JSON.stringify(normalized))
+  if (markForCloudSync) markProgressSyncPending()
 }
 
 export function resetProgressForNewAccount(): ProgressState {
@@ -968,6 +991,61 @@ export function normalizeProgress(value: unknown): ProgressState {
     shipMastery,
     equippedCosmetics: normalizeEquippedCosmetics(data.equippedCosmetics ?? {}, shipMastery),
   }
+}
+
+// Preserve progress made on either device while avoiding double counting run totals.
+// Counters use maxima; individual runs would need server-issued IDs for additive merges.
+export function mergeProgressForSync(localValue: ProgressState, remoteValue: ProgressState): ProgressState {
+  const local = normalizeProgress(localValue)
+  const remote = normalizeProgress(remoteValue)
+  const numericKeys = [
+    'gradiusEndlessTotalScore', 'totalRuns', 'totalScore', 'totalPlaySeconds',
+    'enemiesDestroyed', 'bossesDefeated', 'pickupsCollected', 'nukesUsed', 'victories',
+  ] as const
+  const combined: ProgressState = {
+    ...remote,
+    towerDefenseEndlessUnlocked: local.towerDefenseEndlessUnlocked || remote.towerDefenseEndlessUnlocked,
+    gradiusRaidEndlessUnlocked: local.gradiusRaidEndlessUnlocked || remote.gradiusRaidEndlessUnlocked,
+    mesiahShipColor: local.mesiahShipColor,
+    coreLanderModel: local.coreLanderModel,
+    bestScoreByMode: { ...remote.bestScoreByMode },
+    bestStageByMode: { ...remote.bestStageByMode },
+    missions: { ...remote.missions },
+    achievements: { ...remote.achievements, ...local.achievements },
+    codex: { ...remote.codex, ...local.codex },
+    shipMastery: { ...remote.shipMastery },
+    equippedCosmetics: { ...remote.equippedCosmetics },
+  }
+  for (const key of numericKeys) combined[key] = Math.max(local[key], remote[key])
+  for (const mode of Object.keys(combined.bestScoreByMode) as LeaderboardMode[]) {
+    combined.bestScoreByMode[mode] = Math.max(local.bestScoreByMode[mode] ?? 0, remote.bestScoreByMode[mode] ?? 0)
+    combined.bestStageByMode[mode] = Math.max(local.bestStageByMode[mode] ?? 0, remote.bestStageByMode[mode] ?? 0)
+  }
+  for (const [id, period] of Object.entries(local.missions)) {
+    const key = id as MissionId
+    if (period && (!combined.missions[key] || period > combined.missions[key]!)) {
+      combined.missions[key] = period
+    }
+  }
+  for (const key of Object.keys(local.shipMastery)) {
+    const current = local.shipMastery[key]
+    const other = remote.shipMastery[key]
+    combined.shipMastery[key] = other ? {
+      xp: Math.max(current.xp, other.xp),
+      level: Math.max(current.level, other.level),
+      runs: Math.max(current.runs, other.runs),
+      bestScore: Math.max(current.bestScore, other.bestScore),
+      totalScore: Math.max(current.totalScore, other.totalScore),
+      victories: Math.max(current.victories, other.victories),
+    } : current
+  }
+  for (const [key, value] of Object.entries(local.equippedCosmetics)) {
+    combined.equippedCosmetics[key] = {
+      ...(remote.equippedCosmetics[key] ?? {}),
+      ...value,
+    }
+  }
+  return normalizeProgress(combined)
 }
 
 function syncTowerDefenseEndlessUnlockStorage(unlocked: boolean) {
