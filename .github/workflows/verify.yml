@@ -72,12 +72,18 @@ jobs:
           echo "ANDROID_KEYSTORE_PASSWORD=$PASSWORD" >> "$GITHUB_ENV"
           echo "ANDROID_KEY_ALIAS=ci-only" >> "$GITHUB_ENV"
           echo "ANDROID_KEY_PASSWORD=$PASSWORD" >> "$GITHUB_ENV"
+      - name: Restore cached Gradle 8.14.3 toolchain
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/space-impact-gradle/8.14.3
+          key: gradle-8.14.3-jdk21-${{ runner.os }}-v1
+
+      - name: Prepare compatible pinned Gradle
+        run: bash scripts/setup-pinned-gradle.sh
+
       - name: Compile release APK
         working-directory: android
-        run: |
-          set -euo pipefail
-          gradle --version
-          gradle --no-daemon assembleRelease
+        run: "$SPACE_IMPACT_GRADLE --no-daemon assembleRelease"
       - name: Verify release APK has valid signature
         run: |
           set -euo pipefail
