@@ -130,6 +130,11 @@ export function GradiusRaid({
   const lastTimeRef = useRef(0)
   const lastRenderTimeRef = useRef(0)
   const lastIdleDrawTimeRef = useRef(0)
+  // Air Raid renders a full-screen Pixi/WebGL world behind a full-screen
+  // Canvas 2D gameplay layer. Decouple their frame schedules on phones so
+  // background GPU submissions cannot starve player/enemy movement.
+  const lastPixiBackgroundRenderRef = useRef(0)
+  const lastPixiBackgroundSceneRef = useRef('')
   const graphicsQualityRef = useRef<GraphicsQuality>(getGraphicsQuality())
   const viewportMetricsRef = useRef<RaidViewportMetrics | null>(null)
   const fxCanvasSmoothingQualityRef = useRef<ImageSmoothingQuality | null>(null)
@@ -1479,44 +1484,67 @@ export function GradiusRaid({
       root.style.setProperty('--raid-camera-y', '0px')
       cameraShakeAppliedRef.current = false
     }
-    const stageRush = stageClearRef.current > 0 ? clamp(stageClearRef.current / STAGE_CLEAR_SECONDS, 0, 1) : 0
-    const activeBoss = enemiesRef.current.find((enemy) => enemy.isBoss && enemy.hp > 0)
-    const bossIntensity = activeBoss ? 1 : bossAlertRef.current > 0 ? clamp(bossAlertRef.current / 2.4, 0, 1) : 0
-    const devilCorruption = activeBoss?.bossKind === 'devil' ? clamp(0.45 + (1 - activeBoss.hp / Math.max(1, activeBoss.maxHp)) * 0.75, 0, 1) : 0
-    const finalBattleIntensity = activeBoss?.bossKind === 'final'
-      ? clamp(0.78 + (1 - activeBoss.hp / Math.max(1, activeBoss.maxHp)) * 0.22, 0, 1)
-      : raidModeRef.current !== 'endless' && stageRef.current >= MAX_RAID_STAGE
-        ? 0.68
-        : 0
-    const campaignBackgroundStageTheme =
-      raidModeRef.current !== 'endless'
-        ? stageRef.current === 5
-          ? RAID_BOSS_BACKGROUND_THEME_SQUID
-          : stageRef.current === 10
-            ? RAID_BOSS_BACKGROUND_THEME_SNAKE
-            : stageRef.current >= MAX_RAID_STAGE
-              ? RAID_BOSS_BACKGROUND_THEME_FINAL
-              : stageRef.current
-        : stageRef.current
-    const backgroundStageTheme =
-      activeBoss?.bossKind === 'squid' ? RAID_BOSS_BACKGROUND_THEME_SQUID :
-        activeBoss?.bossKind === 'snake' ? RAID_BOSS_BACKGROUND_THEME_SNAKE :
-          activeBoss?.bossKind === 'final' || activeBoss?.bossKind === 'devil' ? RAID_BOSS_BACKGROUND_THEME_FINAL :
-            campaignBackgroundStageTheme
+    // The foreground stays on every requestAnimationFrame, including player
+    // steering, projectiles, hit FX and boss telegraphs. Background detail
+    // and resolution are unchanged; on Android-sized screens we send the
+    // second full-screen GPU layer at ~30 Hz instead of ~60 Hz.
+    const pixiBackground = pixiBackgroundRef.current
+    if (pixiBackground) {
+      const mobileViewport = viewport.isSmallViewport
+      const backgroundIntervalMs = mobileViewport ? 31 : 0
+      const sceneSignature = `${cssWidth}:${cssHeight}:${dpr}:${gfxQuality}:${stageRef.current}:${phaseRef.current}`
+      if (
+        lastPixiBackgroundRenderRef.current === 0 ||
+        lastPixiBackgroundSceneRef.current !== sceneSignature ||
+        time < lastPixiBackgroundRenderRef.current ||
+        time - lastPixiBackgroundRenderRef.current >= backgroundIntervalMs
+      ) {
+      const stageRush = stageClearRef.current > 0 ? clamp(stageClearRef.current / STAGE_CLEAR_SECONDS, 0, 1) : 0
+      const activeBoss = enemiesRef.current.find((enemy) => enemy.isBoss && enemy.hp > 0)
+      const bossIntensity = activeBoss ? 1 : bossAlertRef.current > 0 ? clamp(bossAlertRef.current / 2.4, 0, 1) : 0
+      const devilCorruption = activeBoss?.bossKind === 'devil' ? clamp(0.45 + (1 - activeBoss.hp / Math.max(1, activeBoss.maxHp)) * 0.75, 0, 1) : 0
+      const finalBattleIntensity = activeBoss?.bossKind === 'final'
+        ? clamp(0.78 + (1 - activeBoss.hp / Math.max(1, activeBoss.maxHp)) * 0.22, 0, 1)
+        : raidModeRef.current !== 'endless' && stageRef.current >= MAX_RAID_STAGE
+          ? 0.68
+          : 0
+      const campaignBackgroundStageTheme =
+        raidModeRef.current !== 'endless'
+          ? stageRef.current === 5
+            ? RAID_BOSS_BACKGROUND_THEME_SQUID
+            : stageRef.current === 10
+              ? RAID_BOSS_BACKGROUND_THEME_SNAKE
+              : stageRef.current >= MAX_RAID_STAGE
+                ? RAID_BOSS_BACKGROUND_THEME_FINAL
+                : stageRef.current
+          : stageRef.current
+      const backgroundStageTheme =
+        activeBoss?.bossKind === 'squid' ? RAID_BOSS_BACKGROUND_THEME_SQUID :
+          activeBoss?.bossKind === 'snake' ? RAID_BOSS_BACKGROUND_THEME_SNAKE :
+            activeBoss?.bossKind === 'final' || activeBoss?.bossKind === 'devil' ? RAID_BOSS_BACKGROUND_THEME_FINAL :
+              campaignBackgroundStageTheme
 
-    pixiBackgroundRef.current?.render({
-      palette: paletteRef.current,
-      width: cssWidth,
-      height: cssHeight,
-      time,
-      quality: gfxQuality,
-      stageTheme: backgroundStageTheme,
-      dpr,
-      stageRush,
-      bossIntensity,
-      devilCorruption,
-      finalBattleIntensity,
-    })
+      const backgroundDrawn = pixiBackground.render({
+        palette: paletteRef.current,
+        width: cssWidth,
+        height: cssHeight,
+        time,
+        quality: gfxQuality,
+        stageTheme: backgroundStageTheme,
+        dpr,
+        stageRush,
+        bossIntensity,
+        devilCorruption,
+        finalBattleIntensity,
+      })
+
+
+        if (backgroundDrawn) {
+          lastPixiBackgroundRenderRef.current = time
+          lastPixiBackgroundSceneRef.current = sceneSignature
+        }
+      }
+    }
 
     const drawTrail = (shot: Shot, color: string, length: number, widthPx: number) => {
       const x = toX(shot.x)
