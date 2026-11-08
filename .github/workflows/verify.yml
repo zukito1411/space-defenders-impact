@@ -63,6 +63,7 @@ jobs:
           set -euo pipefail
           KEY="$RUNNER_TEMP/ci-only-release.jks"
           PASSWORD="$(openssl rand -hex 20)"
+          echo "::add-mask::$PASSWORD"
           keytool -genkeypair -noprompt -storetype PKCS12 \
             -keystore "$KEY" -alias "ci-only" -keyalg RSA -keysize 2048 \
             -validity 7 -dname "CN=CI Verification Only" \
@@ -75,7 +76,18 @@ jobs:
         working-directory: android
         run: |
           chmod +x ./gradlew
-          ./gradlew --no-daemon assembleRelease
+          # Transient Gradle distribution/CDN failures should not block an APK release.
+          for attempt in 1 2 3; do
+            if ./gradlew --no-daemon assembleRelease; then
+              exit 0
+            fi
+            if [[ "$attempt" -eq 3 ]]; then
+              echo "::error::Android release build failed after 3 attempts."
+              exit 1
+            fi
+            echo "Gradle attempt $attempt failed; retrying after a short delay..."
+            sleep $((attempt * 12))
+          done
       - name: Verify release APK has valid signature
         run: |
           set -euo pipefail
