@@ -1484,6 +1484,23 @@ export function GradiusRaid({
       root.style.setProperty('--raid-camera-y', '0px')
       cameraShakeAppliedRef.current = false
     }
+    const activeBoss = enemiesRef.current.find((enemy) => enemy.isBoss && enemy.hp > 0)
+    const campaignBackgroundStageTheme =
+      raidModeRef.current !== 'endless'
+        ? stageRef.current === 5
+          ? RAID_BOSS_BACKGROUND_THEME_SQUID
+          : stageRef.current === 10
+            ? RAID_BOSS_BACKGROUND_THEME_SNAKE
+            : stageRef.current >= MAX_RAID_STAGE
+              ? RAID_BOSS_BACKGROUND_THEME_FINAL
+              : stageRef.current
+        : stageRef.current
+    const backgroundStageTheme =
+      activeBoss?.bossKind === 'squid' ? RAID_BOSS_BACKGROUND_THEME_SQUID :
+        activeBoss?.bossKind === 'snake' ? RAID_BOSS_BACKGROUND_THEME_SNAKE :
+          activeBoss?.bossKind === 'final' || activeBoss?.bossKind === 'devil' ? RAID_BOSS_BACKGROUND_THEME_FINAL :
+            campaignBackgroundStageTheme
+
     // The foreground stays on every requestAnimationFrame, including player
     // steering, projectiles, hit FX and boss telegraphs. Background detail
     // and resolution are unchanged; on Android-sized screens we send the
@@ -1499,8 +1516,7 @@ export function GradiusRaid({
         time < lastPixiBackgroundRenderRef.current ||
         time - lastPixiBackgroundRenderRef.current >= backgroundIntervalMs
       ) {
-      const stageRush = stageClearRef.current > 0 ? clamp(stageClearRef.current / STAGE_CLEAR_SECONDS, 0, 1) : 0
-      const activeBoss = enemiesRef.current.find((enemy) => enemy.isBoss && enemy.hp > 0)
+        const stageRush = stageClearRef.current > 0 ? clamp(stageClearRef.current / STAGE_CLEAR_SECONDS, 0, 1) : 0
       const bossIntensity = activeBoss ? 1 : bossAlertRef.current > 0 ? clamp(bossAlertRef.current / 2.4, 0, 1) : 0
       const devilCorruption = activeBoss?.bossKind === 'devil' ? clamp(0.45 + (1 - activeBoss.hp / Math.max(1, activeBoss.maxHp)) * 0.75, 0, 1) : 0
       const finalBattleIntensity = activeBoss?.bossKind === 'final'
@@ -1508,21 +1524,6 @@ export function GradiusRaid({
         : raidModeRef.current !== 'endless' && stageRef.current >= MAX_RAID_STAGE
           ? 0.68
           : 0
-      const campaignBackgroundStageTheme =
-        raidModeRef.current !== 'endless'
-          ? stageRef.current === 5
-            ? RAID_BOSS_BACKGROUND_THEME_SQUID
-            : stageRef.current === 10
-              ? RAID_BOSS_BACKGROUND_THEME_SNAKE
-              : stageRef.current >= MAX_RAID_STAGE
-                ? RAID_BOSS_BACKGROUND_THEME_FINAL
-                : stageRef.current
-          : stageRef.current
-      const backgroundStageTheme =
-        activeBoss?.bossKind === 'squid' ? RAID_BOSS_BACKGROUND_THEME_SQUID :
-          activeBoss?.bossKind === 'snake' ? RAID_BOSS_BACKGROUND_THEME_SNAKE :
-            activeBoss?.bossKind === 'final' || activeBoss?.bossKind === 'devil' ? RAID_BOSS_BACKGROUND_THEME_FINAL :
-              campaignBackgroundStageTheme
 
       const backgroundDrawn = pixiBackground.render({
         palette: paletteRef.current,
