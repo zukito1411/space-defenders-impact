@@ -25,6 +25,18 @@ export const PLAYER_ID_STORAGE_KEY = 'space-defenders-player-id'
 export const PLAYER_RECOVERY_CODE_STORAGE_KEY = 'space-defenders-player-recovery-code'
 export const CREATOR_PLAYER_NAME = 'zukito'
 const DEFAULT_RAID_RELAY_URL = 'https://space-raid-relay.onrender.com'
+const API_REQUEST_TIMEOUT_MS = 8000
+
+// Network requests must not keep the registration modal or local progress waiting indefinitely.
+async function fetchWithTimeout(input: string, init: RequestInit = {}): Promise<Response> {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), API_REQUEST_TIMEOUT_MS)
+  try {
+    return await fetch(input, { ...init, signal: controller.signal })
+  } finally {
+    clearTimeout(timer)
+  }
+}
 
 export const LEADERBOARD_MODES: Array<{
   key: LeaderboardMode
@@ -191,10 +203,14 @@ export async function registerPlayerName(value: string): Promise<PlayerNameRegis
   const playerName = sanitizePlayerName(value)
   const playerId = getOrCreateStoredPlayerId()
   const apiBase = getLeaderboardApiBase()
-  if (!apiBase) return { registered: true, available: true, taken: false, offline: true, playerId, playerName, recoveryCode: getStoredRecoveryCode() }
+  const localProfile = (): PlayerNameRegistrationResult => ({
+    registered: true, available: true, taken: false, offline: true,
+    playerId, playerName, recoveryCode: getStoredRecoveryCode(),
+  })
+  if (!apiBase || (typeof navigator !== 'undefined' && !navigator.onLine)) return localProfile()
 
   try {
-    const response = await fetch(`${apiBase}/players/register`, {
+    const response = await fetchWithTimeout(`${apiBase}/players/register`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ playerName, playerId }),
@@ -211,6 +227,8 @@ export async function registerPlayerName(value: string): Promise<PlayerNameRegis
     }
 
     if (!response.ok || !data?.registered) {
+      // Unavailable relay/database must never block a player from creating a local pilot.
+      if (response.status >= 500 || response.status === 429) return localProfile()
       return { registered: false, available: false, taken: false, error: 'Name registration failed.', playerName }
     }
 
@@ -224,10 +242,9 @@ export async function registerPlayerName(value: string): Promise<PlayerNameRegis
       progress: data.progress ?? null,
     }
   } catch {
-    if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
-      return { registered: true, available: true, taken: false, offline: true, playerId, playerName, recoveryCode: getStoredRecoveryCode() }
-    }
-    return { registered: false, available: false, taken: false, error: 'Name registration failed.', playerName }
+    // Connection loss, CORS errors and timeouts all fall back to a local identity.
+    // Name ownership is checked again after the service returns.
+    return localProfile()
   }
 }
 
@@ -239,7 +256,7 @@ export async function restorePlayerName(value: string, recoveryCodeValue: string
   if (!apiBase) return { registered: false, available: false, taken: false, error: 'Name restoration failed.', playerName }
 
   try {
-    const response = await fetch(`${apiBase}/players/restore`, {
+    const response = await fetchWithTimeout(`${apiBase}/players/restore`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ playerName, recoveryCode, playerId }),
@@ -270,7 +287,7 @@ export async function uploadPlayerProgress(progress: unknown): Promise<{ saved: 
   if (!apiBase) return { saved: false }
 
   try {
-    const response = await fetch(`${apiBase}/players/progress`, {
+    const response = await fetchWithTimeout(`${apiBase}/players/progress`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ playerId: getOrCreateStoredPlayerId(), progress }),
