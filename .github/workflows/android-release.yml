@@ -86,7 +86,18 @@ jobs:
         shell: bash
         run: |
           chmod +x ./gradlew
-          ./gradlew --no-daemon --stacktrace assembleRelease
+          # Transient Gradle distribution/CDN failures should not block an APK release.
+          for attempt in 1 2 3; do
+            if ./gradlew --no-daemon --stacktrace assembleRelease; then
+              exit 0
+            fi
+            if [[ "$attempt" -eq 3 ]]; then
+              echo "::error::Android release build failed after 3 attempts."
+              exit 1
+            fi
+            echo "Gradle attempt $attempt failed; retrying after a short delay..."
+            sleep $((attempt * 12))
+          done
 
       - name: Verify APK is signed by the permanent production certificate
         env:
