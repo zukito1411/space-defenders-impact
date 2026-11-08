@@ -76,6 +76,15 @@ jobs:
           keytool -list -keystore "$KEYSTORE_PATH" -alias "$ANDROID_KEY_ALIAS" -storepass:env ANDROID_KEYSTORE_PASSWORD > /dev/null
           echo "ANDROID_KEYSTORE_PATH=$KEYSTORE_PATH" >> "$GITHUB_ENV"
 
+      - name: Restore cached Gradle 8.14.3 toolchain
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/space-impact-gradle/8.14.3
+          key: gradle-8.14.3-jdk21-${{ runner.os }}-v1
+
+      - name: Prepare compatible pinned Gradle
+        run: bash scripts/setup-pinned-gradle.sh
+
       - name: Build release-signed APK (not debug)
         working-directory: android
         env:
@@ -84,20 +93,7 @@ jobs:
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           ANDROID_VERSION_CODE: ${{ github.run_number }}
         shell: bash
-        run: |
-          chmod +x ./gradlew
-          # Transient Gradle distribution/CDN failures should not block an APK release.
-          for attempt in 1 2 3; do
-            if ./gradlew --no-daemon --stacktrace assembleRelease; then
-              exit 0
-            fi
-            if [[ "$attempt" -eq 3 ]]; then
-              echo "::error::Android release build failed after 3 attempts."
-              exit 1
-            fi
-            echo "Gradle attempt $attempt failed; retrying after a short delay..."
-            sleep $((attempt * 12))
-          done
+        run: "$SPACE_IMPACT_GRADLE --no-daemon --stacktrace assembleRelease"
 
       - name: Verify APK is signed by the permanent production certificate
         env:
