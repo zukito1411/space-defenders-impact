@@ -225,7 +225,9 @@ export function SpaceImpactDefense({ availableCoins, onClose, initialMode = 'nor
   const [hoveredCell, setHoveredCell] = useState<[number,number]|null>(null)
   const [selectedTowerOnGrid, setSelectedTowerOnGrid] = useState<Tower|null>(null)
   const [destroyFlash, setDestroyFlash] = useState<string | null>(null)  // 'col,row' of smashed tower
-  const [firingTowers, setFiringTowers] = useState<Set<number>>(new Set())  // tower ids currently flashing
+  // Fire effects run as local compositor animations instead of causing
+  // a React state update for every shot from every turret.
+  const firingRingNodesRef = useRef<Map<number, HTMLDivElement>>(new Map())
   const [draggedTower, setDraggedTower] = useState<Tower|null>(null)
   const draggedTowerRef = useRef<Tower | null>(null)
   const dragOffsetRef = useRef<[number, number]>([0, 0])
@@ -1159,9 +1161,18 @@ export function SpaceImpactDefense({ availableCoins, onClose, initialMode = 'nor
           else if (td.key === 'artillery' || td.key === 'dreadnought') playGameSound('artillery')
           else playGameSound('shoot')
         }
-        // Muzzle flash
-        setFiringTowers(prev => { const s = new Set(prev); s.add(tower.id); return s })
-        setTimeout(() => setFiringTowers(prev => { const s = new Set(prev); s.delete(tower.id); return s }), 80)
+        // Muzzle flash: avoid rerendering the full battlefield for every shot.
+        const ring = firingRingNodesRef.current.get(tower.id)
+        if (ring) {
+          ring.getAnimations().forEach(animation => animation.cancel())
+          ring.animate(
+            [
+              { transform: 'translate(-50%, -50%) scale(0.3)', opacity: 0.82 },
+              { transform: 'translate(-50%, -50%) scale(2.4)', opacity: 0 },
+            ],
+            { duration: 480, easing: 'ease-out' },
+          )
+        }
       }
     }
 
@@ -2331,22 +2342,25 @@ export function SpaceImpactDefense({ availableCoins, onClose, initialMode = 'nor
                 }}
                 title={tower.towerDef.label}
               >
-                {firingTowers.has(tower.id) && (
-                  <div
-                    style={{
-                      position: 'absolute',
-                      left: '50%',
-                      top: '50%',
-                      width: cell * footprint * 1.05,
-                      height: cell * footprint * 1.05,
-                      borderRadius: '50%',
-                      border: `2.5px solid ${tower.towerDef.color}`,
-                      boxShadow: `0 0 14px ${tower.towerDef.color}99`,
-                      animation: 'firingWave 0.48s ease-out forwards',
-                      pointerEvents: 'none',
-                    }}
-                  />
-                )}
+                <div
+                  ref={node => {
+                    if (node) firingRingNodesRef.current.set(tower.id, node)
+                    else firingRingNodesRef.current.delete(tower.id)
+                  }}
+                  style={{
+                    position: 'absolute',
+                    left: '50%',
+                    top: '50%',
+                    width: cell * footprint * 1.05,
+                    height: cell * footprint * 1.05,
+                    borderRadius: '50%',
+                    border: `2.5px solid ${tower.towerDef.color}`,
+                    boxShadow: `0 0 14px ${tower.towerDef.color}99`,
+                    opacity: 0,
+                    transform: 'translate(-50%, -50%) scale(0.3)',
+                    pointerEvents: 'none',
+                  }}
+                />
                 <TowerShip tType={tower.type} color={tower.towerDef.color} size={shipSize} />
                 {tower.level > 1 && (
                   <div style={{ fontSize: cell * 0.22, color: '#ffd666', fontWeight: 700, lineHeight: 1 }}>★{tower.level}</div>
