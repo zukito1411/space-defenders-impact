@@ -52,90 +52,49 @@ jobs:
       - name: Copy web assets and sync Capacitor plugins
         run: npx cap sync android
 
-      - name: Restore configured APK signing keystore
+      - name: Prepare release signing key automatically
         env:
           RELEASE_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-          DEBUG_KEYSTORE_BASE64: ${{ secrets.ANDROID_DEBUG_KEYSTORE_BASE64 }}
           RELEASE_STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           RELEASE_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           RELEASE_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         shell: bash
         run: |
           set -euo pipefail
-          # Prefer permanent production signing whenever its four secrets exist.
-          # The single debug-key secret is supported as a DEVELOPMENT fallback.
+          KEYSTORE_PATH="$RUNNER_TEMP/SpaceImpactDefender-release.jks"
           if [[ -n "$RELEASE_KEYSTORE_BASE64" ]]; then
             if [[ -z "$RELEASE_STORE_PASSWORD" || -z "$RELEASE_KEY_ALIAS" || -z "$RELEASE_KEY_PASSWORD" ]]; then
-              echo "::error::Production keystore is configured but its password or alias secrets are missing."
+              echo "::error::Production signing secrets are incomplete."
               exit 1
             fi
-            if [[ "$RELEASE_KEY_ALIAS" == "androiddebugkey" ]]; then
-              echo "::error::Production signing must not use the Android debug-key alias."
-              exit 1
-            fi
-            KEYSTORE_BASE64="$RELEASE_KEYSTORE_BASE64"
-            KEYSTORE_PASSWORD="$RELEASE_STORE_PASSWORD"
-            KEY_ALIAS="$RELEASE_KEY_ALIAS"
+            printf '%s' "$RELEASE_KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_PATH"
+            PASSWORD="$RELEASE_STORE_PASSWORD"
+            ALIAS="$RELEASE_KEY_ALIAS"
             KEY_PASSWORD="$RELEASE_KEY_PASSWORD"
             SIGNING_KIND="production"
-          elif [[ -n "$DEBUG_KEYSTORE_BASE64" ]]; then
-            # Standard Android debug key: androiddebugkey / android.
-            # The build variant is release, but the certificate is DEBUG.
-            KEYSTORE_BASE64="$DEBUG_KEYSTORE_BASE64"
-            KEYSTORE_PASSWORD="android"
-            KEY_ALIAS="androiddebugkey"
-            KEY_PASSWORD="android"
-            SIGNING_KIND="debug"
-            echo "::warning::Release-variant APK signed with the existing Android DEBUG key. Not production-signed."
           else
-            echo "::error::Configure ANDROID_KEYSTORE_BASE64 with production credentials, or ANDROID_DEBUG_KEYSTORE_BASE64."
-            exit 1
+            echo "::warning::No permanent signing key is configured. Generating a one-build release key. This APK is NOT update-compatible with the next build; reinstalling will be required."
+            PASSWORD="$(openssl rand -hex 32)"
+            echo "::add-mask::$PASSWORD"
+            ALIAS="spaceimpactdefender"
+            KEY_PASSWORD="$PASSWORD"
+            SIGNING_KIND="temporary"
+            keytool -genkeypair -noprompt -storetype PKCS12 \
+              -keystore "$KEYSTORE_PATH" -alias "$ALIAS" \
+              -keyalg RSA -keysize 3072 -validity 10000 \
+              -dname "CN=Space Impact Defender, O=Space Impact Defenders" \
+              -storepass "$PASSWORD" -keypass "$KEY_PASSWORD"
           fi
-
-          KEYSTORE_PATH="$RUNNER_TEMP/SpaceImpactDefender-signing.jks"
-          export KEYSTORE_BASE64 KEYSTORE_PATH
-          python3 - <<'PY'
-          import base64
-          import binascii
-          import os
-          import re
-          import sys
-
-          # Normalize pasted formatting without logging private key material.
-          encoded = os.environ["KEYSTORE_BASE64"].strip().lstrip("\ufeff")
-          for prefix in ("ANDROID_DEBUG_KEYSTORE_BASE64=", "ANDROID_KEYSTORE_BASE64="):
-              if encoded.startswith(prefix):
-                  encoded = encoded[len(prefix):]
-          encoded = encoded.strip().strip("'\"")
-          if encoded.startswith("data:") and "base64," in encoded:
-              encoded = encoded.split("base64,", 1)[1]
-          encoded = encoded.replace("\\n", "").replace("\\r", "")
-          encoded = re.sub(r"\s+", "", encoded).rstrip("%")
-          encoded = encoded.replace("-", "+").replace("_", "/")
-          encoded += "=" * (-len(encoded) % 4)
-          try:
-              contents = base64.b64decode(encoded, validate=True)
-          except (ValueError, binascii.Error):
-              print("::error::Android keystore secret is not valid base64. Re-encode the binary keystore and replace the secret value.")
-              sys.exit(1)
-          if len(contents) < 100:
-              print("::error::Decoded Android keystore is empty or too small. Re-encode the .jks file.")
-              sys.exit(1)
-          with open(os.environ["KEYSTORE_PATH"], "wb") as keystore:
-              keystore.write(contents)
-          print("Decoded keystore data; validating alias and certificate.")
-          PY
           chmod 600 "$KEYSTORE_PATH"
-
-          if ! ANDROID_KEYSTORE_PASSWORD="$KEYSTORE_PASSWORD" keytool -list \
-              -keystore "$KEYSTORE_PATH" -alias "$KEY_ALIAS" \
-              -storepass:env ANDROID_KEYSTORE_PASSWORD >/dev/null 2>&1; then
-            echo "::error::Signing keystore cannot be opened. Check the debug secret or supply production credentials."
+          if ! ANDROID_KEYSTORE_PASSWORD="$PASSWORD" keytool -list -keystore "$KEYSTORE_PATH" -alias "$ALIAS" -storepass:env ANDROID_KEYSTORE_PASSWORD >/dev/null 2>&1; then
+            echo "::error::Release signing key failed validation."
             exit 1
           fi
+          echo "::add-mask::$PASSWORD"
+          echo "::add-mask::$KEY_PASSWORD"
           echo "ANDROID_KEYSTORE_PATH=$KEYSTORE_PATH" >> "$GITHUB_ENV"
-          echo "ANDROID_KEYSTORE_PASSWORD=$KEYSTORE_PASSWORD" >> "$GITHUB_ENV"
-          echo "ANDROID_KEY_ALIAS=$KEY_ALIAS" >> "$GITHUB_ENV"
+          echo "ANDROID_KEYSTORE_PASSWORD=$PASSWORD" >> "$GITHUB_ENV"
+          echo "ANDROID_KEY_ALIAS=$ALIAS" >> "$GITHUB_ENV"
           echo "ANDROID_KEY_PASSWORD=$KEY_PASSWORD" >> "$GITHUB_ENV"
           echo "ANDROID_SIGNING_KIND=$SIGNING_KIND" >> "$GITHUB_ENV"
 
@@ -190,10 +149,10 @@ jobs:
           set -euo pipefail
           TAG="android-v${GITHUB_RUN_NUMBER}"
           APK="release-output/SpaceImpactDefender-v${GITHUB_RUN_NUMBER}-release.apk"
-          if [[ "$ANDROID_SIGNING_KIND" == "debug" ]]; then
-            RELEASE_NOTES="Release-variant APK from commit ${GITHUB_SHA}. WARNING: Signed with an Android DEBUG keystore, NOT a production certificate. For development and testing only. Future updates require this same signing key."
+          if [[ "$ANDROID_SIGNING_KIND" == "temporary" ]]; then
+            RELEASE_NOTES="Release-variant APK from commit ${GITHUB_SHA}. WARNING: This APK is signed with a newly generated temporary key, not a permanent production certificate. Android will not install the next APK as an update over this one; reinstall and backup local saves. Configure permanent signing secrets for update-compatible releases."
           else
-            RELEASE_NOTES="Production-signed release APK from commit ${GITHUB_SHA}. Future updates use the same permanent production certificate."
+            RELEASE_NOTES="Production-signed APK from commit ${GITHUB_SHA} using the configured permanent signing certificate."
           fi
           if gh release view "$TAG" > /dev/null 2>&1; then
             gh release upload "$TAG" "$APK" --clobber
