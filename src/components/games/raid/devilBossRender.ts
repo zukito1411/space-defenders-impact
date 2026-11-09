@@ -1,7 +1,7 @@
-import { drawCanvasSpriteContain, getDevilBossCanvasSprite, RAID_DEVIL_BOSS_ATTACK_FILTER, RAID_DEVIL_BOSS_BASE_FILTER, RAID_DEVIL_BOSS_RED_OVERLAY_FILTER } from './assets'
+import { drawCanvasSpriteContain, getDevilBossCanvasSprite, RAID_DEVIL_BOSS_ATTACK_FILTER, RAID_DEVIL_BOSS_BASE_FILTER } from './assets'
 import { getDevilBossRedFilter } from './bossAttacks'
 import type { DevilBossPose, Enemy } from './types'
-import { clamp, drawRadialEllipse } from './utils'
+import { clamp } from './utils'
 import { getBossDefeatFade } from './enemyRender'
 import { easeOutCubic } from './stageBossRender'
 
@@ -53,22 +53,11 @@ export function drawDevilGundamBoss(ctx: CanvasRenderingContext2D, enemy: Enemy,
   const poseSettleScale = (1 + transitionPush * (pose === 'rage' ? 0.018 : pose === 'attack' || pose === 'attack2' ? 0.026 : 0.012)) * (1 + defeatedProgress * 0.045)
   const poseSettleY = transitionPush * size * (pose === 'attack' || pose === 'attack2' ? 0.014 : pose === 'rage' ? -0.008 : 0.006) + defeatedProgress * size * 0.035
   const pulse = (0.98 + Math.sin(time / 1100 + enemy.phase) * 0.018) * poseSettleScale
-  const coreGlow = (enemy.chargeTimer > 0 || attackActive ? 0.22 : pose === 'rage' ? 0.18 : 0.1) + redStep * 0.12
   const filter = redStep > 0
     ? getDevilBossRedFilter(redStep)
     : pose === 'rage' || enemy.chargeTimer > 0 || attackActive
       ? RAID_DEVIL_BOSS_ATTACK_FILTER
     : RAID_DEVIL_BOSS_BASE_FILTER
-
-  ctx.save()
-  ctx.globalCompositeOperation = 'lighter'
-  ctx.globalAlpha *= defeatedFade
-  drawRadialEllipse(ctx, 0, size * 0.26, size * 0.42, size * 0.5, [
-    [0, `rgba(239,68,68,${coreGlow})`],
-    [0.48, 'rgba(127,29,29,0.07)'],
-    [1, 'rgba(0,0,0,0)'],
-  ])
-  ctx.restore()
 
   if (!gpuBodyReady) {
     drawCanvasSpriteContain(
@@ -85,22 +74,5 @@ export function drawDevilGundamBoss(ctx: CanvasRenderingContext2D, enemy: Enemy,
     )
   }
 
-  if (!gpuBodyReady && redStep > 0) {
-    ctx.save()
-    ctx.globalCompositeOperation = 'lighter'
-    drawCanvasSpriteContain(
-      ctx,
-      sprite,
-      0,
-      size * 0.28 + poseSettleY,
-      size * 1.01,
-      RAID_DEVIL_BOSS_RED_OVERLAY_FILTER,
-      defeatedFade * redStep * 0.28,
-      0,
-      pulse,
-      '#ef4444',
-    )
-    ctx.restore()
-  }
 
 }
