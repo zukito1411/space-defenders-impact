@@ -21,6 +21,8 @@ jobs:
           cache: npm
       - name: Install locked dependencies
         run: npm ci
+      - name: Test Air Raid collision broad phase
+        run: node scripts/test-raid-spatial-hash.mjs
       - name: Typecheck and build
         run: npm run build
 
