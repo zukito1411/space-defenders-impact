@@ -1,8 +1,9 @@
 import { Container, Sprite, Texture } from 'pixi.js'
-import { getCobraBossCanvasSprite, getEnemyCanvasSize, getFinalBossCanvasSprite, getSquidBossCanvasSprite } from './assets'
+import { drawCanvasSpriteContain, getCobraBossCanvasSprite, getDevilBossCanvasSprite, getEnemyCanvasSize, getFinalBossCanvasSprite, getSquidBossCanvasSprite, RAID_DEVIL_BOSS_ATTACK_FILTER, RAID_DEVIL_BOSS_BASE_FILTER } from './assets'
 import { STAGE_CLEAR_SECONDS } from './constants'
+import { getDevilBossPose } from './devilBossRender'
 import { drawStageBossBodyDirect, getStageBossIntroProgress } from './stageBossRender'
-import type { Enemy } from './types'
+import type { DevilBossPose, Enemy } from './types'
 import { clamp } from './utils'
 import { raidObjectInView } from './visibility'
 import type { RaidGpuForegroundFrame } from './gpuForeground'
@@ -19,6 +20,8 @@ type BossArtworkEntry = {
   lastUsedMs: number
 }
 type BossSpritePair = { base: Sprite; blend: Sprite }
+type DevilArt = { texture: Texture; canvas: HTMLCanvasElement; renderSize: number }
+const DEVIL_POSES: DevilBossPose[] = ['idle', 'idle2', 'attack', 'attack2', 'rage']
 
 const FRAME_COUNT = 3
 const FRAME_TIME_MS = 620
@@ -34,6 +37,8 @@ const MAX_ACTIVE_BOSS_ARTSETS = 2
 export class RaidGpuBossBodies {
   readonly root = new Container()
   private readonly art = new Map<string, BossArtworkEntry>()
+  private readonly devilArt = new Map<string, DevilArt>()
+  private readonly pendingDevilArt = new Set<string>()
   private readonly nodes = new Map<number, BossSpritePair>()
   private readonly spareNodes: BossSpritePair[] = []
   private readonly renderedIds = new Set<number>()
@@ -118,10 +123,71 @@ export class RaidGpuBossBodies {
     return entry.frames.length === FRAME_COUNT ? entry : null
   }
 
-  prewarm(kind: GpuBossKind | null, viewportWidth: number, time: number) {
+  private devilArtKey(pose: DevilBossPose, size: number) {
+    const renderSize = Math.max(180, Math.min(GPU_BOSS_MAX_ARTWORK_SIZE, Math.ceil(size / 16) * 16))
+    return { key: 'devil:' + pose + ':' + renderSize, renderSize }
+  }
+
+  private buildDevilArt(pose: DevilBossPose, renderSize: number): DevilArt | null {
+    const sprite = getDevilBossCanvasSprite(pose)
+    if (!sprite.loaded || !sprite.image.complete || typeof document === 'undefined') return null
+    const canvas = document.createElement('canvas')
+    const canvasSize = Math.ceil(renderSize * 1.84)
+    canvas.width = canvasSize
+    canvas.height = canvasSize
+    const ctx = canvas.getContext('2d', { alpha: true })
+    if (!ctx) return null
+    ctx.imageSmoothingEnabled = true
+    ctx.imageSmoothingQuality = 'high'
+    ctx.setTransform(1, 0, 0, 1, canvasSize * 0.5, canvasSize * 0.5)
+    drawCanvasSpriteContain(ctx, sprite, 0, renderSize * 0.28, renderSize,
+      pose === 'rage' || pose === 'attack' || pose === 'attack2' ? RAID_DEVIL_BOSS_ATTACK_FILTER : RAID_DEVIL_BOSS_BASE_FILTER,
+      1, 0, 1, '#ef4444')
+    return { canvas, texture: Texture.from(canvas), renderSize }
+  }
+
+  private prepareDevil(pose: DevilBossPose, size: number): DevilArt | null {
+    if (this.disposed) return null
+    const { key, renderSize } = this.devilArtKey(pose, size)
+    const existing = this.devilArt.get(key)
+    if (existing) return existing
+    if (!this.pendingDevilArt.has(key)) {
+      this.pendingDevilArt.add(key)
+      const bake = () => {
+        this.pendingDevilArt.delete(key)
+        if (this.disposed || this.devilArt.has(key)) return
+        const entry = this.buildDevilArt(pose, renderSize)
+        if (!entry) return
+        if (this.devilArt.size >= 8) {
+          const oldest = this.devilArt.entries().next().value as [string, DevilArt] | undefined
+          if (oldest) {
+            this.devilArt.delete(oldest[0])
+            oldest[1].texture.destroy(true)
+            oldest[1].canvas.width = 0
+            oldest[1].canvas.height = 0
+          }
+        }
+        this.devilArt.set(key, entry)
+      }
+      if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+        window.requestIdleCallback(bake, { timeout: 1800 })
+      } else if (typeof window !== 'undefined') {
+        setTimeout(bake, 36)
+      }
+    }
+    return null
+  }
+
+  prewarm(kind: GpuBossKind | 'devil' | null, viewportWidth: number, time: number) {
     if (!kind || this.disposed || !this.isMobile(viewportWidth)) return
     const size = getEnemyCanvasSize({ isBoss: true, bossKind: kind } as Enemy, viewportWidth)
-    this.prepare(kind, size, time)
+    if (kind === 'devil') {
+      // Prepare each static pose while approaching the encounter; at most
+      // one GPU upload per pose instead of filtering its source every frame.
+      for (const pose of DEVIL_POSES) this.prepareDevil(pose, size)
+    } else {
+      this.prepare(kind, size, time)
+    }
   }
 
   private isMobile(width: number, height = 560) {
@@ -138,7 +204,31 @@ export class RaidGpuBossBodies {
         if (!enemy.isBoss || !raidObjectInView(frame.bounds, enemy.x, enemy.y, enemy.radius + 26)) continue
         const kind = enemy.bossKind === 'final' && (enemy.mirageTimer ?? 0) > 0 && enemy.mirageKind
           ? enemy.mirageKind : enemy.bossKind
-        if (kind !== 'squid' && kind !== 'snake' && kind !== 'final') continue
+        if (kind !== 'squid' && kind !== 'snake' && kind !== 'final' && kind !== 'devil') continue
+        if (kind === 'devil') {
+          const size = getEnemyCanvasSize(enemy, frame.width)
+          const pose = getDevilBossPose(enemy, frame.time)
+          const art = this.prepareDevil(pose, size)
+          if (!art) continue
+          const pair = this.nodes.get(enemy.id) ?? this.takePair(enemy.id)
+          activeIds.add(enemy.id)
+          this.renderedIds.add(enemy.id)
+          const fade = enemy.hp > 0 ? 1 :
+            clamp((enemy.defeatTimer ?? enemy.devilDefeatedTimer ?? STAGE_CLEAR_SECONDS) / STAGE_CLEAR_SECONDS, 0, 1)
+          const pulse = 0.98 + Math.sin(frame.time / 1100 + enemy.phase) * 0.018
+          const drawSize = size * (art.canvas.width / art.renderSize) * pulse
+          pair.base.visible = true
+          pair.blend.visible = false
+          pair.base.texture = art.texture
+          pair.base.position.set(enemy.x * frame.width / 100, enemy.y * frame.height / 100)
+          pair.base.width = drawSize
+          pair.base.height = drawSize
+          pair.base.rotation = 0
+          pair.base.alpha = fade
+          const rage = clamp(1 - enemy.hp / Math.max(1, enemy.maxHp), 0, 1)
+          pair.base.tint = pose === 'rage' && rage > 0.64 ? 0xffbfc1 : 0xffffff
+          continue
+        }
         // The snake's bite-lunge needs a special head-hidden pose; keep the
         // original Canvas art for that short interactive animation.
         if (kind === 'snake' && enemy.chargePattern === 'cross' &&
@@ -218,6 +308,10 @@ export class RaidGpuBossBodies {
       count += entry.frames.length
       for (const canvas of entry.canvases) pixels += canvas.width * canvas.height
     }
+    for (const entry of this.devilArt.values()) {
+      count += 1
+      pixels += entry.canvas.width * entry.canvas.height
+    }
     return { cachedFrames: count, estimatedTextureMB: Math.round(pixels * 4 / 1048576) }
   }
 
@@ -228,5 +322,12 @@ export class RaidGpuBossBodies {
     this.spareNodes.length = 0
     for (const entry of this.art.values()) this.disposeArtwork(entry)
     this.art.clear()
+    for (const entry of this.devilArt.values()) {
+      entry.texture.destroy(true)
+      entry.canvas.width = 0
+      entry.canvas.height = 0
+    }
+    this.devilArt.clear()
+    this.pendingDevilArt.clear()
   }
 }
