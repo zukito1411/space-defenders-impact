@@ -534,12 +534,7 @@ export function drawGalacticSquidBoss(ctx: CanvasRenderingContext2D, size: numbe
   const seconds = time / 1000
   ctx.save()
 
-  drawRadialEllipse(ctx, 0, size * 0.08, size * 0.62, size * 0.9, [
-    [0, 'rgba(168,85,247,0.1)'],
-    [0.48, 'rgba(88,28,135,0.08)'],
-    [1, 'rgba(0,0,0,0)'],
-  ])
-  drawBossDust(ctx, size, 'rgba(217,70,239,ALPHA)', 26, 3.7, 0.74, 0.92)
+  // Keep animated tentacles and the high-resolution body; no aura or dust.
 
   const tentacleTexture = getSquidBossTentacleTextureCanvas()
   const drawSegmentedTentacle = (baseX: number, baseY: number, tipX: number, tipY: number, side: number, phase: number, thick: number, bulb = false, attackCurl = false, curveScale = 1) => {
