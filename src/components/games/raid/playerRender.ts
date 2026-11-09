@@ -216,16 +216,36 @@ export function updateMesiahScoutDrones(player: Player, enemies: Enemy[], dt: nu
   }
 }
 
+// One small pre-rendered engine flame replaces two gradients, shadows and
+// Bézier fills for EACH scout EACH frame. Motion remains through the sprite's
+// position/rotation and a very slight alpha flicker.
+let supportEngineFlameCanvas: HTMLCanvasElement | null = null
+function getSupportEngineFlameCanvas() {
+  if (supportEngineFlameCanvas) return supportEngineFlameCanvas
+  if (typeof document === 'undefined') return null
+  const canvas = document.createElement('canvas')
+  canvas.width = 128
+  canvas.height = 152
+  const flameCtx = canvas.getContext('2d', { alpha: true })
+  if (!flameCtx) return null
+  drawPlayerEngine(flameCtx, 64, 34, 78, 0, 0.55)
+  supportEngineFlameCanvas = canvas
+  return canvas
+}
+
 export function drawSupportEngineTrail(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, time: number, rotation = 0, alpha = 0.82, shipKey = '') {
   if (shipKey === 'coreLander') return
-  const engineX = shipKey === 'coreLander' ? -size * 0.03 : 0
-  const engineY = shipKey === 'coreLander' ? -size * 0.04 : size * 0.1
-  const engineSize = size * (shipKey === 'coreLander' ? 0.42 : 0.78)
+  const flame = getSupportEngineFlameCanvas()
   ctx.save()
   ctx.translate(x, y)
   ctx.rotate(rotation)
-  ctx.globalAlpha *= alpha
-  drawPlayerEngine(ctx, engineX, engineY, engineSize, time, 0.55)
+  ctx.globalAlpha *= alpha * (0.97 + Math.sin(time / 140) * 0.03)
+  if (flame) {
+    const scale = size / 100
+    ctx.drawImage(flame, -64 * scale, -24 * scale, 128 * scale, 152 * scale)
+  } else {
+    drawPlayerEngine(ctx, 0, size * 0.1, size * 0.78, time, 0.55)
+  }
   ctx.restore()
 }
 
