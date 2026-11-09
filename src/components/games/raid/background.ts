@@ -1035,6 +1035,14 @@ export class PixiRaidBackground {
     }
   }
 
+  prewarmGpuBoss(kind: 'squid' | 'snake' | 'final' | null, width: number, time: number) {
+    this.gpuForeground.prewarmBoss(kind, width, time)
+  }
+
+  isBossGpuRendered(id: number) { return this.gpuForeground.isBossGpuRendered(id) }
+
+  getRaidGpuStats() { return this.gpuForeground.getStats() }
+
   renderForeground(frame: RaidGpuForegroundFrame) {
     const app = this.app
     if (!app) return false
