@@ -1546,7 +1546,7 @@ export function GradiusRaid({
         : stageRef.current === 5 ? 'squid'
         : stageRef.current === 10 ? 'snake'
         : stageRef.current >= MAX_RAID_STAGE ? 'final' : null
-      pixiBackground.prewarmGpuBoss(nextBossArt, cssWidth, time)
+      pixiBackground.prewarmGpuBoss(nextBossArt, cssWidth, cssHeight, time)
     }
     if (pixiBackground) {
       const mobileViewport = viewport.isSmallViewport
