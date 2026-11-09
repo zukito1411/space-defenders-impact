@@ -992,9 +992,14 @@ export class PixiRaidBackground {
         palette.surfaceMode, palette.surfaceA, palette.surfaceB, palette.surfaceC,
         palette.bgA, palette.bgB, palette.nebulaA, palette.nebulaB,
       ].join('|')
+      // Boss effects add several expensive screen-sized gradients to the
+      // foreground. On phones, reuse the mostly cosmetic background geometry
+      // for ~80ms during an active boss; the GPU sprite-scrolling, boss body
+      // transforms, player controls and combat still advance each game frame.
+      const bossGraphicsInterval = bossIntensity > 0.1 && (width <= 900 || height <= 600) ? 80 : 40
       const redrawGeometry = geometryKey !== this.geometryCacheKey ||
         time < this.lastGeometryUpdateMs ||
-        time - this.lastGeometryUpdateMs >= 40
+        time - this.lastGeometryUpdateMs >= bossGraphicsInterval
       if (redrawGeometry) {
         this.geometryCacheKey = geometryKey
         this.lastGeometryUpdateMs = time
