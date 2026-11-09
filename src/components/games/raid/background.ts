@@ -1037,6 +1037,14 @@ export class PixiRaidBackground {
       this.updateScenic(width, height, seconds, stageTheme, isLow, isMedium)
       this.updateRareCometFlyby(width, height, seconds, isLow, isMedium, stageTheme)
       this.updateBackgroundObjects(width, height, seconds, stageTheme, isLow, isMedium)
+      // Scrolling water/volcano island and cloud sprites are inexpensive
+      // position/visibility updates. They MUST advance each render frame,
+      // independently of the 40-80 ms cached vector-ground redraw cadence.
+      if (quality !== 'low' && isWateryWorldTheme(stageTheme)) {
+        this.updateWateryWorldAssetSprites(width, height, seconds, quality)
+      } else if (quality !== 'low' && isVolcanicWorldTheme(stageTheme)) {
+        this.updateVolcanicWorldAssetSprites(width, height, seconds, quality)
+      }
       // Present with the foreground once per rAF, not twice. Geometry,
       // scenery and textures are updated here on their existing cadence.
       return true
@@ -1411,7 +1419,6 @@ export class PixiRaidBackground {
       this.fillRadial(graphics, width - x * 0.74, y + height * 0.09, width * 0.28, height * 0.012, 'rgba(180,110,245,1)', 'rgba(0,0,0,0)', 0.035 * pulse)
     }
 
-    this.updateWateryWorldAssetSprites(width, height, seconds, quality)
 
     const glowCount = isMedium ? 3 : 5
     for (let i = 0; i < glowCount; i += 1) {
@@ -1568,7 +1575,6 @@ export class PixiRaidBackground {
       this.fillRadial(graphics, x + width * 0.08, y + height * 0.05, width * 0.16, height * 0.012, 'rgba(255,206,84,1)', 'rgba(0,0,0,0)', 0.06 * pulse)
     }
 
-    this.updateVolcanicWorldAssetSprites(width, height, seconds, quality)
 
     const emberCount = isMedium ? 10 : 20
     for (let i = 0; i < emberCount; i += 1) {
