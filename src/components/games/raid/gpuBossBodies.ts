@@ -1,242 +1,63 @@
 import { Container, Sprite, Texture } from 'pixi.js'
-import { drawCanvasSpriteContain, getCobraBossCanvasSprite, getDevilBossCanvasSprite, getEnemyCanvasSize, getFinalBossCanvasSprite, getSquidBossCanvasSprite, RAID_DEVIL_BOSS_ATTACK_FILTER, RAID_DEVIL_BOSS_BASE_FILTER } from './assets'
+import { drawCanvasSpriteContain, getDevilBossCanvasSprite, getEnemyCanvasSize, RAID_DEVIL_BOSS_ATTACK_FILTER, RAID_DEVIL_BOSS_BASE_FILTER } from './assets'
 import { STAGE_CLEAR_SECONDS } from './constants'
 import { getDevilBossPose } from './devilBossRender'
-import { drawStageBossBodyDirect, getStageBossIntroProgress } from './stageBossRender'
 import type { DevilBossPose, Enemy } from './types'
 import { clamp } from './utils'
 import { raidObjectInView } from './visibility'
 import type { RaidGpuForegroundFrame } from './gpuForeground'
 
 type GpuBossKind = 'squid' | 'snake' | 'final'
-type BossArtworkEntry = {
-  key: string
-  kind: GpuBossKind
-  renderSize: number
-  frames: Texture[]
-  canvases: HTMLCanvasElement[]
-  pending: boolean
-  cancelled: boolean
-  lastUsedMs: number
-}
-type BossSpritePair = { base: Sprite; blend: Sprite }
 type DevilArt = { texture: Texture; canvas: HTMLCanvasElement; renderSize: number }
+type BossSpritePair = {
+  base: Sprite
+  blend: Sprite
+  pose: DevilBossPose | null
+  transitionStarted: number
+  fromTexture: Texture | null
+}
 const DEVIL_POSES: DevilBossPose[] = ['idle', 'idle2', 'attack', 'attack2', 'rage']
-
-const FRAME_COUNT = 3
-const FRAME_TIME_MS = 620
-const GPU_BOSS_MAX_ARTWORK_SIZE = 440
-const MAX_ACTIVE_BOSS_ARTSETS = 2
+const MAX_DEVIL_ART_SIZE = 640
+const DEVIL_POSE_BLEND_MS = 160
 
 /**
- * Renders mobile boss body art once, ahead of the battle where possible, and
- * reuses it as GPU textures. Hitboxes, attacks, telegraphs, health bars and
- * dynamic Canvas overlays are deliberately left to the original game logic.
- * If an image isn't ready, Canvas handles the body without interruption.
+ * Keep static Devil Gundam pose art on the GPU, but never turn the animated
+ * squid, snake or final boss into a slideshow of three pre-baked pictures.
+ * Those bosses use their original time-driven Canvas animation instead.
+ * Decorative GPU squares, reticles and auras are intentionally not created.
  */
 export class RaidGpuBossBodies {
   readonly root = new Container()
-  private readonly auraLayer = new Container()
-  private readonly bodyLayer = new Container()
-  private readonly reticleLayer = new Container()
-  private auraTexture: Texture | null = null
-  private reticleTexture: Texture | null = null
-  private readonly auraNodes = new Map<number, Sprite>()
-  private readonly reticleNodes = new Map<number, Sprite>()
-  private readonly art = new Map<string, BossArtworkEntry>()
-  private readonly devilArt = new Map<string, DevilArt>()
-  private readonly pendingDevilArt = new Set<string>()
-  private lastDevilUseMs = 0
   private readonly nodes = new Map<number, BossSpritePair>()
   private readonly spareNodes: BossSpritePair[] = []
   private readonly renderedIds = new Set<number>()
+  private readonly devilArt = new Map<string, DevilArt>()
+  private readonly pendingDevilArt = new Set<string>()
+  private lastDevilUseMs = 0
   private disposed = false
 
-  constructor() {
-    this.auraLayer.blendMode = 'add'
-    this.reticleLayer.blendMode = 'add'
-    this.root.addChild(this.auraLayer, this.bodyLayer, this.reticleLayer)
-  }
-
-  private makeDecorationTexture(aura: boolean) {
-    const canvas = document.createElement('canvas')
-    canvas.width = canvas.height = 128
-    const c = canvas.getContext('2d')!
-    if (aura) {
-      const g = c.createRadialGradient(64, 64, 0, 64, 64, 38)
-      g.addColorStop(0, 'rgba(255,255,255,0.36)')
-      g.addColorStop(0.56, 'rgba(255,255,255,0.16)')
-      g.addColorStop(1, 'rgba(255,255,255,0)')
-      c.fillStyle = g
-      c.beginPath()
-      c.arc(64, 64, 38, 0, Math.PI * 2)
-      c.fill()
-      c.strokeStyle = 'rgba(255,255,255,0.46)'
-      c.lineWidth = 2
-      c.strokeRect(39, 39, 50, 50)
-      c.strokeRect(33, 33, 62, 62)
-    } else {
-      c.strokeStyle = 'rgba(255,255,255,0.8)'
-      c.lineWidth = 3
-      for (const sx of [-1, 1]) for (const sy of [-1, 1]) {
-        c.beginPath()
-        c.moveTo(64 + sx * 45, 64 + sy * 30)
-        c.lineTo(64 + sx * 45, 64 + sy * 45)
-        c.lineTo(64 + sx * 30, 64 + sy * 45)
-        c.stroke()
-      }
-    }
-    return Texture.from(canvas)
-  }
-
-  private ensureDecorations() {
-    if (!this.auraTexture) this.auraTexture = this.makeDecorationTexture(true)
-    if (!this.reticleTexture) this.reticleTexture = this.makeDecorationTexture(false)
-  }
-
-  private decorate(enemy: Enemy, kind: GpuBossKind | 'devil', size: number, frame: RaidGpuForegroundFrame, opacity: number) {
-    if (enemy.hp <= 0) {
-      const aura = this.auraNodes.get(enemy.id)
-      const reticle = this.reticleNodes.get(enemy.id)
-      if (aura) aura.visible = false
-      if (reticle) reticle.visible = false
-      return
-    }
-    this.ensureDecorations()
-    const x = enemy.x * frame.width / 100
-    const y = enemy.y * frame.height / 100
-    if (kind !== 'devil' && this.auraTexture) {
-      let aura = this.auraNodes.get(enemy.id)
-      if (!aura) {
-        aura = new Sprite(this.auraTexture)
-        aura.anchor.set(0.5)
-        this.auraLayer.addChild(aura)
-        this.auraNodes.set(enemy.id, aura)
-      }
-      aura.visible = true
-      aura.position.set(x, y)
-      aura.width = size * 2.8
-      aura.height = size * 2.8
-      aura.rotation = frame.time / 2400
-      aura.tint = kind === 'squid' ? 0xf472b6 : kind === 'snake' ? 0xf87171 : 0x38bdf8
-      aura.alpha = 0.62 * opacity
-    }
-    if (this.reticleTexture) {
-      let reticle = this.reticleNodes.get(enemy.id)
-      if (!reticle) {
-        reticle = new Sprite(this.reticleTexture)
-        reticle.anchor.set(0.5)
-        this.reticleLayer.addChild(reticle)
-        this.reticleNodes.set(enemy.id, reticle)
-      }
-      reticle.visible = true
-      reticle.position.set(x, y)
-      const isFinal = kind === 'final' || kind === 'devil'
-      reticle.width = size * (isFinal ? 2.1 : 1.82)
-      reticle.height = reticle.width
-      reticle.rotation = frame.time / 2400
-      reticle.tint = isFinal ? 0xfbbf24 : 0xfde68a
-      reticle.alpha = isFinal ? 0.56 : 0.44
-    }
-  }
-
-  private getArtworkKey(kind: GpuBossKind, size: number) {
-    const renderSize = Math.max(180, Math.min(GPU_BOSS_MAX_ARTWORK_SIZE, Math.ceil(size / 16) * 16))
-    return { key: kind + ':' + renderSize, renderSize }
-  }
-
-  private imageAvailable(kind: GpuBossKind) {
-    const image = kind === 'squid' ? getSquidBossCanvasSprite()
-      : kind === 'snake' ? getCobraBossCanvasSprite() : getFinalBossCanvasSprite()
-    return image.loaded && image.image.complete
-  }
-
-  private disposeArtwork(entry: BossArtworkEntry) {
-    entry.cancelled = true
-    for (const texture of entry.frames) texture.destroy(true)
-    for (const canvas of entry.canvases) {
-      canvas.width = 0
-      canvas.height = 0
-    }
-    entry.frames.length = 0
-    entry.canvases.length = 0
-  }
-
-  private scheduleNextFrame(entry: BossArtworkEntry) {
-    if (this.disposed || entry.cancelled || entry.pending || entry.frames.length >= FRAME_COUNT) return
-    entry.pending = true
-    const makeFrame = () => {
-      entry.pending = false
-      if (entry.cancelled || this.disposed || entry.frames.length >= FRAME_COUNT) return
-      if (!this.imageAvailable(entry.kind)) return
-      const index = entry.frames.length
-      const canvas = document.createElement('canvas')
-      const canvasSize = Math.ceil(entry.renderSize * 2.55)
-      canvas.width = canvasSize
-      canvas.height = canvasSize
-      const ctx = canvas.getContext('2d', { alpha: true })
-      if (!ctx) return
-      ctx.imageSmoothingEnabled = true
-      ctx.imageSmoothingQuality = 'high'
-      ctx.setTransform(1, 0, 0, 1, canvasSize * 0.5, canvasSize * 0.5)
-      // Preserve the existing fully painted squid / snake / final art.
-      drawStageBossBodyDirect(ctx, entry.kind, entry.renderSize, 680 + index * FRAME_TIME_MS, false, false, 0.32)
-      if (entry.cancelled || this.disposed) {
-        canvas.width = 0
-        canvas.height = 0
-        return
-      }
-      entry.canvases.push(canvas)
-      entry.frames.push(Texture.from(canvas))
-      // Each expensive source frame is baked at most once; never inside a
-      // gameplay frame's synchronous draw loop.
-      this.scheduleNextFrame(entry)
-    }
-    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-      window.requestIdleCallback(makeFrame, { timeout: 1800 })
-    } else if (typeof window !== 'undefined') {
-      setTimeout(makeFrame, 36)
-    }
-  }
-
-  private prepare(kind: GpuBossKind, size: number, time: number) {
-    if (this.disposed || typeof document === 'undefined' || !this.imageAvailable(kind)) return null
-    const { key, renderSize } = this.getArtworkKey(kind, size)
-    let entry = this.art.get(key)
-    if (!entry) {
-      if (this.art.size >= MAX_ACTIVE_BOSS_ARTSETS) {
-        const oldest = this.art.entries().next().value as [string, BossArtworkEntry] | undefined
-        if (oldest) {
-          this.art.delete(oldest[0])
-          this.disposeArtwork(oldest[1])
-        }
-      }
-      entry = { key, kind, renderSize, frames: [], canvases: [], pending: false, cancelled: false, lastUsedMs: time }
-      this.art.set(key, entry)
-    }
-    entry.lastUsedMs = time
-    this.scheduleNextFrame(entry)
-    return entry.frames.length === FRAME_COUNT ? entry : null
+  private isMobile(width: number, height = 560) {
+    return width <= 900 || height <= 600
   }
 
   private devilArtKey(pose: DevilBossPose, size: number) {
-    const renderSize = Math.max(180, Math.min(GPU_BOSS_MAX_ARTWORK_SIZE, Math.ceil(size / 16) * 16))
+    const renderSize = Math.max(180, Math.min(MAX_DEVIL_ART_SIZE, Math.ceil(size / 16) * 16))
     return { key: 'devil:' + pose + ':' + renderSize, renderSize }
   }
 
   private buildDevilArt(pose: DevilBossPose, renderSize: number): DevilArt | null {
-    const sprite = getDevilBossCanvasSprite(pose)
-    if (!sprite.loaded || !sprite.image.complete || typeof document === 'undefined') return null
+    const source = getDevilBossCanvasSprite(pose)
+    if (!source.loaded || !source.image.complete || typeof document === 'undefined') return null
     const canvas = document.createElement('canvas')
-    const canvasSize = Math.ceil(renderSize * 1.84)
-    canvas.width = canvasSize
-    canvas.height = canvasSize
+    const side = Math.ceil(renderSize * 1.84)
+    canvas.width = side
+    canvas.height = side
     const ctx = canvas.getContext('2d', { alpha: true })
     if (!ctx) return null
     ctx.imageSmoothingEnabled = true
     ctx.imageSmoothingQuality = 'high'
-    ctx.setTransform(1, 0, 0, 1, canvasSize * 0.5, canvasSize * 0.5)
-    drawCanvasSpriteContain(ctx, sprite, 0, renderSize * 0.28, renderSize,
+    ctx.setTransform(1, 0, 0, 1, side * 0.5, side * 0.5)
+    drawCanvasSpriteContain(ctx, source, 0, renderSize * 0.28, renderSize,
       pose === 'rage' || pose === 'attack' || pose === 'attack2' ? RAID_DEVIL_BOSS_ATTACK_FILTER : RAID_DEVIL_BOSS_BASE_FILTER,
       1, 0, 1, '#ef4444')
     return { canvas, texture: Texture.from(canvas), renderSize }
@@ -245,15 +66,15 @@ export class RaidGpuBossBodies {
   private prepareDevil(pose: DevilBossPose, size: number): DevilArt | null {
     if (this.disposed) return null
     const { key, renderSize } = this.devilArtKey(pose, size)
-    const existing = this.devilArt.get(key)
-    if (existing) return existing
+    const cached = this.devilArt.get(key)
+    if (cached) return cached
     if (!this.pendingDevilArt.has(key)) {
       this.pendingDevilArt.add(key)
       const bake = () => {
         this.pendingDevilArt.delete(key)
         if (this.disposed || this.devilArt.has(key)) return
-        const entry = this.buildDevilArt(pose, renderSize)
-        if (!entry) return
+        const art = this.buildDevilArt(pose, renderSize)
+        if (!art) return
         if (this.devilArt.size >= 8) {
           const oldest = this.devilArt.entries().next().value as [string, DevilArt] | undefined
           if (oldest) {
@@ -263,7 +84,7 @@ export class RaidGpuBossBodies {
             oldest[1].canvas.height = 0
           }
         }
-        this.devilArt.set(key, entry)
+        this.devilArt.set(key, art)
       }
       if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
         window.requestIdleCallback(bake, { timeout: 1800 })
@@ -275,123 +96,91 @@ export class RaidGpuBossBodies {
   }
 
   prewarm(kind: GpuBossKind | 'devil' | null, viewportWidth: number, viewportHeight: number, time: number) {
-    if (!kind || this.disposed || !this.isMobile(viewportWidth, viewportHeight)) return
-    const size = getEnemyCanvasSize({ isBoss: true, bossKind: kind } as Enemy, viewportWidth)
-    if (kind === 'devil') {
-      this.lastDevilUseMs = time
-      // Enqueue only one pose per tick. On heavy WebViews batching all five
-      // image filters into one idle period would cause another long spike.
-      if (this.pendingDevilArt.size === 0) {
-        for (const pose of DEVIL_POSES) {
-          if (this.devilArt.has(this.devilArtKey(pose, size).key)) continue
-          this.prepareDevil(pose, size)
-          break
-        }
+    // Don't pre-render animated bosses: that caused the slideshow regression.
+    if (kind !== 'devil' || this.disposed || !this.isMobile(viewportWidth, viewportHeight)) return
+    this.lastDevilUseMs = time
+    if (this.pendingDevilArt.size === 0) {
+      const size = getEnemyCanvasSize({ isBoss: true, bossKind: 'devil' } as Enemy, viewportWidth)
+      for (const pose of DEVIL_POSES) {
+        if (this.devilArt.has(this.devilArtKey(pose, size).key)) continue
+        this.prepareDevil(pose, size)
+        break
       }
-    } else {
-      this.prepare(kind, size, time)
     }
   }
 
-  private isMobile(width: number, height = 560) {
-    return width <= 900 || height <= 600
-  }
-
   isRendered(enemyId: number) { return this.renderedIds.has(enemyId) }
+
+  private takePair(id: number) {
+    const pair = this.spareNodes.pop() ?? {
+      base: new Sprite(Texture.WHITE),
+      blend: new Sprite(Texture.WHITE),
+      pose: null,
+      transitionStarted: 0,
+      fromTexture: null,
+    }
+    pair.pose = null
+    pair.fromTexture = null
+    for (const sprite of [pair.base, pair.blend]) {
+      sprite.anchor.set(0.5)
+      if (!sprite.parent) this.root.addChild(sprite)
+    }
+    this.nodes.set(id, pair)
+    return pair
+  }
 
   update(frame: RaidGpuForegroundFrame) {
     this.renderedIds.clear()
     const activeIds = new Set<number>()
     if (this.isMobile(frame.width, frame.height)) {
       for (const enemy of frame.enemies) {
-        if (!enemy.isBoss || !raidObjectInView(frame.bounds, enemy.x, enemy.y, enemy.radius + 26)) continue
-        const kind = enemy.bossKind === 'final' && (enemy.mirageTimer ?? 0) > 0 && enemy.mirageKind
-          ? enemy.mirageKind : enemy.bossKind
-        if (kind !== 'squid' && kind !== 'snake' && kind !== 'final' && kind !== 'devil') continue
-        if (kind === 'devil') {
-          this.lastDevilUseMs = frame.time
-          const size = getEnemyCanvasSize(enemy, frame.width)
-          const pose = getDevilBossPose(enemy, frame.time)
-          const art = this.prepareDevil(pose, size)
-          if (!art) continue
-          const pair = this.nodes.get(enemy.id) ?? this.takePair(enemy.id)
-          activeIds.add(enemy.id)
-          this.renderedIds.add(enemy.id)
-          const fade = enemy.hp > 0 ? 1 :
-            clamp((enemy.defeatTimer ?? enemy.devilDefeatedTimer ?? STAGE_CLEAR_SECONDS) / STAGE_CLEAR_SECONDS, 0, 1)
-          const pulse = 0.98 + Math.sin(frame.time / 1100 + enemy.phase) * 0.018
-          const drawSize = size * (art.canvas.width / art.renderSize) * pulse
-          pair.base.visible = true
-          pair.blend.visible = false
-          pair.base.texture = art.texture
-          pair.base.position.set(enemy.x * frame.width / 100, enemy.y * frame.height / 100)
-          pair.base.width = drawSize
-          pair.base.height = drawSize
-          pair.base.rotation = 0
-          pair.base.alpha = fade
-          const rage = clamp(1 - enemy.hp / Math.max(1, enemy.maxHp), 0, 1)
-          pair.base.tint = pose === 'rage' && rage > 0.64 ? 0xffbfc1 : 0xffffff
-          this.decorate(enemy, kind, size, frame, fade)
-          continue
-        }
-        // The snake's bite-lunge needs a special head-hidden pose; keep the
-        // original Canvas art for that short interactive animation.
-        if (kind === 'snake' && enemy.chargePattern === 'cross' &&
-          (enemy.chargeTimer > 0 || (enemy.beamVolleyRecovery ?? 0) > 0)) continue
-        const size = getEnemyCanvasSize(enemy, frame.width) * (frame.width > 1100 ? 0.96 : 1)
-        const art = this.prepare(kind, size, frame.time)
-        if (!art) continue
+        if (!enemy.isBoss || enemy.bossKind !== 'devil' ||
+          !raidObjectInView(frame.bounds, enemy.x, enemy.y, enemy.radius + 26)) continue
+        this.lastDevilUseMs = frame.time
+        const size = getEnemyCanvasSize(enemy, frame.width)
+        const pose = getDevilBossPose(enemy, frame.time)
+        const art = this.prepareDevil(pose, size)
+        if (!art) continue // Canvas draws the model until its texture is ready.
         const pair = this.nodes.get(enemy.id) ?? this.takePair(enemy.id)
         activeIds.add(enemy.id)
         this.renderedIds.add(enemy.id)
-        const stageIntro = getStageBossIntroProgress(enemy, kind)
-        const stageScale = 0.74 + stageIntro * 0.26
-        const floatScale = 1 + Math.sin(frame.time / 1100) * 0.03
-        const rotation = kind === 'snake' ? 0 : Math.sin(frame.time / 1100) * 0.5 * Math.PI / 180 * 0.45
         const fade = enemy.hp > 0 ? 1 :
           clamp((enemy.defeatTimer ?? enemy.devilDefeatedTimer ?? STAGE_CLEAR_SECONDS) / STAGE_CLEAR_SECONDS, 0, 1)
-        const opacity = fade * (0.58 + stageIntro * 0.42)
-        const positionX = enemy.x * frame.width / 100
-        const positionY = enemy.y * frame.height / 100
-        const drawSize = size * (art.canvases[0].width / art.renderSize) * floatScale * stageScale
-        const phase = (frame.time / FRAME_TIME_MS) % FRAME_COUNT
-        const frameIndex = Math.floor(phase)
-        const blend = phase - frameIndex
-        pair.base.visible = true
-        pair.blend.visible = true
-        pair.base.texture = art.frames[frameIndex]
-        pair.blend.texture = art.frames[(frameIndex + 1) % FRAME_COUNT]
-        const x = positionX
-        const y = positionY
+        if (pair.pose !== pose) {
+          pair.fromTexture = pair.pose !== null
+            ? (pair.blend.visible ? pair.blend.texture : pair.base.texture) : null
+          pair.pose = pose
+          pair.transitionStarted = frame.time
+        }
+        const blend = clamp((frame.time - pair.transitionStarted) / DEVIL_POSE_BLEND_MS, 0, 1)
+        const smoothBlend = blend * blend * (3 - 2 * blend)
+        const pulse = 0.985 + Math.sin(frame.time / 880 + enemy.phase) * 0.016
+        const drawSize = size * (art.canvas.width / art.renderSize) * pulse
+        const px = enemy.x * frame.width / 100
+        const py = enemy.y * frame.height / 100 + Math.sin(frame.time / 690 + enemy.phase) * size * 0.006
+        const tilt = Math.sin(frame.time / 1080 + enemy.phase) * 0.012
         for (const sprite of [pair.base, pair.blend]) {
-          sprite.position.set(x, y)
+          sprite.position.set(px, py)
           sprite.width = drawSize
           sprite.height = drawSize
-          sprite.rotation = rotation
+          sprite.rotation = tilt
+          sprite.tint = 0xffffff
         }
-        pair.base.alpha = (1 - blend) * opacity
-        pair.blend.alpha = blend * opacity
-        this.decorate(enemy, kind, size, frame, opacity)
-        if (kind === 'final') {
-          const rage = clamp((0.55 - enemy.hp / Math.max(1, enemy.maxHp)) / 0.55, 0, 1)
-          const tint = rage > 0.55 ? 0xffe0e5 : 0xffffff
-          pair.base.tint = tint
-          pair.blend.tint = tint
+        if (pair.fromTexture && smoothBlend < 1) {
+          pair.base.texture = pair.fromTexture
+          pair.blend.texture = art.texture
+          pair.base.alpha = fade * (1 - smoothBlend)
+          pair.blend.alpha = fade * smoothBlend
+          pair.base.visible = true
+          pair.blend.visible = true
         } else {
-          pair.base.tint = 0xffffff
-          pair.blend.tint = 0xffffff
+          pair.base.texture = art.texture
+          pair.base.alpha = fade
+          pair.base.visible = true
+          pair.blend.visible = false
+          pair.fromTexture = null
         }
       }
-    }
-    for (const [id, node] of this.auraNodes) {
-      if (activeIds.has(id)) continue
-      node.destroy()
-      this.auraNodes.delete(id)
-    }
-    for (const [id, node] of this.reticleNodes) {
-      if (activeIds.has(id)) continue
-      node.destroy()
-      this.reticleNodes.delete(id)
     }
     for (const [id, pair] of this.nodes) {
       if (activeIds.has(id)) continue
@@ -399,71 +188,39 @@ export class RaidGpuBossBodies {
       pair.blend.visible = false
       pair.base.texture = Texture.WHITE
       pair.blend.texture = Texture.WHITE
+      pair.pose = null
+      pair.fromTexture = null
       this.nodes.delete(id)
       if (this.spareNodes.length < 3) this.spareNodes.push(pair)
       else { pair.base.destroy(); pair.blend.destroy() }
     }
-    // Retire stage/pose textures after the encounter rather than keeping a
-    // second set of full-resolution GPU images alive indefinitely.
-    for (const [key, entry] of this.art) {
-      if (frame.time - entry.lastUsedMs <= 14000) continue
-      this.art.delete(key)
-      this.disposeArtwork(entry)
-    }
     if (this.lastDevilUseMs > 0 && frame.time - this.lastDevilUseMs > 14000) {
-      for (const entry of this.devilArt.values()) {
-        entry.texture.destroy(true)
-        entry.canvas.width = 0
-        entry.canvas.height = 0
+      for (const art of this.devilArt.values()) {
+        art.texture.destroy(true)
+        art.canvas.width = 0
+        art.canvas.height = 0
       }
       this.devilArt.clear()
       this.lastDevilUseMs = 0
     }
   }
 
-  private takePair(id: number) {
-    const pair = this.spareNodes.pop() ?? {
-      base: new Sprite(Texture.WHITE), blend: new Sprite(Texture.WHITE),
-    }
-    for (const sprite of [pair.base, pair.blend]) {
-      sprite.anchor.set(0.5)
-      if (!sprite.parent) this.bodyLayer.addChild(sprite)
-    }
-    this.nodes.set(id, pair)
-    return pair
-  }
-
   getStats() {
     let pixels = 0
-    let count = 0
-    for (const entry of this.art.values()) {
-      count += entry.frames.length
-      for (const canvas of entry.canvases) pixels += canvas.width * canvas.height
-    }
-    for (const entry of this.devilArt.values()) {
-      count += 1
-      pixels += entry.canvas.width * entry.canvas.height
-    }
-    return { cachedFrames: count, estimatedTextureMB: Math.round(pixels * 4 / 1048576) }
+    for (const art of this.devilArt.values()) pixels += art.canvas.width * art.canvas.height
+    return { cachedFrames: this.devilArt.size, estimatedTextureMB: Math.round(pixels * 4 / 1048576) }
   }
 
   destroy() {
     this.disposed = true
     this.root.destroy({ children: true })
     this.nodes.clear()
-    this.auraNodes.clear()
-    this.reticleNodes.clear()
-    this.auraTexture?.destroy(true)
-    this.reticleTexture?.destroy(true)
-    this.auraTexture = null
-    this.reticleTexture = null
     this.spareNodes.length = 0
-    for (const entry of this.art.values()) this.disposeArtwork(entry)
-    this.art.clear()
-    for (const entry of this.devilArt.values()) {
-      entry.texture.destroy(true)
-      entry.canvas.width = 0
-      entry.canvas.height = 0
+    this.renderedIds.clear()
+    for (const art of this.devilArt.values()) {
+      art.texture.destroy(true)
+      art.canvas.width = 0
+      art.canvas.height = 0
     }
     this.devilArt.clear()
     this.pendingDevilArt.clear()
