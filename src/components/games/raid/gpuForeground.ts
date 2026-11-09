@@ -1,4 +1,4 @@
-import { Container, Graphics, Sprite, Texture } from 'pixi.js'
+import { Container, Sprite, Texture } from 'pixi.js'
 import {
   getCanvasSpriteDimensions,
   getEnemyCanvasSize,
@@ -84,7 +84,11 @@ const HUES = [-18, 24, -8, 36, -30, 12, 44, -40]
  */
 export class RaidGpuForeground {
   readonly root = new Container()
-  private readonly particles = new Graphics()
+  private readonly particles = new Container()
+  private readonly particleNodes: Sprite[] = []
+  private particleCount = 0
+  private particleCircleTexture: Texture | null = null
+  private particleRingTexture: Texture | null = null
   private readonly glowLayer = new Container()
   private readonly alienLayer = new Container()
   private readonly projectileLayer = new Container()
@@ -104,6 +108,51 @@ export class RaidGpuForeground {
     this.particles.blendMode = 'add'
     this.projectileLayer.blendMode = 'add'
     this.root.addChild(this.particles, this.glowLayer, this.alienLayer, this.projectileLayer)
+  }
+
+  private ensureParticleTextures() {
+    if (this.particleCircleTexture && this.particleRingTexture) return
+    const makeCanvas = (ring: boolean) => {
+      const canvas = document.createElement('canvas')
+      canvas.width = 64
+      canvas.height = 64
+      const ctx = canvas.getContext('2d')
+      if (!ctx) return null
+      ctx.beginPath()
+      ctx.arc(32, 32, ring ? 29 : 27, 0, Math.PI * 2)
+      if (ring) {
+        ctx.strokeStyle = '#ffffff'
+        ctx.lineWidth = 2
+        ctx.stroke()
+      } else {
+        ctx.fillStyle = '#ffffff'
+        ctx.fill()
+      }
+      return canvas
+    }
+    const circle = makeCanvas(false)
+    const ring = makeCanvas(true)
+    if (!circle || !ring) return
+    this.particleCircleTexture = this.cachedTexture('particle-circle', circle, true)
+    this.particleRingTexture = this.cachedTexture('particle-ring', ring, true)
+  }
+
+  private paintParticle(texture: Texture, x: number, y: number, diameter: number, color: string, alpha: number) {
+    let sprite = this.particleNodes[this.particleCount]
+    if (!sprite) {
+      sprite = new Sprite(texture)
+      sprite.anchor.set(0.5)
+      this.particles.addChild(sprite)
+      this.particleNodes.push(sprite)
+    }
+    this.particleCount += 1
+    sprite.visible = true
+    sprite.texture = texture
+    sprite.tint = color
+    sprite.alpha = alpha
+    sprite.position.set(x, y)
+    sprite.width = diameter
+    sprite.height = diameter
   }
 
   private cachedTexture(key: string, canvas: HTMLCanvasElement, owned: boolean) {
@@ -250,25 +299,36 @@ export class RaidGpuForeground {
   }
 
   private updateParticles(frame: RaidGpuForegroundFrame) {
-    this.particles.clear()
+    // Previously each spark and ring created new tessellated Graphics
+    // geometry on every frame. Reuse two small GPU textures and pooled
+    // Sprite instances so dozens of particles share just two textures.
+    this.ensureParticleTextures()
+    this.particleCount = 0
     const sx = frame.width / 100
     const sy = frame.height / 100
-    if (frame.drawRipples) {
+    if (this.particleRingTexture && frame.drawRipples) {
       for (let i = Math.max(0, frame.ripples.length - frame.maxRipples); i < frame.ripples.length; i++) {
         const ripple = frame.ripples[i]
         if (!raidObjectInView(frame.bounds, ripple.x, ripple.y, ripple.size * 3)) continue
         const progress = 1 - ripple.life / Math.max(0.001, ripple.maxLife)
         const radius = ripple.size * 2.7 * (0.35 + progress * 1.05)
-        this.particles.circle(ripple.x * sx, ripple.y * sy, radius)
-          .stroke({ color: ripple.color, alpha: Math.max(0, ripple.life / Math.max(0.001, ripple.maxLife)) * 0.42, width: 1.25 })
+        this.paintParticle(
+          this.particleRingTexture, ripple.x * sx, ripple.y * sy, radius * 2,
+          ripple.color, Math.max(0, ripple.life / Math.max(0.001, ripple.maxLife)) * 0.42,
+        )
       }
     }
-    for (let i = Math.max(0, frame.sparks.length - frame.maxSparks); i < frame.sparks.length; i++) {
-      const spark = frame.sparks[i]
-      if (!raidObjectInView(frame.bounds, spark.x, spark.y, 3)) continue
-      this.particles.circle(spark.x * sx, spark.y * sy, Math.max(1, spark.size * 0.42))
-        .fill({ color: spark.color, alpha: Math.max(0, spark.life / Math.max(0.001, spark.maxLife)) })
+    if (this.particleCircleTexture) {
+      for (let i = Math.max(0, frame.sparks.length - frame.maxSparks); i < frame.sparks.length; i++) {
+        const spark = frame.sparks[i]
+        if (!raidObjectInView(frame.bounds, spark.x, spark.y, 3)) continue
+        this.paintParticle(
+          this.particleCircleTexture, spark.x * sx, spark.y * sy, Math.max(2, spark.size * 0.84),
+          spark.color, Math.max(0, spark.life / Math.max(0.001, spark.maxLife)),
+        )
+      }
     }
+    for (let i = this.particleCount; i < this.particleNodes.length; i++) this.particleNodes[i].visible = false
   }
 
   private pruneTextureCache() {
@@ -279,6 +339,8 @@ export class RaidGpuForeground {
       used.add(pair.glow.texture)
     }
     for (const shot of this.shotNodes.values()) used.add(shot.texture)
+    if (this.particleCircleTexture) used.add(this.particleCircleTexture)
+    if (this.particleRingTexture) used.add(this.particleRingTexture)
     for (const [key, record] of this.textures) {
       if (this.textures.size <= 96) break
       if (used.has(record.texture)) continue
@@ -314,6 +376,9 @@ export class RaidGpuForeground {
     this.shotNodes.clear()
     this.inactiveEnemyNodes.length = 0
     this.inactiveShotNodes.length = 0
+    this.particleNodes.length = 0
+    this.particleCircleTexture = null
+    this.particleRingTexture = null
     for (const record of this.textures.values()) {
       record.texture.destroy(true)
       if (record.owned) {
