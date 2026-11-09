@@ -147,7 +147,7 @@ export function drawRaidEnemy(
       ? enemy.mirageKind
       : enemy.bossKind
     const hasSpecialBossPresentation = displayBossKind === 'squid' || displayBossKind === 'snake' || displayBossKind === 'final' || displayBossKind === 'devil'
-    if (hasSpecialBossPresentation && displayBossKind !== 'devil') {
+    if (hasSpecialBossPresentation && displayBossKind !== 'devil' && !skipGpuStageBossBody) {
       drawCachedBossAura(ctx, enemy, x, y, size, time)
     }
     if (displayBossKind === 'devil') {
@@ -158,7 +158,7 @@ export function drawRaidEnemy(
       ctx.restore()
       if (enemy.hp > 0) {
         if (enemy.shieldTime > 0 || enemy.y < 18) drawBossShield(ctx, x, y + size * 0.18, size * 0.86, time, enemy.color)
-        drawCachedBossReticle(ctx, x, y, size, time, true)
+        if (!skipGpuStageBossBody) drawCachedBossReticle(ctx, x, y, size, time, true)
         drawCachedBossBar(ctx, enemy, x, y + size * 0.16, size)
       }
       return
@@ -194,7 +194,7 @@ export function drawRaidEnemy(
           drawSnakeVenomTelegraph(ctx, x, y, toX(enemy.chargeLane), toY(enemy.chargeTargetY ?? enemy.y + 34), size, viewportWidth, time, enemy.chargeTimer, enemy.chargePattern, enemy.beamVolleyRecovery ?? 0)
         }
         if (enemy.shieldTime > 0 || enemy.y < 15) drawBossShield(ctx, x, y, size, time, enemy.color)
-        drawCachedBossReticle(ctx, x, y, size, time, enemy.bossKind === 'final')
+        if (!skipGpuStageBossBody) drawCachedBossReticle(ctx, x, y, size, time, enemy.bossKind === 'final')
         drawCachedBossBar(ctx, enemy, x, y, size)
       }
       return
