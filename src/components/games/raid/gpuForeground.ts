@@ -392,7 +392,7 @@ export class RaidGpuForeground {
     }
   }
 
-  prewarmBoss(kind: 'squid' | 'snake' | 'final' | null, width: number, time: number) {
+  prewarmBoss(kind: 'squid' | 'snake' | 'final' | 'devil' | null, width: number, time: number) {
     this.bossBodies.prewarm(kind, width, time)
   }
 
