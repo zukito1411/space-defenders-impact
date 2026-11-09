@@ -6,6 +6,7 @@ import {
 } from './assets'
 import type { CachedCanvasDrawSource } from './assets'
 import { getCachedProjectileOrbSprite, getCachedProjectileTrailSprite, getCachedSpriteGlow } from './utils'
+import { getHomingMissileSprite } from './effectsRender'
 import type { Enemy, Ripple, Shot, Spark } from './types'
 import { raidObjectInView } from './visibility'
 import { createGpuBossProjectileCanvas, getGpuBossProjectileSpec } from './gpuBossProjectiles'
@@ -34,6 +35,9 @@ export type RaidGpuForegroundFrame = {
 // Special scripted weapons and beam-column warnings deliberately remain on
 // Canvas. The remaining shots can use already-cached identical orb/trail art.
 export function isGpuPlayerShot(shot: Shot, advanced: boolean) {
+  // Homing support swarms have cached missile artwork; drawing them in
+  // Canvas 2D per frame was expensive once four Mesiah scouts were active.
+  if (shot.kind === 'homing') return true
   if (advanced) return shot.kind === 'needle'
   return shot.kind !== 'beam' && shot.kind !== 'coreBlast' && shot.kind !== 'spiegelKunai'
 }
@@ -274,6 +278,7 @@ export class RaidGpuForeground {
       }
       this.shotNodes.set(id, node)
     }
+    node.blendMode = 'add'
     node.texture = texture
     node.alpha = 1
     node.anchor.set(art.originX / art.width, art.originY / art.height)
@@ -281,6 +286,31 @@ export class RaidGpuForeground {
     node.height = art.height
     node.position.set(shot.x * frame.width / 100, shot.y * frame.height / 100)
     node.rotation = style.kind === 'trail' ? Math.atan2(shot.vy, shot.vx) : 0
+  }
+
+  private showHomingShot(frame: RaidGpuForegroundFrame, shot: Shot, id: string) {
+    if (!raidObjectInView(frame.bounds, shot.x, shot.y, shot.radius + 16)) return
+    // Use the SAME missile bitmap as the original advanced Canvas renderer;
+    // only transfer positioning and rotation to pooled Pixi GPU sprites.
+    const image = getHomingMissileSprite(frame.visualScale)
+    if (!image.width || !image.height) return
+    const texture = this.cachedTexture('player-homing:' + image.width + ':' + image.height, image, false)
+    this.visibleShots.add(id)
+    let node = this.shotNodes.get(id)
+    if (!node) {
+      node = this.inactiveShotNodes.pop() ?? new Sprite(texture)
+      if (!node.parent) this.projectileLayer.addChild(node)
+      this.shotNodes.set(id, node)
+    }
+    node.visible = true
+    node.blendMode = 'normal'
+    node.texture = texture
+    node.alpha = 1
+    node.anchor.set(0.5)
+    node.position.set(shot.x * frame.width / 100, shot.y * frame.height / 100)
+    node.width = image.width
+    node.height = image.height
+    node.rotation = Math.atan2(shot.vy, shot.vx) + Math.PI / 2
   }
 
   private showSpecialShot(frame: RaidGpuForegroundFrame, shot: Shot, id: string) {
@@ -303,6 +333,8 @@ export class RaidGpuForeground {
       this.shotNodes.set(id, node)
     }
     node.visible = true
+    node.blendMode = 'add'
+    node.anchor.set(0.5)
     node.texture = texture
     node.position.set(spec.x, spec.y)
     node.width = spec.width
@@ -315,10 +347,18 @@ export class RaidGpuForeground {
   private updateShots(frame: RaidGpuForegroundFrame) {
     this.visibleShots.clear()
     for (const shot of frame.shots) {
+      if (shot.kind === 'homing') {
+        this.showHomingShot(frame, shot, 'p:' + shot.id)
+        continue
+      }
       const style = playerStyle(shot, frame.drawAdvancedShotFx, frame.visualScale)
       if (style) this.showShot(frame, shot, 'p:' + shot.id, style)
     }
     for (const shot of frame.guestShots) {
+      if (shot.kind === 'homing') {
+        this.showHomingShot(frame, shot, 'g:' + shot.id)
+        continue
+      }
       const style = playerStyle(shot, frame.drawAdvancedShotFx, frame.visualScale)
       if (style) this.showShot(frame, shot, 'g:' + shot.id, style)
     }
