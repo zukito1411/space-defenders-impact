@@ -40,8 +40,9 @@ export function getRaidGraphicsProfile(quality: GraphicsQuality, isSmallViewport
       maxIonStrikes: 3,
       maxPowerUps: 8,
       drawRipples: false,
-      drawAdvancedShotFx: true,
-      drawDecorativeOverlays: true,
+      // Route ordinary projectiles through pooled GPU sprites on low mode.
+      drawAdvancedShotFx: false,
+      drawDecorativeOverlays: false,
       drawOptionShips: true,
     }
   } else if (quality === 'medium') {
@@ -55,7 +56,7 @@ export function getRaidGraphicsProfile(quality: GraphicsQuality, isSmallViewport
       maxIonStrikes: 5,
       maxPowerUps: 12,
       drawRipples: true,
-      drawAdvancedShotFx: true,
+      drawAdvancedShotFx: false,
       drawDecorativeOverlays: true,
       drawOptionShips: true,
     }
