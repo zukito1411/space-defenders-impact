@@ -1045,8 +1045,8 @@ export class PixiRaidBackground {
     }
   }
 
-  prewarmGpuBoss(kind: 'squid' | 'snake' | 'final' | 'devil' | null, width: number, time: number) {
-    this.gpuForeground.prewarmBoss(kind, width, time)
+  prewarmGpuBoss(kind: 'squid' | 'snake' | 'final' | 'devil' | null, width: number, height: number, time: number) {
+    this.gpuForeground.prewarmBoss(kind, width, height, time)
   }
 
   isBossGpuRendered(id: number) { return this.gpuForeground.isBossGpuRendered(id) }
