@@ -17,7 +17,7 @@ export type CanvasSpriteEntry = {
 
 export const FILTERED_CANVAS_SPRITE_CACHE_LIMIT = 256
 
-export const filteredCanvasSpriteCache = new Map<string, HTMLCanvasElement>()
+export const filteredCanvasSpriteCache = new Map<string, HTMLCanvasElement | ImageBitmap>()
 let filteredCanvasSpriteCacheBytes = 0
 const FILTERED_SPRITE_BYTE_BUDGET =
   typeof navigator !== 'undefined' && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
@@ -25,13 +25,17 @@ const FILTERED_SPRITE_BYTE_BUDGET =
     : 160 * 1024 * 1024
 
 function evictOldestFilteredCanvasSprite() {
-  const first = filteredCanvasSpriteCache.entries().next().value as [string, HTMLCanvasElement] | undefined
+  const first = filteredCanvasSpriteCache.entries().next().value as [string, HTMLCanvasElement | ImageBitmap] | undefined
   if (!first) return
-  const [key, canvas] = first
+  const [key, source] = first
   filteredCanvasSpriteCache.delete(key)
-  filteredCanvasSpriteCacheBytes -= canvas.width * canvas.height * 4
-  canvas.width = 0
-  canvas.height = 0
+  filteredCanvasSpriteCacheBytes = Math.max(0, filteredCanvasSpriteCacheBytes - source.width * source.height * 4)
+  // ImageBitmap.close frees the transferred worker/GPU image immediately.
+  if ('close' in source) source.close()
+  else {
+    source.width = 0
+    source.height = 0
+  }
 }
 
 export const canvasPatternCache = new WeakMap<CanvasRenderingContext2D, WeakMap<HTMLCanvasElement, CanvasPattern | null>>()
@@ -967,43 +971,191 @@ export function warmCanvasSpriteFilter(sprite: CanvasSpriteEntry, filter: string
   getFilteredCanvasSpriteSource(sprite, source, width, height, filter)
 }
 
+
+// A single worker pre-rasterizes static sprite filter variants. Browser
+// canvas and Pixi/WebGL rendering stay on the main thread; only independent
+// pixel preprocessing moves off-thread, as in Leighneron's terrain workers.
+let raidFilterWarmScheduled = false
+type RaidFilterWarmTask = { sprite: CanvasSpriteEntry; filter: string }
+type RaidFilterWorkerReply =
+  | { type: 'result'; spriteKey: string; width: number; height: number; filter: string; bitmap: ImageBitmap }
+  | { type: 'done' }
+  | { type: 'error' }
+
+function cacheWorkerFilteredSprite(key: string, bitmap: ImageBitmap) {
+  if (filteredCanvasSpriteCache.has(key)) {
+    bitmap.close()
+    return
+  }
+  const bytes = bitmap.width * bitmap.height * 4
+  if (bytes > FILTERED_SPRITE_BYTE_BUDGET) {
+    bitmap.close()
+    return
+  }
+  while (
+    filteredCanvasSpriteCache.size >= FILTERED_CANVAS_SPRITE_CACHE_LIMIT ||
+    filteredCanvasSpriteCacheBytes + bytes > FILTERED_SPRITE_BYTE_BUDGET
+  ) {
+    if (!filteredCanvasSpriteCache.size) break
+    evictOldestFilteredCanvasSprite()
+  }
+  filteredCanvasSpriteCache.set(key, bitmap)
+  filteredCanvasSpriteCacheBytes += bytes
+}
+
+function warmRaidSpriteFiltersIncrementally(jobs: RaidFilterWarmTask[]) {
+  let index = 0
+  const step = () => {
+    // Keep the synchronous fallback bounded to at most two filters per turn,
+    // instead of a large freeze just as the player opens Air Raid.
+    const end = Math.min(index + 2, jobs.length)
+    for (; index < end; index += 1) {
+      const task = jobs[index]
+      warmCanvasSpriteFilter(task.sprite, task.filter)
+    }
+    if (index < jobs.length) {
+      if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+        window.requestIdleCallback(step, { timeout: 250 })
+      } else {
+        setTimeout(step, 16)
+      }
+    }
+  }
+  setTimeout(step, 0)
+}
+
+function warmRaidSpriteFiltersInBackground(jobs: RaidFilterWarmTask[]) {
+  if (jobs.length === 0) return
+  if (
+    typeof Worker === 'undefined' ||
+    typeof OffscreenCanvas === 'undefined' ||
+    typeof createImageBitmap === 'undefined'
+  ) {
+    warmRaidSpriteFiltersIncrementally(jobs)
+    return
+  }
+
+  let worker: Worker
+  try {
+    worker = new Worker(new URL('./filterWarm.worker.ts', import.meta.url), { type: 'module' })
+  } catch {
+    warmRaidSpriteFiltersIncrementally(jobs)
+    return
+  }
+
+  // One source bitmap in flight, never an unbounded list of workers/bitmaps.
+  const groups = new Map<string, { sprite: CanvasSpriteEntry; filters: Set<string> }>()
+  for (const job of jobs) {
+    let group = groups.get(job.sprite.cacheKey)
+    if (!group) {
+      group = { sprite: job.sprite, filters: new Set() }
+      groups.set(job.sprite.cacheKey, group)
+    }
+    group.filters.add(job.filter)
+  }
+  const ordered = [...groups.values()]
+  let index = 0
+  let stopped = false
+  const fallback = () => {
+    if (stopped) return
+    stopped = true
+    worker.terminate()
+    // The main-thread fallback always completes safely, but only in idle
+    // slices. Cached worker results are reused instead of regenerated.
+    warmRaidSpriteFiltersIncrementally(jobs)
+  }
+  const submitNext = async () => {
+    if (stopped) return
+    if (index >= ordered.length) {
+      stopped = true
+      worker.terminate()
+      return
+    }
+    const { sprite, filters } = ordered[index++]
+    const { source, width, height } = getCanvasSpriteDimensions(sprite)
+    try {
+      if (!sprite.loaded || width <= 0 || height <= 0) {
+        void submitNext()
+        return
+      }
+      const bitmap = await createImageBitmap(source)
+      if (stopped) {
+        bitmap.close()
+        return
+      }
+      worker.postMessage({
+        type: 'batch', spriteKey: sprite.cacheKey,
+        bitmap, width, height, filters: [...filters],
+      }, [bitmap])
+    } catch {
+      fallback()
+    }
+  }
+
+  worker.onmessage = (event: MessageEvent<RaidFilterWorkerReply>) => {
+    if (stopped) {
+      if (event.data.type === 'result') event.data.bitmap.close()
+      return
+    }
+    const reply = event.data
+    if (reply.type === 'result') {
+      cacheWorkerFilteredSprite(
+        `${reply.spriteKey}|${Math.round(reply.width)}x${Math.round(reply.height)}|${reply.filter}`,
+        reply.bitmap,
+      )
+    } else if (reply.type === 'done') {
+      void submitNext()
+    } else {
+      fallback()
+    }
+  }
+  worker.onerror = fallback
+  worker.onmessageerror = fallback
+  void submitNext()
+}
+
 export function warmRaidCanvasFilterVariants() {
-  if (typeof document === 'undefined') return
+  if (typeof document === 'undefined' || raidFilterWarmScheduled) return
+  raidFilterWarmScheduled = true
+  const jobs: Array<{ sprite: CanvasSpriteEntry; filter: string }> = []
+  const enqueue = (sprite: CanvasSpriteEntry, filter: string) => {
+    if (sprite.loaded && sprite.image.complete && shouldCacheCanvasFilter(filter)) jobs.push({ sprite, filter })
+  }
 
   for (const ship of SHIP_OPTIONS) {
     const sprite = getShipCanvasSprite(ship.key)
-    for (const filter of RAID_SHIP_STATIC_FILTERS) warmCanvasSpriteFilter(sprite, filter)
+    for (const filter of RAID_SHIP_STATIC_FILTERS) enqueue(sprite, filter)
   }
   for (const spriteKey of ['mesiahBlack', 'mesiahWhite', 'mesiahRaptorBlack', 'mesiahRaptorWhite', 'coreLanderBurning', 'godGundam', 'godGundamBurning', 'spiegel']) {
     const sprite = getShipCanvasSprite(spriteKey)
-    for (const filter of RAID_SHIP_STATIC_FILTERS) warmCanvasSpriteFilter(sprite, filter)
+    for (const filter of RAID_SHIP_STATIC_FILTERS) enqueue(sprite, filter)
   }
 
   RAID_DEVIL_BOSS_POSES.forEach((pose) => {
     const sprite = getDevilBossCanvasSprite(pose)
-    for (const filter of RAID_DEVIL_BOSS_STATIC_FILTERS) warmCanvasSpriteFilter(sprite, filter)
+    for (const filter of RAID_DEVIL_BOSS_STATIC_FILTERS) enqueue(sprite, filter)
   })
 
   for (let variant = 0; variant < RAID_ALIEN_SPRITE_COUNT; variant += 1) {
     const sprite = getNormalAlienCanvasSprite(variant)
-    for (const filter of RAID_NORMAL_BOSS_POOL_STATIC_FILTERS) warmCanvasSpriteFilter(sprite, filter)
+    for (const filter of RAID_NORMAL_BOSS_POOL_STATIC_FILTERS) enqueue(sprite, filter)
   }
 
   for (let variant = 0; variant < RAID_ELITE_SPRITE_COUNT; variant += 1) {
     const sprite = getEliteAlienCanvasSprite(variant)
-    for (const filter of RAID_ELITE_STATIC_FILTERS) warmCanvasSpriteFilter(sprite, filter)
+    for (const filter of RAID_ELITE_STATIC_FILTERS) enqueue(sprite, filter)
   }
 
-  for (const filter of RAID_SQUID_BOSS_STATIC_FILTERS) warmCanvasSpriteFilter(getSquidBossCanvasSprite(), filter)
-  for (const filter of RAID_COBRA_BOSS_STATIC_FILTERS) warmCanvasSpriteFilter(getCobraBossCanvasSprite(), filter)
-  warmCanvasSpriteFilter(getDevilMasterProjectileCanvasSprite(), RAID_DEVIL_MASTER_PROJECTILE_FILTER)
+  for (const filter of RAID_SQUID_BOSS_STATIC_FILTERS) enqueue(getSquidBossCanvasSprite(), filter)
+  for (const filter of RAID_COBRA_BOSS_STATIC_FILTERS) enqueue(getCobraBossCanvasSprite(), filter)
+  enqueue(getDevilMasterProjectileCanvasSprite(), RAID_DEVIL_MASTER_PROJECTILE_FILTER)
   for (const model of RAID_CORE_LANDER_COMBAT_MODELS) {
     for (const pose of Object.keys(RAID_CORE_LANDER_BARRAGE_ASSET_PATHS[model]) as GodGundamBarragePose[]) {
-      warmCanvasSpriteFilter(getGodGundamBarrageCanvasSprite(model, pose), getCoreLanderBarrageFilter(model, false))
-      warmCanvasSpriteFilter(getGodGundamBarrageCanvasSprite(model, pose), getCoreLanderBarrageFilter(model, true))
+      enqueue(getGodGundamBarrageCanvasSprite(model, pose), getCoreLanderBarrageFilter(model, false))
+      enqueue(getGodGundamBarrageCanvasSprite(model, pose), getCoreLanderBarrageFilter(model, true))
     }
   }
-  for (const filter of RAID_FINAL_BOSS_STATIC_FILTERS) warmCanvasSpriteFilter(getFinalBossCanvasSprite(), filter)
+  for (const filter of RAID_FINAL_BOSS_STATIC_FILTERS) enqueue(getFinalBossCanvasSprite(), filter)
   getSquidBossTentacleTextureCanvas()
   getCobraBossBodyTextureCanvas()
 
@@ -1011,12 +1163,14 @@ export function warmRaidCanvasFilterVariants() {
     const sprite = getRaidOtherCanvasSprite(key)
     const filters = RAID_OTHER_STATIC_FILTERS[key]
     if (!filters) continue
-    for (const filter of filters) warmCanvasSpriteFilter(sprite, filter)
+    for (const filter of filters) enqueue(sprite, filter)
   }
 
   for (let variant = 0; variant < RAID_DERELICT_WRECK_VARIANTS.length; variant += 1) {
-    warmCanvasSpriteFilter(getDerelictWreckCanvasSprite(variant), RAID_DERELICT_WRECK_FILTER)
+    enqueue(getDerelictWreckCanvasSprite(variant), RAID_DERELICT_WRECK_FILTER)
   }
+  // Filter preparation is a background job: the game never waits for it.
+  warmRaidSpriteFiltersInBackground(jobs)
 }
 
 export function getCachedCanvasPattern(ctx: CanvasRenderingContext2D, texture: HTMLCanvasElement) {
