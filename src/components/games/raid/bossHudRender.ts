@@ -1,5 +1,5 @@
 import type { Enemy } from './types'
-import { clamp, drawRadialEllipse, getOffscreenRenderScale, traceRoundedRect, trimOldestMapEntry } from './utils'
+import { clamp, drawRadialEllipse, getOffscreenRenderScale, traceRoundedRect } from './utils'
 import { hexToRgba } from './stageBossRender'
 import type { StageBossRenderCacheEntry } from './stageBossRender'
 
@@ -33,8 +33,21 @@ export const BOSS_RETICLE_CACHE_LIMIT = 8
 export const BOSS_RETICLE_FRAME_MS = 66
 
 export const bossBarSpriteCache = new Map<string, HTMLCanvasElement>()
+const bossBarLastFill = new Map<string, number>()
+const bossBarLastUpdate = new Map<string, number>()
 
-export const BOSS_BAR_CACHE_LIMIT = 40
+export const BOSS_BAR_CACHE_LIMIT = 12
+const MOBILE_BOSS_BAR_REFRESH_MS = 80
+
+function retireOldBossBar() {
+  const oldest = bossBarSpriteCache.entries().next().value as [string, HTMLCanvasElement] | undefined
+  if (!oldest) return
+  bossBarSpriteCache.delete(oldest[0])
+  bossBarLastFill.delete(oldest[0])
+  bossBarLastUpdate.delete(oldest[0])
+  oldest[1].width = 0
+  oldest[1].height = 0
+}
 
 export function drawBossAura(ctx: CanvasRenderingContext2D, enemy: Enemy, x: number, y: number, size: number, time: number) {
   const seconds = time / 1000
@@ -517,19 +530,35 @@ export function drawCachedBossBar(ctx: CanvasRenderingContext2D, enemy: Enemy, x
   const renderScale = getOffscreenRenderScale(ctx, size)
   const sizeBucket = Math.round(size / 4) * 4
   const scaleBucket = Math.round(renderScale * 100)
-  const key = `bbar:${enemy.bossKind}:${sizeBucket}:${scaleBucket}:${fillBucket}`
+  // Reuse one buffer per active boss instead of allocating a new one for
+  // every hit-point bucket. Boss health changes often during rapid fire.
+  const key = `bbar:${enemy.id}:${enemy.bossKind}:${sizeBucket}:${scaleBucket}`
   const leftPad = Math.ceil(framePadX + skullRadius * 2 + 6)
   const topPad = Math.ceil(Math.max(10, size * 0.032) + framePadY + 10)
   const bottomPad = isFinal ? 36 : 22
   const canvasW = Math.ceil(barWidth + leftPad * 2)
   const canvasH = Math.ceil(height + topPad + bottomPad)
   let canvas = bossBarSpriteCache.get(key)
+  const now = typeof performance !== 'undefined' ? performance.now() : 0
+  const lastUpdate = bossBarLastUpdate.get(key) ?? Number.NEGATIVE_INFINITY
+  const needsRefresh = !canvas || (
+    bossBarLastFill.get(key) !== fillBucket &&
+    (!isMobileBossCanvas() || now - lastUpdate >= MOBILE_BOSS_BAR_REFRESH_MS)
+  )
   if (!canvas) {
     canvas = document.createElement('canvas')
     canvas.width = Math.max(1, Math.ceil(canvasW * renderScale))
     canvas.height = Math.max(1, Math.ceil(canvasH * renderScale))
+  }
+  if (needsRefresh) {
     const bCtx = canvas.getContext('2d')
     if (!bCtx) { drawBossBar(ctx, enemy, x, y, size); return }
+    bCtx.setTransform(1, 0, 0, 1, 0, 0)
+    bCtx.clearRect(0, 0, canvas.width, canvas.height)
+    bCtx.globalAlpha = 1
+    bCtx.globalCompositeOperation = 'source-over'
+    bCtx.filter = 'none'
+    bCtx.shadowBlur = 0
     bCtx.setTransform(renderScale, 0, 0, renderScale, 0, 0)
     bCtx.imageSmoothingEnabled = true
     bCtx.imageSmoothingQuality = 'high'
@@ -627,8 +656,12 @@ export function drawCachedBossBar(ctx: CanvasRenderingContext2D, enemy: Enemy, x
       bCtx.fillText(enemy.bossKind === 'snake' ? 'SERPENT GUARDIAN' : 'ABYSS SQUID', textX, barY - 5)
     }
     bCtx.restore()
-    trimOldestMapEntry(bossBarSpriteCache, BOSS_BAR_CACHE_LIMIT)
-    bossBarSpriteCache.set(key, canvas)
+    if (!bossBarSpriteCache.has(key)) {
+      if (bossBarSpriteCache.size >= BOSS_BAR_CACHE_LIMIT) retireOldBossBar()
+      bossBarSpriteCache.set(key, canvas)
+    }
+    bossBarLastFill.set(key, fillBucket)
+    bossBarLastUpdate.set(key, now)
   }
   const screenBarX = x - barWidth / 2
   const screenBarY = y + size * 0.5 + (isFinal ? 20 : 16)
