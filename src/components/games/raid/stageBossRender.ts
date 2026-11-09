@@ -1,19 +1,39 @@
 import { drawCanvasSpriteContain, drawSpriteGlow, getEliteAlienCanvasSprite, getFinalBossCanvasSprite, RAID_FINAL_BOSS_CORE_OFFSET_X, RAID_FINAL_BOSS_CORE_OFFSET_Y } from './assets'
 import type { BossKind, BriefingBossKind, Enemy, MirageBossKind } from './types'
-import { clamp, drawRadialEllipse, getOffscreenRenderScale, trimOldestMapEntry } from './utils'
+import { clamp, drawRadialEllipse, getOffscreenRenderScale } from './utils'
 import { drawGalacticSnakeBoss } from './snakeBossRender'
 import { drawBossDust, drawGalacticSquidBoss } from './squidBossRender'
 
 export type StageBossRenderCacheEntry = {
   canvas: HTMLCanvasElement
   frameBucket: number
+  appearanceBucket?: number
 }
 
 export const stageBossRenderCache = new Map<string, StageBossRenderCacheEntry>()
 
-export const STAGE_BOSS_RENDER_CACHE_LIMIT = 10
+export const STAGE_BOSS_RENDER_CACHE_LIMIT = 4
 
 export const STAGE_BOSS_RENDER_FRAME_MS = 50
+
+// Keep boss movement and attacks at full game-frame cadence. Only the
+// expensive, layered source artwork is refreshed at 10Hz on phones.
+// The same offscreen canvas is reused instead of allocating a new 10+ MiB
+// pixel buffer for every 50ms animation bucket.
+export const MOBILE_STAGE_BOSS_ART_FRAME_MS = 100
+
+function isMobileRaidBossViewport() {
+  return typeof window !== 'undefined' &&
+    (window.innerWidth <= 900 || window.innerHeight <= 600)
+}
+
+function retireOldestStageBossCanvas() {
+  const oldest = stageBossRenderCache.entries().next().value as [string, StageBossRenderCacheEntry] | undefined
+  if (!oldest) return
+  stageBossRenderCache.delete(oldest[0])
+  oldest[1].canvas.width = 0
+  oldest[1].canvas.height = 0
+}
 
 export const STAGE_BOSS_RENDER_SIZE_CAP = 680
 
@@ -138,22 +158,23 @@ export function drawCachedStageBossBody(
 
   const renderScale = getOffscreenRenderScale(ctx, size)
   const renderSize = Math.max(180, Math.min(STAGE_BOSS_RENDER_SIZE_CAP, Math.ceil(size / 8) * 8))
-  const frameBucket = Math.floor(time / STAGE_BOSS_RENDER_FRAME_MS)
+  const artFrameMs = isMobileRaidBossViewport() ? MOBILE_STAGE_BOSS_ART_FRAME_MS : STAGE_BOSS_RENDER_FRAME_MS
+  const frameBucket = Math.floor(time / artFrameMs)
   const rageBucket = kind === 'final' ? Math.round(clamp(rage, 0, 1) * 14) : 0
   const scaleBucket = Math.round(renderScale * 100)
-  const cacheKey = `${kind}:${renderSize}:${scaleBucket}:${redEyeWarning ? 1 : 0}:${hideHead ? 1 : 0}:${rageBucket}`
+  const cacheKey = `${kind}:${renderSize}:${scaleBucket}:${redEyeWarning ? 1 : 0}:${hideHead ? 1 : 0}`
   let entry = stageBossRenderCache.get(cacheKey)
   if (!entry) {
     const canvasSize = Math.ceil(renderSize * 2.55)
     const canvas = document.createElement('canvas')
     canvas.width = Math.max(1, Math.ceil(canvasSize * renderScale))
     canvas.height = Math.max(1, Math.ceil(canvasSize * renderScale))
-    entry = { canvas, frameBucket: Number.NaN }
-    trimOldestMapEntry(stageBossRenderCache, STAGE_BOSS_RENDER_CACHE_LIMIT)
+    entry = { canvas, frameBucket: Number.NaN, appearanceBucket: Number.NaN }
+    if (stageBossRenderCache.size >= STAGE_BOSS_RENDER_CACHE_LIMIT) retireOldestStageBossCanvas()
     stageBossRenderCache.set(cacheKey, entry)
   }
 
-  if (entry.frameBucket !== frameBucket) {
+  if (entry.frameBucket !== frameBucket || entry.appearanceBucket !== rageBucket) {
     const { canvas } = entry
     const cachedCtx = canvas.getContext('2d')
     if (!cachedCtx) {
@@ -165,8 +186,9 @@ export function drawCachedStageBossBody(
     cachedCtx.imageSmoothingEnabled = true
     cachedCtx.imageSmoothingQuality = 'high'
     cachedCtx.setTransform(renderScale, 0, 0, renderScale, canvas.width * 0.5, canvas.height * 0.5)
-    drawStageBossBodyDirect(cachedCtx, kind, renderSize, frameBucket * STAGE_BOSS_RENDER_FRAME_MS, redEyeWarning, hideHead, rageBucket / 14)
+    drawStageBossBodyDirect(cachedCtx, kind, renderSize, frameBucket * artFrameMs, redEyeWarning, hideHead, rageBucket / 14)
     entry.frameBucket = frameBucket
+    entry.appearanceBucket = rageBucket
   }
 
   const { canvas } = entry
