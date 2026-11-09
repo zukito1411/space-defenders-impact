@@ -1542,7 +1542,8 @@ export function GradiusRaid({
     // Bake expensive composite boss artwork during the stage approach rather
     // than during the boss's first live combat frames.
     if (pixiBackground && !activeBoss) {
-      const nextBossArt = stageRef.current === 5 ? 'squid'
+      const nextBossArt = stageRef.current === NORMAL_RAID_DEVIL_BONUS_STAGE ? 'devil'
+        : stageRef.current === 5 ? 'squid'
         : stageRef.current === 10 ? 'snake'
         : stageRef.current >= MAX_RAID_STAGE ? 'final' : null
       pixiBackground.prewarmGpuBoss(nextBossArt, cssWidth, time)
