@@ -142,6 +142,9 @@ export function GradiusRaid({
     lastDraw: 0, interval: 0, slowFrames: 0, fastFrames: 0,
     windowStart: 0, ticks: 0, frames: 0, simMs: 0, drawMs: 0, maxFrameMs: 0,
   })
+  // Fractional accumulator preserves ~60Hz at 75/90/120Hz display rates,
+  // rather than wrongly dropping 90Hz panels to 45 FPS.
+  const frameClockRef = useRef({ lastRafTime: 0, accumulatedMs: 0 })
   const rafRef = useRef(0)
   const lastTimeRef = useRef(0)
   const lastRenderTimeRef = useRef(0)
@@ -6750,11 +6753,18 @@ export function GradiusRaid({
       // Android often schedules requestAnimationFrame at 90-120Hz. Running
       // expensive gameplay + two fullscreen renderers at that refresh rate
       // wastes work and can cause sustained low FPS and thermal throttling.
-      const frameDelta = time - lastTimeRef.current
-      if (lastTimeRef.current > 0 && frameDelta < 14) {
+      const frameClock = frameClockRef.current
+      const rawRafDelta = frameClock.lastRafTime > 0
+        ? Math.min(100, Math.max(0, time - frameClock.lastRafTime))
+        : 1000 / 60
+      frameClock.lastRafTime = time
+      frameClock.accumulatedMs = Math.min(1000 / 30, frameClock.accumulatedMs + rawRafDelta)
+      if (frameClock.accumulatedMs < 1000 / 60 - 0.5) {
         rafRef.current = requestAnimationFrame(tick)
         return
       }
+      frameClock.accumulatedMs = Math.max(0, frameClock.accumulatedMs - 1000 / 60)
+      const frameDelta = Math.max(0, time - lastTimeRef.current)
       const dt = Math.min(0.033, frameDelta / 1000 || 0)
       lastTimeRef.current = time
       const perf = perfBudgetRef.current
@@ -6864,6 +6874,8 @@ export function GradiusRaid({
       } else if (rafRef.current === 0) {
         // Reset last-time so the first tick after resuming doesn't produce a huge dt spike.
         lastTimeRef.current = performance.now()
+        frameClockRef.current.lastRafTime = 0
+        frameClockRef.current.accumulatedMs = 0
         perfBudgetRef.current.lastDraw = 0
         rafRef.current = requestAnimationFrame(tick)
       }
