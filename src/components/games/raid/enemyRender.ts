@@ -3,11 +3,11 @@ import { drawCanvasSpriteContain, drawSpriteGlow, getCanvasSpriteDimensions, get
 import { DEG, STAGE_CLEAR_SECONDS } from './constants'
 import type { BossKind, Enemy, MirageBossKind } from './types'
 import { clamp } from './utils'
-import { drawBossShield, drawCachedBossAura, drawCachedBossBar, drawCachedBossReticle } from './bossHudRender'
+import { drawBossShield, drawCachedBossBar } from './bossHudRender'
 import { drawDevilGundamBoss } from './devilBossRender'
 import { drawSnakeVenomTelegraph } from './snakeBossRender'
 import { drawSquidWhipStrike } from './squidBossRender'
-import { drawCachedStageBossBody, drawEnemyHitFlash, drawStageBossIntroEffect, getStageBossIntroProgress, hexToRgba } from './stageBossRender'
+import { drawCachedStageBossBody, drawEnemyHitFlash, drawFinalBossSpriteBody, getStageBossIntroProgress, hexToRgba } from './stageBossRender'
 
 // Normal enemies change their color grading with the background pulse. Drawing
 // a large original PNG with ctx.filter on every animation frame is costly in
@@ -146,10 +146,6 @@ export function drawRaidEnemy(
     const displayBossKind: BossKind | MirageBossKind | null = enemy.bossKind === 'final' && (enemy.mirageTimer ?? 0) > 0 && enemy.mirageKind
       ? enemy.mirageKind
       : enemy.bossKind
-    const hasSpecialBossPresentation = displayBossKind === 'squid' || displayBossKind === 'snake' || displayBossKind === 'final' || displayBossKind === 'devil'
-    if (hasSpecialBossPresentation && displayBossKind !== 'devil' && !skipGpuStageBossBody) {
-      drawCachedBossAura(ctx, enemy, x, y, size, time)
-    }
     if (displayBossKind === 'devil') {
       ctx.save()
       ctx.translate(x, y)
@@ -158,7 +154,6 @@ export function drawRaidEnemy(
       ctx.restore()
       if (enemy.hp > 0) {
         if (enemy.shieldTime > 0 || enemy.y < 18) drawBossShield(ctx, x, y + size * 0.18, size * 0.86, time, enemy.color)
-        if (!skipGpuStageBossBody) drawCachedBossReticle(ctx, x, y, size, time, true)
         drawCachedBossBar(ctx, enemy, x, y + size * 0.16, size)
       }
       return
@@ -169,7 +164,6 @@ export function drawRaidEnemy(
       ctx.save()
       ctx.translate(x, y)
       ctx.globalAlpha *= defeatFade
-      drawStageBossIntroEffect(ctx, size, time, displayBossKind, introProgress)
       ctx.rotate(displayBossKind === 'snake' ? 0 : rotation * 0.45)
       ctx.globalAlpha *= 0.58 + introProgress * 0.42
       ctx.scale(floatScale * introScale, floatScale * introScale)
@@ -181,7 +175,9 @@ export function drawRaidEnemy(
         }
         else {
           const finalRage = clamp((0.55 - enemy.hp / Math.max(1, enemy.maxHp)) / 0.55, 0, 1)
-          drawCachedStageBossBody(ctx, 'final', size, time, false, false, finalRage)
+          // A single filtered source image is cheaper and smoother than
+          // re-rasterizing an enormous animated texture each art frame.
+          drawFinalBossSpriteBody(ctx, size, time, finalRage)
         }
       }
       drawEnemyHitFlash(ctx, size, enemy.hitFlash, enemy.bossKind === 'final' ? '#fbbf24' : enemy.bossKind === 'squid' ? '#f472b6' : '#f43f5e')
@@ -194,7 +190,6 @@ export function drawRaidEnemy(
           drawSnakeVenomTelegraph(ctx, x, y, toX(enemy.chargeLane), toY(enemy.chargeTargetY ?? enemy.y + 34), size, viewportWidth, time, enemy.chargeTimer, enemy.chargePattern, enemy.beamVolleyRecovery ?? 0)
         }
         if (enemy.shieldTime > 0 || enemy.y < 15) drawBossShield(ctx, x, y, size, time, enemy.color)
-        if (!skipGpuStageBossBody) drawCachedBossReticle(ctx, x, y, size, time, enemy.bossKind === 'final')
         drawCachedBossBar(ctx, enemy, x, y, size)
       }
       return
