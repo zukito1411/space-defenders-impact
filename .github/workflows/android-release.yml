@@ -10,6 +10,11 @@ on:
 permissions:
   contents: write
 
+# Never race two pushes while initializing the permanent signing key.
+concurrency:
+  group: space-impact-android-signed-main
+  cancel-in-progress: false
+
 jobs:
   signed-android-release:
     if: github.ref == 'refs/heads/main'
@@ -52,8 +57,9 @@ jobs:
       - name: Copy web assets and sync Capacitor plugins
         run: npx cap sync android
 
-      - name: Prepare release signing key automatically
+      - name: Restore persistent Android signing identity
         env:
+          GH_TOKEN: ${{ github.token }}
           RELEASE_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           RELEASE_STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           RELEASE_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
@@ -61,42 +67,86 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          KEYSTORE_PATH="$RUNNER_TEMP/SpaceImpactDefender-release.jks"
-          if [[ -n "$RELEASE_KEYSTORE_BASE64" ]]; then
-            if [[ -z "$RELEASE_STORE_PASSWORD" || -z "$RELEASE_KEY_ALIAS" || -z "$RELEASE_KEY_PASSWORD" ]]; then
-              echo "::error::Production signing secrets are incomplete."
+          umask 077
+          # Draft GitHub releases are visible only to collaborators with
+          # write access. NEVER publish this release or its signing key.
+          VAULT_TAG="space-impact-private-signing-vault-v1"
+          VAULT_ASSET="SpaceImpactDefender-private-signing-vault-v1.tar.gz"
+          VAULT_DIR="$RUNNER_TEMP/space-impact-signing-vault"
+          VAULT_ARCHIVE="$RUNNER_TEMP/$VAULT_ASSET"
+          KEYSTORE_PATH="$VAULT_DIR/SpaceImpactDefender-release.jks"
+          mkdir -p "$VAULT_DIR"
+          if gh release view "$VAULT_TAG" --json isDraft --jq '.isDraft' > "$RUNNER_TEMP/vault-is-draft" 2>/dev/null; then
+            if [[ "$(cat "$RUNNER_TEMP/vault-is-draft")" != "true" ]]; then
+              echo "::error::The private signing vault was published! Stop and secure the key."
               exit 1
             fi
-            printf '%s' "$RELEASE_KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_PATH"
-            PASSWORD="$RELEASE_STORE_PASSWORD"
-            ALIAS="$RELEASE_KEY_ALIAS"
-            KEY_PASSWORD="$RELEASE_KEY_PASSWORD"
-            SIGNING_KIND="production"
+            echo "Restoring permanent signing key from existing private draft."
+            gh release download "$VAULT_TAG" --pattern "$VAULT_ASSET" --dir "$RUNNER_TEMP" --clobber
+            test -s "$VAULT_ARCHIVE"
+            tar -xzf "$VAULT_ARCHIVE" -C "$VAULT_DIR"
           else
-            echo "::warning::No permanent signing key is configured. Generating a one-build release key. This APK is NOT update-compatible with the next build; reinstalling will be required."
-            PASSWORD="$(openssl rand -hex 32)"
-            echo "::add-mask::$PASSWORD"
-            ALIAS="spaceimpactdefender"
-            KEY_PASSWORD="$PASSWORD"
-            SIGNING_KIND="temporary"
-            keytool -genkeypair -noprompt -storetype PKCS12 \
-              -keystore "$KEYSTORE_PATH" -alias "$ALIAS" \
-              -keyalg RSA -keysize 3072 -validity 10000 \
-              -dname "CN=Space Impact Defender, O=Space Impact Defenders" \
-              -storepass "$PASSWORD" -keypass "$KEY_PASSWORD"
+            echo "Creating the first permanent Android signing key."
+            if [[ -n "$RELEASE_KEYSTORE_BASE64" ]]; then
+              if [[ -z "$RELEASE_STORE_PASSWORD" || -z "$RELEASE_KEY_ALIAS" || -z "$RELEASE_KEY_PASSWORD" ]]; then
+                echo "::error::Optional permanent signing secrets are incomplete."
+                exit 1
+              fi
+              printf '%s' "$RELEASE_KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_PATH"
+              STORE_PASSWORD="$RELEASE_STORE_PASSWORD"
+              KEY_ALIAS="$RELEASE_KEY_ALIAS"
+              KEY_PASSWORD="$RELEASE_KEY_PASSWORD"
+            else
+              # Ignore ANDROID_DEBUG_KEYSTORE_BASE64, which previously held
+              # a fingerprint and cannot sign or update an Android APK.
+              STORE_PASSWORD="$(openssl rand -hex 32)"
+              KEY_ALIAS="spaceimpactdefender"
+              KEY_PASSWORD="$STORE_PASSWORD"
+              echo "::add-mask::$STORE_PASSWORD"
+              keytool -genkeypair -noprompt -storetype PKCS12 \
+                -keystore "$KEYSTORE_PATH" -alias "$KEY_ALIAS" \
+                -keyalg RSA -keysize 3072 -validity 10000 \
+                -dname "CN=Space Impact Defender, O=Space Impact Defenders" \
+                -storepass "$STORE_PASSWORD" -keypass "$KEY_PASSWORD"
+            fi
+            echo "::add-mask::$STORE_PASSWORD"
+            echo "::add-mask::$KEY_PASSWORD"
+            printf '%s' "$STORE_PASSWORD" > "$VAULT_DIR/store-password"
+            printf '%s' "$KEY_ALIAS" > "$VAULT_DIR/key-alias"
+            printf '%s' "$KEY_PASSWORD" > "$VAULT_DIR/key-password"
+            chmod 600 "$KEYSTORE_PATH"
+            tar -czf "$VAULT_ARCHIVE" -C "$VAULT_DIR" \
+              SpaceImpactDefender-release.jks store-password key-alias key-password
+            gh release create "$VAULT_TAG" "$VAULT_ARCHIVE" \
+              --target "$GITHUB_SHA" --draft \
+              --title "PRIVATE ANDROID SIGNING VAULT - DO NOT PUBLISH" \
+              --notes "CONTAINS PRIVATE SIGNING KEY AND PASSWORD. NEVER PUBLISH, SHARE OR DELETE."
+            if [[ "$(gh release view "$VAULT_TAG" --json isDraft --jq '.isDraft')" != "true" ]]; then
+              echo "::error::Unable to confirm private signing vault."
+              exit 1
+            fi
+            echo "Permanent certificate saved for all subsequent builds."
           fi
+          for item in SpaceImpactDefender-release.jks store-password key-alias key-password; do
+            test -s "$VAULT_DIR/$item" || { echo "::error::Corrupt signing vault: missing $item"; exit 1; }
+          done
+          STORE_PASSWORD="$(cat "$VAULT_DIR/store-password")"
+          KEY_ALIAS="$(cat "$VAULT_DIR/key-alias")"
+          KEY_PASSWORD="$(cat "$VAULT_DIR/key-password")"
+          echo "::add-mask::$STORE_PASSWORD"
+          echo "::add-mask::$KEY_PASSWORD"
           chmod 600 "$KEYSTORE_PATH"
-          if ! ANDROID_KEYSTORE_PASSWORD="$PASSWORD" keytool -list -keystore "$KEYSTORE_PATH" -alias "$ALIAS" -storepass:env ANDROID_KEYSTORE_PASSWORD >/dev/null 2>&1; then
-            echo "::error::Release signing key failed validation."
+          if ! ANDROID_KEYSTORE_PASSWORD="$STORE_PASSWORD" keytool -list \
+              -keystore "$KEYSTORE_PATH" -alias "$KEY_ALIAS" \
+              -storepass:env ANDROID_KEYSTORE_PASSWORD >/dev/null 2>&1; then
+            echo "::error::Saved signing key is invalid. Never silently rotate a key."
             exit 1
           fi
-          echo "::add-mask::$PASSWORD"
-          echo "::add-mask::$KEY_PASSWORD"
           echo "ANDROID_KEYSTORE_PATH=$KEYSTORE_PATH" >> "$GITHUB_ENV"
-          echo "ANDROID_KEYSTORE_PASSWORD=$PASSWORD" >> "$GITHUB_ENV"
-          echo "ANDROID_KEY_ALIAS=$ALIAS" >> "$GITHUB_ENV"
+          echo "ANDROID_KEYSTORE_PASSWORD=$STORE_PASSWORD" >> "$GITHUB_ENV"
+          echo "ANDROID_KEY_ALIAS=$KEY_ALIAS" >> "$GITHUB_ENV"
           echo "ANDROID_KEY_PASSWORD=$KEY_PASSWORD" >> "$GITHUB_ENV"
-          echo "ANDROID_SIGNING_KIND=$SIGNING_KIND" >> "$GITHUB_ENV"
+          echo "ANDROID_SIGNING_KIND=permanent" >> "$GITHUB_ENV"
 
       - name: Restore cached Gradle 8.14.3 toolchain
         uses: actions/cache@v4
@@ -149,11 +199,7 @@ jobs:
           set -euo pipefail
           TAG="android-v${GITHUB_RUN_NUMBER}"
           APK="release-output/SpaceImpactDefender-v${GITHUB_RUN_NUMBER}-release.apk"
-          if [[ "$ANDROID_SIGNING_KIND" == "temporary" ]]; then
-            RELEASE_NOTES="Release-variant APK from commit ${GITHUB_SHA}. WARNING: This APK is signed with a newly generated temporary key, not a permanent production certificate. Android will not install the next APK as an update over this one; reinstall and backup local saves. Configure permanent signing secrets for update-compatible releases."
-          else
-            RELEASE_NOTES="Production-signed APK from commit ${GITHUB_SHA} using the configured permanent signing certificate."
-          fi
+          RELEASE_NOTES="Android APK from commit ${GITHUB_SHA}. Signed with the same permanent certificate secured in an unpublished private draft. v19 and earlier had per-build keys and require one last reinstall."
           if gh release view "$TAG" > /dev/null 2>&1; then
             gh release upload "$TAG" "$APK" --clobber
             gh release edit "$TAG" --latest
