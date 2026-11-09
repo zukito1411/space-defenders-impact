@@ -868,6 +868,7 @@ export class PixiRaidBackground {
   private readonly farStarLayers = [new Graphics(), new Graphics(), new Graphics()]
   private readonly nearStarLayers = [new Graphics(), new Graphics(), new Graphics()]
   private readonly speedLineGraphics = new Graphics()
+  private readonly speedLineSprites = BACKGROUND_SPEED_LINES.map(() => new Sprite(Texture.WHITE))
   private readonly surfaceGraphics = new Graphics()
   private readonly wateryIslandSprites = createWorldSurfaceSprites(WATERY_WORLD_ISLAND_LAYERS.length)
   private readonly wateryCloudSprites = createWorldSurfaceSprites(WATERY_WORLD_CLOUD_LAYERS.length)
@@ -920,6 +921,10 @@ export class PixiRaidBackground {
       this.nearStarLayers.forEach((layer) => this.scene.addChild(layer))
       this.scene.addChild(this.surfaceGraphics)
       this.scene.addChild(this.speedLineGraphics)
+      this.speedLineSprites.forEach((sprite) => {
+        sprite.anchor.set(0.5, 0)
+        this.scene.addChild(sprite)
+      })
       this.wateryIslandSprites.forEach((sprite) => this.scene.addChild(sprite))
       this.wateryCloudSprites.forEach((sprite) => this.scene.addChild(sprite))
       this.volcanicIslandSprites.forEach((sprite) => this.scene.addChild(sprite))
@@ -1292,22 +1297,23 @@ export class PixiRaidBackground {
   }
 
   private updateSpeedLines(width: number, height: number, seconds: number, streak: string, isLow: boolean, isMedium: boolean, stageTheme: number) {
-    const graphics = this.speedLineGraphics
-    graphics.clear()
+    // Speed lines are static quads with GPU-only position updates. Never
+    // clear and re-tessellate Graphics geometry every render frame.
     const allowSpeedLines = shouldDrawRaidSpeedLines(stageTheme)
-    graphics.visible = !isLow && allowSpeedLines
-    if (isLow || !allowSpeedLines) return
-
-    const speedLineLimit = isMedium ? 2 : BACKGROUND_SPEED_LINES.length
-    for (let index = 0; index < speedLineLimit; index += 1) {
+    this.speedLineGraphics.visible = false
+    const speedLineLimit = !allowSpeedLines || isLow ? 0 : isMedium ? 2 : BACKGROUND_SPEED_LINES.length
+    for (let index = 0; index < this.speedLineSprites.length; index += 1) {
+      const sprite = this.speedLineSprites[index]
+      sprite.visible = index < speedLineLimit
+      if (!sprite.visible) continue
       const line = BACKGROUND_SPEED_LINES[index]
       const y = (((seconds + line.delay) / 0.75) % 1) * height * 1.5 - height * 0.2
-      const lineColor = getRaidSpeedLineColor(line, streak, stageTheme)
-      const x = line.x * width
-      graphics.moveTo(x, y)
-      graphics.lineTo(x, y + line.length)
-      const stroke = getPixiFill(lineColor, 0.36)
-      graphics.stroke({ color: stroke.color, alpha: stroke.alpha, width: line.width, cap: 'round' })
+      const stroke = getPixiFill(getRaidSpeedLineColor(line, streak, stageTheme), 0.36)
+      sprite.position.set(line.x * width, y)
+      sprite.width = Math.max(1, line.width)
+      sprite.height = line.length
+      sprite.tint = stroke.color
+      sprite.alpha = stroke.alpha
     }
   }
 
