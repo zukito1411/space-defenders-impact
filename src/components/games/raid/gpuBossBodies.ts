@@ -179,8 +179,8 @@ export class RaidGpuBossBodies {
     return null
   }
 
-  prewarm(kind: GpuBossKind | 'devil' | null, viewportWidth: number, time: number) {
-    if (!kind || this.disposed || !this.isMobile(viewportWidth)) return
+  prewarm(kind: GpuBossKind | 'devil' | null, viewportWidth: number, viewportHeight: number, time: number) {
+    if (!kind || this.disposed || !this.isMobile(viewportWidth, viewportHeight)) return
     const size = getEnemyCanvasSize({ isBoss: true, bossKind: kind } as Enemy, viewportWidth)
     if (kind === 'devil') {
       this.lastDevilUseMs = time
