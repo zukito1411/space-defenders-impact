@@ -8,6 +8,7 @@ import type { CachedCanvasDrawSource } from './assets'
 import { getCachedProjectileOrbSprite, getCachedProjectileTrailSprite, getCachedSpriteGlow } from './utils'
 import type { Enemy, Ripple, Shot, Spark } from './types'
 import { raidObjectInView } from './visibility'
+import { createGpuBossProjectileCanvas, getGpuBossProjectileSpec } from './gpuBossProjectiles'
 import type { RaidVisibilityBounds } from './visibility'
 
 export type RaidGpuForegroundFrame = {
@@ -37,7 +38,12 @@ export function isGpuPlayerShot(shot: Shot, advanced: boolean) {
 }
 
 export function isGpuEnemyShot(shot: Shot, advanced: boolean) {
-  if (shot.kind === 'beam') return false
+  // Full-screen boss beams and heavy poison/bubble effects are rendered
+  // from reusable GPU sprites rather than fresh gradients on the 2D canvas.
+  if (shot.kind === 'beam') return shot.life !== undefined
+  if (shot.kind === 'poisonCloud' || shot.kind === 'squidBubble' ||
+    shot.kind === 'squidInk' || shot.kind === 'squidSpine' ||
+    shot.kind === 'snakeFang' || shot.kind === 'venomSpit') return true
   if (!advanced) return true
   return shot.kind === 'orbShot' || shot.kind === 'blade' ||
     shot.kind === 'needle' || shot.kind === 'voidShot' ||
@@ -267,11 +273,40 @@ export class RaidGpuForeground {
       this.shotNodes.set(id, node)
     }
     node.texture = texture
+    node.alpha = 1
     node.anchor.set(art.originX / art.width, art.originY / art.height)
     node.width = art.width
     node.height = art.height
     node.position.set(shot.x * frame.width / 100, shot.y * frame.height / 100)
     node.rotation = style.kind === 'trail' ? Math.atan2(shot.vy, shot.vx) : 0
+  }
+
+  private showSpecialShot(frame: RaidGpuForegroundFrame, shot: Shot, id: string) {
+    const spec = getGpuBossProjectileSpec(shot, frame.visualScale, frame.width, frame.height, frame.time)
+    if (!spec) return false
+    if (spec.kind !== 'beam' && !raidObjectInView(frame.bounds, shot.x, shot.y, shot.radius + 32)) return true
+    const key = 'boss-bullet:' + spec.kind
+    let texture = this.textures.get(key)?.texture
+    if (!texture) {
+      const canvas = createGpuBossProjectileCanvas(spec.kind)
+      texture = this.cachedTexture(key, canvas, true)
+    }
+    this.visibleShots.add(id)
+    let node = this.shotNodes.get(id)
+    if (!node) {
+      node = this.inactiveShotNodes.pop() ?? new Sprite(texture)
+      if (!node.parent) this.projectileLayer.addChild(node)
+      node.anchor.set(0.5)
+      this.shotNodes.set(id, node)
+    }
+    node.visible = true
+    node.texture = texture
+    node.position.set(spec.x, spec.y)
+    node.width = spec.width
+    node.height = spec.height
+    node.rotation = spec.rotation
+    node.alpha = spec.alpha
+    return true
   }
 
   private updateShots(frame: RaidGpuForegroundFrame) {
@@ -285,8 +320,10 @@ export class RaidGpuForeground {
       if (style) this.showShot(frame, shot, 'g:' + shot.id, style)
     }
     for (const shot of frame.enemyShots) {
+      const id = 'e:' + shot.id
+      if (this.showSpecialShot(frame, shot, id)) continue
       const style = enemyStyle(shot, frame.drawAdvancedShotFx, frame.visualScale)
-      if (style) this.showShot(frame, shot, 'e:' + shot.id, style)
+      if (style) this.showShot(frame, shot, id, style)
     }
     for (const [id, sprite] of this.shotNodes) {
       if (this.visibleShots.has(id)) continue
