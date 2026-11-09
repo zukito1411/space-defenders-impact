@@ -153,11 +153,6 @@ export function GradiusRaid({
   const lastTimeRef = useRef(0)
   const lastRenderTimeRef = useRef(0)
   const lastIdleDrawTimeRef = useRef(0)
-  // Air Raid renders a full-screen Pixi/WebGL world behind a full-screen
-  // Canvas 2D gameplay layer. Decouple their frame schedules on phones so
-  // background GPU submissions cannot starve player/enemy movement.
-  const lastPixiBackgroundRenderRef = useRef(0)
-  const lastPixiBackgroundSceneRef = useRef('')
   const lastVisualRetirementRef = useRef(0)
   const graphicsQualityRef = useRef<GraphicsQuality>(getGraphicsQuality())
   const viewportMetricsRef = useRef<RaidViewportMetrics | null>(null)
@@ -1534,10 +1529,8 @@ export function GradiusRaid({
     const measured = showPerfHudRef.current
     const costs = drawCostsRef.current
     const backgroundStart = measured ? performance.now() : 0
-    // The foreground stays on every requestAnimationFrame, including player
-    // steering, projectiles, hit FX and boss telegraphs. Background detail
-    // and resolution are unchanged; on Android-sized screens we send the
-    // second full-screen GPU layer at ~30 Hz instead of ~60 Hz.
+    // Animation cadence follows the actual render frame; only expensive
+    // background geometry is throttled independently by PixiRaidBackground.
     const pixiBackground = pixiBackgroundRef.current
     // Bake expensive composite boss artwork during the stage approach rather
     // than during the boss's first live combat frames.
@@ -1548,17 +1541,12 @@ export function GradiusRaid({
         : stageRef.current >= MAX_RAID_STAGE ? 'final' : null
       pixiBackground.prewarmGpuBoss(nextBossArt, cssWidth, cssHeight, time)
     }
+
+    // Update GPU scenery transforms on EVERY presented frame. The 31 ms mobile
+    // throttle caused stars, clouds and islands to jump in visibly delayed steps.
+    // PixiRaidBackground.render keeps expensive vector tessellation cached.
     if (pixiBackground) {
-      const mobileViewport = viewport.isSmallViewport
-      const backgroundIntervalMs = mobileViewport ? 31 : 0
-      const sceneSignature = `${cssWidth}:${cssHeight}:${dpr}:${gfxQuality}:${stageRef.current}:${phaseRef.current}`
-      if (
-        lastPixiBackgroundRenderRef.current === 0 ||
-        lastPixiBackgroundSceneRef.current !== sceneSignature ||
-        time < lastPixiBackgroundRenderRef.current ||
-        time - lastPixiBackgroundRenderRef.current >= backgroundIntervalMs
-      ) {
-        const stageRush = stageClearRef.current > 0 ? clamp(stageClearRef.current / STAGE_CLEAR_SECONDS, 0, 1) : 0
+      const stageRush = stageClearRef.current > 0 ? clamp(stageClearRef.current / STAGE_CLEAR_SECONDS, 0, 1) : 0
       const bossIntensity = activeBoss ? 1 : bossAlertRef.current > 0 ? clamp(bossAlertRef.current / 2.4, 0, 1) : 0
       const devilCorruption = activeBoss?.bossKind === 'devil' ? clamp(0.45 + (1 - activeBoss.hp / Math.max(1, activeBoss.maxHp)) * 0.75, 0, 1) : 0
       const finalBattleIntensity = activeBoss?.bossKind === 'final'
@@ -1567,7 +1555,7 @@ export function GradiusRaid({
           ? 0.68
           : 0
 
-      const backgroundDrawn = pixiBackground.render({
+      pixiBackground.render({
         palette: paletteRef.current,
         width: cssWidth,
         height: cssHeight,
@@ -1580,13 +1568,6 @@ export function GradiusRaid({
         devilCorruption,
         finalBattleIntensity,
       })
-
-
-        if (backgroundDrawn) {
-          lastPixiBackgroundRenderRef.current = time
-          lastPixiBackgroundSceneRef.current = sceneSignature
-        }
-      }
     }
 
     costs.backgroundMs = measured ? performance.now() - backgroundStart : 0
@@ -6924,8 +6905,18 @@ export function GradiusRaid({
           const perDraw = Math.max(1, perf.frames)
           const gpu = pixiBackgroundRef.current?.getRaidGpuStats()
           const bubbleCount = enemyShotsRef.current.reduce((count, shot) => count + (shot.kind === 'squidBubble' ? 1 : 0), 0)
+          const liveShots = shotsRef.current
+          let homingCount = 0
+          let needleCount = 0
+          for (const shot of liveShots) {
+            if (shot.kind === 'homing') homingCount += 1
+            else if (shot.kind === 'needle') needleCount += 1
+          }
+          const pilot = playerRef.current
+          const scoutCount = pilot.ship.key === 'mesiah'
+            ? normalizeMesiahScoutDrones(pilot).filter(scout => scout.active).length : 0
           if (perfHudRef.current) perfHudRef.current.textContent =
-            `FPS ${renderFps} | Sim ${avgSim}ms | Draw ${avgDraw}ms | GPU submit ${(perf.gpuSubmitMs / perDraw).toFixed(1)}ms | BG ${(perf.backgroundMs / perDraw).toFixed(1)}ms | Canvas ${(perf.canvasMs / perDraw).toFixed(1)}ms | Boss ${(perf.bossMs / perDraw).toFixed(1)}ms | Spike ${Math.round(perf.maxFrameMs)}ms | DPR ${viewportMetricsRef.current?.dpr.toFixed(2) ?? '?'} | Shots ${shotsRef.current.length}/${enemyShotsRef.current.length} | Bubbles ${bubbleCount} | GPU nodes ${gpu?.shots ?? 0} | GPU textures ${gpu?.textures ?? 0} | WebGL ${gpu?.gpuFrameMs === null || gpu?.gpuFrameMs === undefined ? 'n/a' : gpu.gpuFrameMs.toFixed(1) + 'ms'} | Boss atlas ${gpu?.bossTextureMB ?? 0}MB`
+            `FPS ${renderFps} | Sim ${avgSim}ms | Draw ${avgDraw}ms | GPU submit ${(perf.gpuSubmitMs / perDraw).toFixed(1)}ms | BG ${(perf.backgroundMs / perDraw).toFixed(1)}ms | Canvas ${(perf.canvasMs / perDraw).toFixed(1)}ms | Boss ${(perf.bossMs / perDraw).toFixed(1)}ms | Spike ${Math.round(perf.maxFrameMs)}ms | DPR ${viewportMetricsRef.current?.dpr.toFixed(2) ?? '?'} | Scouts ${scoutCount} | Shots ${liveShots.length}/${enemyShotsRef.current.length} (homing ${homingCount}, needle ${needleCount}) | Bubbles ${bubbleCount} | GPU nodes ${gpu?.shots ?? 0} | GPU textures ${gpu?.textures ?? 0} | WebGL ${gpu?.gpuFrameMs === null || gpu?.gpuFrameMs === undefined ? 'n/a' : gpu.gpuFrameMs.toFixed(1) + 'ms'} | Boss atlas ${gpu?.bossTextureMB ?? 0}MB`
           perf.windowStart = time
           perf.frames = 0
           perf.ticks = 0
