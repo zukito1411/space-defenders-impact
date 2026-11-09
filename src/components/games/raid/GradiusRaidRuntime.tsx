@@ -22,6 +22,7 @@ import { createAsteroidHazard, getAsteroidClusterInterval, getRandomEventDuratio
 import { RAID_FX_CANVAS_CONTEXT_SETTINGS, getRaidGraphicsProfile, makeRaidViewportMetrics } from './graphics'
 import { createRaidVisibilityBounds, raidObjectInView } from './visibility'
 import { isGpuEnemyShot, isGpuPlayerShot } from './gpuForeground'
+import { clearRaidSpatialHash, createRaidSpatialHash, insertRaidSpatialHash, queryRaidSpatialHash } from './spatialHash'
 import type { RaidViewportMetrics } from './graphics'
 import { clearPickupLoadout, extendLoadoutForSuperBoss, getFormationEnemyCount, getFormationSpawnSeconds, getPowerScore, getSingleEnemySpawnSeconds, resetStageLoadout } from './loadout'
 import { acquireHomingTarget, animateStageClearPlayer, applyRiftPullToPlayer, applyStartingStageLevel, fullyBuffRaidPlayer, getCoreLanderFireInterval, getGodGundamBarrageBossDamage, getGodGundamBarrageDamageMultiplier, getGodGundamMeleeDamagePerSecond, getGodGundamMeleeRange, getGodGundamPassivePose, getGodGundamStageAttackBonus, getNukeBossDamage, getNukeCooldownSeconds, getPlayerBaseAttack, getRiftCenter, getSpiegelShadowCloneDamageMultiplier, hasSpiegelShadowClones, isCoreLanderBurning, levelUpPlayer, movePlayerWithInput, revivePlayerForBossClear, updatePlayerTimers } from './mechanics'
@@ -247,6 +248,9 @@ export function GradiusRaid({
   const enemyCollisionBucketsRef = useRef<EnemyCollisionBuckets>(createEnemyCollisionBuckets())
   const largeEnemyCollisionRef = useRef<Enemy[]>([])
   const shotCollisionCandidatesRef = useRef<Enemy[]>([])
+  const bubbleCollisionHashRef = useRef(createRaidSpatialHash<Shot>())
+  const asteroidCollisionHashRef = useRef(createRaidSpatialHash<AsteroidHazard>())
+  const wreckCollisionHashRef = useRef(createRaidSpatialHash<DerelictWreck>())
   const asteroidsRef = useRef<AsteroidHazard[]>([])
   const meteorsRef = useRef<MeteorHazard[]>([])
   const ionStrikesRef = useRef<IonStrike[]>([])
@@ -5608,9 +5612,30 @@ export function GradiusRaid({
     for (const bubble of expiredSquidBubbles) splitSquidBubble(bubble)
     expiredSquidBubbles.length = 0
 
+    // Index all active contacts once per physics tick. Querying only the
+    // nearby cells avoids scanning every bubble/asteroid/wreck for every
+    // fired shot when bosses unleash dense projectile patterns.
+    const bubbleHash = bubbleCollisionHashRef.current
+    const asteroidHash = asteroidCollisionHashRef.current
+    const wreckHash = wreckCollisionHashRef.current
+    clearRaidSpatialHash(bubbleHash)
+    clearRaidSpatialHash(asteroidHash)
+    clearRaidSpatialHash(wreckHash)
+    for (const bubble of enemyShotsRef.current) {
+      if (bubble.kind === 'squidBubble' && (bubble.hp ?? 1) > 0 && (bubble.life ?? 1) > 0) {
+        insertRaidSpatialHash(bubbleHash, bubble, bubble.radius)
+      }
+    }
+    for (const asteroid of asteroidsRef.current) {
+      if (asteroid.hp > 0) insertRaidSpatialHash(asteroidHash, asteroid, asteroid.radius)
+    }
+    for (const wreck of wrecksRef.current) {
+      if (wreck.hp > 0) insertRaidSpatialHash(wreckHash, wreck, wreck.width * 0.5, wreck.height * 0.55)
+    }
+
     for (const shot of shotsRef.current) {
       if (shot.y <= -50) continue
-      for (const bubble of enemyShotsRef.current) {
+      for (const bubble of queryRaidSpatialHash(bubbleHash, shot.x, shot.y, shot.radius)) {
         if (bubble.kind !== 'squidBubble' || (bubble.hp ?? 1) <= 0 || (bubble.retargetTime ?? 0) > 0) continue
         const hitRange = shot.radius + bubble.radius
         if (
@@ -5644,7 +5669,7 @@ export function GradiusRaid({
     }
     for (const shot of shotsRef.current) {
       if (shot.y <= -50) continue
-      for (const asteroid of asteroidsRef.current) {
+      for (const asteroid of queryRaidSpatialHash(asteroidHash, shot.x, shot.y, shot.radius)) {
         if (asteroid.hp <= 0) continue
         const hitRange = shot.radius + asteroid.radius
         if (
@@ -5677,7 +5702,7 @@ export function GradiusRaid({
 
     for (const shot of shotsRef.current) {
       if (shot.y <= -50) continue
-      for (const wreck of wrecksRef.current) {
+      for (const wreck of queryRaidSpatialHash(wreckHash, shot.x, shot.y, shot.radius)) {
         if (wreck.hp <= 0) continue
         const hitX = wreck.width * 0.5 + shot.radius
         const hitY = wreck.height * 0.55 + shot.radius
