@@ -8,6 +8,23 @@ export const bossAuraSpriteCache = new Map<string, StageBossRenderCacheEntry>()
 export const BOSS_AURA_CACHE_LIMIT = 12
 
 export const BOSS_AURA_FRAME_MS = 33
+const MOBILE_BOSS_AURA_FRAME_MS = 100
+const MOBILE_BOSS_RETICLE_FRAME_MS = 120
+
+function isMobileBossCanvas() {
+  return typeof window !== 'undefined' &&
+    (window.innerWidth <= 900 || window.innerHeight <= 600)
+}
+
+function evictBossEffectBuffer(cache: Map<string, StageBossRenderCacheEntry>, limit: number) {
+  if (cache.size < limit) return
+  const oldest = cache.entries().next().value as [string, StageBossRenderCacheEntry] | undefined
+  if (!oldest) return
+  cache.delete(oldest[0])
+  // Drop the actual backing pixels, not just the JS cache reference.
+  oldest[1].canvas.width = 0
+  oldest[1].canvas.height = 0
+}
 
 export const bossReticleSpriteCache = new Map<string, StageBossRenderCacheEntry>()
 
@@ -112,9 +129,11 @@ export function drawCachedBossAura(ctx: CanvasRenderingContext2D, enemy: Enemy, 
   }
   const renderScale = getOffscreenRenderScale(ctx, size)
   const sizeBucket = Math.max(60, Math.min(560, Math.round(size / 8) * 8))
-  const frameBucket = Math.floor(time / BOSS_AURA_FRAME_MS)
+  const frameMs = isMobileBossCanvas() ? MOBILE_BOSS_AURA_FRAME_MS : BOSS_AURA_FRAME_MS
+  const frameBucket = Math.floor(time / frameMs)
   const scaleBucket = Math.round(renderScale * 100)
-  const key = `aura:${kind}:${sizeBucket}:${scaleBucket}:${frameBucket}`
+  // Stable key: never allocate a new full-size canvas every animation tick.
+  const key = `aura:${kind}:${sizeBucket}:${scaleBucket}`
   let entry = bossAuraSpriteCache.get(key)
   if (!entry) {
     const canvasSize = Math.ceil(sizeBucket * 2.8)
@@ -122,14 +141,14 @@ export function drawCachedBossAura(ctx: CanvasRenderingContext2D, enemy: Enemy, 
     canvas.width = Math.max(1, Math.ceil(canvasSize * renderScale))
     canvas.height = Math.max(1, Math.ceil(canvasSize * renderScale))
     entry = { canvas, frameBucket: Number.NaN }
-    trimOldestMapEntry(bossAuraSpriteCache, BOSS_AURA_CACHE_LIMIT)
+    evictBossEffectBuffer(bossAuraSpriteCache, BOSS_AURA_CACHE_LIMIT)
     bossAuraSpriteCache.set(key, entry)
   }
   if (entry.frameBucket !== frameBucket) {
     const { canvas } = entry
     const cCtx = canvas.getContext('2d')
     if (!cCtx) { drawBossAura(ctx, enemy, x, y, size, time); return }
-    const bucketTime = frameBucket * BOSS_AURA_FRAME_MS
+    const bucketTime = frameBucket * frameMs
     const seconds = bucketTime / 1000
     cCtx.setTransform(1, 0, 0, 1, 0, 0)
     cCtx.clearRect(0, 0, canvas.width, canvas.height)
@@ -195,9 +214,10 @@ export function drawCachedBossReticle(ctx: CanvasRenderingContext2D, x: number, 
   }
   const renderScale = getOffscreenRenderScale(ctx, size)
   const sizeBucket = Math.max(40, Math.min(560, Math.round(size / 8) * 8))
-  const rotBucket = Math.floor(time / BOSS_RETICLE_FRAME_MS)
+  const frameMs = isMobileBossCanvas() ? MOBILE_BOSS_RETICLE_FRAME_MS : BOSS_RETICLE_FRAME_MS
+  const rotBucket = Math.floor(time / frameMs)
   const scaleBucket = Math.round(renderScale * 100)
-  const key = `reticle:${isFinal ? 1 : 0}:${sizeBucket}:${scaleBucket}:${rotBucket}`
+  const key = `reticle:${isFinal ? 1 : 0}:${sizeBucket}:${scaleBucket}`
   let entry = bossReticleSpriteCache.get(key)
   if (!entry) {
     const extent = sizeBucket * (isFinal ? 0.74 : 0.64)
@@ -206,7 +226,7 @@ export function drawCachedBossReticle(ctx: CanvasRenderingContext2D, x: number, 
     canvas.width = Math.max(1, Math.ceil(canvasSize * renderScale))
     canvas.height = Math.max(1, Math.ceil(canvasSize * renderScale))
     entry = { canvas, frameBucket: Number.NaN }
-    trimOldestMapEntry(bossReticleSpriteCache, BOSS_RETICLE_CACHE_LIMIT)
+    evictBossEffectBuffer(bossReticleSpriteCache, BOSS_RETICLE_CACHE_LIMIT)
     bossReticleSpriteCache.set(key, entry)
   }
   if (entry.frameBucket !== rotBucket) {
@@ -216,7 +236,7 @@ export function drawCachedBossReticle(ctx: CanvasRenderingContext2D, x: number, 
     cCtx.setTransform(1, 0, 0, 1, 0, 0)
     cCtx.clearRect(0, 0, canvas.width, canvas.height)
     cCtx.setTransform(renderScale, 0, 0, renderScale, canvas.width / 2, canvas.height / 2)
-    cCtx.rotate((rotBucket * BOSS_RETICLE_FRAME_MS) / 2400)
+    cCtx.rotate((rotBucket * frameMs) / 2400)
     cCtx.globalAlpha = isFinal ? 0.56 : 0.44
     cCtx.strokeStyle = 'rgba(251,191,36,0.72)'
     cCtx.shadowBlur = 10
