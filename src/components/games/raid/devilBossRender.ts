@@ -28,7 +28,7 @@ export function getDevilBossPose(enemy: Enemy, time: number): DevilBossPose {
   return idleCycle > 1.7 ? 'idle2' : 'idle'
 }
 
-export function drawDevilGundamBoss(ctx: CanvasRenderingContext2D, enemy: Enemy, size: number, time: number) {
+export function drawDevilGundamBoss(ctx: CanvasRenderingContext2D, enemy: Enemy, size: number, time: number, gpuBodyReady = false) {
   const pose = getDevilBossPose(enemy, time)
   if (enemy.devilVisualPose !== pose) {
     enemy.devilVisualPose = pose
@@ -70,20 +70,22 @@ export function drawDevilGundamBoss(ctx: CanvasRenderingContext2D, enemy: Enemy,
   ])
   ctx.restore()
 
-  drawCanvasSpriteContain(
-    ctx,
-    sprite,
-    0,
-    size * 0.28 + poseSettleY,
-    size,
-    filter,
-    defeatedFade,
-    0,
-    pulse,
-    '#ef4444',
-  )
+  if (!gpuBodyReady) {
+    drawCanvasSpriteContain(
+      ctx,
+      sprite,
+      0,
+      size * 0.28 + poseSettleY,
+      size,
+      filter,
+      defeatedFade,
+      0,
+      pulse,
+      '#ef4444',
+    )
+  }
 
-  if (redStep > 0) {
+  if (!gpuBodyReady && redStep > 0) {
     ctx.save()
     ctx.globalCompositeOperation = 'lighter'
     drawCanvasSpriteContain(

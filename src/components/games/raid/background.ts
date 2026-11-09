@@ -868,6 +868,7 @@ export class PixiRaidBackground {
   private readonly farStarLayers = [new Graphics(), new Graphics(), new Graphics()]
   private readonly nearStarLayers = [new Graphics(), new Graphics(), new Graphics()]
   private readonly speedLineGraphics = new Graphics()
+  private readonly speedLineSprites = BACKGROUND_SPEED_LINES.map(() => new Sprite(Texture.WHITE))
   private readonly surfaceGraphics = new Graphics()
   private readonly wateryIslandSprites = createWorldSurfaceSprites(WATERY_WORLD_ISLAND_LAYERS.length)
   private readonly wateryCloudSprites = createWorldSurfaceSprites(WATERY_WORLD_CLOUD_LAYERS.length)
@@ -894,6 +895,12 @@ export class PixiRaidBackground {
   private width = 0
   private height = 0
   private dpr = 1
+  private gpuTimerGl: WebGL2RenderingContext | null = null
+  private gpuTimerExt: { TIME_ELAPSED_EXT: number; GPU_DISJOINT_EXT: number } | null = null
+  private gpuTimerQuery: WebGLQuery | null = null
+  private gpuTimerFrames = 0
+  private gpuTimerDisabled = false
+  private lastGpuElapsedMs: number | null = null
 
   async init(host: HTMLDivElement) {
     try {
@@ -920,6 +927,10 @@ export class PixiRaidBackground {
       this.nearStarLayers.forEach((layer) => this.scene.addChild(layer))
       this.scene.addChild(this.surfaceGraphics)
       this.scene.addChild(this.speedLineGraphics)
+      this.speedLineSprites.forEach((sprite) => {
+        sprite.anchor.set(0.5, 0)
+        this.scene.addChild(sprite)
+      })
       this.wateryIslandSprites.forEach((sprite) => this.scene.addChild(sprite))
       this.wateryCloudSprites.forEach((sprite) => this.scene.addChild(sprite))
       this.volcanicIslandSprites.forEach((sprite) => this.scene.addChild(sprite))
@@ -949,6 +960,10 @@ export class PixiRaidBackground {
   }
 
   destroy() {
+    if (this.gpuTimerGl && this.gpuTimerQuery) {
+      try { this.gpuTimerGl.deleteQuery(this.gpuTimerQuery) } catch { /* context lost */ }
+      this.gpuTimerQuery = null
+    }
     this.gradientCache.forEach((gradient) => gradient.destroy())
     this.gradientCache.clear()
     this.gpuForeground.destroy()
@@ -1030,6 +1045,65 @@ export class PixiRaidBackground {
     }
   }
 
+  prewarmGpuBoss(kind: 'squid' | 'snake' | 'final' | 'devil' | null, width: number, height: number, time: number) {
+    this.gpuForeground.prewarmBoss(kind, width, height, time)
+  }
+
+  isBossGpuRendered(id: number) { return this.gpuForeground.isBossGpuRendered(id) }
+
+  getRaidGpuStats() { return { ...this.gpuForeground.getStats(), gpuFrameMs: this.lastGpuElapsedMs } }
+
+  private renderWithGpuTimer(app: Application) {
+    if (this.gpuTimerDisabled) { app.render(); return }
+    try {
+      if (!this.gpuTimerGl) {
+        // Pixi can use WebGL1, where the WebGL2 timer API is unavailable.
+        // This is optional telemetry, never a gameplay dependency.
+        const renderer = app.renderer as unknown as { gl?: WebGLRenderingContext | WebGL2RenderingContext }
+        const gl = renderer.gl
+        if (!gl || typeof (gl as WebGL2RenderingContext).createQuery !== 'function') {
+          this.gpuTimerDisabled = true
+          app.render()
+          return
+        }
+        this.gpuTimerGl = gl as WebGL2RenderingContext
+        this.gpuTimerExt = this.gpuTimerGl.getExtension('EXT_disjoint_timer_query_webgl2')
+        if (!this.gpuTimerExt) {
+          this.gpuTimerDisabled = true
+          app.render()
+          return
+        }
+      }
+      const gl = this.gpuTimerGl
+      const ext = this.gpuTimerExt
+      if (gl && ext && this.gpuTimerQuery) {
+        if (gl.getQueryParameter(this.gpuTimerQuery, gl.QUERY_RESULT_AVAILABLE)) {
+          const disjoint = Boolean(gl.getParameter(ext.GPU_DISJOINT_EXT))
+          if (!disjoint) this.lastGpuElapsedMs = Number(gl.getQueryParameter(this.gpuTimerQuery, gl.QUERY_RESULT)) / 1000000
+          gl.deleteQuery(this.gpuTimerQuery)
+          this.gpuTimerQuery = null
+        }
+      }
+      // Sample at ~3Hz, avoiding per-frame query allocations or a GPU sync.
+      const sample = gl && ext && !this.gpuTimerQuery && ++this.gpuTimerFrames % 20 === 0
+      if (sample) {
+        const query = gl!.createQuery()
+        if (query) {
+          gl!.beginQuery(ext!.TIME_ELAPSED_EXT, query)
+          this.gpuTimerQuery = query
+          try { app.render() } finally { gl!.endQuery(ext!.TIME_ELAPSED_EXT) }
+          return
+        }
+      }
+      app.render()
+    } catch {
+      this.gpuTimerDisabled = true
+      this.lastGpuElapsedMs = null
+      // Never let unsupported GPU timing stop the game's renderer.
+      app.render()
+    }
+  }
+
   renderForeground(frame: RaidGpuForegroundFrame) {
     const app = this.app
     if (!app) return false
@@ -1037,7 +1111,7 @@ export class PixiRaidBackground {
     try {
       // Present scenery even if the GPU actor layer fails; Canvas will draw
       // those actors itself, avoiding a black screen on unsupported devices.
-      app.render()
+      this.renderWithGpuTimer(app)
       return foregroundReady
     } catch {
       this.gpuForeground.root.visible = false
@@ -1292,22 +1366,23 @@ export class PixiRaidBackground {
   }
 
   private updateSpeedLines(width: number, height: number, seconds: number, streak: string, isLow: boolean, isMedium: boolean, stageTheme: number) {
-    const graphics = this.speedLineGraphics
-    graphics.clear()
+    // Speed lines are static quads with GPU-only position updates. Never
+    // clear and re-tessellate Graphics geometry every render frame.
     const allowSpeedLines = shouldDrawRaidSpeedLines(stageTheme)
-    graphics.visible = !isLow && allowSpeedLines
-    if (isLow || !allowSpeedLines) return
-
-    const speedLineLimit = isMedium ? 2 : BACKGROUND_SPEED_LINES.length
-    for (let index = 0; index < speedLineLimit; index += 1) {
+    this.speedLineGraphics.visible = false
+    const speedLineLimit = !allowSpeedLines || isLow ? 0 : isMedium ? 2 : BACKGROUND_SPEED_LINES.length
+    for (let index = 0; index < this.speedLineSprites.length; index += 1) {
+      const sprite = this.speedLineSprites[index]
+      sprite.visible = index < speedLineLimit
+      if (!sprite.visible) continue
       const line = BACKGROUND_SPEED_LINES[index]
       const y = (((seconds + line.delay) / 0.75) % 1) * height * 1.5 - height * 0.2
-      const lineColor = getRaidSpeedLineColor(line, streak, stageTheme)
-      const x = line.x * width
-      graphics.moveTo(x, y)
-      graphics.lineTo(x, y + line.length)
-      const stroke = getPixiFill(lineColor, 0.36)
-      graphics.stroke({ color: stroke.color, alpha: stroke.alpha, width: line.width, cap: 'round' })
+      const stroke = getPixiFill(getRaidSpeedLineColor(line, streak, stageTheme), 0.36)
+      sprite.position.set(line.x * width, y)
+      sprite.width = Math.max(1, line.width)
+      sprite.height = line.length
+      sprite.tint = stroke.color
+      sprite.alpha = stroke.alpha
     }
   }
 

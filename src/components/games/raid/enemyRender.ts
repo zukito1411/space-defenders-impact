@@ -133,6 +133,7 @@ export function drawRaidEnemy(
   time: number,
   normalEnemyFilter: string,
   dpr = 1,
+  skipGpuStageBossBody = false,
 ) {
   const x = toX(enemy.x)
   const y = toY(enemy.y)
@@ -146,18 +147,18 @@ export function drawRaidEnemy(
       ? enemy.mirageKind
       : enemy.bossKind
     const hasSpecialBossPresentation = displayBossKind === 'squid' || displayBossKind === 'snake' || displayBossKind === 'final' || displayBossKind === 'devil'
-    if (hasSpecialBossPresentation && displayBossKind !== 'devil') {
+    if (hasSpecialBossPresentation && displayBossKind !== 'devil' && !skipGpuStageBossBody) {
       drawCachedBossAura(ctx, enemy, x, y, size, time)
     }
     if (displayBossKind === 'devil') {
       ctx.save()
       ctx.translate(x, y)
-      drawDevilGundamBoss(ctx, enemy, size, time)
+      drawDevilGundamBoss(ctx, enemy, size, time, skipGpuStageBossBody)
       drawEnemyHitFlash(ctx, size, enemy.hitFlash, '#ef4444')
       ctx.restore()
       if (enemy.hp > 0) {
         if (enemy.shieldTime > 0 || enemy.y < 18) drawBossShield(ctx, x, y + size * 0.18, size * 0.86, time, enemy.color)
-        drawCachedBossReticle(ctx, x, y, size, time, true)
+        if (!skipGpuStageBossBody) drawCachedBossReticle(ctx, x, y, size, time, true)
         drawCachedBossBar(ctx, enemy, x, y + size * 0.16, size)
       }
       return
@@ -172,14 +173,16 @@ export function drawRaidEnemy(
       ctx.rotate(displayBossKind === 'snake' ? 0 : rotation * 0.45)
       ctx.globalAlpha *= 0.58 + introProgress * 0.42
       ctx.scale(floatScale * introScale, floatScale * introScale)
-      if (displayBossKind === 'squid') drawCachedStageBossBody(ctx, 'squid', size, time)
-      else if (displayBossKind === 'snake') {
-        const biteLungeActive = enemy.chargePattern === 'cross' && (enemy.chargeTimer > 0 || (enemy.beamVolleyRecovery ?? 0) > 0)
-        drawCachedStageBossBody(ctx, 'snake', size, time, biteLungeActive, biteLungeActive)
-      }
-      else {
-        const finalRage = clamp((0.55 - enemy.hp / Math.max(1, enemy.maxHp)) / 0.55, 0, 1)
-        drawCachedStageBossBody(ctx, 'final', size, time, false, false, finalRage)
+      if (!skipGpuStageBossBody) {
+        if (displayBossKind === 'squid') drawCachedStageBossBody(ctx, 'squid', size, time)
+        else if (displayBossKind === 'snake') {
+          const biteLungeActive = enemy.chargePattern === 'cross' && (enemy.chargeTimer > 0 || (enemy.beamVolleyRecovery ?? 0) > 0)
+          drawCachedStageBossBody(ctx, 'snake', size, time, biteLungeActive, biteLungeActive)
+        }
+        else {
+          const finalRage = clamp((0.55 - enemy.hp / Math.max(1, enemy.maxHp)) / 0.55, 0, 1)
+          drawCachedStageBossBody(ctx, 'final', size, time, false, false, finalRage)
+        }
       }
       drawEnemyHitFlash(ctx, size, enemy.hitFlash, enemy.bossKind === 'final' ? '#fbbf24' : enemy.bossKind === 'squid' ? '#f472b6' : '#f43f5e')
       ctx.restore()
@@ -191,7 +194,7 @@ export function drawRaidEnemy(
           drawSnakeVenomTelegraph(ctx, x, y, toX(enemy.chargeLane), toY(enemy.chargeTargetY ?? enemy.y + 34), size, viewportWidth, time, enemy.chargeTimer, enemy.chargePattern, enemy.beamVolleyRecovery ?? 0)
         }
         if (enemy.shieldTime > 0 || enemy.y < 15) drawBossShield(ctx, x, y, size, time, enemy.color)
-        drawCachedBossReticle(ctx, x, y, size, time, enemy.bossKind === 'final')
+        if (!skipGpuStageBossBody) drawCachedBossReticle(ctx, x, y, size, time, enemy.bossKind === 'final')
         drawCachedBossBar(ctx, enemy, x, y, size)
       }
       return

@@ -40,8 +40,9 @@ export function getRaidGraphicsProfile(quality: GraphicsQuality, isSmallViewport
       maxIonStrikes: 3,
       maxPowerUps: 8,
       drawRipples: false,
-      drawAdvancedShotFx: true,
-      drawDecorativeOverlays: true,
+      // Route ordinary projectiles through pooled GPU sprites on low mode.
+      drawAdvancedShotFx: false,
+      drawDecorativeOverlays: false,
       drawOptionShips: true,
     }
   } else if (quality === 'medium') {
@@ -55,7 +56,7 @@ export function getRaidGraphicsProfile(quality: GraphicsQuality, isSmallViewport
       maxIonStrikes: 5,
       maxPowerUps: 12,
       drawRipples: true,
-      drawAdvancedShotFx: true,
+      drawAdvancedShotFx: false,
       drawDecorativeOverlays: true,
       drawOptionShips: true,
     }
@@ -106,14 +107,15 @@ export type RaidViewportMetrics = {
   profile: RaidGraphicsProfile
   quality: GraphicsQuality
   multiplayer: boolean
+  adaptiveScale: number
 }
 
-export function makeRaidViewportMetrics(root: HTMLElement, quality: GraphicsQuality, multiplayer: boolean): RaidViewportMetrics {
+export function makeRaidViewportMetrics(root: HTMLElement, quality: GraphicsQuality, multiplayer: boolean, adaptiveScale = 1): RaidViewportMetrics {
   const cssWidth = Math.max(1, root.clientWidth || (typeof window !== 'undefined' ? window.innerWidth : 1) || 1)
   const cssHeight = Math.max(1, root.clientHeight || (typeof window !== 'undefined' ? window.innerHeight : 1) || 1)
   const isSmallViewport = cssWidth <= 860 || cssHeight <= 560
   const profile = getRaidGraphicsProfile(quality, isSmallViewport, multiplayer)
-  const dpr = Math.min(profile.dprCap, typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1)
+  const dpr = Math.max(0.7, Math.min(profile.dprCap, typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1) * adaptiveScale)
   const isDesktopViewport = cssWidth > 1100 && cssHeight > 700
   const visualScale = clamp(Math.min(cssWidth, cssHeight) / (isDesktopViewport ? 760 : 560), 0.72, isDesktopViewport ? 1.08 : 1.28)
   return {
@@ -128,5 +130,6 @@ export function makeRaidViewportMetrics(root: HTMLElement, quality: GraphicsQual
     profile,
     quality,
     multiplayer,
+    adaptiveScale,
   }
 }
