@@ -6922,7 +6922,7 @@ export function GradiusRaid({
           const gpu = pixiBackgroundRef.current?.getRaidGpuStats()
           const bubbleCount = enemyShotsRef.current.reduce((count, shot) => count + (shot.kind === 'squidBubble' ? 1 : 0), 0)
           if (perfHudRef.current) perfHudRef.current.textContent =
-            `FPS ${renderFps} | Sim ${avgSim}ms | Draw ${avgDraw}ms | GPU submit ${(perf.gpuSubmitMs / perDraw).toFixed(1)}ms | BG ${(perf.backgroundMs / perDraw).toFixed(1)}ms | Canvas ${(perf.canvasMs / perDraw).toFixed(1)}ms | Boss ${(perf.bossMs / perDraw).toFixed(1)}ms | Spike ${Math.round(perf.maxFrameMs)}ms | DPR ${viewportMetricsRef.current?.dpr.toFixed(2) ?? '?'} | Shots ${shotsRef.current.length}/${enemyShotsRef.current.length} | Bubbles ${bubbleCount} | GPU nodes ${gpu?.shots ?? 0} | GPU textures ${gpu?.textures ?? 0} | Boss atlas ${gpu?.bossTextureMB ?? 0}MB`
+            `FPS ${renderFps} | Sim ${avgSim}ms | Draw ${avgDraw}ms | GPU submit ${(perf.gpuSubmitMs / perDraw).toFixed(1)}ms | BG ${(perf.backgroundMs / perDraw).toFixed(1)}ms | Canvas ${(perf.canvasMs / perDraw).toFixed(1)}ms | Boss ${(perf.bossMs / perDraw).toFixed(1)}ms | Spike ${Math.round(perf.maxFrameMs)}ms | DPR ${viewportMetricsRef.current?.dpr.toFixed(2) ?? '?'} | Shots ${shotsRef.current.length}/${enemyShotsRef.current.length} | Bubbles ${bubbleCount} | GPU nodes ${gpu?.shots ?? 0} | GPU textures ${gpu?.textures ?? 0} | WebGL ${gpu?.gpuFrameMs === null || gpu?.gpuFrameMs === undefined ? 'n/a' : gpu.gpuFrameMs.toFixed(1) + 'ms'} | Boss atlas ${gpu?.bossTextureMB ?? 0}MB`
           perf.windowStart = time
           perf.frames = 0
           perf.ticks = 0
