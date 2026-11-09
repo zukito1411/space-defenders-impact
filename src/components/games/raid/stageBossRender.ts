@@ -1,8 +1,8 @@
-import { drawCanvasSpriteContain, drawSpriteGlow, getEliteAlienCanvasSprite, getFinalBossCanvasSprite, RAID_FINAL_BOSS_CORE_OFFSET_X, RAID_FINAL_BOSS_CORE_OFFSET_Y } from './assets'
+import { drawCanvasSpriteContain, getEliteAlienCanvasSprite, getFinalBossCanvasSprite } from './assets'
 import type { BossKind, BriefingBossKind, Enemy, MirageBossKind } from './types'
 import { clamp, drawRadialEllipse, getOffscreenRenderScale } from './utils'
 import { drawGalacticSnakeBoss } from './snakeBossRender'
-import { drawBossDust, drawGalacticSquidBoss } from './squidBossRender'
+import { drawGalacticSquidBoss } from './squidBossRender'
 
 export type StageBossRenderCacheEntry = {
   canvas: HTMLCanvasElement
@@ -20,7 +20,7 @@ export const STAGE_BOSS_RENDER_FRAME_MS = 50
 // expensive, layered source artwork is refreshed at 10Hz on phones.
 // The same offscreen canvas is reused instead of allocating a new 10+ MiB
 // pixel buffer for every 50ms animation bucket.
-export const MOBILE_STAGE_BOSS_ART_FRAME_MS = 100
+export const MOBILE_STAGE_BOSS_ART_FRAME_MS = 40
 
 function isMobileRaidBossViewport() {
   return typeof window !== 'undefined' &&
@@ -37,93 +37,19 @@ function retireOldestStageBossCanvas() {
 
 export const STAGE_BOSS_RENDER_SIZE_CAP = 680
 
+// The final encounter displays the actual ship, not rings, orbiting drones or
+// bright texture effects that hide the model and stall mobile WebViews.
 export function drawFinalBossSpriteBody(ctx: CanvasRenderingContext2D, size: number, time: number, rage = 0) {
   const sprite = getFinalBossCanvasSprite()
-  if (!sprite.loaded || !sprite.image.complete) {
-    return
-  }
-
+  if (!sprite.loaded || !sprite.image.complete) return
   const seconds = time / 1000
-  const coreRage = clamp(rage, 0, 1)
-  const pulse = 0.78 + Math.sin(seconds * (2.8 + coreRage * 1.1)) * 0.16
-  const slowPulse = 0.7 + Math.sin(seconds * 1.2) * 0.16
-  const spriteSize = size * 1.08
-  const spin = seconds * (0.055 + coreRage * 0.018)
-  const coreLocalX = size * RAID_FINAL_BOSS_CORE_OFFSET_X
-  const coreLocalY = size * RAID_FINAL_BOSS_CORE_OFFSET_Y
-  const coreX = coreLocalX * Math.cos(spin) - coreLocalY * Math.sin(spin)
-  const coreY = coreLocalX * Math.sin(spin) + coreLocalY * Math.cos(spin)
-  const coreColor = coreRage > 0.08 ? '#f87171' : '#38bdf8'
-  const coreGlow = coreRage > 0.08 ? 'rgba(248,113,113,ALPHA)' : 'rgba(56,189,248,ALPHA)'
-
-  ctx.save()
-  drawRadialEllipse(ctx, 0, 0, size * (0.48 + coreRage * 0.035), size * (0.5 + coreRage * 0.035), [
-    [0, `rgba(255,255,255,${0.035 + pulse * 0.025})`],
-    [0.42, coreRage > 0.08 ? 'rgba(248,113,113,0.15)' : 'rgba(56,189,248,0.11)'],
-    [0.72, 'rgba(251,191,36,0.055)'],
-    [1, 'rgba(0,0,0,0)'],
-  ])
-  drawBossDust(ctx, size, coreGlow, 10, 13.4, 0.5, 0.5)
-
-  drawSpriteGlow(ctx, 0, 0, spriteSize, coreRage > 0.08 ? 'rgba(248,113,113,0.34)' : 'rgba(56,189,248,0.28)', 1)
-  ctx.shadowColor = coreRage > 0.08 ? 'rgba(248,113,113,0.62)' : 'rgba(56,189,248,0.58)'
-  ctx.shadowBlur = size * (0.055 + coreRage * 0.025)
-  drawCanvasSpriteContain(ctx, sprite, 0, 0, spriteSize, 'brightness(1.12) contrast(1.14) saturate(1.22)', 1, spin, 1, coreColor)
-  ctx.shadowBlur = 0
-
-  ctx.globalCompositeOperation = 'lighter'
-  drawRadialEllipse(ctx, coreX, coreY, size * (0.078 + coreRage * 0.026), size * (0.078 + coreRage * 0.026), [
-    [0, `rgba(255,255,255,${0.72 + pulse * 0.18})`],
-    [0.22, coreRage > 0.08 ? `rgba(248,113,113,${0.62 + pulse * 0.2})` : `rgba(56,189,248,${0.6 + pulse * 0.18})`],
-    [0.64, coreRage > 0.08 ? `rgba(185,28,28,${0.28 + pulse * 0.2})` : `rgba(14,165,233,${0.25 + pulse * 0.18})`],
-    [1, coreRage > 0.08 ? 'rgba(127,29,29,0)' : 'rgba(14,165,233,0)'],
-  ])
-  ctx.strokeStyle = coreRage > 0.08 ? `rgba(252,165,165,${0.36 + pulse * 0.28})` : `rgba(125,249,255,${0.34 + pulse * 0.26})`
-  ctx.lineWidth = Math.max(1.4, size * 0.005)
-  for (let ring = 0; ring < 4; ring += 1) {
-    ctx.beginPath()
-    ctx.ellipse(coreX, coreY, size * (0.072 + ring * 0.032), size * (0.026 + ring * 0.013), seconds * (0.25 + ring * 0.05), 0, Math.PI * 2)
-    ctx.stroke()
-  }
-
-  const orbitalSprite = getEliteAlienCanvasSprite(4)
-  for (let drone = 0; drone < 10; drone += 1) {
-    const angle = drone / 10 * Math.PI * 2 + seconds * 0.28
-    const dx = Math.cos(angle) * size * (0.62 + Math.sin(drone) * 0.035)
-    const dy = size * 0.02 + Math.sin(angle) * size * 0.46
-    ctx.save()
-    ctx.translate(dx, dy)
-    ctx.rotate(angle + Math.PI / 2)
-    if (orbitalSprite.loaded && orbitalSprite.image.complete) {
-      ctx.globalCompositeOperation = 'source-over'
-      ctx.shadowColor = coreRage > 0.08 ? 'rgba(248,113,113,0.54)' : 'rgba(56,189,248,0.5)'
-      ctx.shadowBlur = size * 0.018
-      drawCanvasSpriteContain(
-        ctx,
-        orbitalSprite,
-        0,
-        0,
-        size * 0.082,
-        coreRage > 0.08 ? 'brightness(1.16) contrast(1.2) saturate(1.35)' : 'brightness(1.12) contrast(1.18) saturate(1.2)',
-        0.88 + slowPulse * 0.08,
-        0,
-        1,
-        coreColor,
-      )
-      ctx.shadowBlur = 0
-    } else {
-      ctx.fillStyle = `rgba(14,165,233,${0.28 + slowPulse * 0.1})`
-      ctx.strokeStyle = coreRage > 0.08 ? 'rgba(252,165,165,0.76)' : 'rgba(125,249,255,0.78)'
-      ctx.lineWidth = Math.max(0.8, size * 0.003)
-      ctx.beginPath()
-      ctx.ellipse(0, 0, size * 0.04, size * 0.01, 0, 0, Math.PI * 2)
-      ctx.fill()
-      ctx.stroke()
-    }
-    ctx.restore()
-  }
-
-  ctx.restore()
+  const breathe = 1 + Math.sin(seconds * 1.8) * 0.012
+  const bob = Math.sin(seconds * 1.45) * size * 0.009
+  const tilt = Math.sin(seconds * 0.56) * 0.023
+  const filter = rage > 0.5
+    ? 'brightness(1.07) contrast(1.1) saturate(1.12)'
+    : 'brightness(1.08) contrast(1.1) saturate(1.13)'
+  drawCanvasSpriteContain(ctx, sprite, 0, bob, size * 1.08, filter, 1, tilt, breathe, '#38bdf8')
 }
 
 export type CachedStageBossKind = Extract<BossKind, 'squid' | 'snake' | 'final'>
