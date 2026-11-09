@@ -1045,6 +1045,39 @@
   will-change: transform;
 }
 
+/* Optional diagnostic, updated only once a second via the gameplay ref.
+   Does not cause React rerenders while playing or intercept touch input. */
+.raid__perf-hud {
+  position: absolute;
+  bottom: max(8px, env(safe-area-inset-bottom));
+  left: max(8px, env(safe-area-inset-left));
+  z-index: 8;
+  font: 600 10px/1.4 ui-monospace, SFMono-Regular, Consolas, monospace;
+  letter-spacing: -0.2px;
+  padding: 4px 7px;
+  color: #dffaff;
+  background: rgba(2, 6, 19, 0.76);
+  border: 1px solid rgba(125, 211, 252, 0.24);
+  border-radius: 5px;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.raid__performance-toggle {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  color: #e0f2fe;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.raid__performance-toggle input {
+  accent-color: #22d3ee;
+  width: 17px;
+  height: 17px;
+}
+
 .raid__playfield::before,
 .raid__playfield::after {
   content: none;
