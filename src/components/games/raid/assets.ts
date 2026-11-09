@@ -823,8 +823,9 @@ export function processDevilBossAsset(image: HTMLImageElement) {
   }
   if (maxX < minX || maxY < minY) return sourceCanvas
 
-  const canvasSize = 512
-  const targetHeight = 472
+  // Keep detail in Devil Gundam's original pose art on large phone screens.
+  const canvasSize = 640
+  const targetHeight = 590
   const sourceWidth = maxX - minX + 1
   const sourceHeight = maxY - minY + 1
   const scale = targetHeight / sourceHeight
