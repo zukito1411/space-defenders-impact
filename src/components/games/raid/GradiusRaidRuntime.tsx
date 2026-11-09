@@ -1532,6 +1532,14 @@ export function GradiusRaid({
     // and resolution are unchanged; on Android-sized screens we send the
     // second full-screen GPU layer at ~30 Hz instead of ~60 Hz.
     const pixiBackground = pixiBackgroundRef.current
+    // Bake expensive composite boss artwork during the stage approach rather
+    // than during the boss's first live combat frames.
+    if (pixiBackground && !activeBoss) {
+      const nextBossArt = stageRef.current === 5 ? 'squid'
+        : stageRef.current === 10 ? 'snake'
+        : stageRef.current >= MAX_RAID_STAGE ? 'final' : null
+      pixiBackground.prewarmGpuBoss(nextBossArt, cssWidth, time)
+    }
     if (pixiBackground) {
       const mobileViewport = viewport.isSmallViewport
       const backgroundIntervalMs = mobileViewport ? 31 : 0
@@ -2250,7 +2258,8 @@ export function GradiusRaid({
       const spriteMargin = enemy.isBoss ? 26 : enemy.isMiniBoss ? 12 : 5
       if (!raidObjectInView(drawBounds, enemy.x, enemy.y, enemy.radius + spriteMargin)) continue
       if (gpuForegroundDrawn && !enemy.isBoss && !enemy.isMiniBoss) continue
-      drawRaidEnemy(ctx, enemy, toX, toY, cssWidth, time, normalEnemyFilter, dpr)
+      drawRaidEnemy(ctx, enemy, toX, toY, cssWidth, time, normalEnemyFilter, dpr,
+        gpuForegroundDrawn && Boolean(enemy.isBoss && pixiBackground?.isBossGpuRendered(enemy.id)))
     }
 
     if (godMeleeStrikesRef.current.length > 0) {
