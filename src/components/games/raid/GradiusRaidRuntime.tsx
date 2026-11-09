@@ -21,6 +21,7 @@ import { drawAsteroidHazard, drawAsteroidWarning, drawDerelictWreck, drawDevilCh
 import { createAsteroidHazard, getAsteroidClusterInterval, getRandomEventDuration, getRandomEventInterval, pickNextRandomRaidEventKind, splitAsteroidHazard } from './events'
 import { RAID_FX_CANVAS_CONTEXT_SETTINGS, getRaidGraphicsProfile, makeRaidViewportMetrics } from './graphics'
 import { createRaidVisibilityBounds, raidObjectInView } from './visibility'
+import { isGpuEnemyShot, isGpuPlayerShot } from './gpuForeground'
 import type { RaidViewportMetrics } from './graphics'
 import { clearPickupLoadout, extendLoadoutForSuperBoss, getFormationEnemyCount, getFormationSpawnSeconds, getPowerScore, getSingleEnemySpawnSeconds, resetStageLoadout } from './loadout'
 import { acquireHomingTarget, animateStageClearPlayer, applyRiftPullToPlayer, applyStartingStageLevel, fullyBuffRaidPlayer, getCoreLanderFireInterval, getGodGundamBarrageBossDamage, getGodGundamBarrageDamageMultiplier, getGodGundamMeleeDamagePerSecond, getGodGundamMeleeRange, getGodGundamPassivePose, getGodGundamStageAttackBonus, getNukeBossDamage, getNukeCooldownSeconds, getPlayerBaseAttack, getRiftCenter, getSpiegelShadowCloneDamageMultiplier, hasSpiegelShadowClones, isCoreLanderBurning, levelUpPlayer, movePlayerWithInput, revivePlayerForBossClear, updatePlayerTimers } from './mechanics'
@@ -1551,6 +1552,27 @@ export function GradiusRaid({
       }
     }
 
+    // One WebGL pass now presents animated scenery and pooled foreground
+    // sprites together. The complex Canvas overlay still draws every frame.
+    const gpuForegroundDrawn = pixiBackground?.renderForeground({
+      width: cssWidth,
+      height: cssHeight,
+      dpr,
+      visualScale,
+      time,
+      bounds: drawBounds,
+      drawAdvancedShotFx: gfxProfile.drawAdvancedShotFx,
+      drawRipples: gfxProfile.drawRipples,
+      maxRipples: gfxProfile.maxRipples,
+      maxSparks: gfxProfile.maxSparks,
+      enemies: enemiesRef.current,
+      shots: shotsRef.current,
+      guestShots: guestLocalShotsRef.current,
+      enemyShots: enemyShotsRef.current,
+      sparks: sparksRef.current,
+      ripples: ripplesRef.current,
+    }) ?? false
+
     const drawTrail = (shot: Shot, color: string, length: number, widthPx: number) => {
       const x = toX(shot.x)
       const y = toY(shot.y)
@@ -2131,7 +2153,7 @@ export function GradiusRaid({
 
     ctx.globalCompositeOperation = 'lighter'
 
-    if (gfxProfile.drawRipples) {
+    if (!gpuForegroundDrawn && gfxProfile.drawRipples) {
       const ripples = ripplesRef.current
       const rippleStart = Math.max(0, ripples.length - gfxProfile.maxRipples)
       let lastRippleColor = ''
@@ -2173,7 +2195,7 @@ export function GradiusRaid({
       else if (shot.kind === 'needle') drawTrail(shot, 'rgba(125,249,255,0.9)', 42, 3.2)
       else drawPulseBolt(shot)
     }
-    const sparks = sparksRef.current
+    const sparks = gpuForegroundDrawn ? [] : sparksRef.current
     const sparkStart = Math.max(0, sparks.length - gfxProfile.maxSparks)
     let lastSparkColor = ''
     for (let i = sparkStart; i < sparks.length; i += 1) {
@@ -2206,6 +2228,7 @@ export function GradiusRaid({
     for (const enemy of enemiesRef.current) {
       const spriteMargin = enemy.isBoss ? 26 : enemy.isMiniBoss ? 12 : 5
       if (!raidObjectInView(drawBounds, enemy.x, enemy.y, enemy.radius + spriteMargin)) continue
+      if (gpuForegroundDrawn && !enemy.isBoss && !enemy.isMiniBoss) continue
       drawRaidEnemy(ctx, enemy, toX, toY, cssWidth, time, normalEnemyFilter, dpr)
     }
 
@@ -2217,16 +2240,19 @@ export function GradiusRaid({
     }
 
     for (const shot of shotsRef.current) {
+      if (gpuForegroundDrawn && isGpuPlayerShot(shot, gfxProfile.drawAdvancedShotFx)) continue
       if (raidObjectInView(drawBounds, shot.x, shot.y, shot.radius + 12)) drawPlayerShot(shot)
     }
     // Preserve immediate visual feedback for locally predicted guest shots.
     for (const shot of guestLocalShotsRef.current) {
+      if (gpuForegroundDrawn && isGpuPlayerShot(shot, gfxProfile.drawAdvancedShotFx)) continue
       if (raidObjectInView(drawBounds, shot.x, shot.y, shot.radius + 12)) drawPlayerShot(shot)
     }
 
     for (const shot of enemyShotsRef.current) {
       // Beam columns may cross the screen even when their origin is outside.
       if (shot.kind !== 'beam' && !raidObjectInView(drawBounds, shot.x, shot.y, shot.radius + 16)) continue
+      if (gpuForegroundDrawn && isGpuEnemyShot(shot, gfxProfile.drawAdvancedShotFx)) continue
       if (!gfxProfile.drawAdvancedShotFx) {
         if (shot.kind === 'beam') drawTrail(shot, 'rgba(56,189,248,0.88)', 82, 9)
         else drawOrb(shot, shot.kind === 'poisonCloud' || shot.kind === 'venomSpit' || shot.kind === 'snakeFang' || shot.kind === 'devilSnakeHead' ? 'rgba(132,204,22,0.68)' : shot.kind === 'squidInk' || shot.kind === 'squidSpine' ? 'rgba(244,114,182,0.78)' : 'rgba(251,113,133,0.78)', shot.kind === 'squidBubble' ? 12 : 8)
