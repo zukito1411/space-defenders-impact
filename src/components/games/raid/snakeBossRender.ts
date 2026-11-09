@@ -2,7 +2,7 @@ import { drawCanvasSpriteContain, getCachedCanvasPattern, getCanvasSpriteDimensi
 import { BOSS_COLORS } from './constants'
 import type { Enemy, Vec } from './types'
 import { clamp, drawRadialEllipse } from './utils'
-import { drawBossDust, drawEtchedPanelLine } from './squidBossRender'
+import { drawEtchedPanelLine } from './squidBossRender'
 
 export const cobraBossBodyTextureCache = new Map<string, HTMLCanvasElement>()
 
@@ -615,12 +615,7 @@ export function drawGalacticSnakeBoss(ctx: CanvasRenderingContext2D, size: numbe
   const seconds = time / 1000
   ctx.save()
 
-  drawRadialEllipse(ctx, 0, size * 0.03, size * 0.64, size * 0.88, [
-    [0, 'rgba(225,29,72,0.11)'],
-    [0.42, 'rgba(251,146,60,0.07)'],
-    [1, 'rgba(0,0,0,0)'],
-  ])
-  drawBossDust(ctx, size, 'rgba(244,63,94,ALPHA)', 34, 8.2, 0.68, 0.96)
+  // Only the living cobra body is drawn; suppress background dust and halos.
 
   const bodyPoints: Vec[] = []
   for (let i = 0; i < 88; i += 1) {
