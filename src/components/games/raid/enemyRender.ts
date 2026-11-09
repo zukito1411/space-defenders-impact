@@ -25,6 +25,27 @@ type NormalEnemyRaster = {
 const normalEnemyRasters = new Map<number, NormalEnemyRaster>()
 const MAX_NORMAL_ENEMY_RASTERS = 96
 
+export function pruneNormalEnemyRasters(activeEnemies: readonly Enemy[], maxRetire = 8) {
+  if (!normalEnemyRasters.size) return
+  const active = new Set(activeEnemies.map(enemy => enemy.id))
+  let retired = 0
+  for (const [id, raster] of normalEnemyRasters) {
+    if (active.has(id)) continue
+    raster.canvas.width = 0
+    raster.canvas.height = 0
+    normalEnemyRasters.delete(id)
+    if (++retired >= maxRetire) break
+  }
+}
+
+export function clearNormalEnemyRasters() {
+  for (const raster of normalEnemyRasters.values()) {
+    raster.canvas.width = 0
+    raster.canvas.height = 0
+  }
+  normalEnemyRasters.clear()
+}
+
 function drawRasterizedNormalEnemy(
   ctx: CanvasRenderingContext2D,
   enemy: Enemy,
@@ -61,7 +82,14 @@ function drawRasterizedNormalEnemy(
     }
     if (normalEnemyRasters.size >= MAX_NORMAL_ENEMY_RASTERS) {
       const oldest = normalEnemyRasters.keys().next().value
-      if (oldest !== undefined) normalEnemyRasters.delete(oldest)
+      if (oldest !== undefined) {
+        const old = normalEnemyRasters.get(oldest)
+        if (old) {
+          old.canvas.width = 0
+          old.canvas.height = 0
+        }
+        normalEnemyRasters.delete(oldest)
+      }
     }
     cached = { canvas, context: cachedContext, filter: '', spriteKey: '', width: 0, height: 0 }
     normalEnemyRasters.set(enemy.id, cached)

@@ -3,4 +3,4 @@ export { drawGalacticSquidBoss, drawSquidWhipStrike, getSquidBossTentacleTexture
 export { drawCobraBossHead, drawGalacticSnakeBoss, drawSnakeBiteLungeModel, drawSnakeTerrorHead, drawSnakeVenomTelegraph, getCobraBossBodyTextureCanvas } from './snakeBossRender'
 export { drawCachedStageBossBody, drawEnemyHitFlash, drawFinalBossSpriteBody, drawStageBossBodyDirect, drawStageBossIntroEffect, getStageBossIntroProgress, hexToRgba } from './stageBossRender'
 export { drawDevilGundamBoss, getDevilBossPose } from './devilBossRender'
-export { drawRaidEnemy, getBossDefeatFade } from './enemyRender'
+export { drawRaidEnemy, getBossDefeatFade, pruneNormalEnemyRasters, clearNormalEnemyRasters } from './enemyRender'

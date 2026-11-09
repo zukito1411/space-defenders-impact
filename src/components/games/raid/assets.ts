@@ -18,6 +18,21 @@ export type CanvasSpriteEntry = {
 export const FILTERED_CANVAS_SPRITE_CACHE_LIMIT = 256
 
 export const filteredCanvasSpriteCache = new Map<string, HTMLCanvasElement>()
+let filteredCanvasSpriteCacheBytes = 0
+const FILTERED_SPRITE_BYTE_BUDGET =
+  typeof navigator !== 'undefined' && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
+    ? 64 * 1024 * 1024
+    : 160 * 1024 * 1024
+
+function evictOldestFilteredCanvasSprite() {
+  const first = filteredCanvasSpriteCache.entries().next().value as [string, HTMLCanvasElement] | undefined
+  if (!first) return
+  const [key, canvas] = first
+  filteredCanvasSpriteCache.delete(key)
+  filteredCanvasSpriteCacheBytes -= canvas.width * canvas.height * 4
+  canvas.width = 0
+  canvas.height = 0
+}
 
 export const canvasPatternCache = new WeakMap<CanvasRenderingContext2D, WeakMap<HTMLCanvasElement, CanvasPattern | null>>()
 
@@ -915,7 +930,11 @@ export function getFilteredCanvasSpriteSource(sprite: CanvasSpriteEntry, source:
 
   const cacheKey = `${sprite.cacheKey}|${Math.round(width)}x${Math.round(height)}|${filter}`
   const cached = filteredCanvasSpriteCache.get(cacheKey)
-  if (cached) return cached
+  if (cached) {
+    filteredCanvasSpriteCache.delete(cacheKey)
+    filteredCanvasSpriteCache.set(cacheKey, cached)
+    return cached
+  }
 
   const canvas = document.createElement('canvas')
   canvas.width = Math.max(1, Math.round(width))
@@ -928,11 +947,17 @@ export function getFilteredCanvasSpriteSource(sprite: CanvasSpriteEntry, source:
   ctx.drawImage(source, 0, 0, canvas.width, canvas.height)
   ctx.filter = 'none'
 
-  if (filteredCanvasSpriteCache.size >= FILTERED_CANVAS_SPRITE_CACHE_LIMIT) {
-    const oldestKey = filteredCanvasSpriteCache.keys().next().value
-    if (oldestKey) filteredCanvasSpriteCache.delete(oldestKey)
+  const bytes = canvas.width * canvas.height * 4
+  if (bytes > FILTERED_SPRITE_BYTE_BUDGET) return canvas
+  while (
+    filteredCanvasSpriteCache.size >= FILTERED_CANVAS_SPRITE_CACHE_LIMIT ||
+    filteredCanvasSpriteCacheBytes + bytes > FILTERED_SPRITE_BYTE_BUDGET
+  ) {
+    if (!filteredCanvasSpriteCache.size) break
+    evictOldestFilteredCanvasSprite()
   }
   filteredCanvasSpriteCache.set(cacheKey, canvas)
+  filteredCanvasSpriteCacheBytes += bytes
   return canvas
 }
 
