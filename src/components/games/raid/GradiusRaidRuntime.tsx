@@ -128,6 +128,20 @@ export function GradiusRaid({
   const pixiBackgroundRef = useRef<PixiRaidBackground | null>(null)
   const fxCanvasRef = useRef<HTMLCanvasElement | null>(null)
   const fxCanvasContextRef = useRef<CanvasRenderingContext2D | null>(null)
+  const perfHudRef = useRef<HTMLDivElement | null>(null)
+  const [showPerfHud, setShowPerfHud] = useState(() => {
+    try { return typeof window !== 'undefined' && window.localStorage.getItem('raid-show-fps') === '1' }
+    catch { return false }
+  })
+  const showPerfHudRef = useRef(showPerfHud)
+  showPerfHudRef.current = showPerfHud
+  // Single JS render scheduler: limit 90/120Hz Android displays to 60Hz,
+  // and adapt *visual draws only* if full-screen Canvas/WebGL is overloaded.
+  // This avoids burning GPU/CPU time on more frames than the phone can show.
+  const perfBudgetRef = useRef({
+    lastDraw: 0, interval: 0, slowFrames: 0, fastFrames: 0,
+    windowStart: 0, ticks: 0, frames: 0, simMs: 0, drawMs: 0, maxFrameMs: 0,
+  })
   const rafRef = useRef(0)
   const lastTimeRef = useRef(0)
   const lastRenderTimeRef = useRef(0)
@@ -6733,8 +6747,18 @@ export function GradiusRaid({
 
   useEffect(() => {
     const tick = (time: number) => {
-      const dt = Math.min(0.033, (time - lastTimeRef.current) / 1000 || 0)
+      // Android often schedules requestAnimationFrame at 90-120Hz. Running
+      // expensive gameplay + two fullscreen renderers at that refresh rate
+      // wastes work and can cause sustained low FPS and thermal throttling.
+      const frameDelta = time - lastTimeRef.current
+      if (lastTimeRef.current > 0 && frameDelta < 14) {
+        rafRef.current = requestAnimationFrame(tick)
+        return
+      }
+      const dt = Math.min(0.033, frameDelta / 1000 || 0)
       lastTimeRef.current = time
+      const perf = perfBudgetRef.current
+      const simulationStart = performance.now()
       pollRaidGamepads(time)
       const entranceSlamActive = phaseRef.current === 'playing' && bossEntranceSlamRef.current > 0
       if (bossEntranceSlamRef.current > 0) {
@@ -6754,12 +6778,73 @@ export function GradiusRaid({
         sendMultiplayerInput(time)
       }
       if (session) updateMultiplayerConnection(time)
-      // Throttle canvas redraws to ~30 fps during idle (non-playing) phases to reduce GPU load and heat.
+      const simulationMs = performance.now() - simulationStart
       const phase = phaseRef.current
       const isIdlePhase = phase === 'select' || phase === 'briefing' || phase === 'paused'
-      if (!isIdlePhase || time - lastIdleDrawTimeRef.current >= 33) {
+      const onPhone = Boolean(viewportMetricsRef.current?.isSmallViewport)
+      // If a phone cannot consistently present 60 costly WebGL+Canvas
+      // frames, temporarily settle at 30 visual FPS. Game state, input,
+      // collision, movement and network continue ticking up to 60Hz.
+      const desiredInterval = isIdlePhase ? 33 : onPhone ? perf.interval : 0
+      let drewFrame = false
+      let drawMs = 0
+      if (!desiredInterval || time - perf.lastDraw >= desiredInterval - 1) {
+        perf.lastDraw = time
         if (isIdlePhase) lastIdleDrawTimeRef.current = time
+        const drawStart = performance.now()
         drawFxCanvas(time)
+        drawMs = performance.now() - drawStart
+        drewFrame = true
+        if (onPhone && !isIdlePhase) {
+          const overloaded = drawMs > 19 || frameDelta > 29
+          if (overloaded) {
+            perf.slowFrames += 1
+            perf.fastFrames = 0
+          } else {
+            perf.slowFrames = Math.max(0, perf.slowFrames - 1)
+            if (perf.interval > 0 && drawMs < 10 && frameDelta < 25) perf.fastFrames += 1
+            else perf.fastFrames = 0
+          }
+          if (perf.interval === 0 && perf.slowFrames >= 8) {
+            perf.interval = 33
+            perf.slowFrames = 0
+          }
+          if (perf.interval > 0 && perf.fastFrames >= 110) {
+            perf.interval = 0
+            perf.fastFrames = 0
+          }
+        }
+      }
+      if (showPerfHudRef.current) {
+        if (perf.windowStart === 0) perf.windowStart = time
+        perf.ticks += 1
+        perf.simMs += simulationMs
+        if (drewFrame) {
+          perf.frames += 1
+          perf.drawMs += drawMs
+        }
+        perf.maxFrameMs = Math.max(perf.maxFrameMs, frameDelta)
+        if (time - perf.windowStart >= 1000) {
+          const windowMs = time - perf.windowStart
+          const renderFps = Math.round(perf.frames * 1000 / Math.max(1, windowMs))
+          const avgSim = (perf.simMs / Math.max(1, perf.ticks)).toFixed(1)
+          const avgDraw = (perf.drawMs / Math.max(1, perf.frames)).toFixed(1)
+          if (perfHudRef.current) perfHudRef.current.textContent =
+            `FPS ${renderFps} | Sim ${avgSim}ms | Draw ${avgDraw}ms | Spike ${Math.round(perf.maxFrameMs)}ms`
+          perf.windowStart = time
+          perf.frames = 0
+          perf.ticks = 0
+          perf.simMs = 0
+          perf.drawMs = 0
+          perf.maxFrameMs = 0
+        }
+      } else {
+        perf.windowStart = 0
+        perf.frames = 0
+        perf.ticks = 0
+        perf.simMs = 0
+        perf.drawMs = 0
+        perf.maxFrameMs = 0
       }
       const renderInterval = phase === 'playing'
         ? (stageClearRef.current > 0 || bossAlertRef.current > 0 ? GAMEPLAY_ALERT_SNAPSHOT_INTERVAL_MS : GAMEPLAY_SNAPSHOT_INTERVAL_MS)
@@ -6779,6 +6864,7 @@ export function GradiusRaid({
       } else if (rafRef.current === 0) {
         // Reset last-time so the first tick after resuming doesn't produce a huge dt spike.
         lastTimeRef.current = performance.now()
+        perfBudgetRef.current.lastDraw = 0
         rafRef.current = requestAnimationFrame(tick)
       }
     }
@@ -7165,6 +7251,7 @@ export function GradiusRaid({
       <div className="raid__playfield">
         <div ref={pixiBackgroundHostRef} className="raid__pixi-background" aria-hidden="true" />
         <canvas ref={fxCanvasRef} className="raid__fx-canvas" />
+        {showPerfHud && <div ref={perfHudRef} className="raid__perf-hud" aria-hidden="true">Measuring FPS…</div>}
       </div>
 
       {bossEntranceSlamActive && (
@@ -7273,6 +7360,16 @@ export function GradiusRaid({
                   </button>
                 ))}
               </div>
+            </div>
+            <div className="raid__settings-section">
+              <label className="raid__performance-toggle">
+                <input type="checkbox" checked={showPerfHud} onChange={(event) => {
+                  const next = event.currentTarget.checked
+                  setShowPerfHud(next)
+                  try { window.localStorage.setItem('raid-show-fps', next ? '1' : '0') } catch { /* optional */ }
+                }} />
+                Show FPS and performance timings (Air Raid)
+              </label>
             </div>
             <div className="raid__settings-section">
               <span className="raid__settings-heading">{menuText.audioSettings}</span>
