@@ -9,6 +9,7 @@ import { getCachedProjectileOrbSprite, getCachedProjectileTrailSprite, getCached
 import type { Enemy, Ripple, Shot, Spark } from './types'
 import { raidObjectInView } from './visibility'
 import { createGpuBossProjectileCanvas, getGpuBossProjectileSpec } from './gpuBossProjectiles'
+import { RaidGpuBossBodies } from './gpuBossBodies'
 import type { RaidVisibilityBounds } from './visibility'
 
 export type RaidGpuForegroundFrame = {
@@ -98,6 +99,7 @@ export class RaidGpuForeground {
   private readonly glowLayer = new Container()
   private readonly alienLayer = new Container()
   private readonly projectileLayer = new Container()
+  private readonly bossBodies = new RaidGpuBossBodies()
   private readonly enemyNodes = new Map<number, EnemyPair>()
   private readonly shotNodes = new Map<string, Sprite>()
   // Bounded recycling avoids continuous Sprite creation/destruction when
@@ -113,7 +115,7 @@ export class RaidGpuForeground {
   constructor() {
     this.particles.blendMode = 'add'
     this.projectileLayer.blendMode = 'add'
-    this.root.addChild(this.particles, this.glowLayer, this.alienLayer, this.projectileLayer)
+    this.root.addChild(this.particles, this.glowLayer, this.alienLayer, this.bossBodies.root, this.projectileLayer)
   }
 
   private ensureParticleTextures() {
@@ -390,9 +392,23 @@ export class RaidGpuForeground {
     }
   }
 
+  prewarmBoss(kind: 'squid' | 'snake' | 'final' | null, width: number, time: number) {
+    this.bossBodies.prewarm(kind, width, time)
+  }
+
+  isBossGpuRendered(enemyId: number) { return this.bossBodies.isRendered(enemyId) }
+
+  getStats() {
+    const boss = this.bossBodies.getStats()
+    return { enemies: this.enemyNodes.size, shots: this.shotNodes.size,
+      textures: this.textures.size, particles: this.particleCount,
+      bossFrames: boss.cachedFrames, bossTextureMB: boss.estimatedTextureMB }
+  }
+
   update(frame: RaidGpuForegroundFrame) {
     if (this.broken || this.destroyed) return false
     try {
+      this.bossBodies.update(frame)
       this.updateParticles(frame)
       this.updateAliens(frame)
       this.updateShots(frame)
@@ -408,6 +424,8 @@ export class RaidGpuForeground {
   destroy() {
     if (this.destroyed) return
     this.destroyed = true
+    this.root.removeChild(this.bossBodies.root)
+    this.bossBodies.destroy()
     this.root.destroy({ children: true })
     this.enemyNodes.clear()
     this.shotNodes.clear()
