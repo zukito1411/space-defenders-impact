@@ -95,7 +95,13 @@ export class RaidGpuBossBodies {
   }
 
   private decorate(enemy: Enemy, kind: GpuBossKind | 'devil', size: number, frame: RaidGpuForegroundFrame, opacity: number) {
-    if (enemy.hp <= 0) return
+    if (enemy.hp <= 0) {
+      const aura = this.auraNodes.get(enemy.id)
+      const reticle = this.reticleNodes.get(enemy.id)
+      if (aura) aura.visible = false
+      if (reticle) reticle.visible = false
+      return
+    }
     this.ensureDecorations()
     const x = enemy.x * frame.width / 100
     const y = enemy.y * frame.height / 100
