@@ -6871,6 +6871,32 @@ export function GradiusRaid({
             perf.interval = 0
             perf.fastFrames = 0
           }
+
+          // Dynamic resolution responds only to sustained *drawing* overload.
+          // Simulation-bound frames cannot be fixed by reducing pixel count.
+          // A long cooldown prevents rapid WebGL render-target reallocations.
+          const adaptive = adaptiveResolutionRef.current
+          if (perf.interval > 0 && perf.slowFrames >= 55 &&
+            drawMs > 19 && simulationMs < 11 &&
+            time - adaptive.lastChangeMs > 8000 && adaptive.scale > 0.75) {
+            adaptive.scale = Math.max(0.75, Math.round((adaptive.scale - 0.1) * 100) / 100)
+            adaptive.lastChangeMs = time
+            adaptive.fastFrames = 0
+            perf.slowFrames = 0
+            viewportMetricsRef.current = null
+          }
+          if (perf.interval === 0 && drawMs < 10 && frameDelta < 23 && simulationMs < 10) {
+            adaptive.fastFrames += 1
+          } else {
+            adaptive.fastFrames = 0
+          }
+          if (adaptive.scale < 1 && adaptive.fastFrames >= 260 &&
+            time - adaptive.lastChangeMs > 18000) {
+            adaptive.scale = Math.min(1, Math.round((adaptive.scale + 0.1) * 100) / 100)
+            adaptive.lastChangeMs = time
+            adaptive.fastFrames = 0
+            viewportMetricsRef.current = null
+          }
         }
       }
       if (showPerfHudRef.current) {
