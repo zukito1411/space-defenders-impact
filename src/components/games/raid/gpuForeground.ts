@@ -286,7 +286,8 @@ export class RaidGpuForeground {
   private showSpecialShot(frame: RaidGpuForegroundFrame, shot: Shot, id: string) {
     const spec = getGpuBossProjectileSpec(shot, frame.visualScale, frame.width, frame.height, frame.time)
     if (!spec) return false
-    if (spec.kind !== 'beam' && !raidObjectInView(frame.bounds, shot.x, shot.y, shot.radius + 32)) return true
+    if (spec.kind !== 'beam' && !raidObjectInView(frame.bounds, shot.x, shot.y,
+      spec.width * 50 / Math.max(1, frame.width), spec.height * 50 / Math.max(1, frame.height))) return true
     const key = 'boss-bullet:' + spec.kind
     let texture = this.textures.get(key)?.texture
     if (!texture) {
