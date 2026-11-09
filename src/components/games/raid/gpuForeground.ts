@@ -90,6 +90,10 @@ export class RaidGpuForeground {
   private readonly projectileLayer = new Container()
   private readonly enemyNodes = new Map<number, EnemyPair>()
   private readonly shotNodes = new Map<string, Sprite>()
+  // Bounded recycling avoids continuous Sprite creation/destruction when
+  // hundreds of projectiles enter and exit the viewport each second.
+  private readonly inactiveShotNodes: Sprite[] = []
+  private readonly inactiveEnemyNodes: EnemyPair[] = []
   private readonly textures = new Map<string, OwnedTexture>()
   private readonly visibleEnemies = new Set<number>()
   private readonly visibleShots = new Set<string>()
@@ -147,13 +151,19 @@ export class RaidGpuForeground {
       this.visibleEnemies.add(alien.id)
       let pair = this.enemyNodes.get(alien.id)
       if (!pair) {
-        const ship = new Sprite(texture)
-        const glow = new Sprite(Texture.WHITE)
-        ship.anchor.set(0.5)
-        glow.anchor.set(0.5)
-        this.alienLayer.addChild(ship)
-        this.glowLayer.addChild(glow)
-        pair = { ship, glow }
+        pair = this.inactiveEnemyNodes.pop()
+        if (pair) {
+          pair.ship.visible = true
+          pair.glow.visible = true
+        } else {
+          const ship = new Sprite(texture)
+          const glow = new Sprite(Texture.WHITE)
+          ship.anchor.set(0.5)
+          glow.anchor.set(0.5)
+          this.alienLayer.addChild(ship)
+          this.glowLayer.addChild(glow)
+          pair = { ship, glow }
+        }
         this.enemyNodes.set(alien.id, pair)
       }
       const aspect = texture.width / Math.max(1, texture.height)
@@ -174,8 +184,15 @@ export class RaidGpuForeground {
     }
     for (const [id, pair] of this.enemyNodes) {
       if (this.visibleEnemies.has(id)) continue
-      pair.ship.destroy()
-      pair.glow.destroy()
+      pair.ship.visible = false
+      pair.glow.visible = false
+      pair.ship.texture = Texture.WHITE
+      pair.glow.texture = Texture.WHITE
+      if (this.inactiveEnemyNodes.length < 48) this.inactiveEnemyNodes.push(pair)
+      else {
+        pair.ship.destroy()
+        pair.glow.destroy()
+      }
       this.enemyNodes.delete(id)
     }
   }
@@ -191,8 +208,13 @@ export class RaidGpuForeground {
     this.visibleShots.add(id)
     let node = this.shotNodes.get(id)
     if (!node) {
-      node = new Sprite(texture)
-      this.projectileLayer.addChild(node)
+      node = this.inactiveShotNodes.pop()
+      if (node) {
+        node.visible = true
+      } else {
+        node = new Sprite(texture)
+        this.projectileLayer.addChild(node)
+      }
       this.shotNodes.set(id, node)
     }
     node.texture = texture
@@ -219,7 +241,10 @@ export class RaidGpuForeground {
     }
     for (const [id, sprite] of this.shotNodes) {
       if (this.visibleShots.has(id)) continue
-      sprite.destroy()
+      sprite.visible = false
+      sprite.texture = Texture.WHITE
+      if (this.inactiveShotNodes.length < 192) this.inactiveShotNodes.push(sprite)
+      else sprite.destroy()
       this.shotNodes.delete(id)
     }
   }
@@ -287,6 +312,8 @@ export class RaidGpuForeground {
     this.root.destroy({ children: true })
     this.enemyNodes.clear()
     this.shotNodes.clear()
+    this.inactiveEnemyNodes.length = 0
+    this.inactiveShotNodes.length = 0
     for (const record of this.textures.values()) {
       record.texture.destroy(true)
       if (record.owned) {
