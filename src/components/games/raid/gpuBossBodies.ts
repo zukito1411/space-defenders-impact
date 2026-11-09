@@ -39,6 +39,7 @@ export class RaidGpuBossBodies {
   private readonly art = new Map<string, BossArtworkEntry>()
   private readonly devilArt = new Map<string, DevilArt>()
   private readonly pendingDevilArt = new Set<string>()
+  private lastDevilUseMs = 0
   private readonly nodes = new Map<number, BossSpritePair>()
   private readonly spareNodes: BossSpritePair[] = []
   private readonly renderedIds = new Set<number>()
@@ -182,9 +183,16 @@ export class RaidGpuBossBodies {
     if (!kind || this.disposed || !this.isMobile(viewportWidth)) return
     const size = getEnemyCanvasSize({ isBoss: true, bossKind: kind } as Enemy, viewportWidth)
     if (kind === 'devil') {
-      // Prepare each static pose while approaching the encounter; at most
-      // one GPU upload per pose instead of filtering its source every frame.
-      for (const pose of DEVIL_POSES) this.prepareDevil(pose, size)
+      this.lastDevilUseMs = time
+      // Enqueue only one pose per tick. On heavy WebViews batching all five
+      // image filters into one idle period would cause another long spike.
+      if (this.pendingDevilArt.size === 0) {
+        for (const pose of DEVIL_POSES) {
+          if (this.devilArt.has(this.devilArtKey(pose, size).key)) continue
+          this.prepareDevil(pose, size)
+          break
+        }
+      }
     } else {
       this.prepare(kind, size, time)
     }
@@ -206,6 +214,7 @@ export class RaidGpuBossBodies {
           ? enemy.mirageKind : enemy.bossKind
         if (kind !== 'squid' && kind !== 'snake' && kind !== 'final' && kind !== 'devil') continue
         if (kind === 'devil') {
+          this.lastDevilUseMs = frame.time
           const size = getEnemyCanvasSize(enemy, frame.width)
           const pose = getDevilBossPose(enemy, frame.time)
           const art = this.prepareDevil(pose, size)
@@ -286,6 +295,22 @@ export class RaidGpuBossBodies {
       this.nodes.delete(id)
       if (this.spareNodes.length < 3) this.spareNodes.push(pair)
       else { pair.base.destroy(); pair.blend.destroy() }
+    }
+    // Retire stage/pose textures after the encounter rather than keeping a
+    // second set of full-resolution GPU images alive indefinitely.
+    for (const [key, entry] of this.art) {
+      if (frame.time - entry.lastUsedMs <= 14000) continue
+      this.art.delete(key)
+      this.disposeArtwork(entry)
+    }
+    if (this.lastDevilUseMs > 0 && frame.time - this.lastDevilUseMs > 14000) {
+      for (const entry of this.devilArt.values()) {
+        entry.texture.destroy(true)
+        entry.canvas.width = 0
+        entry.canvas.height = 0
+      }
+      this.devilArt.clear()
+      this.lastDevilUseMs = 0
     }
   }
 
