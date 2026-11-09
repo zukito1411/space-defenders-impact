@@ -86,12 +86,6 @@ export function BossBriefingCanvas({ kind }: { kind: BriefingBossKind }) {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
       ctx.clearRect(0, 0, rect.width, rect.height)
 
-      const glow = ctx.createRadialGradient(rect.width * 0.5, rect.height * 0.5, 4, rect.width * 0.5, rect.height * 0.5, rect.width * 0.48)
-      glow.addColorStop(0, kind === 'devil' ? 'rgba(239,68,68,0.18)' : kind === 'snake' ? 'rgba(225,29,72,0.22)' : kind === 'final' ? 'rgba(248,113,113,0.18)' : 'rgba(244,114,182,0.2)')
-      glow.addColorStop(1, 'rgba(0,0,0,0)')
-      ctx.fillStyle = glow
-      ctx.fillRect(0, 0, rect.width, rect.height)
-
       ctx.save()
       const size = Math.min(rect.width * (kind === 'devil' ? 0.86 : kind === 'snake' ? 0.58 : kind === 'final' ? 0.68 : 0.62), rect.height * (kind === 'devil' ? 0.96 : 0.78))
       ctx.translate(rect.width * 0.5, rect.height * (kind === 'devil' ? 0.33 : kind === 'final' ? 0.58 : 0.54))
