@@ -895,6 +895,12 @@ export class PixiRaidBackground {
   private width = 0
   private height = 0
   private dpr = 1
+  private gpuTimerGl: WebGL2RenderingContext | null = null
+  private gpuTimerExt: { TIME_ELAPSED_EXT: number; GPU_DISJOINT_EXT: number } | null = null
+  private gpuTimerQuery: WebGLQuery | null = null
+  private gpuTimerFrames = 0
+  private gpuTimerDisabled = false
+  private lastGpuElapsedMs: number | null = null
 
   async init(host: HTMLDivElement) {
     try {
@@ -954,6 +960,10 @@ export class PixiRaidBackground {
   }
 
   destroy() {
+    if (this.gpuTimerGl && this.gpuTimerQuery) {
+      try { this.gpuTimerGl.deleteQuery(this.gpuTimerQuery) } catch { /* context lost */ }
+      this.gpuTimerQuery = null
+    }
     this.gradientCache.forEach((gradient) => gradient.destroy())
     this.gradientCache.clear()
     this.gpuForeground.destroy()
@@ -1041,7 +1051,58 @@ export class PixiRaidBackground {
 
   isBossGpuRendered(id: number) { return this.gpuForeground.isBossGpuRendered(id) }
 
-  getRaidGpuStats() { return this.gpuForeground.getStats() }
+  getRaidGpuStats() { return { ...this.gpuForeground.getStats(), gpuFrameMs: this.lastGpuElapsedMs } }
+
+  private renderWithGpuTimer(app: Application) {
+    if (this.gpuTimerDisabled) { app.render(); return }
+    try {
+      if (!this.gpuTimerGl) {
+        // Pixi can use WebGL1, where the WebGL2 timer API is unavailable.
+        // This is optional telemetry, never a gameplay dependency.
+        const renderer = app.renderer as unknown as { gl?: WebGLRenderingContext | WebGL2RenderingContext }
+        const gl = renderer.gl
+        if (!gl || typeof (gl as WebGL2RenderingContext).createQuery !== 'function') {
+          this.gpuTimerDisabled = true
+          app.render()
+          return
+        }
+        this.gpuTimerGl = gl as WebGL2RenderingContext
+        this.gpuTimerExt = this.gpuTimerGl.getExtension('EXT_disjoint_timer_query_webgl2')
+        if (!this.gpuTimerExt) {
+          this.gpuTimerDisabled = true
+          app.render()
+          return
+        }
+      }
+      const gl = this.gpuTimerGl
+      const ext = this.gpuTimerExt
+      if (gl && ext && this.gpuTimerQuery) {
+        if (gl.getQueryParameter(this.gpuTimerQuery, gl.QUERY_RESULT_AVAILABLE)) {
+          const disjoint = Boolean(gl.getParameter(ext.GPU_DISJOINT_EXT))
+          if (!disjoint) this.lastGpuElapsedMs = Number(gl.getQueryParameter(this.gpuTimerQuery, gl.QUERY_RESULT)) / 1000000
+          gl.deleteQuery(this.gpuTimerQuery)
+          this.gpuTimerQuery = null
+        }
+      }
+      // Sample at ~3Hz, avoiding per-frame query allocations or a GPU sync.
+      const sample = gl && ext && !this.gpuTimerQuery && ++this.gpuTimerFrames % 20 === 0
+      if (sample) {
+        const query = gl!.createQuery()
+        if (query) {
+          gl!.beginQuery(ext!.TIME_ELAPSED_EXT, query)
+          this.gpuTimerQuery = query
+          try { app.render() } finally { gl!.endQuery(ext!.TIME_ELAPSED_EXT) }
+          return
+        }
+      }
+      app.render()
+    } catch {
+      this.gpuTimerDisabled = true
+      this.lastGpuElapsedMs = null
+      // Never let unsupported GPU timing stop the game's renderer.
+      app.render()
+    }
+  }
 
   renderForeground(frame: RaidGpuForegroundFrame) {
     const app = this.app
@@ -1050,7 +1111,7 @@ export class PixiRaidBackground {
     try {
       // Present scenery even if the GPU actor layer fails; Canvas will draw
       // those actors itself, avoiding a black screen on unsupported devices.
-      app.render()
+      this.renderWithGpuTimer(app)
       return foregroundReady
     } catch {
       this.gpuForeground.root.visible = false
