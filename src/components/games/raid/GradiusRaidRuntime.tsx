@@ -142,10 +142,13 @@ export function GradiusRaid({
   const perfBudgetRef = useRef({
     lastDraw: 0, interval: 0, slowFrames: 0, fastFrames: 0,
     windowStart: 0, ticks: 0, frames: 0, simMs: 0, drawMs: 0, maxFrameMs: 0,
+    backgroundMs: 0, gpuSubmitMs: 0, canvasMs: 0, bossMs: 0,
   })
   // Fractional accumulator preserves ~60Hz at 75/90/120Hz display rates,
   // rather than wrongly dropping 90Hz panels to 45 FPS.
   const frameClockRef = useRef({ lastRafTime: 0, accumulatedMs: 0 })
+  const drawCostsRef = useRef({ backgroundMs: 0, gpuSubmitMs: 0, canvasMs: 0, bossMs: 0 })
+  const adaptiveResolutionRef = useRef({ scale: 1, lastChangeMs: 0, fastFrames: 0 })
   const rafRef = useRef(0)
   const lastTimeRef = useRef(0)
   const lastRenderTimeRef = useRef(0)
@@ -1407,7 +1410,7 @@ export function GradiusRaid({
     const refreshViewportMetrics = () => {
       const root = rootRef.current
       if (!root) return
-      viewportMetricsRef.current = makeRaidViewportMetrics(root, graphicsQualityRef.current, isCoOpActive())
+      viewportMetricsRef.current = makeRaidViewportMetrics(root, graphicsQualityRef.current, isCoOpActive(), adaptiveResolutionRef.current.scale)
     }
 
     refreshViewportMetrics()
@@ -1462,8 +1465,9 @@ export function GradiusRaid({
     const gfxQuality = graphicsQualityRef.current
     const multiplayerActive = isCoOpActive()
     let viewport = viewportMetricsRef.current
-    if (!viewport || viewport.quality !== gfxQuality || viewport.multiplayer !== multiplayerActive) {
-      viewport = makeRaidViewportMetrics(root, gfxQuality, multiplayerActive)
+    if (!viewport || viewport.quality !== gfxQuality || viewport.multiplayer !== multiplayerActive ||
+      viewport.adaptiveScale !== adaptiveResolutionRef.current.scale) {
+      viewport = makeRaidViewportMetrics(root, gfxQuality, multiplayerActive, adaptiveResolutionRef.current.scale)
       viewportMetricsRef.current = viewport
     }
     const { cssWidth, cssHeight, dpr, profile: gfxProfile, visualScale } = viewport
@@ -1527,6 +1531,9 @@ export function GradiusRaid({
           activeBoss?.bossKind === 'final' || activeBoss?.bossKind === 'devil' ? RAID_BOSS_BACKGROUND_THEME_FINAL :
             campaignBackgroundStageTheme
 
+    const measured = showPerfHudRef.current
+    const costs = drawCostsRef.current
+    const backgroundStart = measured ? performance.now() : 0
     // The foreground stays on every requestAnimationFrame, including player
     // steering, projectiles, hit FX and boss telegraphs. Background detail
     // and resolution are unchanged; on Android-sized screens we send the
@@ -1581,8 +1588,10 @@ export function GradiusRaid({
       }
     }
 
+    costs.backgroundMs = measured ? performance.now() - backgroundStart : 0
     // One WebGL pass now presents animated scenery and pooled foreground
     // sprites together. The complex Canvas overlay still draws every frame.
+    const gpuStart = measured ? performance.now() : 0
     const gpuForegroundDrawn = pixiBackground?.renderForeground({
       width: cssWidth,
       height: cssHeight,
@@ -1601,6 +1610,8 @@ export function GradiusRaid({
       sparks: sparksRef.current,
       ripples: ripplesRef.current,
     }) ?? false
+    costs.gpuSubmitMs = measured ? performance.now() - gpuStart : 0
+    const canvasStart = measured ? performance.now() : 0
 
     const drawTrail = (shot: Shot, color: string, length: number, widthPx: number) => {
       const x = toX(shot.x)
@@ -2253,6 +2264,7 @@ export function GradiusRaid({
       drawDerelictWreck(ctx, wreck, toX, toY, cssWidth, time)
     }
 
+    const bossCanvasStart = measured ? performance.now() : 0
     const normalEnemyFilter = getNormalEnemyFilter(time)
     for (const enemy of enemiesRef.current) {
       const spriteMargin = enemy.isBoss ? 26 : enemy.isMiniBoss ? 12 : 5
@@ -2261,6 +2273,7 @@ export function GradiusRaid({
       drawRaidEnemy(ctx, enemy, toX, toY, cssWidth, time, normalEnemyFilter, dpr,
         gpuForegroundDrawn && Boolean(enemy.isBoss && pixiBackground?.isBossGpuRendered(enemy.id)))
     }
+    costs.bossMs = measured ? performance.now() - bossCanvasStart : 0
 
     if (godMeleeStrikesRef.current.length > 0) {
       drawGodGundamPassiveStrikes(ctx, godMeleeStrikesRef.current, toX, toY, cssWidth)
@@ -2373,6 +2386,7 @@ export function GradiusRaid({
       ctx.fillRect(0, 0, cssWidth, cssHeight)
       ctx.globalAlpha = 1
     }
+    costs.canvasMs = measured ? performance.now() - canvasStart : 0
   }, [])
 
   const spawnSparks = useCallback((x: number, y: number, color: string, count: number, size = 5) => {
@@ -6866,6 +6880,11 @@ export function GradiusRaid({
         if (drewFrame) {
           perf.frames += 1
           perf.drawMs += drawMs
+          const costs = drawCostsRef.current
+          perf.backgroundMs += costs.backgroundMs
+          perf.gpuSubmitMs += costs.gpuSubmitMs
+          perf.canvasMs += costs.canvasMs
+          perf.bossMs += costs.bossMs
         }
         perf.maxFrameMs = Math.max(perf.maxFrameMs, frameDelta)
         if (time - perf.windowStart >= 1000) {
@@ -6873,14 +6892,21 @@ export function GradiusRaid({
           const renderFps = Math.round(perf.frames * 1000 / Math.max(1, windowMs))
           const avgSim = (perf.simMs / Math.max(1, perf.ticks)).toFixed(1)
           const avgDraw = (perf.drawMs / Math.max(1, perf.frames)).toFixed(1)
+          const perDraw = Math.max(1, perf.frames)
+          const gpu = pixiBackgroundRef.current?.getRaidGpuStats()
+          const bubbleCount = enemyShotsRef.current.reduce((count, shot) => count + (shot.kind === 'squidBubble' ? 1 : 0), 0)
           if (perfHudRef.current) perfHudRef.current.textContent =
-            `FPS ${renderFps} | Sim ${avgSim}ms | Draw ${avgDraw}ms | Spike ${Math.round(perf.maxFrameMs)}ms`
+            `FPS ${renderFps} | Sim ${avgSim}ms | Draw ${avgDraw}ms | GPU submit ${(perf.gpuSubmitMs / perDraw).toFixed(1)}ms | BG ${(perf.backgroundMs / perDraw).toFixed(1)}ms | Canvas ${(perf.canvasMs / perDraw).toFixed(1)}ms | Boss ${(perf.bossMs / perDraw).toFixed(1)}ms | Spike ${Math.round(perf.maxFrameMs)}ms | DPR ${viewportMetricsRef.current?.dpr.toFixed(2) ?? '?'} | Shots ${shotsRef.current.length}/${enemyShotsRef.current.length} | Bubbles ${bubbleCount} | GPU nodes ${gpu?.shots ?? 0} | GPU textures ${gpu?.textures ?? 0} | Boss atlas ${gpu?.bossTextureMB ?? 0}MB`
           perf.windowStart = time
           perf.frames = 0
           perf.ticks = 0
           perf.simMs = 0
           perf.drawMs = 0
           perf.maxFrameMs = 0
+          perf.backgroundMs = 0
+          perf.gpuSubmitMs = 0
+          perf.canvasMs = 0
+          perf.bossMs = 0
         }
       } else {
         perf.windowStart = 0
@@ -6889,6 +6915,10 @@ export function GradiusRaid({
         perf.simMs = 0
         perf.drawMs = 0
         perf.maxFrameMs = 0
+        perf.backgroundMs = 0
+        perf.gpuSubmitMs = 0
+        perf.canvasMs = 0
+        perf.bossMs = 0
       }
       const renderInterval = phase === 'playing'
         ? (stageClearRef.current > 0 || bossAlertRef.current > 0 ? GAMEPLAY_ALERT_SNAPSHOT_INTERVAL_MS : GAMEPLAY_SNAPSHOT_INTERVAL_MS)
