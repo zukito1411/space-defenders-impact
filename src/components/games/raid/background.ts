@@ -1027,11 +1027,13 @@ export class PixiRaidBackground {
 
   renderForeground(frame: RaidGpuForegroundFrame) {
     const app = this.app
-    if (!app || !this.gpuForeground.update(frame)) return false
+    if (!app) return false
+    const foregroundReady = this.gpuForeground.update(frame)
     try {
-      // One GPU draw call for both background and pooled foreground objects.
+      // Present scenery even if the GPU actor layer fails; Canvas will draw
+      // those actors itself, avoiding a black screen on unsupported devices.
       app.render()
-      return true
+      return foregroundReady
     } catch {
       this.gpuForeground.root.visible = false
       return false
