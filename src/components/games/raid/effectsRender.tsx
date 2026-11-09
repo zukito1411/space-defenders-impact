@@ -368,7 +368,9 @@ export function drawGodGundamBarrage(
       ctx.save()
       ctx.translate(x, y)
       if (shouldMirrorCoreLanderBarragePose(model, attackSide)) ctx.scale(-1, 1)
-      ctx.shadowBlur = Math.max(8, spriteSize * 0.08)
+      // Large per-sprite software shadows are costly on Android Canvas.
+    // Impact glows remain visible via separate additive energy effects.
+    ctx.shadowBlur = typeof window !== 'undefined' && window.innerHeight <= 600 ? 0 : Math.max(8, spriteSize * 0.08)
       ctx.shadowColor = shadowColor
       drawCanvasSpriteContain(ctx, sprite, 0, 0, spriteSize * (target.isBoss ? 1 : 0.86) * poseScale, barrageFilter, alpha, 0, 1, energyColor)
       ctx.restore()
@@ -471,7 +473,7 @@ export function drawGodGundamPassiveStrikes(
       ctx.save()
       ctx.translate(x, y)
       if (shouldMirrorCoreLanderBarragePose(model, attackSide)) ctx.scale(-1, 1)
-      ctx.shadowBlur = Math.max(5, spriteSize * (clone ? 0.045 : 0.08))
+      ctx.shadowBlur = typeof window !== 'undefined' && window.innerHeight <= 600 ? 0 : Math.max(5, spriteSize * (clone ? 0.045 : 0.08))
       ctx.shadowColor = shadowColor
       drawCanvasSpriteContain(ctx, sprite, 0, 0, spriteSize * (1 + layer * 0.06) * poseScale, strikeFilter, alpha * cloneFade, 0, 1, energyColor)
       ctx.restore()
