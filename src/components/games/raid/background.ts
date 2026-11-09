@@ -7,6 +7,8 @@ import type { RaidOtherAssetKey } from './assets'
 import { COMET_ASSET_HEAD_ANGLE, DEG } from './constants'
 import type { CameraShakeState } from './types'
 import { clamp, seededNoise } from './utils'
+import { RaidGpuForeground } from './gpuForeground'
+import type { RaidGpuForegroundFrame } from './gpuForeground'
 
 export type RaidPalette = {
   baseTop: string
@@ -854,6 +856,7 @@ export function getRaidCameraShakeOffset(shake: CameraShakeState, time: number, 
 export class PixiRaidBackground {
   private app: Application | null = null
   private readonly scene = new Container()
+  private readonly gpuForeground = new RaidGpuForeground()
   private readonly baseGraphics = new Graphics()
   private readonly nebulaGraphics = new Graphics()
   private readonly bossTintGraphics = new Graphics()
@@ -907,6 +910,7 @@ export class PixiRaidBackground {
       })
       this.app = app
       app.stage.addChild(this.scene)
+      app.stage.addChild(this.gpuForeground.root)
       this.scene.addChild(this.baseGraphics)
       this.scene.addChild(this.nebulaGraphics)
       this.scene.addChild(this.bossTintGraphics)
@@ -947,6 +951,7 @@ export class PixiRaidBackground {
   destroy() {
     this.gradientCache.forEach((gradient) => gradient.destroy())
     this.gradientCache.clear()
+    this.gpuForeground.destroy()
     this.app?.destroy({ removeView: true }, { children: true })
     this.app = null
   }
@@ -1012,9 +1017,23 @@ export class PixiRaidBackground {
       this.updateScenic(width, height, seconds, stageTheme, isLow, isMedium)
       this.updateRareCometFlyby(width, height, seconds, isLow, isMedium, stageTheme)
       this.updateBackgroundObjects(width, height, seconds, stageTheme, isLow, isMedium)
+      // Present with the foreground once per rAF, not twice. Geometry,
+      // scenery and textures are updated here on their existing cadence.
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  renderForeground(frame: RaidGpuForegroundFrame) {
+    const app = this.app
+    if (!app || !this.gpuForeground.update(frame)) return false
+    try {
+      // One GPU draw call for both background and pooled foreground objects.
       app.render()
       return true
     } catch {
+      this.gpuForeground.root.visible = false
       return false
     }
   }
