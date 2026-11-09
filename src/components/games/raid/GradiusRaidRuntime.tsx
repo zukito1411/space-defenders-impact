@@ -6880,7 +6880,7 @@ export function GradiusRaid({
           // A long cooldown prevents rapid WebGL render-target reallocations.
           const adaptive = adaptiveResolutionRef.current
           if (perf.interval > 0 && perf.slowFrames >= 55 &&
-            drawMs > 19 && simulationMs < 11 &&
+            (drawMs > 19 || frameDelta > 31) && simulationMs < 11 &&
             time - adaptive.lastChangeMs > 8000 && adaptive.scale > 0.75) {
             adaptive.scale = Math.max(0.75, Math.round((adaptive.scale - 0.1) * 100) / 100)
             adaptive.lastChangeMs = time
