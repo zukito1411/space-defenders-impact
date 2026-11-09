@@ -153,7 +153,7 @@ export function drawRaidEnemy(
     if (displayBossKind === 'devil') {
       ctx.save()
       ctx.translate(x, y)
-      drawDevilGundamBoss(ctx, enemy, size, time)
+      drawDevilGundamBoss(ctx, enemy, size, time, skipGpuStageBossBody)
       drawEnemyHitFlash(ctx, size, enemy.hitFlash, '#ef4444')
       ctx.restore()
       if (enemy.hp > 0) {
