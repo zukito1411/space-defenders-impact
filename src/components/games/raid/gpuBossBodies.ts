@@ -36,6 +36,13 @@ const MAX_ACTIVE_BOSS_ARTSETS = 2
  */
 export class RaidGpuBossBodies {
   readonly root = new Container()
+  private readonly auraLayer = new Container()
+  private readonly bodyLayer = new Container()
+  private readonly reticleLayer = new Container()
+  private auraTexture: Texture | null = null
+  private reticleTexture: Texture | null = null
+  private readonly auraNodes = new Map<number, Sprite>()
+  private readonly reticleNodes = new Map<number, Sprite>()
   private readonly art = new Map<string, BossArtworkEntry>()
   private readonly devilArt = new Map<string, DevilArt>()
   private readonly pendingDevilArt = new Set<string>()
@@ -44,6 +51,88 @@ export class RaidGpuBossBodies {
   private readonly spareNodes: BossSpritePair[] = []
   private readonly renderedIds = new Set<number>()
   private disposed = false
+
+  constructor() {
+    this.auraLayer.blendMode = 'add'
+    this.reticleLayer.blendMode = 'add'
+    this.root.addChild(this.auraLayer, this.bodyLayer, this.reticleLayer)
+  }
+
+  private makeDecorationTexture(aura: boolean) {
+    const canvas = document.createElement('canvas')
+    canvas.width = canvas.height = 128
+    const c = canvas.getContext('2d')!
+    if (aura) {
+      const g = c.createRadialGradient(64, 64, 0, 64, 64, 38)
+      g.addColorStop(0, 'rgba(255,255,255,0.36)')
+      g.addColorStop(0.56, 'rgba(255,255,255,0.16)')
+      g.addColorStop(1, 'rgba(255,255,255,0)')
+      c.fillStyle = g
+      c.beginPath()
+      c.arc(64, 64, 38, 0, Math.PI * 2)
+      c.fill()
+      c.strokeStyle = 'rgba(255,255,255,0.46)'
+      c.lineWidth = 2
+      c.strokeRect(39, 39, 50, 50)
+      c.strokeRect(33, 33, 62, 62)
+    } else {
+      c.strokeStyle = 'rgba(255,255,255,0.8)'
+      c.lineWidth = 3
+      for (const sx of [-1, 1]) for (const sy of [-1, 1]) {
+        c.beginPath()
+        c.moveTo(64 + sx * 45, 64 + sy * 30)
+        c.lineTo(64 + sx * 45, 64 + sy * 45)
+        c.lineTo(64 + sx * 30, 64 + sy * 45)
+        c.stroke()
+      }
+    }
+    return Texture.from(canvas)
+  }
+
+  private ensureDecorations() {
+    if (!this.auraTexture) this.auraTexture = this.makeDecorationTexture(true)
+    if (!this.reticleTexture) this.reticleTexture = this.makeDecorationTexture(false)
+  }
+
+  private decorate(enemy: Enemy, kind: GpuBossKind | 'devil', size: number, frame: RaidGpuForegroundFrame, opacity: number) {
+    if (enemy.hp <= 0) return
+    this.ensureDecorations()
+    const x = enemy.x * frame.width / 100
+    const y = enemy.y * frame.height / 100
+    if (kind !== 'devil' && this.auraTexture) {
+      let aura = this.auraNodes.get(enemy.id)
+      if (!aura) {
+        aura = new Sprite(this.auraTexture)
+        aura.anchor.set(0.5)
+        this.auraLayer.addChild(aura)
+        this.auraNodes.set(enemy.id, aura)
+      }
+      aura.visible = true
+      aura.position.set(x, y)
+      aura.width = size * 2.8
+      aura.height = size * 2.8
+      aura.rotation = frame.time / 2400
+      aura.tint = kind === 'squid' ? 0xf472b6 : kind === 'snake' ? 0xf87171 : 0x38bdf8
+      aura.alpha = 0.62 * opacity
+    }
+    if (this.reticleTexture) {
+      let reticle = this.reticleNodes.get(enemy.id)
+      if (!reticle) {
+        reticle = new Sprite(this.reticleTexture)
+        reticle.anchor.set(0.5)
+        this.reticleLayer.addChild(reticle)
+        this.reticleNodes.set(enemy.id, reticle)
+      }
+      reticle.visible = true
+      reticle.position.set(x, y)
+      const isFinal = kind === 'final' || kind === 'devil'
+      reticle.width = size * (isFinal ? 2.1 : 1.82)
+      reticle.height = reticle.width
+      reticle.rotation = frame.time / 2400
+      reticle.tint = isFinal ? 0xfbbf24 : 0xfde68a
+      reticle.alpha = isFinal ? 0.56 : 0.44
+    }
+  }
 
   private getArtworkKey(kind: GpuBossKind, size: number) {
     const renderSize = Math.max(180, Math.min(GPU_BOSS_MAX_ARTWORK_SIZE, Math.ceil(size / 16) * 16))
@@ -236,6 +325,7 @@ export class RaidGpuBossBodies {
           pair.base.alpha = fade
           const rage = clamp(1 - enemy.hp / Math.max(1, enemy.maxHp), 0, 1)
           pair.base.tint = pose === 'rage' && rage > 0.64 ? 0xffbfc1 : 0xffffff
+          this.decorate(enemy, kind, size, frame, fade)
           continue
         }
         // The snake's bite-lunge needs a special head-hidden pose; keep the
@@ -275,6 +365,7 @@ export class RaidGpuBossBodies {
         }
         pair.base.alpha = (1 - blend) * opacity
         pair.blend.alpha = blend * opacity
+        this.decorate(enemy, kind, size, frame, opacity)
         if (kind === 'final') {
           const rage = clamp((0.55 - enemy.hp / Math.max(1, enemy.maxHp)) / 0.55, 0, 1)
           const tint = rage > 0.55 ? 0xffe0e5 : 0xffffff
@@ -285,6 +376,16 @@ export class RaidGpuBossBodies {
           pair.blend.tint = 0xffffff
         }
       }
+    }
+    for (const [id, node] of this.auraNodes) {
+      if (activeIds.has(id)) continue
+      node.destroy()
+      this.auraNodes.delete(id)
+    }
+    for (const [id, node] of this.reticleNodes) {
+      if (activeIds.has(id)) continue
+      node.destroy()
+      this.reticleNodes.delete(id)
     }
     for (const [id, pair] of this.nodes) {
       if (activeIds.has(id)) continue
@@ -320,7 +421,7 @@ export class RaidGpuBossBodies {
     }
     for (const sprite of [pair.base, pair.blend]) {
       sprite.anchor.set(0.5)
-      if (!sprite.parent) this.root.addChild(sprite)
+      if (!sprite.parent) this.bodyLayer.addChild(sprite)
     }
     this.nodes.set(id, pair)
     return pair
@@ -344,6 +445,12 @@ export class RaidGpuBossBodies {
     this.disposed = true
     this.root.destroy({ children: true })
     this.nodes.clear()
+    this.auraNodes.clear()
+    this.reticleNodes.clear()
+    this.auraTexture?.destroy(true)
+    this.reticleTexture?.destroy(true)
+    this.auraTexture = null
+    this.reticleTexture = null
     this.spareNodes.length = 0
     for (const entry of this.art.values()) this.disposeArtwork(entry)
     this.art.clear()
