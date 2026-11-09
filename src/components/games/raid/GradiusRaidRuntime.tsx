@@ -2337,10 +2337,12 @@ export function GradiusRaid({
     if (allyShipRef && !hideAllyShipForBarrage) drawRaidPlayer(ctx, allyShipRef, phaseRef.current, toX, toY, cssWidth, time, ALLY_PLAYER_COLOR, getCachedEquippedCosmetics(allyShipRef.ship.key), getRaidPlayerVisualShipKey(allyShipRef, progressRef.current), sameScreenIdentityAura ? ALLY_PLAYER_COLOR : null)
     if (devilAssistShipRef && !hideDevilAssistForBarrage) drawRaidPlayer(ctx, devilAssistShipRef, phaseRef.current, toX, toY, cssWidth, time, '#facc15', getCachedEquippedCosmetics(devilAssistShipRef.ship.key), getRaidPlayerVisualShipKey(devilAssistShipRef, progressRef.current), null)
 
-    if (isWateryWorldTheme(backgroundStageTheme)) {
-      drawWateryWorldForegroundClouds(ctx, cssWidth, cssHeight, time, gfxQuality)
-    } else if (isVolcanicWorldTheme(backgroundStageTheme)) {
-      drawVolcanicWorldForegroundClouds(ctx, cssWidth, cssHeight, time, gfxQuality)
+    if (gfxProfile.drawDecorativeOverlays) {
+      if (isWateryWorldTheme(backgroundStageTheme)) {
+        drawWateryWorldForegroundClouds(ctx, cssWidth, cssHeight, time, gfxQuality)
+      } else if (isVolcanicWorldTheme(backgroundStageTheme)) {
+        drawVolcanicWorldForegroundClouds(ctx, cssWidth, cssHeight, time, gfxQuality)
+      }
     }
 
     for (const powerUp of powerUpsRef.current) {
