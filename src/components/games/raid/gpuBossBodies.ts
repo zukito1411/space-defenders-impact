@@ -94,7 +94,7 @@ export class RaidGpuBossBodies {
     if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
       window.requestIdleCallback(makeFrame, { timeout: 1800 })
     } else if (typeof window !== 'undefined') {
-      window.setTimeout(makeFrame, 36)
+      setTimeout(makeFrame, 36)
     }
   }
 
