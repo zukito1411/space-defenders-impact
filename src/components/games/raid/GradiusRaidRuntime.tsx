@@ -1489,6 +1489,7 @@ export function GradiusRaid({
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
     ctx.clearRect(0, 0, cssWidth, cssHeight)
 
+    const isGuestView = Boolean(multiplayerSessionRef.current && !multiplayerSessionRef.current.isHost)
     const toX = (value: number) => (value / WIDTH) * cssWidth
     const toY = (value: number) => (value / HEIGHT) * cssHeight
     // Actual viewport dimensions decide which sprites reach the renderer.
@@ -1565,6 +1566,8 @@ export function GradiusRaid({
         stageTheme: backgroundStageTheme,
         dpr,
         stageRush,
+        playerX: (isGuestView ? remotePlayerRef.current : playerRef.current)?.x ?? 50,
+        playerY: (isGuestView ? remotePlayerRef.current : playerRef.current)?.y ?? 65,
         bossIntensity,
         devilCorruption,
         finalBattleIntensity,
@@ -2322,7 +2325,6 @@ export function GradiusRaid({
 
     // On the guest's screen playerRef = interpolated host, remotePlayerRef = own (guest) ship.
     // Always draw the player's OWN ship in PLAYER_COLOR (red) and the ally in ALLY_PLAYER_COLOR (cyan).
-    const isGuestView = Boolean(multiplayerSessionRef.current && !multiplayerSessionRef.current.isHost)
     const ownShipRef = isGuestView ? remotePlayerRef.current : playerRef.current
     const allyShipRef = isGuestView ? playerRef.current : remotePlayerRef.current
     const devilAssistShipRef = devilAssistPlayerRef.current

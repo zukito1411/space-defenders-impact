@@ -1,3 +1,4 @@
+import { RaidTravelMotion } from './travelMotion'
 import { getPublicAssetUrl } from '../sound'
 import type { GraphicsQuality } from '../sound'
 import { getRaidAlienSpriteUrl, getRaidEliteSpriteUrl, getRaidShipSpriteUrl } from '../RaidShipSprite'
@@ -802,6 +803,8 @@ export type PixiRaidBackgroundFrame = {
   stageRush: number
   bossIntensity: number
   devilCorruption: number
+  playerX?: number
+  playerY?: number
   finalBattleIntensity?: number
 }
 
@@ -890,6 +893,7 @@ export class PixiRaidBackground {
   private readonly finalBattleTextures = new Map<string, Texture>()
   private readonly gradientCache = new Map<string, FillGradient>()
   private baseKey = ''
+  private readonly travel = new RaidTravelMotion()
   private starfieldKey = ''
   private ambientGlowKey = ''
   // Large Pixi vector layers do not need tessellation on every display frame.
@@ -1010,6 +1014,7 @@ export class PixiRaidBackground {
     try {
       const { width, height, dpr, palette, quality, stageTheme, time, stageRush, bossIntensity, devilCorruption, finalBattleIntensity = 0 } = frame
       const seconds = time / 1000
+      this.travel.update(time, stageRush, getRaidStarfieldSpeedScale(stageTheme), frame.playerX ?? 50, frame.playerY ?? 65)
       const isLow = quality === 'low'
       const isMedium = quality === 'medium'
 
@@ -1062,13 +1067,23 @@ export class PixiRaidBackground {
       // Cheap GPU-backed movements continue on every frame, so the animated
       // starfield, scrolling scenery and background ships remain smooth.
       this.updateGalaxies(width, height, seconds, stageTheme, isLow, isMedium)
-      this.updateStarfield(width, height, seconds, quality, dpr, palette.starTint, palette.streak, stageRush, stageTheme)
+      this.updateStarfield(width, height, quality, dpr, palette.starTint, palette.streak, stageTheme)
       this.updateSpeedLines(width, height, seconds, palette.streak, isLow, isMedium, stageTheme)
       this.updatePlanets(width, height, seconds, palette, stageTheme, isLow, isMedium)
       this.updateWrecks(width, height, seconds, stageTheme, isLow, isMedium)
       this.updateScenic(width, height, seconds, stageTheme, isLow, isMedium)
       this.updateRareCometFlyby(width, height, seconds, isLow, isMedium, stageTheme)
       this.updateBackgroundObjects(width, height, seconds, stageTheme, isLow, isMedium)
+      // Depth response stays in scenery; foreground gameplay never shifts.
+      const space = !isWateryWorldTheme(stageTheme) && !isVolcanicWorldTheme(stageTheme)
+      const px = space ? -this.travel.x * width : 0
+      const py = space ? -this.travel.y * height : 0
+      this.nebulaGraphics.position.set(px * 0.006, py * 0.004)
+      for (const layer of this.farStarLayers) layer.x = px * 0.008
+      for (const layer of this.nearStarLayers) layer.x = px * 0.024
+      for (const sprite of this.galaxySprites) { sprite.x += px * 0.004; sprite.y += py * 0.003 }
+      for (const sprite of this.planetSprites) { sprite.x += px * 0.018; sprite.y += py * 0.012 }
+      for (const sprite of this.asteroidSprites) { sprite.x += px * 0.035; sprite.y += py * 0.02 }
       // Scrolling water/volcano island and cloud sprites are inexpensive
       // position/visibility updates. They MUST advance each render frame,
       // independently of the 40-80 ms cached vector-ground redraw cadence.
@@ -1328,7 +1343,7 @@ export class PixiRaidBackground {
 
   private updateGalaxies(width: number, height: number, seconds: number, stageTheme: number, isLow: boolean, isMedium: boolean) {
     const scene = getRaidBackgroundScene(stageTheme)
-    const drift = Math.sin(seconds / 18)
+    const drift = Math.sin(seconds / 120)
     const visibleCount = isLow || !shouldDrawRaidGalaxies(stageTheme) ? 0 : isMedium ? 1 : scene.galaxies.length
     for (let index = 0; index < this.galaxySprites.length; index += 1) {
       const sprite = this.galaxySprites[index]
@@ -1340,7 +1355,7 @@ export class PixiRaidBackground {
         sprite,
         texture,
         width * galaxy.x + drift * width * galaxy.driftX,
-        height * galaxy.y + Math.cos(seconds / 22) * height * galaxy.driftY,
+        height * galaxy.y + Math.cos(seconds / 140) * height * galaxy.driftY,
         width * galaxy.width * scene.galaxyScale * (isMedium ? 0.82 : 1),
         height * galaxy.height * scene.galaxyScale * (isMedium ? 0.82 : 1),
         galaxy.alpha * (isMedium ? 0.78 : 1),
@@ -1349,7 +1364,7 @@ export class PixiRaidBackground {
     }
   }
 
-  private updateStarfield(width: number, height: number, seconds: number, quality: GraphicsQuality, dpr: number, starTint: string, streak: string, stageRush: number, stageTheme: number) {
+  private updateStarfield(width: number, height: number, quality: GraphicsQuality, dpr: number, starTint: string, streak: string, stageTheme: number) {
     if (!shouldDrawRaidStars(stageTheme)) {
       this.updateScrollingGraphics(this.farStarLayers, Math.max(1, height), 0, false)
       this.updateScrollingGraphics(this.nearStarLayers, Math.max(1, height), 0, false)
@@ -1370,7 +1385,7 @@ export class PixiRaidBackground {
         for (let index = 0; index < starLimit; index += 1) {
           const star = BACKGROUND_STARS[index]
           layer.circle(star.x * width, star.y * farLayerHeight, star.size * 0.62).fill(getPixiFill(
-            star.tint > 0.66 ? starTint : star.tint > 0.33 ? 'rgba(125,211,252,0.55)' : 'rgba(255,255,255,0.76)',
+            star.tint > 0.94 ? starTint : star.tint > 0.6 ? 'rgba(173,205,255,0.62)' : star.tint < 0.12 ? 'rgba(255,222,185,0.64)' : 'rgba(241,246,255,0.76)',
             star.alpha * 0.52,
           ))
         }
@@ -1383,8 +1398,9 @@ export class PixiRaidBackground {
             if (!shouldDrawRaidStarTrail(star, index, quality)) continue
             const x = star.x * width
             const y = star.y * nearLayerHeight
-            layer.moveTo(x, y - 14)
-            layer.lineTo(x, y + 22)
+            const length = 3 + star.size * 4 + star.tint * 6
+            layer.moveTo(x, y - length * 0.4)
+            layer.lineTo(x, y + length * 0.6)
             const trailFill = getPixiFill(star.tint > 0.78 ? streak : 'rgba(255,255,255,0.36)', star.alpha * 0.26)
             layer.stroke({
               color: trailFill.color,
@@ -1397,10 +1413,8 @@ export class PixiRaidBackground {
       }
     }
 
-    const rush = clamp(stageRush, 0, 1)
-    const starSpeedScale = getRaidStarfieldSpeedScale(stageTheme)
-    this.updateScrollingGraphics(this.farStarLayers, farLayerHeight, seconds * ((15 + rush * 42) * starSpeedScale) - height * 0.13, true)
-    this.updateScrollingGraphics(this.nearStarLayers, nearLayerHeight, seconds * ((72 + rush * 170) * starSpeedScale) - height * 0.19, !isLow && !isMedium && shouldDrawRaidStarTrails(stageTheme))
+    this.updateScrollingGraphics(this.farStarLayers, farLayerHeight, this.travel.far - height * 0.13, true)
+    this.updateScrollingGraphics(this.nearStarLayers, nearLayerHeight, this.travel.near - height * 0.19, !isLow && !isMedium && shouldDrawRaidStarTrails(stageTheme))
   }
 
   private updateScrollingGraphics(layers: Graphics[], layerHeight: number, offset: number, visible: boolean) {
@@ -1429,9 +1443,9 @@ export class PixiRaidBackground {
       const stroke = getPixiFill(getRaidSpeedLineColor(line, streak, stageTheme), 0.36)
       sprite.position.set(line.x * width, y)
       sprite.width = Math.max(1, line.width)
-      sprite.height = line.length
+      sprite.height = line.length * (0.18 + this.travel.rush * 0.82)
       sprite.tint = stroke.color
-      sprite.alpha = stroke.alpha
+      sprite.alpha = stroke.alpha * (0.18 + this.travel.rush * 0.82)
     }
   }
 
