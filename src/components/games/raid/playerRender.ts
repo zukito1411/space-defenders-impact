@@ -358,8 +358,11 @@ export function drawPlayerEngine(ctx: CanvasRenderingContext2D, x: number, y: nu
     const boost = clamp(engineBoost, 0, 1.35)
     const flicker = 1 + Math.sin(time / 41) * 0.025
     // Baked detail replaces two live gradients and shadow blurs per exhaust.
-    if (drawRaidCombatTexture(ctx, exhaust, x, y + size * 0.63,
-      size * (1.3 + boost * 0.5) * flicker, size * (0.48 + boost * 0.08), -Math.PI / 2, true)) return
+    const length = size * (1.3 + boost * 0.5) * flicker
+    // RIGHT-facing source root is at u≈0.8. Keep that root fixed at
+    // the nozzle while boost stretches the wake away from the hull.
+    if (drawRaidCombatTexture(ctx, exhaust, x, y + size * 0.34 + length * 0.3,
+      length, size * (0.36 + boost * 0.06), -Math.PI / 2, true)) return
   }
 
   const flicker = Math.sin(time / 105) * 0.04 + Math.sin(time / 53) * 0.018
@@ -1069,7 +1072,7 @@ export function drawRaidPlayer(
   const drawGodGundamEngineOverSprite = !isDown && Boolean(coreLanderCombatModel)
 
   if (!drawGodGundamEngineOverSprite && !isDown && cosmetics.trail) drawMasteryEngineTrail(ctx, x, engineY, engineSize, time, color, cosmeticShipKey, engineBoost)
-  if (!drawGodGundamEngineOverSprite && !isDown) drawPlayerEngine(ctx, x, engineY, engineSize, time, engineBoost)
+  else if (!drawGodGundamEngineOverSprite && !isDown) drawPlayerEngine(ctx, x, engineY, engineSize, time, engineBoost)
   if (!isDown && identityAuraColor) {
     ctx.save()
     ctx.globalCompositeOperation = 'lighter'
@@ -1244,8 +1247,10 @@ export function drawRaidPlayer(
     ctx.globalAlpha *= 0.7
     const ventOffset = engineSize * 0.08
     if (cosmetics.trail) drawMasteryEngineTrail(ctx, x, engineY, engineSize, time, color, cosmeticShipKey, engineBoost)
-    drawPlayerEngine(ctx, x - ventOffset, engineY, engineSize, time, engineBoost)
-    drawPlayerEngine(ctx, x + ventOffset, engineY, engineSize, time, engineBoost)
+    else {
+      drawPlayerEngine(ctx, x - ventOffset, engineY, engineSize, time, engineBoost)
+      drawPlayerEngine(ctx, x + ventOffset, engineY, engineSize, time, engineBoost)
+    }
     ctx.restore()
   }
   } finally { ctx.restore() }

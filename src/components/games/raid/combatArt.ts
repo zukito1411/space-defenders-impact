@@ -67,7 +67,7 @@ export function isWarmRaidEffectColor(color: string) {
   return warm
 }
 
-function splitAtlas(texture: Texture, trimBossProjectiles = false): Texture[] {
+function splitAtlas(texture: Texture, trimBossProjectiles = false, trimExplosion = false): Texture[] {
   // Generated sheets may be NPOT. WebGL 1 cannot mipmap those sources.
   const powerOfTwo = (value: number) => value > 0 && (value & (value - 1)) === 0
   texture.source.autoGenerateMipmaps = powerOfTwo(texture.source.pixelWidth) && powerOfTwo(texture.source.pixelHeight)
@@ -77,7 +77,7 @@ function splitAtlas(texture: Texture, trimBossProjectiles = false): Texture[] {
   return Array.from({ length: 16 }, (_, index) => {
     // Normalized boss cells have 32px transparent gutters. Remove only
     // empty padding and retain 8px for filtering; clouds keep their extent.
-    const inset = trimBossProjectiles && index <= 9 && index !== 5 ? width * (24 / 256) : 2
+    const inset = trimExplosion || (trimBossProjectiles && index <= 9 && index !== 5) ? width * (24 / 256) : 2
     return new Texture({
     source: texture.source,
     // A small inset plus the artwork's gutters prevent neighboring tile bleed.
@@ -104,7 +104,7 @@ export function preloadRaidCombatArt(): Promise<void> {
         buildMaterials(ENEMY_MATERIALS, enemyMaterials)
       }).catch((error: unknown) => { console.warn('Raid projectile artwork failed to load:', RAID_COMBAT_ATLAS_URL, error) })),
       (explosionFrames.length ? Promise.resolve() : Assets.load<Texture>(RAID_EXPLOSION_ATLAS_URL).then((texture) => {
-        explosionFrames = splitAtlas(texture)
+        explosionFrames = splitAtlas(texture, false, true)
         rootTextures.push(texture)
       }).catch((error: unknown) => { console.warn('Raid explosion artwork failed to load:', RAID_EXPLOSION_ATLAS_URL, error) })),
       (bossFrames.length ? Promise.resolve() : Assets.load<Texture>(RAID_BOSS_ATLAS_URL).then((texture) => {

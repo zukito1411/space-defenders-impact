@@ -1202,7 +1202,7 @@ export class PixiRaidBackground {
   }
 
   private async loadAssets() {
-    const entries = Object.entries(RAID_OTHER_ASSET_PATHS) as Array<[PixiRaidAssetKey, string]>
+    const entries = (Object.entries(RAID_OTHER_ASSET_PATHS) as Array<[PixiRaidAssetKey, string]>).filter(([key]) => key !== 'nukeMissile')
     await Promise.all(entries.map(async ([key, path]) => {
       try {
         const sprite = getRaidOtherCanvasSprite(key)
