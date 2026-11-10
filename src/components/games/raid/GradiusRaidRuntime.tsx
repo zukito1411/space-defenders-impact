@@ -1,4 +1,4 @@
-import { impactFrameProgress, impactScale, impactAlpha } from './combatFeel'
+import { impactFrameProgress, explosionDiameter, impactAlpha, rippleLifetime, rippleReplacement } from './combatFeel'
 import { useDoorCallback, useDoorState, useSpaceDoor } from '../../ui/SpaceDoor'
 import { getRaidText } from '../../../i18n'
 import type { LanguageCode } from '../../../i18n'
@@ -1213,11 +1213,14 @@ export function GradiusRaid({
     if (quality === 'low') return
     const profile = getRaidGraphicsProfile(quality, false, isCoOpActive())
     if (ripplesRef.current.length >= profile.maxRipples) {
-      const trimCount = ripplesRef.current.length - Math.max(0, profile.maxRipples - 1)
-      for (let index = 0; index < trimCount; index += 1) recycleRipple(ripplesRef.current[index])
-      ripplesRef.current.splice(0, trimCount)
+      const candidate = rippleReplacement(ripplesRef.current, size * 0.72)
+      if (candidate < 0) return
+      recycleRipple(ripplesRef.current[candidate])
+      ripplesRef.current.splice(candidate, 1)
+      // A graphics-setting reduction may lower the live effect cap.
+      while (ripplesRef.current.length >= profile.maxRipples) recycleRipple(ripplesRef.current.shift()!)
     }
-    const rippleLife = 0.32
+    const rippleLife = rippleLifetime(size, isWarmRaidEffectColor(color))
     ripplesRef.current.push(acquireRipple(x, y, color, size * 0.72, rippleLife))
   }, [])
 
@@ -2195,19 +2198,22 @@ export function GradiusRaid({
       ctx.lineWidth = 1.25
       for (let i = rippleStart; i < ripples.length; i += 1) {
         const ripple = ripples[i]
-        if (!raidObjectInView(drawBounds, ripple.x, ripple.y, ripple.size * 3)) continue
         const progress = 1 - ripple.life / ripple.maxLife
+        const diameter = explosionDiameter(ripple.size, visualScale, progress)
+        if (!raidObjectInView(drawBounds, ripple.x, ripple.y,
+          Math.max(ripple.size * 3, diameter * 50 / cssWidth),
+          Math.max(ripple.size * 3, diameter * 50 / cssHeight))) continue
         const radius = (ripple.size * 2.7) * (0.35 + progress * 1.05)
-        ctx.globalAlpha = Math.max(0, ripple.life / ripple.maxLife) * 0.42
-        if (ripple.color !== lastRippleColor) { ctx.strokeStyle = ripple.color; lastRippleColor = ripple.color }
-        ctx.beginPath()
-        ctx.arc(toX(ripple.x), toY(ripple.y), radius, 0, Math.PI * 2)
-        ctx.stroke()
         const explosion = ripple.size >= 5 && isWarmRaidEffectColor(ripple.color) ? getRaidExplosionFrame(impactFrameProgress(progress)) : undefined
         if (explosion) {
-          const diameter = Math.max(28, ripple.size * 6.2) * visualScale * impactScale(progress)
           ctx.globalAlpha = impactAlpha(progress)
           drawRaidCombatTexture(ctx, explosion, toX(ripple.x), toY(ripple.y), diameter, diameter, ripple.id * 2.399, false)
+        } else {
+          ctx.globalAlpha = Math.max(0, ripple.life / ripple.maxLife) * 0.42
+          if (ripple.color !== lastRippleColor) { ctx.strokeStyle = ripple.color; lastRippleColor = ripple.color }
+          ctx.beginPath()
+          ctx.arc(toX(ripple.x), toY(ripple.y), radius, 0, Math.PI * 2)
+          ctx.stroke()
         }
       }
     }

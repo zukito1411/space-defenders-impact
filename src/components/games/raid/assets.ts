@@ -53,6 +53,7 @@ export type CanvasSpriteProcessor = (image: HTMLImageElement) => HTMLCanvasEleme
 export const canvasSpriteCache = new Map<string, CanvasSpriteEntry>()
 
 export const RAID_OTHER_ASSET_PATHS = {
+  nukeMissile: 'assets/raid-fx/nuke-missile-v1.webp',
   asteroid: 'assets/others/asteroid.webp',
   comet: 'assets/others/comet.webp',
   galaxy: 'assets/others/galaxy.webp',

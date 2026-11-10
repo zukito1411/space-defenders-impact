@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs'
 import ts from 'typescript'
 const source = readFileSync(new URL('../src/components/games/raid/combatFeel.ts', import.meta.url),'utf8')
 const code=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText
-const {impactFrameProgress,impactScale,impactAlpha,updateFlightPose}=await import('data:text/javascript;base64,'+Buffer.from(code).toString('base64'))
+const {impactFrameProgress,impactScale,impactAlpha,updateFlightPose,explosionDiameter,rippleLifetime,rippleReplacement}=await import('data:text/javascript;base64,'+Buffer.from(code).toString('base64'))
 let previousFrame=0, previousSize=0, previousAlpha=1
 for(let i=0;i<=100;i++) {
   const p=i/100, frame=impactFrameProgress(p), size=impactScale(p), alpha=impactAlpha(p)
@@ -12,7 +12,7 @@ for(let i=0;i<=100;i++) {
   assert.ok(alpha<=previousAlpha && alpha>=0)
   previousFrame=frame;previousSize=size;previousAlpha=alpha
 }
-assert.equal(impactFrameProgress(0.22),0.5,'ignition should bloom before mid-lifetime')
+assert.equal(impactFrameProgress(0.38),0.5,'ignition should bloom before mid-lifetime')
 assert.equal(impactAlpha(1),0,'last frame should fade without popping')
 assert.equal(impactFrameProgress(-10),0)
 assert.equal(impactFrameProgress(10),1)
@@ -31,3 +31,11 @@ assert.equal(baseline.bank,0,'teleport should reset visual bank')
 updateFlightPose(baseline,5000,91)
 assert.equal(baseline.bank,0,'resume should reset visual bank')
 console.log('Combat feel: impact envelopes, smooth fade, rate-independent bank, settle and teleport/resume reset passed')
+
+assert.equal(rippleLifetime(10,true),0.9)
+assert.equal(rippleLifetime(20,true),1.25)
+assert.equal(rippleLifetime(20,false),0.38)
+assert.ok(explosionDiameter(8,1,0.5)>60,'explosion should be large enough to read')
+assert.ok(explosionDiameter(1000,1,1)<=220,'explosion must stay bounded')
+assert.equal(rippleReplacement([{size:15},{size:12}],2),-1,'tiny hits must not evict major blasts')
+assert.equal(rippleReplacement([{size:15},{size:3}],12),1,'replace the weakest effect first')

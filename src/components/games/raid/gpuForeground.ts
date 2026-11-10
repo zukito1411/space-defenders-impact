@@ -1,4 +1,4 @@
-import { impactFrameProgress, impactScale, impactAlpha } from './combatFeel'
+import { impactFrameProgress, explosionDiameter, impactAlpha } from './combatFeel'
 import { Color, Container, Sprite, Texture } from 'pixi.js'
 import type { Renderer } from 'pixi.js'
 import {
@@ -500,24 +500,29 @@ export class RaidGpuForeground {
     if (this.particleRingTexture && frame.drawRipples) {
       for (let i = Math.max(0, frame.ripples.length - frame.maxRipples); i < frame.ripples.length; i++) {
         const ripple = frame.ripples[i]
-        if (!raidObjectInView(frame.bounds, ripple.x, ripple.y, ripple.size * 3)) continue
         const progress = 1 - ripple.life / Math.max(0.001, ripple.maxLife)
+        const diameter = explosionDiameter(ripple.size, frame.visualScale, progress)
+        if (!raidObjectInView(frame.bounds, ripple.x, ripple.y,
+          Math.max(ripple.size * 3, diameter * 50 / frame.width),
+          Math.max(ripple.size * 3, diameter * 50 / frame.height))) continue
         const radius = ripple.size * 2.7 * (0.35 + progress * 1.05)
-        this.paintParticle(
-          this.particleRingTexture, ripple.x * sx, ripple.y * sy, radius * 2,
-          ripple.color, Math.max(0, ripple.life / Math.max(0.001, ripple.maxLife)) * 0.42,
-        )
-        const shock = getRaidCombatFrame(COMBAT_TILE.shock)
-        if (shock) {
-          this.paintParticle(shock, ripple.x * sx, ripple.y * sy, radius * 2.1,
-            ripple.color, (1 - progress) * 0.34, radius * 1.5, ripple.id * 2.399)
-        }
         const tint = this.colorTint(ripple.color)
         const red = (tint >>> 16) & 255
         const green = (tint >>> 8) & 255
         const blue = tint & 255
         const warm = red > green * 0.95 && red > blue * 1.1
         const explosion = warm && ripple.size >= 5 ? getRaidExplosionFrame(impactFrameProgress(progress)) : undefined
+        if (!explosion) {
+          this.paintParticle(
+            this.particleRingTexture, ripple.x * sx, ripple.y * sy, radius * 2,
+            ripple.color, Math.max(0, ripple.life / Math.max(0.001, ripple.maxLife)) * 0.42,
+          )
+          const shock = getRaidCombatFrame(COMBAT_TILE.shock)
+          if (shock) {
+            this.paintParticle(shock, ripple.x * sx, ripple.y * sy, radius * 2.1,
+              ripple.color, (1 - progress) * 0.34, radius * 1.5, ripple.id * 2.399)
+          }
+        }
         if (explosion) {
           let sprite = this.impactNodes[this.impactCount]
           if (!sprite) {
@@ -530,7 +535,6 @@ export class RaidGpuForeground {
           sprite.texture = explosion
           sprite.visible = true
           sprite.position.set(ripple.x * sx, ripple.y * sy)
-          const diameter = Math.max(28, ripple.size * 6.2) * frame.visualScale * impactScale(progress)
           sprite.width = diameter
           sprite.height = diameter
           sprite.rotation = ripple.id * 2.399

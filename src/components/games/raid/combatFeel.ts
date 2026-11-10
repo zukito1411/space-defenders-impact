@@ -3,7 +3,7 @@ const unit = (value: number) => Math.max(0, Math.min(1, value))
 /** Presentation only: quick ignition followed by a longer ember/smoke tail. */
 export function impactFrameProgress(progress: number) {
   const p = unit(progress)
-  return p < 0.22 ? p * (0.5 / 0.22) : 0.5 + (p - 0.22) * (0.5 / 0.78)
+  return p < 0.38 ? p * (0.5 / 0.38) : 0.5 + (p - 0.38) * (0.5 / 0.62)
 }
 export function impactScale(progress: number) {
   return 0.66 + (1 - Math.pow(1 - unit(progress), 3)) * 0.56
@@ -25,4 +25,17 @@ export function updateFlightPose(pose: FlightPose, time: number, x: number) {
   pose.time = time
   pose.x = x
   return pose.bank
+}
+
+/** Readable explosions inside the existing bounded ripple/sprite budget. */
+export function explosionDiameter(size: number, visualScale: number, progress: number) {
+  return Math.min(180, Math.max(56, size * 8.8)) * visualScale * impactScale(progress)
+}
+export function rippleLifetime(size: number, warm: boolean) {
+  return warm && size >= 7 ? size >= 18 ? 1.25 : 0.9 : 0.38
+}
+export function rippleReplacement(ripples: readonly {size: number}[], incomingSize: number) {
+  let candidate = 0
+  for (let i = 1; i < ripples.length; i++) if (ripples[i].size < ripples[candidate].size) candidate = i
+  return ripples.length && incomingSize < ripples[candidate].size * 0.7 ? -1 : candidate
 }

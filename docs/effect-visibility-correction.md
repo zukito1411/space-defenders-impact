@@ -1,0 +1,17 @@
+# Explosion, nuke and engine correction
+
+Ordinary warm explosions now last 0.9 seconds, large ones 1.25 seconds, instead of 0.32 seconds for all ripples. The bloom reaches its middle frame at 38% of that lifetime. Explosion frame rectangles remove only zero-alpha cell gutters, retaining 8px filtering clearance, and the rendered fireball has a 56px base minimum before viewport scaling and a bounded size. GPU and Canvas use the same geometry and timing.
+
+A major blast is protected from replacement by a tiny ripple when the existing effect budget is full. Existing quality-dependent ripple/spark caps are unchanged. A textured fireball replaces its redundant ring/shock decorations: one effect draw instead of three on the GPU path, or one instead of two on Canvas. Culling includes the larger drawn extents.
+
+The equipped cosmetic engine trail and ordinary exhaust are mutually exclusive. Real two-nozzle combat models still draw one treatment at each nozzle. The atlas plume's leading root stays fixed at y + 0.34 × engine size as boost stretches its tail; previously the root drifted toward the hull with increasing length. The plume is also narrower. Banking transforms remain balanced.
+
+The new nuke missile is a normalized 512×256 RGBA WebP (15456 bytes), generated with the built-in image tool. It is included in loading/packaging but excluded from unused background GPU textures. The missile uses one bitmap, one short wake stroke and its existing destination marker. Detonation uses one shared explosion frame and one shock ring with a short initial screen wash. This replaces per-frame missile gradients/paths, a blast gradient, three rings and ten ray strokes. Damage, cooldown, travel time, invulnerability and blast duration are unchanged.
+
+The larger, longer fireballs increase individual pixel coverage and effect occupancy, while the removed layers reduce per-effect draw work. These are bounded implementation changes, not a measured FPS guarantee. No new continuous particles or post-processing layers were added.
+
+Validation: production build and asset packaging; boss-art and combat-feel checks; explosion duration/size limits and priority replacement; engine render harness checks one treatment, anchored boost and balanced transforms; nuke render harness checks one missile bitmap, two guidance strokes, one fireball and one shock ring without live gradients. The connected browser was unavailable and the cloud preview could not reach localhost, so gameplay appearance and Android FPS remain unverified.
+
+## Nuke generation prompt
+
+Use case: stylized-concept. Production 2D top-down sci-fi shooter sprite: ONE powerful nuclear strike missile pointing RIGHT with a short contained engine flame pointing LEFT. Isolated on genuine transparent RGBA background. Orthographic top-down view, no perspective tilt. Premium detailed silver-titanium armored warhead with dark gunmetal panel breaks, small crimson fins, amber warning bands, a bright cyan guidance strip and a strong readable silhouette at small game size. Sleek heavy military space torpedo, not a spaceship, no separate effects or orbiting objects. Restrained warm orange exhaust tightly attached to its rear nozzle; no loose particles, no huge halo, no smoke cloud. Center the entire missile and flame on a wide landscape canvas with transparent padding around all sides. No text, no lettering, no checkerboard, no backdrop, no scene. Crisp practical game texture.

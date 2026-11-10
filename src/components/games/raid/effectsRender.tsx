@@ -1,4 +1,6 @@
-import { RAID_DERELICT_WRECK_FILTER, RAID_DEVIL_RETICLE_GLOW_STOPS, RAID_SPIEGEL_SHADOW_CLONE_FILTER, RAID_SPIEGEL_SHADOW_CLONE_IMPACT_STOPS, drawCanvasImageContain, drawCanvasSpriteContain, getDerelictWreckCanvasSprite, getDerelictWreckVariantIndex, getGodGundamBarrageCanvasSprite, getRaidOtherCanvasSprite, getShipCanvasSprite } from './assets'
+import { COMBAT_TILE, drawRaidCombatTexture, getRaidCombatFrame, getRaidExplosionFrame } from './combatArt'
+import { impactAlpha, impactFrameProgress } from './combatFeel'
+import { getCanvasSpriteDimensions, RAID_DERELICT_WRECK_FILTER, RAID_DEVIL_RETICLE_GLOW_STOPS, RAID_SPIEGEL_SHADOW_CLONE_FILTER, RAID_SPIEGEL_SHADOW_CLONE_IMPACT_STOPS, drawCanvasImageContain, drawCanvasSpriteContain, getDerelictWreckCanvasSprite, getDerelictWreckVariantIndex, getGodGundamBarrageCanvasSprite, getRaidOtherCanvasSprite, getShipCanvasSprite } from './assets'
 import type { CachedCanvasDrawSource } from './assets'
 import { PICKUP_VOICE_SAMPLE_URLS } from './audio'
 import { forEachDevilBossBeamLane, forEachFinalBossBeamLane, getDevilBossBeamRadius, getDevilBossChargeDuration, getFinalBossBeamRadius } from './bossAttacks'
@@ -92,157 +94,79 @@ export function getNukePathDerivative(strike: NukeStrike, progress: number) {
 }
 
 export function drawNukeMissile(
-  ctx: CanvasRenderingContext2D,
-  strike: NukeStrike,
-  toX: (value: number) => number,
-  toY: (value: number) => number,
-  viewportWidth: number,
-  time: number,
+  ctx: CanvasRenderingContext2D, strike: NukeStrike,
+  toX: (value: number) => number, toY: (value: number) => number,
+  viewportWidth: number, time: number,
 ) {
-  const rawProgress = clamp(strike.age / strike.duration, 0, 1)
-  const progress = 1 - Math.pow(1 - rawProgress, 2.2)
+  const raw = clamp(strike.age / strike.duration, 0, 1)
+  const progress = 1 - Math.pow(1 - raw, 2.2)
   const point = getNukePathPoint(strike, progress)
   const derivative = getNukePathDerivative(strike, progress)
-  const x = toX(point.x)
-  const y = toY(point.y)
-  const dx = toX(point.x + derivative.x * 0.01) - x
-  const dy = toY(point.y + derivative.y * 0.01) - y
-  const angle = Math.atan2(dy, dx) + Math.PI / 2
-  const missileLength = Math.max(24, Math.min(42, viewportWidth * 0.043))
-  const missileWidth = missileLength * 0.34
-
+  const x = toX(point.x), y = toY(point.y)
+  const heading = Math.atan2(toY(point.y + derivative.y * 0.01) - y, toX(point.x + derivative.x * 0.01) - x)
   ctx.save()
   ctx.globalCompositeOperation = 'lighter'
+  ctx.strokeStyle = 'rgba(251,191,36,0.42)'
+  ctx.lineWidth = 2.2
   ctx.lineCap = 'round'
-  for (let index = 0; index < 10; index += 1) {
-    const next = Math.max(0, progress - index * 0.032)
-    const prev = Math.max(0, progress - (index + 1) * 0.032)
-    if (next <= 0 || next === prev) continue
-    const a = getNukePathPoint(strike, prev)
-    const b = getNukePathPoint(strike, next)
-    const alpha = (1 - index / 10) * (0.5 + rawProgress * 0.35)
-    ctx.strokeStyle = index < 4 ? `rgba(255,255,255,${alpha * 0.72})` : `rgba(249,115,22,${alpha * 0.58})`
-    ctx.lineWidth = Math.max(1.5, missileWidth * (0.55 - index * 0.035))
-    ctx.beginPath()
-    ctx.moveTo(toX(a.x), toY(a.y))
-    ctx.lineTo(toX(b.x), toY(b.y))
-    ctx.stroke()
+  ctx.beginPath()
+  for (let i = 4; i >= 0; i--) {
+    const trail = getNukePathPoint(strike, Math.max(0, progress - i * 0.025))
+    if (i === 4) ctx.moveTo(toX(trail.x), toY(trail.y))
+    else ctx.lineTo(toX(trail.x), toY(trail.y))
   }
-
-  const targetX = toX(strike.targetX)
-  const targetY = toY(strike.targetY)
-  ctx.globalAlpha = Math.max(0, 1 - rawProgress * 0.9)
-  ctx.strokeStyle = 'rgba(251,191,36,0.62)'
+  ctx.stroke()
+  // The destination remains visible until impact: no additional DOM overlay.
+  ctx.globalAlpha = (1 - raw) * 0.8
+  ctx.strokeStyle = '#fbbf24'
   ctx.lineWidth = 1.4
   ctx.setLineDash([5, 5])
   ctx.lineDashOffset = -time / 48
   ctx.beginPath()
-  ctx.arc(targetX, targetY, 18 + Math.sin(time / 120) * 2, 0, Math.PI * 2)
+  ctx.arc(toX(strike.targetX), toY(strike.targetY), 18 + Math.sin(time / 120) * 2, 0, Math.PI * 2)
   ctx.stroke()
   ctx.setLineDash([])
   ctx.globalAlpha = 1
-
-  ctx.translate(x, y)
-  ctx.rotate(angle)
-  ctx.shadowBlur = 18
-  ctx.shadowColor = 'rgba(249,115,22,0.85)'
-
-  const flame = ctx.createLinearGradient(0, missileLength * 0.18, 0, missileLength * 0.86)
-  flame.addColorStop(0, 'rgba(255,255,255,0.95)')
-  flame.addColorStop(0.22, 'rgba(251,191,36,0.9)')
-  flame.addColorStop(0.58, 'rgba(239,35,60,0.82)')
-  flame.addColorStop(1, 'rgba(239,35,60,0)')
-  ctx.fillStyle = flame
-  ctx.beginPath()
-  ctx.moveTo(-missileWidth * 0.28, missileLength * 0.22)
-  ctx.quadraticCurveTo(0, missileLength * (0.72 + Math.sin(time / 70) * 0.08), missileWidth * 0.28, missileLength * 0.22)
-  ctx.closePath()
-  ctx.fill()
-
-  const body = ctx.createLinearGradient(-missileWidth * 0.6, 0, missileWidth * 0.6, 0)
-  body.addColorStop(0, '#7f1d1d')
-  body.addColorStop(0.32, '#f8fafc')
-  body.addColorStop(0.56, '#fca5a5')
-  body.addColorStop(1, '#1f2937')
-  ctx.fillStyle = body
-  ctx.strokeStyle = 'rgba(255,255,255,0.82)'
-  ctx.lineWidth = 1.1
-  ctx.beginPath()
-  ctx.moveTo(0, -missileLength * 0.56)
-  ctx.quadraticCurveTo(missileWidth * 0.48, -missileLength * 0.26, missileWidth * 0.42, missileLength * 0.24)
-  ctx.lineTo(missileWidth * 0.2, missileLength * 0.46)
-  ctx.lineTo(0, missileLength * 0.34)
-  ctx.lineTo(-missileWidth * 0.2, missileLength * 0.46)
-  ctx.lineTo(-missileWidth * 0.42, missileLength * 0.24)
-  ctx.quadraticCurveTo(-missileWidth * 0.48, -missileLength * 0.26, 0, -missileLength * 0.56)
-  ctx.closePath()
-  ctx.fill()
-  ctx.stroke()
-
-  ctx.fillStyle = '#ef233c'
-  ctx.beginPath()
-  ctx.moveTo(-missileWidth * 0.48, missileLength * 0.12)
-  ctx.lineTo(-missileWidth * 0.98, missileLength * 0.4)
-  ctx.lineTo(-missileWidth * 0.32, missileLength * 0.34)
-  ctx.closePath()
-  ctx.fill()
-  ctx.beginPath()
-  ctx.moveTo(missileWidth * 0.48, missileLength * 0.12)
-  ctx.lineTo(missileWidth * 0.98, missileLength * 0.4)
-  ctx.lineTo(missileWidth * 0.32, missileLength * 0.34)
-  ctx.closePath()
-  ctx.fill()
-
+  const length = clamp(viewportWidth * 0.09, 64, 110)
+  const missile = getRaidOtherCanvasSprite('nukeMissile')
+  if (missile.loaded && missile.image.complete) {
+    const { source } = getCanvasSpriteDimensions(missile)
+    ctx.globalCompositeOperation = 'source-over'
+    ctx.translate(x, y)
+    ctx.rotate(heading)
+    ctx.drawImage(source, -length / 2, -length / 4, length, length / 2)
+  } else {
+    const fallback = getRaidCombatFrame(COMBAT_TILE.missile)
+    if (fallback) drawRaidCombatTexture(ctx, fallback, x, y, length, length * 0.55, heading, false)
+  }
   ctx.restore()
 }
 
-export function drawNukeBlast(ctx: CanvasRenderingContext2D, width: number, height: number, flashTime: number, time: number, originX?: number, originY?: number) {
+export function drawNukeBlast(ctx: CanvasRenderingContext2D, width: number, height: number, flashTime: number, _time: number, originX?: number, originY?: number) {
   const strength = clamp(flashTime / NUKE_FLASH_SECONDS, 0, 1)
   if (strength <= 0) return
-
-  const expansion = 1 - strength
-  const centerX = (originX ?? width * 0.5) + Math.sin(time / 210) * width * 0.015
-  const centerY = originY ?? height * 0.46
-  const maxRadius = Math.max(width, height)
-
+  const progress = 1 - strength
+  const x = originX ?? width * 0.5, y = originY ?? height * 0.46
+  const expansion = 1 - Math.pow(1 - progress, 3)
   ctx.save()
-  ctx.globalCompositeOperation = 'screen'
-  ctx.fillStyle = `rgba(255, 246, 220, ${0.08 + strength * 0.22})`
-  ctx.fillRect(0, 0, width, height)
-
-  drawRadialEllipse(ctx, centerX, centerY, maxRadius * (0.18 + expansion * 0.78), maxRadius * (0.14 + expansion * 0.62), [
-    [0, `rgba(255, 255, 255, ${0.86 * strength})`],
-    [0.18, `rgba(251, 191, 36, ${0.66 * strength})`],
-    [0.46, `rgba(239, 35, 60, ${0.36 * strength})`],
-    [1, 'rgba(0,0,0,0)'],
-  ])
-
-  ctx.globalCompositeOperation = 'lighter'
-  ctx.lineCap = 'round'
-  for (let index = 0; index < 3; index += 1) {
-    const ringProgress = clamp(expansion * 1.25 - index * 0.16, 0, 1)
-    if (ringProgress <= 0) continue
-    const radius = maxRadius * (0.12 + ringProgress * (0.42 + index * 0.1))
-    ctx.globalAlpha = (1 - ringProgress) * strength * (0.72 - index * 0.16)
-    ctx.strokeStyle = index === 0 ? '#ffffff' : index === 1 ? '#fbbf24' : '#fb7185'
-    ctx.lineWidth = Math.max(2, width * (0.004 + index * 0.001))
-    ctx.beginPath()
-    ctx.arc(centerX, centerY, radius, 0, Math.PI * 2)
-    ctx.stroke()
+  // Short flash, one textured fireball and one ring replace live gradients,
+  // three rings and ten individually stroked rays every frame.
+  if (progress < 0.18) {
+    ctx.fillStyle = `rgba(255,246,220,${0.18 * Math.pow(1 - progress / 0.18, 2)})`
+    ctx.fillRect(0, 0, width, height)
   }
-
-  ctx.globalAlpha = Math.min(0.7, strength * 0.65)
-  ctx.strokeStyle = 'rgba(255,255,255,0.72)'
-  ctx.lineWidth = Math.max(1.5, width * 0.0025)
-  for (let ray = 0; ray < 10; ray += 1) {
-    const angle = (ray / 10) * Math.PI * 2 + time / 260
-    const inner = maxRadius * (0.05 + expansion * 0.22)
-    const outer = maxRadius * (0.34 + expansion * 0.54)
-    ctx.beginPath()
-    ctx.moveTo(centerX + Math.cos(angle) * inner, centerY + Math.sin(angle) * inner)
-    ctx.lineTo(centerX + Math.cos(angle) * outer, centerY + Math.sin(angle) * outer)
-    ctx.stroke()
+  const fireball = getRaidExplosionFrame(impactFrameProgress(progress))
+  if (fireball) {
+    const diameter = Math.min(width, height) * (0.52 + expansion * 0.88)
+    ctx.globalAlpha = impactAlpha(progress)
+    drawRaidCombatTexture(ctx, fireball, x, y, diameter, diameter, 0, false)
   }
+  ctx.globalAlpha = strength * strength * 0.7
+  ctx.strokeStyle = '#ffe8b5'
+  ctx.lineWidth = Math.max(2, width * 0.003)
+  ctx.beginPath()
+  ctx.arc(x, y, Math.max(width, height) * (0.06 + expansion * 0.52), 0, Math.PI * 2)
+  ctx.stroke()
   ctx.restore()
 }
 
