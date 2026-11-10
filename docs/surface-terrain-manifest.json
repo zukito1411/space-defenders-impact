@@ -1,0 +1,46 @@
+[
+  {
+    "key": "water",
+    "path": "public/assets/raid-fx/terrain-water-v1.webp",
+    "size": [
+      512,
+      512
+    ],
+    "bytes": 56554,
+    "sha256": "50a91063d601592658e3bdfb9ad9e14ffa26384ea2977243690a74f4b563631c",
+    "sourceSize": [
+      1254,
+      1254
+    ],
+    "sourceSha256": "a6176a6d5fd2a27cfc99567f7a96e372d224fc0d15afabd0941e13380017e576",
+    "normalization": "RGB 512px POT downsample, Lanczos; WebP quality 92. Colors/composition unchanged.",
+    "repeatEdgeMeanAbsRGB": [
+      4.814,
+      4.931
+    ],
+    "generation": "built-in ImageGen",
+    "prompt": "Use case: stylized-concept. Asset type: seamless repeating 2D game terrain texture, square 1024 by 1024. Top-down orthographic close view of dark violet alien ocean water, realistic fine ripples, delicate pale lavender wavelets, rich deep purple and midnight blue water, restrained specular glints, exquisite crisp small-scale detail for a modern vertical scrolling shooter. The ENTIRE image is just water, no land, no islands, no continents, no clouds, no coastlines, no sky, no horizon, no planet curvature, no perspective or vanishing point, no text or frame. Perfectly tileable in both directions with matching opposite edges, visually homogeneous scale and exposure, no central focal point or large bright glare. The entire square fills with opaque detailed water texture, subtle low contrast to preserve foreground projectile readability."
+  },
+  {
+    "key": "lava",
+    "path": "public/assets/raid-fx/terrain-basalt-v1.webp",
+    "size": [
+      512,
+      512
+    ],
+    "bytes": 77016,
+    "sha256": "1cd3bb798e5920dd4db5f6a92a2b8553cc960f6333ece7a2c193f89aa63b7876",
+    "sourceSize": [
+      1254,
+      1254
+    ],
+    "sourceSha256": "e4639682ad4ca84047c68d0f4a8fc64290c63ef7ec8ef5a3e07c5610bc60c7d4",
+    "normalization": "RGB 512px POT downsample, Lanczos; WebP quality 92. Colors/composition unchanged.",
+    "repeatEdgeMeanAbsRGB": [
+      6.874,
+      6.63
+    ],
+    "generation": "built-in ImageGen",
+    "prompt": "Use case: stylized-concept. Asset type: seamless repeating 2D game terrain texture, square 1024 by 1024. Top-down orthographic close view of dark charcoal volcanic basalt terrain with fine cracked rock detail and small branching ember-orange lava fissures. Restrained exposure and realistic detailed hard natural rock for a modern vertical scrolling space shooter. Large terrain landmarks will be added separately: no mountains, no volcano cones, no islands, no clouds, no smoke, no buildings, no sky, no horizon, no planet curvature, no perspective, no text or frame. A homogeneous repeating terrain material, perfect seamless tile in both directions with matching opposite edges; orange fissures are sparse and dispersed, mostly stay away from the outer edge, edges remain matching dark textured basalt. No huge pools or central focal point. Full opaque square, crisp fine-scale detail, low contrast dark areas protect projectile readability."
+  }
+]

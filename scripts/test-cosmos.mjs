@@ -1,8 +1,11 @@
+import { TilingSprite as RealTilingSprite, Texture as RealTexture, TextureSource } from 'pixi.js'
+const { setUvs: realTilingUvs } = await import(new URL('./scene/sprite-tiling/utils/setUvs.mjs', import.meta.resolve('pixi.js')))
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import ts from 'typescript'
 const read = (file) => readFileSync(new URL('../'+file,import.meta.url),'utf8')
 const load = (source, jsx=false) => import('data:text/javascript;base64,'+Buffer.from(ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022,jsx:jsx?ts.JsxEmit.React:undefined}}).outputText).toString('base64'))
+const surface = await load(read('src/components/games/raid/surfaceMotion.ts'))
 const material = await load(read('src/components/games/raid/sceneryMaterial.ts'))
 const journey = await load(read('src/components/games/raid/journey.ts'))
 const regions = await load(read('src/components/games/raid/cosmos.ts'))
@@ -50,11 +53,15 @@ const ease=n=>{const t=unit(n);return t*t*(3-2*t)};
 const JOURNEY_CLEAR_SECONDS=3.15;
 const getRaidStageEntrySeconds=${journey.getRaidStageEntrySeconds.toString()};
 const sampleRaidJourney=${journey.sampleRaidJourney.toString()};
+const createSurfaceCameraFrame=${surface.createSurfaceCameraFrame.toString()};
+const positiveSurfaceModulo=${surface.positiveSurfaceModulo.toString()};
+const sampleSurfaceCamera=${surface.sampleSurfaceCamera.toString()};
+const getSurfaceIslandY=${surface.getSurfaceIslandY.toString()};
 const PLANET_DEPTH=[30,20,10],PLANET_PARALLAX=[.018,.009,.004];
 const COSMIC_REGIONS=${JSON.stringify(regions.COSMIC_REGIONS)};
 const cosmicRegionIndex=${cosmicRegionIndex.toString()},edgeFlyby=${edgeFlyby.toString()};
-const frame={width:464,height:464};
-const getCosmosBackdrop=i=>i>=0&&i<4?frame:undefined,getCosmosLandmark=getCosmosBackdrop,getCosmosBloom=getCosmosBackdrop,getJourneyPlanet=getCosmosBackdrop,getJourneySurface=getCosmosBackdrop,getJourneyBloom=getCosmosBackdrop;
+const frame={width:512,height:512};
+const getCosmosBackdrop=i=>i>=0&&i<4?frame:undefined,getCosmosLandmark=getCosmosBackdrop,getCosmosBloom=getCosmosBackdrop,getJourneyPlanet=getCosmosBackdrop,getJourneySurface=getCosmosBackdrop,getJourneyBloom=getCosmosBackdrop,getSurfaceTerrain=()=>globalThis.__surfaceTestTexture??frame;
 const DEG=Math.PI/180,COMET_ASSET_HEAD_ANGLE=0;
 const seededNoise=(i,s)=>((i*37+s*19)%100)/100;
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -63,6 +70,11 @@ class Sprite {
  constructor(){sprites++;this.visible=false;this.texture=frame;this.zIndex=0;this.scaleX=this.scaleY=1;this.anchor={set(){}};this.scale={set:(x,y=x)=>{this.scaleX=x;this.scaleY=y}};this.position={set:(x,y)=>{this.x=x;this.y=y}}}
  get width(){return this.texture.width*this.scaleX} set width(v){this.scaleX=v/this.texture.width}
  get height(){return this.texture.height*this.scaleY} set height(v){this.scaleY=v/this.texture.height}
+}
+class TilingSprite extends Sprite {
+ constructor(){super();this._width=this._height=1;this.tileScale={set:(x,y=x)=>{this.tileScale.x=x;this.tileScale.y=y}};this.tilePosition={set:(x,y)=>{this.tilePosition.x=x;this.tilePosition.y=y}}}
+ get width(){return this._width} set width(v){this._width=v}
+ get height(){return this._height} set height(v){this._height=v}
 }
 class Texture {static WHITE=frame}
 class Container {constructor(){this.position={set(){}};this.pivot={set(){}};this.scale={set(){}}} }
@@ -149,6 +161,46 @@ scene.fillRadial=()=>{};scene.drawFinalBattleWeaponProfile=()=>{};scene.drawFina
 scene.finalBattleTextures.get=()=>({width:128,height:128})
 scene.updateFinalBattleLayer(1000,500,10,9103,'high',.68)
 for(const sprite of [...scene.finalBattleSprites,...scene.finalBattleCruiserSprites].filter(s=>s.visible))assert.equal(sprite.alpha,1,'background battle hull became transparent')
+// Exercise the actual ground render methods and UV assignments in both orientations.
+const ground=new background.PixiRaidBackground()
+globalThis.__surfaceTestTexture=new RealTexture({source:new TextureSource({width:512,height:512})})
+ground.journeySurfaceSprite=new RealTilingSprite({texture:globalThis.__surfaceTestTexture,width:1,height:1})
+const uvAtLandmark=(plane,landmark)=>{
+ const uv=new Float32Array(8);realTilingUvs(plane,uv)
+ const x=(landmark.x-plane.x)/plane.width,y=(landmark.y-plane.y)/plane.height
+ return [uv[0]+x*(uv[2]-uv[0]),uv[1]+y*(uv[7]-uv[1])]
+}
+const assertSameUv=(a,b)=>{for(let i=0;i<2;i++){const d=surface.positiveSurfaceModulo(a[i]-b[i],1);assert.ok(Math.min(d,1-d)<2e-6,'real Pixi texture slid under its island')}}
+for(const key of ['octiIsland','island','island2','island3','snakeVolcano','volcano','volcano2','volcano3','clouds','clouds2','volcanicClouds','volcanicClouds2'])ground.assetTextures.set(key,{width:256,height:256})
+const groundCount=background.sprites
+for(const [w,h] of [[390,844],[1280,720]])for(const watery of [true,false]) {
+ const step=(t,x=0,y=0)=>{
+  surface.sampleSurfaceCamera(t,w,h,1.5,x,y,512,ground.surfaceCamera)
+  if(watery)ground.updateWateryWorldAssetSprites(w,h,t,'high')
+  else ground.updateVolcanicWorldAssetSprites(w,h,t,'high')
+  ground.updateJourneyWorld(w,h,watery?9101:9102)
+ }
+ step(10)
+ const islands=watery?ground.wateryIslandSprites:ground.volcanicIslandSprites
+ const landmark=islands[1],beforeY=landmark.y,beforeX=landmark.x
+ const plane=ground.journeySurfaceSprite,uv0=plane.tilePosition.y,period=ground.surfaceCamera.tileSize
+ const anchoredUv=uvAtLandmark(plane,landmark)
+ step(11)
+ assertSameUv(anchoredUv,uvAtLandmark(plane,landmark))
+ const delta=landmark.y-beforeY
+ const uvDelta=surface.positiveSurfaceModulo(plane.tilePosition.y-uv0,period)
+ assert.ok(Math.abs(uvDelta-surface.positiveSurfaceModulo(delta,period))<1e-8,'production terrain/island scroll diverged')
+ assert.equal(plane.tileScale.x,plane.tileScale.y,'portrait texture was stretched anisotropically')
+ assert.ok(plane.tileScale.x*1.5*1.45<=1+1e-9,'production portrait terrain was upscaled')
+ assert.equal(landmark.alpha,1,'water/rock showed through a ground landmark')
+ const oldX=plane.tilePosition.x,oldY=plane.tilePosition.y,islandY=landmark.y
+ step(11,.6,-.4)
+ assertSameUv(anchoredUv,uvAtLandmark(plane,landmark))
+ assert.ok(Math.abs(surface.positiveSurfaceModulo(plane.tilePosition.x-oldX,period)-surface.positiveSurfaceModulo(landmark.x-beforeX,period))<1e-8,'ground horizontal steering slipped')
+ assert.ok(Math.abs(surface.positiveSurfaceModulo(plane.tilePosition.y-oldY,period)-surface.positiveSurfaceModulo(landmark.y-islandY,period))<1e-8,'ground vertical steering slipped')
+}
+assert.equal(background.sprites,groundCount,'surface rendering grew the sprite pool')
+ground.journeySurfaceSprite.destroy();globalThis.__surfaceTestTexture.destroy(true);delete globalThis.__surfaceTestTexture
 console.log('Cosmos: all regions and special arenas, three pooled atlas sources, transition bounds, rare passes and fixed sprite counts passed')
 // Hook harness checks actual component lifecycle without a browser/audio device.
 const hooks=[],effects=[];let cursor=0,changed=false,tick,hidden=false,enabled=true,disposed=0,plays=0;
