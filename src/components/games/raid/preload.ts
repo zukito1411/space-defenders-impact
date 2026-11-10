@@ -1,3 +1,5 @@
+import { COSMOS_ART_URLS, preloadCosmosArt } from './cosmosArt'
+import { COSMOS_AMBIENCE_URL } from './CosmosPresentation'
 import { getRaidAlienSpriteUrl, getRaidEliteSpriteUrl, getRaidShipSpriteUrl, RAID_ALIEN_SPRITE_COUNT, RAID_ELITE_SPRITE_COUNT } from '../RaidShipSprite'
 import { getPublicAssetUrl } from '../sound'
 import { Assets } from 'pixi.js'
@@ -15,7 +17,7 @@ export const RAID_IMAGE_CACHE_NAME = 'space-defender-raid-images-v1'
 
 export const RAID_AUDIO_CACHE_NAME = 'space-defender-audio-v1'
 
-export const RAID_PERSISTENT_CACHE_VERSION = 'gradius-raid-assets-v4'
+export const RAID_PERSISTENT_CACHE_VERSION = 'gradius-raid-assets-v5'
 
 export const RAID_PERSISTENT_CACHE_STORAGE_KEY = 'gradiusRaidPersistentAssetCache'
 
@@ -59,7 +61,7 @@ export function warmRaidCanvasAssets() {
 
 export function getRaidPersistentImageUrls() {
   const urls = new Set<string>()
-  for (const url of RAID_COMBAT_ART_URLS) urls.add(url)
+  for (const url of [...RAID_COMBAT_ART_URLS, ...COSMOS_ART_URLS]) urls.add(url)
   urls.add(getPublicAssetUrl(RAID_FINAL_BOSS_ASSET_PATH))
   urls.add(getPublicAssetUrl(RAID_SQUID_BOSS_ASSET_PATH))
   urls.add(getPublicAssetUrl(RAID_COBRA_BOSS_ASSET_PATH))
@@ -86,6 +88,7 @@ export function getRaidPersistentImageUrls() {
 
 export function getRaidPersistentAudioUrls() {
   return [
+    COSMOS_AMBIENCE_URL,
     RAID_DEFAULT_BGM_TRACK,
     RAID_BOSS_BGM_TRACK,
     RAID_BOSS_SQUID_BGM_TRACK,
@@ -269,6 +272,7 @@ export function getRaidPixiBackgroundAssetCount() {
 export function getRaidPixiBackgroundAssetUrls() {
   return [...new Set([
     ...RAID_COMBAT_ART_URLS,
+    ...COSMOS_ART_URLS,
     ...Object.values(RAID_OTHER_ASSET_PATHS).map((path) => getPublicAssetUrl(path)),
     getRaidShipSpriteUrl('rocket'),
     getRaidShipSpriteUrl('laser'),
@@ -304,6 +308,7 @@ export function preloadRaidPixiBackgroundAssets(onProgress?: (loaded: number, to
   const warmPromise = Promise.all(entries.map(async (url) => {
     try {
       if (RAID_COMBAT_ART_URLS.includes(url)) await preloadRaidCombatArt()
+      else if (COSMOS_ART_URLS.includes(url)) await preloadCosmosArt()
       else await Assets.load(url)
     } catch {
       // Keep preload progress moving; missing Pixi textures simply do not render.

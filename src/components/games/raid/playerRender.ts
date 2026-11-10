@@ -1028,6 +1028,7 @@ export function drawRaidPlayer(
   cosmetics: Required<ShipCosmeticEquipState> = { trail: false, aura: false, frame: false },
   visualShipKey = player.ship.key,
   identityAuraColor: string | null = null,
+  environmentRim: string | null = null,
 ) {
   const x = toX(player.x)
   const y = toY(player.y)
@@ -1135,7 +1136,7 @@ export function drawRaidPlayer(
     ? player.ship.key === 'spaceEt' ? 'rgba(125,249,255,0.46)' : 'rgba(34,211,238,0.34)'
     : player.shield > 0 ? 'rgba(252,211,77,0.16)' : player.invuln > 0 ? 'rgba(226,232,240,0.1)' : null
   if (spriteGlow) drawSpriteGlow(ctx, x, y, renderSize, spriteGlow, 0.68)
-  else if (!isDown) drawSpriteGlow(ctx, x, y, renderSize, hexToRgba(color, 0.09), 0.55)
+  else if (!isDown) drawSpriteGlow(ctx, x, y, renderSize, environmentRim ?? hexToRgba(color, 0.09), 0.55)
   if (player.ship.key === 'coreLander' && !coreLanderCombatModel && coreLanderBurningBlend > 0.01) {
     const baseSprite = getShipCanvasSprite('coreLander')
     const burningSprite = getShipCanvasSprite('coreLanderBurning')

@@ -1,3 +1,5 @@
+import { COSMIC_REGIONS, cosmicRegionIndex } from './cosmos'
+import { CosmosPresentation } from './CosmosPresentation'
 import { missileLaunchScale, homingCruiseSpeed } from './missilePresentation'
 import { impactFrameProgress, explosionDiameter, impactAlpha, rippleLifetime, rippleReplacement } from './combatFeel'
 import { useDoorCallback, useDoorState, useSpaceDoor } from '../../ui/SpaceDoor'
@@ -1575,6 +1577,7 @@ export function GradiusRaid({
         time,
         quality: gfxQuality,
         stageTheme: backgroundStageTheme,
+        runToken: runStartTimeRef.current,
         dpr,
         stageRush,
         playerX: (isGuestView ? remotePlayerRef.current : playerRef.current)?.x ?? 50,
@@ -2369,8 +2372,8 @@ export function GradiusRaid({
     if (gfxProfile.drawOptionShips && allyShipRef && !hideAllyShipForBarrage) drawRaidOptions(ctx, allyShipRef, toX, toY, cssWidth, time, ALLY_PLAYER_COLOR, getRaidPlayerVisualShipKey(allyShipRef, progressRef.current))
     if (gfxProfile.drawOptionShips && devilAssistShipRef && !hideDevilAssistForBarrage) drawRaidOptions(ctx, devilAssistShipRef, toX, toY, cssWidth, time, '#facc15', getRaidPlayerVisualShipKey(devilAssistShipRef, progressRef.current))
     const sameScreenIdentityAura = sameScreenCoopRef.current
-    if (ownShipRef && !hideOwnShipForBarrage) drawRaidPlayer(ctx, ownShipRef, phaseRef.current, toX, toY, cssWidth, time, PLAYER_COLOR, getCachedEquippedCosmetics(ownShipRef.ship.key), getRaidPlayerVisualShipKey(ownShipRef, progressRef.current), sameScreenIdentityAura ? PLAYER_COLOR : null)
-    if (allyShipRef && !hideAllyShipForBarrage) drawRaidPlayer(ctx, allyShipRef, phaseRef.current, toX, toY, cssWidth, time, ALLY_PLAYER_COLOR, getCachedEquippedCosmetics(allyShipRef.ship.key), getRaidPlayerVisualShipKey(allyShipRef, progressRef.current), sameScreenIdentityAura ? ALLY_PLAYER_COLOR : null)
+    if (ownShipRef && !hideOwnShipForBarrage) drawRaidPlayer(ctx, ownShipRef, phaseRef.current, toX, toY, cssWidth, time, PLAYER_COLOR, getCachedEquippedCosmetics(ownShipRef.ship.key), getRaidPlayerVisualShipKey(ownShipRef, progressRef.current), sameScreenIdentityAura ? PLAYER_COLOR : null, COSMIC_REGIONS[cosmicRegionIndex(backgroundStageTheme)].rim)
+    if (allyShipRef && !hideAllyShipForBarrage) drawRaidPlayer(ctx, allyShipRef, phaseRef.current, toX, toY, cssWidth, time, ALLY_PLAYER_COLOR, getCachedEquippedCosmetics(allyShipRef.ship.key), getRaidPlayerVisualShipKey(allyShipRef, progressRef.current), sameScreenIdentityAura ? ALLY_PLAYER_COLOR : null, COSMIC_REGIONS[cosmicRegionIndex(backgroundStageTheme)].rim)
     if (devilAssistShipRef && !hideDevilAssistForBarrage) drawRaidPlayer(ctx, devilAssistShipRef, phaseRef.current, toX, toY, cssWidth, time, '#facc15', getCachedEquippedCosmetics(devilAssistShipRef.ship.key), getRaidPlayerVisualShipKey(devilAssistShipRef, progressRef.current), null)
 
     if (gfxProfile.drawDecorativeOverlays) {
@@ -7346,6 +7349,8 @@ export function GradiusRaid({
         <canvas ref={fxCanvasRef} className="raid__fx-canvas" />
         {showPerfHud && <div ref={perfHudRef} className="raid__perf-hud" aria-hidden="true">Measuring FPS…</div>}
       </div>
+
+      <CosmosPresentation stage={snapshot.stageTheme} phase={snapshot.phase} surfaceArenas={snapshot.raidMode !== 'endless'} bossActive={bossIncoming || snapshot.enemies.some((enemy) => enemy.isBoss)} />
 
       {bossEntranceSlamActive && (
         <div
