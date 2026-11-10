@@ -43,13 +43,18 @@ export function drawFinalBossSpriteBody(ctx: CanvasRenderingContext2D, size: num
   const sprite = getFinalBossCanvasSprite()
   if (!sprite.loaded || !sprite.image.complete) return
   const seconds = time / 1000
+  const coreRage = clamp(rage, 0, 1)
   const breathe = 1 + Math.sin(seconds * 1.8) * 0.012
   const bob = Math.sin(seconds * 1.45) * size * 0.009
-  const tilt = Math.sin(seconds * 0.56) * 0.023
-  const filter = rage > 0.5
+  // Restore the original full 360-degree rotation of the FINAL BOSS MODEL.
+  // The earlier cleanup accidentally replaced it with a 1.3-degree wobble.
+  // Keep the cleaned-up single-sprite renderer: no spinning geometric rings,
+  // orbiting drones, background halos or other costly effects are reintroduced.
+  const spin = seconds * (0.055 + coreRage * 0.018)
+  const filter = coreRage > 0.5
     ? 'brightness(1.07) contrast(1.1) saturate(1.12)'
     : 'brightness(1.08) contrast(1.1) saturate(1.13)'
-  drawCanvasSpriteContain(ctx, sprite, 0, bob, size * 1.08, filter, 1, tilt, breathe, '#38bdf8')
+  drawCanvasSpriteContain(ctx, sprite, 0, bob, size * 1.08, filter, 1, spin, breathe, '#38bdf8')
 }
 
 export type CachedStageBossKind = Extract<BossKind, 'squid' | 'snake' | 'final'>
