@@ -93,6 +93,23 @@ export function getNukePathDerivative(strike: NukeStrike, progress: number) {
   }
 }
 
+/** One bounded reticle for the pilot's actual missile target, not one per missile. */
+export function drawHomingTargetLock(ctx: CanvasRenderingContext2D, x: number, y: number, radius: number, time: number) {
+  ctx.save()
+  ctx.translate(x,y)
+  ctx.globalAlpha = 0.6 + Math.sin(time / 130) * 0.14
+  ctx.strokeStyle = '#67e8f9'
+  ctx.lineWidth = 1.5
+  ctx.beginPath()
+  for (const sx of [-1,1]) for (const sy of [-1,1]) {
+    ctx.moveTo(sx * radius * 0.55, sy * radius)
+    ctx.lineTo(sx * radius, sy * radius)
+    ctx.lineTo(sx * radius, sy * radius * 0.55)
+  }
+  ctx.stroke()
+  ctx.restore()
+}
+
 export function drawNukeMissile(
   ctx: CanvasRenderingContext2D, strike: NukeStrike,
   toX: (value: number) => number, toY: (value: number) => number,
