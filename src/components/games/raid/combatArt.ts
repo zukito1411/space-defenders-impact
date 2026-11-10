@@ -127,7 +127,7 @@ export function preloadRaidCombatArt(): Promise<void> {
         texture.source.scaleMode = 'linear'
         texture.source.autoGenerateMipmaps = true
         rootTextures.push(texture)
-        for (const [index, kind, width, height] of [[0, 'rocket', 86, 48], [1, 'homing', 78, 44]] as const) {
+        for (const [index, kind, width, height] of [[0, 'rocket', 76, 42], [1, 'homing', 68, 38]] as const) {
           playerMaterials[kind] = {texture: new Texture({source: texture.source,
             frame: new Rectangle(2, index * texture.height / 2 + 2, texture.width - 4, texture.height / 2 - 4)}),
             width, height, directional: true, solid: true}

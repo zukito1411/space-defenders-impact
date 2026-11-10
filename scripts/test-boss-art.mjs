@@ -51,5 +51,5 @@ console.log('Boss art: six shared special textures, Canvas geometry, solid fangs
 const rocket=art.getRaidProjectileMaterial('rocket')
 const homing=art.getRaidProjectileMaterial('homing')
 assert.notEqual(rocket.texture.frame.y,homing.texture.frame.y,'rocket and homing must use distinct artwork')
-assert.ok(rocket.width>=80 && homing.width>=75,'missile silhouettes must be readable')
+assert.ok(rocket.width>=74 && homing.width>=66,'missile silhouettes must be readable')
 assert.ok(rocket.solid && homing.solid,'missiles should preserve their mechanical detail with normal blending')

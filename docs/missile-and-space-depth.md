@@ -1,5 +1,7 @@
 # Missile identity and space depth
 
+The radial star motion and missile sizes described in this original pass are superseded by [forward travel refinement](forward-travel-refinement.md).
+
 Rockets and homing missiles now use separate mechanical silhouettes on a shared 512×512 two-row WebP atlas. Rockets are dark/red with amber markings and orange exhaust; homing weapons are silver/cyan with blue exhaust. The missile material rectangles are 86×48 and 78×44 before viewport scaling, with normal blending to preserve metal detail. The atlas was normalized using alpha bounds above 24 plus an 8px fringe and a common scale, avoiding distant near-transparent pixels shrinking the weapons. Each frame retains transparent filtering gutters. It adds one shared texture source (approximately 1.33 MiB including mipmaps), not a source per missile.
 
 A single cyan bracket reticle marks an actual acquired homing target. Target identity is collected during existing missile rendering loops and resolved against live enemies. No marker appears without a target ID; predicted guest shots without an authoritative target ID do not invent a lock.
