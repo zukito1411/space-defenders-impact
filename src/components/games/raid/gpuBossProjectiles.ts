@@ -30,7 +30,7 @@ export function getGpuBossProjectileSpec(
     !(kind === 'beam' && shot.life !== undefined)) return null
   const x = shot.x * width / 100
   const y = shot.y * height / 100
-  const heading = Math.atan2(shot.vy, shot.vx)
+  const heading = Math.atan2(shot.vy * height, shot.vx * width)
   out.kind = kind as GpuBossProjectileKind
   out.x = x
   out.y = y
@@ -58,7 +58,7 @@ export function getGpuBossProjectileSpec(
     const pulse = 0.86 + Math.sin(time / 130 + shot.id * 1.7) * 0.13
     out.width = radius * 2.3 * pulse
     out.height = radius * 2.1 * pulse
-    out.rotation = heading * 0.25
+    out.rotation = heading
     out.alpha = 0.93
   } else if (kind === 'snakeFang' || kind === 'squidSpine') {
     const length = kind === 'snakeFang' ? Math.max(24, visualScale * 26) : Math.max(22, visualScale * 24)

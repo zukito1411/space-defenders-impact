@@ -1,6 +1,7 @@
 import { Assets, Color, Rectangle, Texture } from 'pixi.js'
 import { getPublicAssetUrl } from '../sound'
 import type { Shot } from './types'
+import type { GpuBossProjectileSpec } from './gpuBossProjectiles'
 
 export const RAID_COMBAT_ATLAS_URL = getPublicAssetUrl('assets/raid-fx/combat-atlas-v2.png')
 export const RAID_EXPLOSION_ATLAS_URL = getPublicAssetUrl('assets/raid-fx/explosion-atlas-v2.png')
@@ -47,6 +48,7 @@ const ENEMY_MATERIALS: Partial<Record<Shot['kind'], MaterialSpec>> = {
 let combatFrames: Texture[] = []
 let explosionFrames: Texture[] = []
 let bossFrames: Texture[] = []
+const bossMaterials: Partial<Record<Shot['kind'], CombatProjectileMaterial>> = {}
 const rootTextures: Texture[] = []
 const playerMaterials: Partial<Record<Shot['kind'], CombatProjectileMaterial>> = {}
 const enemyMaterials: Partial<Record<Shot['kind'], CombatProjectileMaterial>> = {}
@@ -103,6 +105,15 @@ export function preloadRaidCombatArt(): Promise<void> {
       (bossFrames.length ? Promise.resolve() : Assets.load<Texture>(RAID_BOSS_ATLAS_URL).then((texture) => {
         bossFrames = splitAtlas(texture)
         rootTextures.push(texture)
+        const specs: Partial<Record<Shot['kind'], MaterialSpec>> = {
+          enemy: [8, 34, 34, false, false], boss: [7, 52, 42, true, false],
+          plasma: [8, 40, 40, false, false], orbShot: [6, 44, 44, false, false],
+          voidShot: [6, 52, 52, false, false], superShot: [9, 50, 50, false, false],
+        }
+        for (const [kind, spec] of Object.entries(specs)) {
+          const [tile, width, height, directional, solid] = spec
+          bossMaterials[kind as Shot['kind']] = { texture: bossFrames[tile], width, height, directional, solid }
+        }
       }).catch((error: unknown) => { console.warn('Raid boss artwork failed to load:', RAID_BOSS_ATLAS_URL, error) })),
     ]).then(() => {
       // Retry missing art on the next preparation instead of caching failure.
@@ -113,10 +124,30 @@ export function preloadRaidCombatArt(): Promise<void> {
 }
 
 export function getRaidProjectileMaterial(kind: Shot['kind'], enemy = false) {
-  return (enemy ? enemyMaterials : playerMaterials)[kind]
+  return enemy ? bossMaterials[kind] ?? enemyMaterials[kind] : playerMaterials[kind]
 }
 
-export function getRaidBossFrame(tile: number): Texture | undefined { return bossFrames[tile] }
+const BOSS_ART_TILES: Partial<Record<GpuBossProjectileSpec['kind'], number>> = {
+  squidBubble: 0, squidInk: 1, squidSpine: 2, snakeFang: 3, venomSpit: 4, poisonCloud: 5,
+}
+export function isRaidBossArtSolid(kind: string) {
+  return kind === 'poisonCloud' || kind === 'snakeFang' || kind === 'squidSpine'
+}
+/** Both foreground renderers consume the same texture and geometry. */
+export function applyRaidBossArtwork(spec: GpuBossProjectileSpec): Texture | undefined {
+  const tile = BOSS_ART_TILES[spec.kind]
+  const texture = tile === undefined ? undefined : bossFrames[tile]
+  if (!texture) return undefined
+  if (spec.kind === 'snakeFang' || spec.kind === 'squidSpine') {
+    const width = spec.width
+    spec.width = spec.height
+    spec.height = width
+    spec.rotation -= Math.PI / 2
+  }
+  spec.width *= 1.2
+  spec.height *= 1.2
+  return texture
+}
 
 export function getRaidCombatFrame(tile: number): Texture | undefined { return combatFrames[tile] }
 
