@@ -24,4 +24,4 @@ export function edgeFlyby(seconds: number, slot: number) {
   const age = ((Math.max(0, seconds) + slot * 13 + period - 8) % period)
   return age < 3.2 ? age / 3.2 : -1
 }
-export const COSMOS_TEXTURE_BYTES = 2 * 1024 * 1024 * 4
+export const COSMOS_TEXTURE_BYTES = 2 * 1024 * 1024 * 4 + 512 * 512 * 4

@@ -1,5 +1,6 @@
+import { sceneryTint, PLANET_DEPTH, PLANET_PARALLAX } from './sceneryMaterial'
 import { cosmicRegionIndex, COSMIC_REGIONS, edgeFlyby } from './cosmos'
-import { getCosmosBackdrop, getCosmosLandmark, preloadCosmosArt } from './cosmosArt'
+import { getCosmosBackdrop, getCosmosLandmark, getCosmosBloom, preloadCosmosArt } from './cosmosArt'
 import { projectDepthStar, type DepthStar } from './depthProjection'
 import { RaidTravelMotion } from './travelMotion'
 import { getPublicAssetUrl } from '../sound'
@@ -192,12 +193,7 @@ const VOLCANIC_WORLD_ISLAND_LAYERS: WorldIslandLayer[] = [
 
 const VOLCANIC_WORLD_ISLAND_TRAVEL_SIZE = Math.max(...VOLCANIC_WORLD_ISLAND_LAYERS.map((layer) => layer.size))
 
-export const BACKGROUND_SPEED_LINES = [
-  { x: 0.11, length: 170, width: 2, delay: -0.2, color: 'streak' },
-  { x: 0.32, length: 120, width: 1, delay: -0.42, color: 'white' },
-  { x: 0.63, length: 150, width: 2, delay: -0.16, color: 'red' },
-  { x: 0.88, length: 135, width: 1, delay: -0.34, color: 'cyan' },
-] as const
+export const BACKGROUND_SPEED_LINES = [0.045, 0.955, 0.105, 0.895] as const
 
 export const RAID_PLANET_DEPTH_SCALES = [
   [1.08, 0.74, 0.88],
@@ -580,23 +576,6 @@ function shouldDrawRaidSpeedLines(stageTheme: number) {
   return shouldDrawRaidBattleOverlay(stageTheme) || isWateryWorldTheme(stageTheme) || isVolcanicWorldTheme(stageTheme)
 }
 
-function getRaidSpeedLineColor(line: typeof BACKGROUND_SPEED_LINES[number], streak: string, stageTheme: number) {
-  if (isWateryWorldTheme(stageTheme)) {
-    if (line.color === 'red') return 'rgba(170,90,255,0.28)'
-    if (line.color === 'cyan') return 'rgba(132,230,255,0.32)'
-    return 'rgba(190,210,255,0.34)'
-  }
-  if (isVolcanicWorldTheme(stageTheme)) {
-    if (line.color === 'red') return 'rgba(255,96,38,0.42)'
-    if (line.color === 'cyan') return 'rgba(255,190,95,0.28)'
-    return 'rgba(255,150,72,0.34)'
-  }
-  if (line.color === 'streak') return streak
-  if (line.color === 'red') return 'rgba(239,35,60,0.42)'
-  if (line.color === 'cyan') return 'rgba(125,211,252,0.28)'
-  return 'rgba(255,255,255,0.26)'
-}
-
 export function getRaidStarfieldSpeedScale(stageTheme: number) {
   const roundedTheme = Math.floor(stageTheme)
   if (roundedTheme === RAID_BOSS_BACKGROUND_THEME_SQUID) return 0.36
@@ -632,11 +611,6 @@ export function getRaidScenePlanetDrawScale(asset: RaidOtherAssetKey) {
   if (asset === 'planet2') return 2.8
   if (asset === 'planet1') return 2.45
   return 2.25
-}
-
-export function getRaidScenePlanetAlpha(layer: RaidBackgroundPlanetLayer) {
-  const floor = layer.asset === 'planetNebula' ? 0.82 : 0.88
-  return clamp(Math.max(layer.alpha, floor), 0, 0.96)
 }
 
 export function getRaidSceneObjectSize(width: number, height: number, layer: RaidBackgroundScenicLayer | RaidBackgroundWreckLayer) {
@@ -867,6 +841,9 @@ export class PixiRaidBackground {
   private foregroundPrepared = false
   private cancelForegroundPreparation: (() => void) | null = null
   private readonly scene = new Container()
+  private readonly solidScenery = new Container({ sortableChildren: true })
+  private readonly sceneryBloomSprites = [new Sprite(Texture.WHITE), new Sprite(Texture.WHITE)]
+  private reducedMotion = false
   private readonly gpuForeground = new RaidGpuForeground()
   private readonly baseGraphics = new Graphics()
   private readonly nebulaGraphics = new Graphics()
@@ -943,6 +920,7 @@ export class PixiRaidBackground {
         return false
       }
       this.app = app
+      this.reducedMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
       app.stage.addChild(this.scene)
       app.stage.addChild(this.gpuForeground.root)
       this.scene.addChild(this.baseGraphics)
@@ -977,23 +955,27 @@ export class PixiRaidBackground {
       this.scene.addChild(this.surfaceGraphics)
       this.scene.addChild(this.speedLineGraphics)
       this.speedLineSprites.forEach((sprite) => {
-        sprite.anchor.set(0.5, 0)
+        sprite.texture = this.depthStarTexture ?? Texture.WHITE
+        sprite.anchor.set(0.5)
         this.scene.addChild(sprite)
       })
       this.wateryIslandSprites.forEach((sprite) => this.scene.addChild(sprite))
       this.wateryCloudSprites.forEach((sprite) => this.scene.addChild(sprite))
       this.volcanicIslandSprites.forEach((sprite) => this.scene.addChild(sprite))
       this.volcanicCloudSprites.forEach((sprite) => this.scene.addChild(sprite))
-      this.planetSprites.forEach((sprite) => this.scene.addChild(sprite))
-      this.wreckSprites.forEach((sprite) => this.scene.addChild(sprite))
-      this.scenicSprites.forEach((sprite) => this.scene.addChild(sprite))
       this.scene.addChild(this.finalBattleBackdropGraphics)
-      this.finalBattleSprites.forEach((sprite) => this.scene.addChild(sprite))
+      this.scene.addChild(this.solidScenery)
+      this.sceneryBloomSprites.forEach((sprite) => { sprite.blendMode = 'add'; sprite.visible = false; this.solidScenery.addChild(sprite) })
+      this.planetSprites.forEach((sprite, index) => { sprite.zIndex = PLANET_DEPTH[index]; this.solidScenery.addChild(sprite) })
+      this.wreckSprites.forEach((sprite, index) => { sprite.zIndex = 35 + index * 0.01; this.solidScenery.addChild(sprite) })
+      this.scenicSprites.forEach((sprite) => this.solidScenery.addChild(sprite))
+      this.finalBattleSprites.forEach((sprite, index) => { sprite.zIndex = 45 + index * 0.01; this.solidScenery.addChild(sprite) })
       this.scene.addChild(this.finalBattleGraphics)
-      this.finalBattleCruiserSprites.forEach((sprite) => this.scene.addChild(sprite))
-      this.scene.addChild(this.cometFlybySprite)
-      this.asteroidSprites.forEach((sprite) => this.scene.addChild(sprite))
-      this.debrisSprites.forEach((sprite) => this.scene.addChild(sprite))
+      this.finalBattleCruiserSprites.forEach((sprite, index) => { sprite.zIndex = 50 + index * 0.01; this.solidScenery.addChild(sprite) })
+      this.cometFlybySprite.zIndex = 55
+      this.solidScenery.addChild(this.cometFlybySprite)
+      this.asteroidSprites.forEach((sprite) => this.solidScenery.addChild(sprite))
+      this.debrisSprites.forEach((sprite, index) => { sprite.zIndex = 56 + index * 0.01; this.solidScenery.addChild(sprite) })
       this.scene.addChild(this.explosionGraphics)
 
       const canvas = app.canvas as HTMLCanvasElement
@@ -1115,10 +1097,11 @@ export class PixiRaidBackground {
       // starfield, scrolling scenery and background ships remain smooth.
       this.updateGalaxies(width, height, seconds, stageTheme, isLow, isMedium)
       this.updateStarfield(width, height, quality, dpr, palette.starTint, palette.streak, stageTheme)
-      this.updateSpeedLines(width, height, seconds, palette.streak, isLow, isMedium, stageTheme)
+      this.updateSpeedLines(width, height, isLow, isMedium, stageTheme)
       this.updatePlanets(width, height, seconds, palette, stageTheme, isLow, isMedium)
       this.updateWrecks(width, height, seconds, stageTheme, isLow, isMedium)
       this.updateScenic(width, height, seconds, stageTheme, isLow, isMedium)
+      this.updateSceneryBloom(stageTheme, isLow, isMedium)
       this.updateRareCometFlyby(width, height, seconds, isLow, isMedium, stageTheme)
       this.updateBackgroundObjects(width, height, seconds, stageTheme, isLow, isMedium)
       // Depth response stays in scenery; foreground gameplay never shifts.
@@ -1511,24 +1494,42 @@ export class PixiRaidBackground {
     }
   }
 
-  private updateSpeedLines(width: number, height: number, seconds: number, streak: string, isLow: boolean, isMedium: boolean, stageTheme: number) {
-    // Speed lines are static quads with GPU-only position updates. Never
-    // clear and re-tessellate Graphics geometry every render frame.
-    const allowSpeedLines = shouldDrawRaidSpeedLines(stageTheme)
+  private updateSpeedLines(width: number, height: number, isLow: boolean, isMedium: boolean, stageTheme: number) {
     this.speedLineGraphics.visible = false
-    const speedLineLimit = !allowSpeedLines || isLow ? 0 : isMedium ? 2 : BACKGROUND_SPEED_LINES.length
-    for (let index = 0; index < this.speedLineSprites.length; index += 1) {
+    const limit = isLow || this.reducedMotion || !shouldDrawRaidSpeedLines(stageTheme) ? 0 : isMedium ? 2 : 4
+    const rush = this.travel.rush
+    for (let index = 0; index < this.speedLineSprites.length; index++) {
       const sprite = this.speedLineSprites[index]
-      sprite.visible = index < speedLineLimit && this.travel.rush > 0.12
+      sprite.visible = index < limit
       if (!sprite.visible) continue
-      const line = BACKGROUND_SPEED_LINES[index]
-      const y = (((seconds + line.delay) / 0.75) % 1) * height * 1.5 - height * 0.2
-      const stroke = getPixiFill(getRaidSpeedLineColor(line, streak, stageTheme), 0.36)
-      sprite.position.set(line.x * width, y)
-      sprite.width = Math.max(1, line.width)
-      sprite.height = line.length * (0.18 + this.travel.rush * 0.82)
-      sprite.tint = stroke.color
-      sprite.alpha = stroke.alpha * (0.18 + this.travel.rush * 0.82)
+      const length = Math.min(height, 900) * (0.075 + rush * 0.17) * (index < 2 ? 1 : 0.72)
+      const maxLength = Math.min(height, 900) * 0.245 * (index < 2 ? 1 : 0.72)
+      const span = height + maxLength * 2
+      const y = ((this.travel.near * (2.4 + index * 0.3) + index * span * 0.31) % span + span) % span - maxLength
+      const edge = clamp(Math.min((y + length * 0.5) / length, (height - y + length * 0.5) / length), 0, 1)
+      sprite.position.set(width * BACKGROUND_SPEED_LINES[index] - this.travel.x * width * 0.006, y)
+      sprite.width = (isMedium ? 3 : 4.5) + rush * 1.5
+      sprite.height = length
+      sprite.rotation = 0
+      sprite.tint = COSMIC_REGIONS[this.cosmosRegion < 0 ? 0 : this.cosmosRegion].tint
+      sprite.alpha = ((isMedium ? 0.18 : 0.22) + rush * 0.3) * edge
+    }
+  }
+
+  private updateSceneryBloom(stageTheme: number, isLow: boolean, isMedium: boolean) {
+    const region = COSMIC_REGIONS[this.cosmosRegion < 0 ? 0 : this.cosmosRegion]
+    for (let i = 0; i < this.sceneryBloomSprites.length; i++) {
+      const glow = this.sceneryBloomSprites[i]
+      const source = i === 0 ? this.planetSprites[0] : this.scenicSprites[0]
+      const texture = getCosmosBloom(i === 0 ? (region.landmark < 2 ? region.landmark : 0) : region.landmark)
+      const canonical = i === 0 || this.cosmosRegion >= 2
+      glow.visible = !isLow && (!isMedium || i === 0) && canonical && shouldDrawRaidGalaxies(stageTheme) && source.visible && Boolean(texture)
+      if (!glow.visible || !texture) continue
+      const size = Math.max(source.width, source.height) * (256 / 192)
+      setPixiSpriteContain(glow, texture, source.x, source.y, size, size, i === 0 ? 0.38 : 0.24, source.rotation)
+      glow.tint = region.tint
+      // A nearer opaque surface also occludes bloom from farther objects.
+      glow.zIndex = source.zIndex - 0.001
     }
   }
 
@@ -1985,9 +1986,8 @@ export class PixiRaidBackground {
     this.fillRadial(graphics, width * 0.5, height * 0.46, Math.max(width, height) * 0.62 * pulse, Math.max(width, height) * 0.62, surfaceA, 'rgba(0,0,0,0)', 0.16)
   }
 
-  private updatePlanets(width: number, height: number, seconds: number, palette: RaidPalette, stageTheme: number, isLow: boolean, isMedium: boolean) {
+  private updatePlanets(width: number, height: number, seconds: number, _palette: RaidPalette, stageTheme: number, isLow: boolean, isMedium: boolean) {
     const scene = getRaidBackgroundScene(stageTheme)
-    const fallbackAlpha = palette.planetA ? 1 : 1
     const visibleCount = isLow || isWateryWorldTheme(stageTheme) || isVolcanicWorldTheme(stageTheme)
       ? 0
       : isMedium
@@ -2006,21 +2006,21 @@ export class PixiRaidBackground {
         sprite.visible = true
         setPixiSpriteContain(sprite, orbital, width * (region.landmark === 1 ? 0.94 : 0.04) - this.travel.x * width * 0.018,
           height * (-0.18 + progress * 0.58) - this.travel.y * height * 0.008, size, size,
-          Math.min(1, age / 2) * (this.cosmosRegion >= 2 ? 0.32 : 0.9), 0)
-        sprite.tint = region.tint
+          1, 0)
+        sprite.tint = sceneryTint(region.tint, this.cosmosRegion >= 2 ? 0.52 : 0.94)
         continue
       }
-      sprite.tint = region.tint
+      sprite.tint = sceneryTint(region.tint, index === 1 ? 0.68 : 0.5)
       const texture = planet ? this.assetTextures.get(planet.asset) : undefined
       sprite.visible = Boolean(texture && index < visibleCount)
       if (!texture || !planet || index >= visibleCount) continue
       const radius = getRaidScenePlanetRadius(Math.min(width, height), scene, planet, stageTheme, Math.min(index, 2))
       const depth = 0.7 + index * 0.25
-      const y = getRaidScenePlanetY(planet, height, seconds * (0.35 + index * 0.4), radius * 2)
+      const y = getRaidScenePlanetY(planet, height, seconds * (index === 0 ? 0.75 : index === 1 ? 0.12 : 0.05), radius * 2)
       const size = radius * getRaidScenePlanetDrawScale(planet.asset) * depth
-      setPixiSpriteContain(sprite, texture, width * planet.x, y, size, size, getRaidScenePlanetAlpha(planet) * fallbackAlpha * (0.65 + index * 0.16), planet.rotation)
-      sprite.x -= this.travel.x * width * (0.004 + index * 0.014)
-      sprite.y -= this.travel.y * height * (0.003 + index * 0.008)
+      setPixiSpriteContain(sprite, texture, width * planet.x, y, size, size, 1, planet.rotation)
+      sprite.x -= this.travel.x * width * PLANET_PARALLAX[index]
+      sprite.y -= this.travel.y * height * (PLANET_PARALLAX[index] * 0.5)
     }
   }
 
@@ -2034,6 +2034,7 @@ export class PixiRaidBackground {
       const wreck = scene.wrecks[index]
       sprite.visible = Boolean(texture && wreck && index < visibleCount)
       if (!texture || !wreck || index >= visibleCount) continue
+      sprite.tint = sceneryTint(COSMIC_REGIONS[this.cosmosRegion < 0 ? 0 : this.cosmosRegion].tint, 0.46)
       const position = getRaidSceneWreckPosition(width, height, seconds, wreck)
       setPixiSpriteContain(
         sprite,
@@ -2042,7 +2043,7 @@ export class PixiRaidBackground {
         position.y,
         position.width,
         position.height,
-        wreck.alpha,
+        1,
         wreck.rotation + seconds * wreck.spin,
       )
     }
@@ -2063,11 +2064,13 @@ export class PixiRaidBackground {
         sprite.visible = true
         setPixiSpriteContain(sprite, landmark, width * 0.92 - this.travel.x * width * 0.03,
           height * (-0.12 + progress * 0.96) - this.travel.y * height * 0.015, size, size,
-          Math.min(1, age / 3) * 0.58, -0.12)
-        sprite.tint = region.tint
+          1, -0.12)
+        sprite.zIndex = 40
+        sprite.tint = sceneryTint(region.tint, 0.7)
         continue
       }
-      sprite.tint = region.tint
+      sprite.zIndex = scenic?.layer === 'far' ? 5 : 40 + index * 0.01
+      sprite.tint = sceneryTint(region.tint, scenic?.asset === 'sun' ? 0.82 : 0.62)
       const texture = scenic ? this.assetTextures.get(scenic.asset) : undefined
       sprite.visible = Boolean(texture && index < visibleCount)
       if (!texture || !scenic || index >= visibleCount) continue
@@ -2079,7 +2082,7 @@ export class PixiRaidBackground {
         position.y,
         position.width,
         position.height,
-        scenic.alpha,
+        1,
         scenic.rotation + seconds * scenic.spin,
       )
     }
@@ -2174,10 +2177,11 @@ export class PixiRaidBackground {
       const travelDy = fighter.side === 'ally' ? -height * 1.22 : height * 1.22
       const angle = Math.atan2(width * laneDrift, -travelDy)
       const size = baseSize * fighter.size * (isMedium ? 0.92 : 1)
-      const shipAlpha = alpha * (fighter.assetKind === 'ship' ? 0.48 : 0.52)
+      const shipTint = sceneryTint(0xffffff, 0.42 + alpha * 0.18)
       if (texture) {
         const drawSize = fighter.assetKind === 'ship' ? size : size * 1.08
-        setPixiSpriteContain(sprite, texture, x, y, drawSize, drawSize, shipAlpha, fighter.side === 'ally' ? angle : angle - Math.PI)
+        setPixiSpriteContain(sprite, texture, x, y, drawSize, drawSize, 1, fighter.side === 'ally' ? angle : angle - Math.PI)
+        sprite.tint = shipTint
       } else {
         sprite.visible = false
       }
@@ -2206,7 +2210,8 @@ export class PixiRaidBackground {
       const cruiserAlpha = alpha * cruiser.alpha * edgeFade
       if (texture) {
         this.drawFinalBattleCruiserTrail(graphics, x, y, size, angle, cruiserAlpha)
-        setPixiSpriteContain(sprite, texture, x, y, size, size, cruiserAlpha, angle)
+        setPixiSpriteContain(sprite, texture, x, y, size, size, 1, angle)
+        sprite.tint = sceneryTint(0xffffff, 0.42 + cruiser.alpha * 0.25)
       } else {
         sprite.visible = false
       }
@@ -2432,28 +2437,30 @@ export class PixiRaidBackground {
       const sprite = this.asteroidSprites[index]
       sprite.visible = index < asteroidLimit
       if (!asteroidTexture || index >= asteroidLimit) continue
-      sprite.tint = COSMIC_REGIONS[this.cosmosRegion < 0 ? 0 : this.cosmosRegion].tint
+      sprite.tint = sceneryTint(COSMIC_REGIONS[this.cosmosRegion < 0 ? 0 : this.cosmosRegion].tint, 0.76)
       const edgeSlot = index - Math.max(0, asteroidLimit - (isMedium ? 1 : 2))
+      sprite.zIndex = edgeSlot >= 0 ? 80 + edgeSlot : 60 + index * 0.01
       if (edgeSlot >= 0) {
         const pass = edgeFlyby(seconds - this.cosmosEntered, edgeSlot)
         sprite.visible = pass >= 0
         if (pass < 0) continue
         const size = Math.min(width, height) * 0.23
         setPixiSpriteContain(sprite, asteroidTexture, width * (edgeSlot === 0 ? 0.015 : 0.985),
-          -size + pass * (height + size * 2), size, size, 0.48, seconds * 0.08)
+          -size + pass * (height + size * 2), size, size, 1, seconds * 0.08)
         continue
       }
       const asteroid = BACKGROUND_ASTEROIDS[index]
       const y = ((seconds * asteroid.speed + asteroid.delay / 22 + 1) % 1) * height * 1.15 - height * 0.05
-      setPixiSpriteContain(sprite, asteroidTexture, width * asteroid.x, y, asteroid.width * 1.5 * scene.asteroidBias, asteroid.height * 1.5 * scene.asteroidBias, asteroid.alpha, seconds * asteroid.spin * DEG / 10)
+      setPixiSpriteContain(sprite, asteroidTexture, width * asteroid.x, y, asteroid.width * 1.5 * scene.asteroidBias, asteroid.height * 1.5 * scene.asteroidBias, 1, seconds * asteroid.spin * DEG / 10)
     }
     for (let index = 0; index < this.debrisSprites.length; index += 1) {
       const sprite = this.debrisSprites[index]
       sprite.visible = index < debrisLimit
       if (!asteroidTexture || index >= debrisLimit) continue
+      sprite.tint = sceneryTint(COSMIC_REGIONS[this.cosmosRegion < 0 ? 0 : this.cosmosRegion].tint, 0.5)
       const debris = BACKGROUND_DEBRIS[index]
       const y = ((seconds * debris.speed + debris.delay / 48 + 1) % 1) * height * 1.2 - height * 0.05
-      setPixiSpriteContain(sprite, asteroidTexture, width * debris.x, y, debris.width * 1.35 * scene.debrisBias, debris.height * 1.35 * scene.debrisBias, debris.alpha, seconds * debris.spin * DEG / 12)
+      setPixiSpriteContain(sprite, asteroidTexture, width * debris.x, y, debris.width * 1.35 * scene.debrisBias, debris.height * 1.35 * scene.debrisBias, 1, seconds * debris.spin * DEG / 12)
     }
   }
 

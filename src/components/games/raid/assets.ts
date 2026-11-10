@@ -523,21 +523,9 @@ export function removeConnectedCanvasMatte(canvas: HTMLCanvasElement, isMattePix
 
 export function processAsteroidAsset(image: HTMLImageElement) {
   const canvas = makeSpriteProcessingCanvas(image, 620)
-  if (!canvas) return null
-  const keyedCanvas = applyAlphaKey(canvas, (red, green, blue) => {
-    const min = Math.min(red, green, blue)
-    const max = Math.max(red, green, blue)
-    if (min > 244 && max - min < 18) return 0
-    if (min > 220 && max - min < 24) return (244 - min) / 24
-    return 1
-  })
-  return removeConnectedCanvasMatte(keyedCanvas, (red, green, blue) => {
-    const min = Math.min(red, green, blue)
-    const max = Math.max(red, green, blue)
-    const luma = red * 0.299 + green * 0.587 + blue * 0.114
-    const chroma = max - min
-    return (luma > 138 && chroma < 38) || (luma > 190 && chroma < 70)
-  })
+  // This shipped asset already has a clean alpha silhouette. Color keying
+  // its white highlights punched holes through illuminated rock surfaces.
+  return canvas ? trimTransparentCanvas(canvas, 3) : null
 }
 
 export function processCometAsset(image: HTMLImageElement) {
@@ -631,14 +619,8 @@ export function processRingedPlanetAsset(image: HTMLImageElement) {
 
 export function processSpaceStationAsset(image: HTMLImageElement) {
   const canvas = makeSpriteProcessingCanvas(image, 760)
-  if (!canvas) return null
-  const keyedCanvas = applyAlphaKey(canvas, (red, green, blue) => {
-    const luma = red * 0.299 + green * 0.587 + blue * 0.114
-    if (luma < 4) return 0
-    if (luma < 20) return (luma - 4) / 16
-    return 1
-  })
-  return trimTransparentCanvas(keyedCanvas, 3)
+  // Preserve dark hull panels; black surface paint is not transparent space.
+  return canvas ? trimTransparentCanvas(canvas, 3) : null
 }
 
 export function processVioletCloudAsset(image: HTMLImageElement) {
