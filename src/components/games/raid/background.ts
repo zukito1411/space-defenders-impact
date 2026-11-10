@@ -1,3 +1,4 @@
+import { projectDepthStar, type DepthStar } from './depthProjection'
 import { RaidTravelMotion } from './travelMotion'
 import { getPublicAssetUrl } from '../sound'
 import type { GraphicsQuality } from '../sound'
@@ -874,6 +875,8 @@ export class PixiRaidBackground {
   private readonly scenicSprites = [new Sprite(Texture.WHITE), new Sprite(Texture.WHITE)]
   private readonly farStarLayers = [new Graphics(), new Graphics(), new Graphics()]
   private readonly nearStarLayers = [new Graphics(), new Graphics(), new Graphics()]
+  private readonly depthStarSprites = Array.from({length: 99}, () => new Sprite(Texture.WHITE))
+  private readonly depthStarScratch: DepthStar = {x:0,y:0,size:0,alpha:0,rotation:0}
   private readonly speedLineGraphics = new Graphics()
   private readonly speedLineSprites = BACKGROUND_SPEED_LINES.map(() => new Sprite(Texture.WHITE))
   private readonly surfaceGraphics = new Graphics()
@@ -940,6 +943,12 @@ export class PixiRaidBackground {
       this.galaxySprites.forEach((sprite) => this.scene.addChild(sprite))
       this.farStarLayers.forEach((layer) => this.scene.addChild(layer))
       this.nearStarLayers.forEach((layer) => this.scene.addChild(layer))
+      this.depthStarSprites.forEach((sprite, index) => {
+        sprite.anchor.set(0.5)
+        sprite.tint = index % 9 === 0 ? 0xffe5bf : 0xdbeafe
+        sprite.visible = false
+        this.scene.addChild(sprite)
+      })
       this.scene.addChild(this.surfaceGraphics)
       this.scene.addChild(this.speedLineGraphics)
       this.speedLineSprites.forEach((sprite) => {
@@ -1082,7 +1091,6 @@ export class PixiRaidBackground {
       for (const layer of this.farStarLayers) layer.x = px * 0.008
       for (const layer of this.nearStarLayers) layer.x = px * 0.024
       for (const sprite of this.galaxySprites) { sprite.x += px * 0.004; sprite.y += py * 0.003 }
-      for (const sprite of this.planetSprites) { sprite.x += px * 0.018; sprite.y += py * 0.012 }
       for (const sprite of this.asteroidSprites) { sprite.x += px * 0.035; sprite.y += py * 0.02 }
       // Scrolling water/volcano island and cloud sprites are inexpensive
       // position/visibility updates. They MUST advance each render frame,
@@ -1384,15 +1392,18 @@ export class PixiRaidBackground {
 
   private updateStarfield(width: number, height: number, quality: GraphicsQuality, dpr: number, starTint: string, streak: string, stageTheme: number) {
     if (!shouldDrawRaidStars(stageTheme)) {
+      for (const sprite of this.depthStarSprites) sprite.visible = false
       this.updateScrollingGraphics(this.farStarLayers, Math.max(1, height), 0, false)
       this.updateScrollingGraphics(this.nearStarLayers, Math.max(1, height), 0, false)
       return
     }
     const key = getRaidStarfieldCacheKey(width, height, quality, dpr, starTint, streak)
     const isLow = quality === 'low'
-    const isMedium = quality === 'medium'
     const isHigh = quality === 'high'
+    const isMedium = quality === 'medium'
     const starLimit = isLow ? 40 : isMedium ? 100 : isHigh ? 160 : BACKGROUND_STARS.length
+    const farCount = isLow ? 28 : Math.ceil(starLimit * 0.55)
+    const nearCount = starLimit - farCount
     const farLayerHeight = height * 1.26
     const nearLayerHeight = height * 1.38
 
@@ -1400,7 +1411,7 @@ export class PixiRaidBackground {
       this.starfieldKey = key
       for (const layer of this.farStarLayers) {
         layer.clear()
-        for (let index = 0; index < starLimit; index += 1) {
+        for (let index = 0; index < farCount; index += 1) {
           const star = BACKGROUND_STARS[index]
           layer.circle(star.x * width, star.y * farLayerHeight, star.size * 0.62).fill(getPixiFill(
             star.tint > 0.94 ? starTint : star.tint > 0.6 ? 'rgba(173,205,255,0.62)' : star.tint < 0.12 ? 'rgba(255,222,185,0.64)' : 'rgba(241,246,255,0.76)',
@@ -1408,31 +1419,26 @@ export class PixiRaidBackground {
           ))
         }
       }
-      for (const layer of this.nearStarLayers) {
-        layer.clear()
-        if (!isLow && !isMedium) {
-          for (let index = 0; index < starLimit; index += 1) {
-            const star = BACKGROUND_STARS[index]
-            if (!shouldDrawRaidStarTrail(star, index, quality)) continue
-            const x = star.x * width
-            const y = star.y * nearLayerHeight
-            const length = 3 + star.size * 4 + star.tint * 6
-            layer.moveTo(x, y - length * 0.4)
-            layer.lineTo(x, y + length * 0.6)
-            const trailFill = getPixiFill(star.tint > 0.78 ? streak : 'rgba(255,255,255,0.36)', star.alpha * 0.26)
-            layer.stroke({
-              color: trailFill.color,
-              alpha: trailFill.alpha,
-              width: Math.max(1, star.size * 0.65),
-              cap: 'round',
-            })
-          }
-        }
-      }
+      for (const layer of this.nearStarLayers) layer.clear()
     }
 
     this.updateScrollingGraphics(this.farStarLayers, farLayerHeight, this.travel.far - height * 0.13, true)
-    this.updateScrollingGraphics(this.nearStarLayers, nearLayerHeight, this.travel.near - height * 0.19, !isLow && !isMedium && shouldDrawRaidStarTrails(stageTheme))
+    this.updateScrollingGraphics(this.nearStarLayers, nearLayerHeight, this.travel.near - height * 0.19, false)
+    for (let i = 0; i < this.depthStarSprites.length; i++) {
+      const sprite = this.depthStarSprites[i]
+      if (i >= nearCount) { sprite.visible = false; continue }
+      const seed = BACKGROUND_STARS[farCount + i]
+      const phase = projectDepthStar(seed.x, seed.y, seed.tint, this.travel.near,
+        width, height, this.travel.x, this.travel.y, this.depthStarScratch)
+      const star = this.depthStarScratch
+      sprite.visible = star.alpha > 0.005
+      if (!sprite.visible) continue
+      sprite.position.set(star.x, star.y)
+      sprite.width = Math.max(star.size, 1 + Math.pow(phase, 3) * (isLow ? 3 : 13))
+      sprite.height = star.size
+      sprite.alpha = star.alpha
+      sprite.rotation = star.rotation
+    }
   }
 
   private updateScrollingGraphics(layers: Graphics[], layerHeight: number, offset: number, visible: boolean) {
@@ -1936,9 +1942,12 @@ export class PixiRaidBackground {
       sprite.visible = Boolean(texture && index < visibleCount)
       if (!texture || !planet || index >= visibleCount) continue
       const radius = getRaidScenePlanetRadius(Math.min(width, height), scene, planet, stageTheme, Math.min(index, 2))
-      const y = getRaidScenePlanetY(planet, height, seconds, radius * 2)
-      const size = radius * getRaidScenePlanetDrawScale(planet.asset)
-      setPixiSpriteContain(sprite, texture, width * planet.x, y, size, size, getRaidScenePlanetAlpha(planet) * fallbackAlpha, planet.rotation + seconds * planet.spin)
+      const depth = 0.7 + index * 0.25
+      const y = getRaidScenePlanetY(planet, height, seconds * (0.35 + index * 0.4), radius * 2)
+      const size = radius * getRaidScenePlanetDrawScale(planet.asset) * depth
+      setPixiSpriteContain(sprite, texture, width * planet.x, y, size, size, getRaidScenePlanetAlpha(planet) * fallbackAlpha * (0.65 + index * 0.16), planet.rotation + seconds * planet.spin * 0.12)
+      sprite.x -= this.travel.x * width * (0.004 + index * 0.014)
+      sprite.y -= this.travel.y * height * (0.003 + index * 0.008)
     }
   }
 

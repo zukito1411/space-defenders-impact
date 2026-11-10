@@ -6,7 +6,8 @@ import type { GpuBossProjectileSpec } from './gpuBossProjectiles'
 export const RAID_COMBAT_ATLAS_URL = getPublicAssetUrl('assets/raid-fx/combat-atlas-v2.png')
 export const RAID_EXPLOSION_ATLAS_URL = getPublicAssetUrl('assets/raid-fx/explosion-atlas-v2.png')
 export const RAID_BOSS_ATLAS_URL = getPublicAssetUrl('assets/raid-fx/boss-atlas-v1.png')
-export const RAID_COMBAT_ART_URLS = [RAID_COMBAT_ATLAS_URL, RAID_EXPLOSION_ATLAS_URL, RAID_BOSS_ATLAS_URL]
+export const RAID_MISSILE_ATLAS_URL = getPublicAssetUrl('assets/raid-fx/player-missiles-v1.webp')
+export const RAID_COMBAT_ART_URLS = [RAID_COMBAT_ATLAS_URL, RAID_EXPLOSION_ATLAS_URL, RAID_BOSS_ATLAS_URL, RAID_MISSILE_ATLAS_URL]
 
 export const COMBAT_TILE = {
   plasma: 0, hotBolt: 1, ionNeedle: 2, alienOrb: 3,
@@ -48,6 +49,7 @@ const ENEMY_MATERIALS: Partial<Record<Shot['kind'], MaterialSpec>> = {
 let combatFrames: Texture[] = []
 let explosionFrames: Texture[] = []
 let bossFrames: Texture[] = []
+let missileLoaded = false
 const bossMaterials: Partial<Record<Shot['kind'], CombatProjectileMaterial>> = {}
 const rootTextures: Texture[] = []
 const playerMaterials: Partial<Record<Shot['kind'], CombatProjectileMaterial>> = {}
@@ -89,11 +91,12 @@ function splitAtlas(texture: Texture, trimBossProjectiles = false, trimExplosion
 function buildMaterials(specs: Partial<Record<Shot['kind'], MaterialSpec>>, target: typeof playerMaterials) {
   for (const [kind, spec] of Object.entries(specs)) {
     const [tile, width, height, directional, solid] = spec
+    if (target === playerMaterials && missileLoaded && (kind === 'rocket' || kind === 'homing')) continue
     target[kind as Shot['kind']] = { texture: combatFrames[tile], width, height, directional, solid }
   }
 }
 
-/** Decode once in the loading screen. Frames share two GPU texture sources. */
+/** Decode once in the loading screen. Frames share their atlas GPU texture sources. */
 export function preloadRaidCombatArt(): Promise<void> {
   if (!warmPromise) {
     warmPromise = Promise.all([
@@ -120,9 +123,20 @@ export function preloadRaidCombatArt(): Promise<void> {
           bossMaterials[kind as Shot['kind']] = { texture: bossFrames[tile], width, height, directional, solid }
         }
       }).catch((error: unknown) => { console.warn('Raid boss artwork failed to load:', RAID_BOSS_ATLAS_URL, error) })),
+      (missileLoaded ? Promise.resolve() : Assets.load<Texture>(RAID_MISSILE_ATLAS_URL).then((texture) => {
+        texture.source.scaleMode = 'linear'
+        texture.source.autoGenerateMipmaps = true
+        rootTextures.push(texture)
+        for (const [index, kind, width, height] of [[0, 'rocket', 86, 48], [1, 'homing', 78, 44]] as const) {
+          playerMaterials[kind] = {texture: new Texture({source: texture.source,
+            frame: new Rectangle(2, index * texture.height / 2 + 2, texture.width - 4, texture.height / 2 - 4)}),
+            width, height, directional: true, solid: true}
+        }
+        missileLoaded = true
+      }).catch((error: unknown) => {console.warn('Missile art unavailable:',error)})),
     ]).then(() => {
       // Retry missing art on the next preparation instead of caching failure.
-      if (!combatFrames.length || !explosionFrames.length || !bossFrames.length) warmPromise = null
+      if (!combatFrames.length || !explosionFrames.length || !bossFrames.length || !missileLoaded) warmPromise = null
     })
   }
   return warmPromise

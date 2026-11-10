@@ -15,7 +15,7 @@ source = source.replace("import { getPublicAssetUrl } from '../sound'", 'const g
 const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText
 const art = await import('data:text/javascript;base64,' + Buffer.from(code).toString('base64'))
 await art.preloadRaidCombatArt()
-assert.equal(art.getRaidCombatRootTextures().length, 3)
+assert.equal(art.getRaidCombatRootTextures().length, 4)
 for (const kind of ['squidBubble','squidInk','squidSpine','snakeFang','venomSpit','poisonCloud']) {
   const spec = {kind,width:30,height:60,rotation:Math.PI/2,alpha:0.7,x:120,y:80}
   const texture = art.applyRaidBossArtwork(spec)
@@ -47,3 +47,9 @@ const boss=art.getRaidProjectileMaterial('boss',true)
 assert.notEqual(generic.texture,boss.texture,'carrier bolts must differ from generic enemy orbs')
 assert.equal(boss.directional,true)
 console.log('Boss art: six shared special textures, Canvas geometry, solid fangs, beam fallback and distinct enemy materials passed')
+
+const rocket=art.getRaidProjectileMaterial('rocket')
+const homing=art.getRaidProjectileMaterial('homing')
+assert.notEqual(rocket.texture.frame.y,homing.texture.frame.y,'rocket and homing must use distinct artwork')
+assert.ok(rocket.width>=80 && homing.width>=75,'missile silhouettes must be readable')
+assert.ok(rocket.solid && homing.solid,'missiles should preserve their mechanical detail with normal blending')
