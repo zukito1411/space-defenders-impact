@@ -23,7 +23,9 @@ import { createAsteroidHazard, getAsteroidClusterInterval, getRandomEventDuratio
 import { RAID_FX_CANVAS_CONTEXT_SETTINGS, getRaidGraphicsProfile, makeRaidViewportMetrics } from './graphics'
 import { createRaidVisibilityBounds, raidObjectInView } from './visibility'
 import { isGpuEnemyShot, isGpuPlayerShot } from './gpuForeground'
-import { drawRaidCombatTexture, getRaidExplosionFrame, getRaidProjectileMaterial, isWarmRaidEffectColor } from './combatArt'
+import { getGpuBossProjectileSpec } from './gpuBossProjectiles'
+import type { GpuBossProjectileSpec } from './gpuBossProjectiles'
+import { applyRaidBossArtwork, isRaidBossArtSolid, drawRaidCombatTexture, getRaidExplosionFrame, getRaidProjectileMaterial, isWarmRaidEffectColor } from './combatArt'
 import { clearRaidSpatialHash, createRaidSpatialHash, insertRaidSpatialHash, queryRaidSpatialHash } from './spatialHash'
 import type { RaidViewportMetrics } from './graphics'
 import { clearPickupLoadout, extendLoadoutForSuperBoss, getFormationEnemyCount, getFormationSpawnSeconds, getPowerScore, getSingleEnemySpawnSeconds, resetStageLoadout } from './loadout'
@@ -36,6 +38,8 @@ import type { AsteroidHazard, BossDefeatExplosionEvent, BossKind, BossMessage, C
 import { acquireRipple, acquireSpark, buildEnemyCollisionBuckets, clamp, collectShotCollisionCandidates, compactInPlace, createEnemyCollisionBuckets, distSq, drawRadialEllipse, getCachedProjectileOrbSprite, getCachedProjectileTrailSprite, getEliteEnemyChance, getMaxActiveEliteEnemies, pickEliteEnemyKind, readRaidPalette, recycleRipple, recycleRippleList, recycleSpark, recycleSparkList, takeLastFilteredMapped, updateRipplesInPlace, updateSparksInPlace } from './utils'
 import type { EnemyCollisionBuckets } from './utils'
 import { RaidFrameTimings } from './frameTimings'
+
+const canvasBossArtSpec: GpuBossProjectileSpec = { kind: 'squidBubble', width: 0, height: 0, rotation: 0, alpha: 1, x: 0, y: 0 }
 
 let shotId = 1
 
@@ -2300,7 +2304,19 @@ export function GradiusRaid({
       // Beam columns may cross the screen even when their origin is outside.
       if (shot.kind !== 'beam' && !raidObjectInView(drawBounds, shot.x, shot.y, shot.radius + 16)) continue
       if (gpuForegroundDrawn && isGpuEnemyShot(shot, gfxProfile.drawAdvancedShotFx)) continue
-      if (!gpuForegroundDrawn && drawAtlasShot(shot, true)) continue
+      if (!gpuForegroundDrawn) {
+        const spec = getGpuBossProjectileSpec(shot, visualScale, cssWidth, cssHeight, time, canvasBossArtSpec)
+        const texture = spec ? applyRaidBossArtwork(spec) : undefined
+        if (texture && spec) {
+          ctx.save()
+          ctx.globalAlpha = spec.alpha
+          const drawn = drawRaidCombatTexture(ctx, texture, spec.x, spec.y, spec.width, spec.height,
+            spec.rotation, !isRaidBossArtSolid(spec.kind))
+          ctx.restore()
+          if (drawn) continue
+        }
+        if (drawAtlasShot(shot, true)) continue
+      }
       if (!gfxProfile.drawAdvancedShotFx) {
         if (shot.kind === 'beam') drawTrail(shot, 'rgba(56,189,248,0.88)', 82, 9)
         else drawOrb(shot, shot.kind === 'poisonCloud' || shot.kind === 'venomSpit' || shot.kind === 'snakeFang' || shot.kind === 'devilSnakeHead' ? 'rgba(132,204,22,0.68)' : shot.kind === 'squidInk' || shot.kind === 'squidSpine' ? 'rgba(244,114,182,0.78)' : 'rgba(251,113,133,0.78)', shot.kind === 'squidBubble' ? 12 : 8)

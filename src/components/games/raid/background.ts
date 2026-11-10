@@ -1092,6 +1092,24 @@ export class PixiRaidBackground {
       } else if (quality !== 'low' && isVolcanicWorldTheme(stageTheme)) {
         this.updateVolcanicWorldAssetSprites(width, height, seconds, quality)
       }
+      // Boss Rush's water and volcanic arenas use their own surface layers.
+      // Apply depth here, after their per-frame positions have been reset.
+      if (quality !== 'low' && !space) {
+        const dx = -this.travel.x * width
+        const dy = -this.travel.y * height
+        const islands = isWateryWorldTheme(stageTheme) ? this.wateryIslandSprites : this.volcanicIslandSprites
+        const clouds = isWateryWorldTheme(stageTheme) ? this.wateryCloudSprites : this.volcanicCloudSprites
+        for (const sprite of islands) {
+          if (!sprite.visible) continue
+          sprite.x += dx * 0.025
+          sprite.y += dy * 0.012
+        }
+        for (const sprite of clouds) {
+          if (!sprite.visible) continue
+          sprite.x += dx * 0.065
+          sprite.y += dy * 0.03
+        }
+      }
       // Present with the foreground once per rAF, not twice. Geometry,
       // scenery and textures are updated here on their existing cadence.
       return true
