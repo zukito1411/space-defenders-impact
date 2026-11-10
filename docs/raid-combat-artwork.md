@@ -1,5 +1,7 @@
 # Gradius Raid combat artwork
 
+The runtime now uses [version 2](raid-combat-artwork-v2.md). The version 1 assets and prompts below are retained as artwork history.
+
 Created and refined with the built-in image generation tool. PNG bytes are copied intact into the project; originals remain in the generator output directory.
 
 ## Runtime assets

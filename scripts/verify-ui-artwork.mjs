@@ -6,8 +6,8 @@ import { join } from 'node:path'
 const required = [
   'assets/ui/orbital-hangar-v1.png',
   'assets/ui/console-plate-v1.png',
-  'assets/raid-fx/combat-atlas-v1.png',
-  'assets/raid-fx/explosion-atlas-v1.png',
+  'assets/raid-fx/combat-atlas-v2.png',
+  'assets/raid-fx/explosion-atlas-v2.png',
 ]
 
 for (const asset of required) {
