@@ -1,3 +1,4 @@
+import { useDoorCallback, useDoorState, useSpaceDoor } from '../../ui/SpaceDoor'
 import { getRaidText } from '../../../i18n'
 import type { LanguageCode } from '../../../i18n'
 import { isCreatorPlayerName, submitLeaderboardScore } from '../../../leaderboards'
@@ -308,10 +309,11 @@ export function GradiusRaid({
   const startRaidBgmRef = useRef<(stage: number, mode?: RaidBgmMode, bossKind?: BossKind | null) => void>(() => {})
   const stopRaidBgmRef = useRef<() => void>(() => {})
   const [selectedShipKey, setSelectedShipKey] = useState(SHIP_OPTIONS[0].key)
-  const [briefingStep, setBriefingStep] = useState(0)
-  const [stagePickerOpen, setStagePickerOpen] = useState(false)
-  const [settingsOpen, setSettingsOpen] = useState(false)
-  const [difficultyOpen, setDifficultyOpen] = useState(false)
+  const [briefingStep, setBriefingStep] = useDoorState(0)
+  const [stagePickerOpen, setStagePickerOpen] = useDoorState(false)
+  const { sequence: doorSequence } = useSpaceDoor()
+  const [settingsOpen, setSettingsOpen] = useDoorState(false)
+  const [difficultyOpen, setDifficultyOpen] = useDoorState(false)
   const [audioMix, setAudioMix] = useState<AudioMixSettings>(() => getGameAudioMixSettings())
   const [assetPreload, setAssetPreload] = useState<RaidAssetPreloadState>(getRaidAssetPreloadInitialState)
   const [snapshot, setSnapshot] = useState<Snapshot>(() => ({
@@ -2728,7 +2730,7 @@ export function GradiusRaid({
     syncSnapshot()
   }, [addRipple, spawnSparks, syncSnapshot])
 
-  const resetGame = useCallback(async (startStage = 1, fullyBuffed = false, mode: RaidMode = raidModeRef.current) => {
+  const resetGame = useDoorCallback(async (startStage: number = 1, fullyBuffed: boolean = false, mode: RaidMode = raidModeRef.current) => {
     const session = multiplayerSessionRef.current
     const sameScreen = sameScreenCoopRef.current
     if (session && !session.isHost) return
@@ -2876,7 +2878,7 @@ export function GradiusRaid({
     stopBGM()
     startRaidBgm(stageRef.current, 'cruise')
     syncSnapshot()
-  }, [playerName, preloadRaidAssetsForMenu, resetGuestPredictionState, startRaidBgm, syncSnapshot])
+  })
 
   useEffect(() => {
     const session = multiplayerSessionRef.current
@@ -2942,7 +2944,7 @@ export function GradiusRaid({
     devilAssistEntryRef.current = entryMode === 'directEntry' ? STAGE_ENTRY_SECONDS : 0
   }, [])
 
-  const openBriefing = useCallback(() => {
+  const openBriefing = useDoorCallback(() => {
     const session = multiplayerSessionRef.current
     if (session && !session.isHost) return
     raidModeRef.current = 'campaign'
@@ -2950,7 +2952,7 @@ export function GradiusRaid({
     setBriefingStep(0)
     playGameSound('select')
     syncSnapshot()
-  }, [syncSnapshot])
+  })
 
   const chooseShip = useCallback((ship: ShipOption) => {
     const session = multiplayerSessionRef.current
@@ -2964,16 +2966,16 @@ export function GradiusRaid({
     syncSnapshot()
   }, [syncSnapshot])
 
-  const pauseGame = useCallback(() => {
+  const pauseGame = useDoorCallback(() => {
     const session = multiplayerSessionRef.current
     if (session && !session.isHost) return
     if (phaseRef.current !== 'playing') return
     phaseRef.current = 'paused'
     stopRaidBgm()
     syncSnapshot()
-  }, [stopRaidBgm, syncSnapshot])
+  })
 
-  const resumeGame = useCallback(() => {
+  const resumeGame = useDoorCallback(() => {
     const session = multiplayerSessionRef.current
     if (session && !session.isHost) return
     if (phaseRef.current !== 'paused') return
@@ -2986,7 +2988,7 @@ export function GradiusRaid({
       activeBoss?.bossKind ?? null,
     )
     syncSnapshot()
-  }, [startRaidBgm, syncSnapshot])
+  })
 
   const pushShot = useCallback((shot: Omit<Shot, 'id'>) => {
     // In capture mode (local prediction), redirect to the capture buffer instead of the shared shot list
@@ -6840,14 +6842,15 @@ export function GradiusRaid({
       const perf = perfBudgetRef.current
       const measured = showPerfHudRef.current
       const simulationStart = measured ? performance.now() : 0
-      pollRaidGamepads(time)
+      if (doorSequence?.busy) keysRef.current.clear()
+      else pollRaidGamepads(time)
       const entranceSlamActive = phaseRef.current === 'playing' && bossEntranceSlamRef.current > 0
       if (bossEntranceSlamRef.current > 0) {
         bossEntranceSlamRef.current = Math.max(0, bossEntranceSlamRef.current - dt)
       }
       const gameplayDt = entranceSlamActive ? dt * BOSS_ENTRANCE_SLOWMO_SCALE : dt
       const session = multiplayerSessionRef.current
-      if (!session || session.isHost) updateGame(gameplayDt)
+      if ((!session || session.isHost) && (session || !doorSequence?.busy)) updateGame(gameplayDt)
       // Tick the victory blackout on every client (host sets it in updateGame, guest in applyMultiplayerState)
       if (victoryBlackoutRef.current > 0) {
         victoryBlackoutRef.current = Math.max(0, victoryBlackoutRef.current - dt)

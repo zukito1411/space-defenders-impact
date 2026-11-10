@@ -1,3 +1,4 @@
+import { useDoorState } from '../ui/SpaceDoor'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type * as React from 'react'
 import { GameDialog } from '../ui/GameDialog'
@@ -166,7 +167,7 @@ export function SpaceImpactDefense({ availableCoins, onClose, initialMode = 'nor
   const [soundOn, setSoundOn] = useState(getGameSoundEnabled)
   const [audioMix, setAudioMix] = useState<AudioMixSettings>(getGameAudioMixSettings)
   const [graphicsQuality, setGraphicsQualityState] = useState<GraphicsQuality>(getGraphicsQuality)
-  const [showSettingsModal, setShowSettingsModal] = useState(false)
+  const [showSettingsModal, setShowSettingsModal] = useDoorState(false)
   const [isCompact, setIsCompact] = useState(() => getIsCompactLayout(mobileLayoutMode))
 
   // Game data refs (avoid re-render on every frame)

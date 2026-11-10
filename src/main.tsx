@@ -2,6 +2,7 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 
 import App from './App.tsx'
+import { SpaceDoorProvider } from './components/ui/SpaceDoor'
 import { getPublicAssetUrl } from './components/games/sound'
 
 import './index.css'
@@ -25,7 +26,7 @@ root.style.setProperty('--ui-console-texture', getUiArtworkCssUrl('assets/ui/con
 
 ReactDOM.createRoot(root).render(
   <React.StrictMode>
-    <App />
+    <SpaceDoorProvider><App /></SpaceDoorProvider>
   </React.StrictMode>,
 )
 

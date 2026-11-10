@@ -1,3 +1,4 @@
+import { useDoorState } from './components/ui/SpaceDoor'
 import './App.css'
 import { GameButton, GameMenuAction } from './components/ui/GameButton'
 import { GameDialog } from './components/ui/GameDialog'
@@ -162,7 +163,7 @@ function getHangarAttackClass(shipKey: string) {
 }
 
 function App() {
-  const [screen, setScreen] = useState<ScreenState>('title')
+  const [screen, setScreen] = useDoorState<ScreenState>('title')
   const [language, setLanguage] = useState<LanguageCode>(getInitialLanguage)
   const [gameMode, setGameMode] = useState<GameMode>('normal')
   const [activeGame, setActiveGame] = useState<ActiveGame>('towerDefense')
