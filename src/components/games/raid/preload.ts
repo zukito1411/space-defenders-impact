@@ -1,3 +1,4 @@
+import { CAMPAIGN_BOSS_ART } from './bossCatalog'
 import { WRECK_ART_URLS, preloadWreckArt } from './wreckArt'
 import { SURFACE_ART_URLS, preloadSurfaceArt } from './surfaceArt'
 import { COSMOS_ART_URLS, preloadCosmosArt } from './cosmosArt'
@@ -6,7 +7,7 @@ import { getRaidAlienSpriteUrl, getRaidEliteSpriteUrl, getRaidShipSpriteUrl, RAI
 import { getPublicAssetUrl } from '../sound'
 import { Assets } from 'pixi.js'
 import { RAID_COMBAT_ART_URLS, preloadRaidCombatArt } from './combatArt'
-import { RAID_COBRA_BOSS_ASSET_PATH, RAID_CORE_LANDER_BARRAGE_ASSET_PATHS, RAID_CORE_LANDER_COMBAT_MODELS, RAID_DERELICT_WRECK_ASSET_PATH, RAID_DERELICT_WRECK_VARIANTS, RAID_DEVIL_BOSS_ASSET_PATHS, RAID_DEVIL_BOSS_POSES, RAID_DEVIL_MASTER_PROJECTILE_ASSET_PATH, RAID_FINAL_BOSS_ASSET_PATH, RAID_OTHER_ASSET_PATHS, RAID_SQUID_BOSS_ASSET_PATH, getCobraBossCanvasSprite, getDerelictWreckCanvasSprite, getDevilBossCanvasSprite, getDevilMasterProjectileCanvasSprite, getEliteAlienCanvasSprite, getFinalBossCanvasSprite, getGodGundamBarrageCanvasSprite, getNormalAlienCanvasSprite, getRaidOtherCanvasSprite, getShipCanvasSprite, getSquidBossCanvasSprite, warmRaidCanvasFilterVariants } from './assets'
+import { RAID_COBRA_BOSS_ASSET_PATH, RAID_CORE_LANDER_BARRAGE_ASSET_PATHS, RAID_CORE_LANDER_COMBAT_MODELS, RAID_DERELICT_WRECK_ASSET_PATH, RAID_DERELICT_WRECK_VARIANTS, RAID_DEVIL_BOSS_ASSET_PATHS, RAID_DEVIL_BOSS_POSES, RAID_DEVIL_MASTER_PROJECTILE_ASSET_PATH, RAID_FINAL_BOSS_ASSET_PATH, RAID_OTHER_ASSET_PATHS, RAID_SQUID_BOSS_ASSET_PATH, getCobraBossCanvasSprite, getGenericBossCanvasSprite, getDerelictWreckCanvasSprite, getDevilBossCanvasSprite, getDevilMasterProjectileCanvasSprite, getEliteAlienCanvasSprite, getFinalBossCanvasSprite, getGodGundamBarrageCanvasSprite, getNormalAlienCanvasSprite, getRaidOtherCanvasSprite, getShipCanvasSprite, getSquidBossCanvasSprite, warmRaidCanvasFilterVariants } from './assets'
 import type { CanvasSpriteEntry, GodGundamBarragePose, RaidOtherAssetKey } from './assets'
 import { DEFAULT_PICKUP_VOICE_SAMPLE_URL, PICKUP_VOICE_SAMPLE_URLS } from './audio'
 import { RAID_BOSS_BGM_TRACK, RAID_BOSS_FINAL_BGM_TRACK, RAID_BOSS_SNAKE_BGM_TRACK, RAID_BOSS_SQUID_BGM_TRACK, RAID_DEFAULT_BGM_TRACK, RAID_ENDING_BGM_TRACK, SHIP_OPTIONS } from './constants'
@@ -19,7 +20,7 @@ export const RAID_IMAGE_CACHE_NAME = 'space-defender-raid-images-v1'
 
 export const RAID_AUDIO_CACHE_NAME = 'space-defender-audio-v1'
 
-export const RAID_PERSISTENT_CACHE_VERSION = 'gradius-raid-assets-v8'
+export const RAID_PERSISTENT_CACHE_VERSION = 'gradius-raid-assets-v9'
 
 export const RAID_PERSISTENT_CACHE_STORAGE_KEY = 'gradiusRaidPersistentAssetCache'
 
@@ -37,6 +38,10 @@ export let raidPixiAssetWarmComplete = false
 
 export function warmRaidCanvasAssets() {
   const entries: CanvasSpriteEntry[] = []
+  for (const art of CAMPAIGN_BOSS_ART) {
+    const sprite = getGenericBossCanvasSprite(art.kind, art.stage)
+    if (sprite) entries.push(sprite)
+  }
   entries.push(getFinalBossCanvasSprite())
   entries.push(getSquidBossCanvasSprite())
   entries.push(getCobraBossCanvasSprite())
@@ -64,6 +69,7 @@ export function warmRaidCanvasAssets() {
 export function getRaidPersistentImageUrls() {
   const urls = new Set<string>()
   for (const url of [...RAID_COMBAT_ART_URLS, ...COSMOS_ART_URLS, ...SURFACE_ART_URLS, ...WRECK_ART_URLS]) urls.add(url)
+  for (const art of CAMPAIGN_BOSS_ART) urls.add(getPublicAssetUrl(art.assetPath))
   urls.add(getPublicAssetUrl(RAID_FINAL_BOSS_ASSET_PATH))
   urls.add(getPublicAssetUrl(RAID_SQUID_BOSS_ASSET_PATH))
   urls.add(getPublicAssetUrl(RAID_COBRA_BOSS_ASSET_PATH))

@@ -1,3 +1,4 @@
+import { getCampaignBossKind, getGenericBossArt } from './bossCatalog'
 import { pickGameplayWreckVariant } from './wreckVariety'
 import { getRaidStageEntrySeconds } from './journey'
 import { COSMIC_REGIONS, cosmicRegionIndex } from './cosmos'
@@ -3767,7 +3768,7 @@ export function GradiusRaid({
       ? 'devil'
       : raidModeRef.current === 'endless'
         ? forceLocalDevilTest ? 'devil' : pickEndlessBossKind(stage, wave, devilBossNextEligibleStageRef.current, isCreatorPlayerName(playerName))
-        : stage === MAX_RAID_STAGE ? 'final' : stage === 10 ? 'snake' : stage === 5 ? 'squid' : stage % 5 === 0 ? 'super' : bossCycle[(stage - 1) % bossCycle.length]
+        : getCampaignBossKind(stage)
     if (bossKind === 'devil') {
       devilPreBuffRankRef.current = player.rank
       fullyBuffRaidPlayer(player)
@@ -3825,6 +3826,7 @@ export function GradiusRaid({
       color: BOSS_COLORS[bossKind],
       pattern: bossKind === 'devil' ? 10 : bossKind === 'final' ? 9 : bossKind === 'snake' ? 8 : bossKind === 'squid' ? 7 : bossKind === 'super' ? 6 : bossCycle.indexOf(bossKind),
       bossKind,
+      bossArtStage: getGenericBossArt(bossKind, stage)?.stage,
       miniBossKind: null,
       shieldTime: (bossKind === 'devil' ? 7.2 : bossKind === 'final' ? 7.4 : bossKind === 'squid' || bossKind === 'snake' ? 5.8 : bossKind === 'super' || bossKind === 'gate' ? 5.4 : 3.8) + Math.min(2.2, stagePressure * 0.18),
       originX: 50,

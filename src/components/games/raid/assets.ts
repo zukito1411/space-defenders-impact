@@ -1,3 +1,4 @@
+import { getGenericBossArt } from './bossCatalog'
 import { getWreckCanvasSprite } from './wreckArt'
 import { getRaidAlienSpriteUrl, getRaidEliteSpriteUrl, getRaidShipSpriteUrl, RAID_ALIEN_SPRITE_COUNT, RAID_ELITE_SPRITE_COUNT } from '../RaidShipSprite'
 import { getPublicAssetUrl } from '../sound'
@@ -5,7 +6,7 @@ import { getCobraBossBodyTextureCanvas, getSquidBossTentacleTextureCanvas } from
 import { PLAYER_COLOR, SHIP_OPTIONS } from './constants'
 import { DEG } from './constants'
 import { getCoreLanderBarrageFilter } from './state'
-import type { CoreLanderCombatModel, DevilBossPose, Enemy } from './types'
+import type { BossKind, CoreLanderCombatModel, DevilBossPose, Enemy } from './types'
 import { clamp, drawRadialEllipse, getCachedSpriteGlow } from './utils'
 
 export type CanvasSpriteEntry = {
@@ -1183,6 +1184,12 @@ export function getDerelictWreckVariantIndex(variant: number) {
 
 export function getDerelictWreckVariantData(variant: number) {
   return RAID_DERELICT_WRECK_VARIANTS[getDerelictWreckVariantIndex(variant)]
+}
+
+/** Pre-normalized boss art needs no runtime extraction, tint filter or duplicate body canvas. */
+export function getGenericBossCanvasSprite(kind: BossKind | null, stage?: number) {
+  const art = getGenericBossArt(kind, stage)
+  return art ? makeImageCanvasSprite(`campaign-boss:${art.stage}:v1`, getPublicAssetUrl(art.assetPath)) : undefined
 }
 
 export function getDerelictWreckCanvasSprite(variant: number) {

@@ -1,0 +1,365 @@
+{
+  "generation": "Built-in ImageGen; three 2x2 design sheets followed by alpha/framing cleanup edits",
+  "normalization": "Each cell alpha <32 removed and alpha >=200 made opaque; trim, fit within 488px, center on transparent 512px square; WebP quality 93",
+  "assets": [
+    {
+      "stage": 1,
+      "name": "crimson-bastion",
+      "path": "public/assets/bosses/stage-01-crimson-bastion-v1.webp",
+      "size": [
+        512,
+        512
+      ],
+      "bytes": 78114,
+      "sha256": "2fe7579d54157a5d71dbdedf79182813e2774a38832d7f45a8cd1349ce54c904",
+      "source_size": [
+        1254,
+        1254
+      ],
+      "source_sha256": "ee57920a5f82e31f277ac9789a4765079f833136df0f1c50f9b5c7f7372f25fa",
+      "source_cell": 0,
+      "source_crop": [
+        83,
+        79,
+        547,
+        565
+      ],
+      "content_rect": [
+        24,
+        13,
+        464,
+        486
+      ]
+    },
+    {
+      "stage": 2,
+      "name": "amethyst-orrery",
+      "path": "public/assets/bosses/stage-02-amethyst-orrery-v1.webp",
+      "size": [
+        512,
+        512
+      ],
+      "bytes": 81766,
+      "sha256": "473922a362d851ed482ff941c86f02b399bc4f9b333393e46adb8537643a0cd9",
+      "source_size": [
+        1254,
+        1254
+      ],
+      "source_sha256": "ee57920a5f82e31f277ac9789a4765079f833136df0f1c50f9b5c7f7372f25fa",
+      "source_cell": 1,
+      "source_crop": [
+        78,
+        97,
+        539,
+        540
+      ],
+      "content_rect": [
+        25,
+        34,
+        461,
+        443
+      ]
+    },
+    {
+      "stage": 3,
+      "name": "verdant-reaper",
+      "path": "public/assets/bosses/stage-03-verdant-reaper-v1.webp",
+      "size": [
+        512,
+        512
+      ],
+      "bytes": 75046,
+      "sha256": "1a3b6e719a0bf9c320703a69533dfa54cb3280f453525e050b0fa0f842edd98d",
+      "source_size": [
+        1254,
+        1254
+      ],
+      "source_sha256": "ee57920a5f82e31f277ac9789a4765079f833136df0f1c50f9b5c7f7372f25fa",
+      "source_cell": 2,
+      "source_crop": [
+        74,
+        72,
+        559,
+        521
+      ],
+      "content_rect": [
+        13,
+        31,
+        485,
+        449
+      ]
+    },
+    {
+      "stage": 4,
+      "name": "tidal-razor",
+      "path": "public/assets/bosses/stage-04-tidal-razor-v1.webp",
+      "size": [
+        512,
+        512
+      ],
+      "bytes": 86362,
+      "sha256": "9dd8b9c5afb5800d5e607e858558b4386fd1d7dc1fdd555be629a45af9b51e2e",
+      "source_size": [
+        1254,
+        1254
+      ],
+      "source_sha256": "ee57920a5f82e31f277ac9789a4765079f833136df0f1c50f9b5c7f7372f25fa",
+      "source_cell": 3,
+      "source_crop": [
+        66,
+        68,
+        557,
+        528
+      ],
+      "content_rect": [
+        12,
+        27,
+        488,
+        457
+      ]
+    },
+    {
+      "stage": 6,
+      "name": "cinder-gate",
+      "path": "public/assets/bosses/stage-06-cinder-gate-v1.webp",
+      "size": [
+        512,
+        512
+      ],
+      "bytes": 83234,
+      "sha256": "708b4003ebd0a67eea1f758a323b025207729a58412aa9bc0d2ba9895fc6ea6d",
+      "source_size": [
+        1254,
+        1254
+      ],
+      "source_sha256": "ac0b5f67d7ac4256a30f7876030df434ce7748b2455a5a3251167580fa197d25",
+      "source_cell": 0,
+      "source_crop": [
+        67,
+        72,
+        573,
+        550
+      ],
+      "content_rect": [
+        12,
+        25,
+        488,
+        461
+      ]
+    },
+    {
+      "stage": 7,
+      "name": "ashen-ark",
+      "path": "public/assets/bosses/stage-07-ashen-ark-v1.webp",
+      "size": [
+        512,
+        512
+      ],
+      "bytes": 81702,
+      "sha256": "a455b97ef9e5f65d27d9f46f9ab7b5c701a0ac885482db331a8392bde0a356c5",
+      "source_size": [
+        1254,
+        1254
+      ],
+      "source_sha256": "ac0b5f67d7ac4256a30f7876030df434ce7748b2455a5a3251167580fa197d25",
+      "source_cell": 1,
+      "source_crop": [
+        27,
+        67,
+        583,
+        585
+      ],
+      "content_rect": [
+        12,
+        28,
+        488,
+        455
+      ]
+    },
+    {
+      "stage": 8,
+      "name": "prism-sovereign",
+      "path": "public/assets/bosses/stage-08-prism-sovereign-v1.webp",
+      "size": [
+        512,
+        512
+      ],
+      "bytes": 90456,
+      "sha256": "37546539db442bda5f070fa23cf6628aa95466e43a3df84f5d1a67dc1715b0ee",
+      "source_size": [
+        1254,
+        1254
+      ],
+      "source_sha256": "ac0b5f67d7ac4256a30f7876030df434ce7748b2455a5a3251167580fa197d25",
+      "source_cell": 2,
+      "source_crop": [
+        57,
+        37,
+        582,
+        540
+      ],
+      "content_rect": [
+        12,
+        22,
+        488,
+        468
+      ]
+    },
+    {
+      "stage": 9,
+      "name": "scythe-regent",
+      "path": "public/assets/bosses/stage-09-scythe-regent-v1.webp",
+      "size": [
+        512,
+        512
+      ],
+      "bytes": 86334,
+      "sha256": "64d24b22d5e861800bb367d43d3551ac5b91935f1915ee3c9feb5155d61a1e21",
+      "source_size": [
+        1254,
+        1254
+      ],
+      "source_sha256": "ac0b5f67d7ac4256a30f7876030df434ce7748b2455a5a3251167580fa197d25",
+      "source_cell": 3,
+      "source_crop": [
+        26,
+        56,
+        583,
+        523
+      ],
+      "content_rect": [
+        12,
+        51,
+        488,
+        409
+      ]
+    },
+    {
+      "stage": 11,
+      "name": "triarch-hydra",
+      "path": "public/assets/bosses/stage-11-triarch-hydra-v1.webp",
+      "size": [
+        512,
+        512
+      ],
+      "bytes": 97682,
+      "sha256": "d2baf6623be4367b9e45ca1475ef11485333b23d1fc5ecd27f19b702e97b9109",
+      "source_size": [
+        1261,
+        1247
+      ],
+      "source_sha256": "5b83696a394515c85d8feaa4abc1d9340745f9ca9fbc6e5b77f06df8d269f334",
+      "source_cell": 0,
+      "source_crop": [
+        76,
+        68,
+        570,
+        547
+      ],
+      "content_rect": [
+        12,
+        19,
+        488,
+        473
+      ]
+    },
+    {
+      "stage": 12,
+      "name": "null-cathedral",
+      "path": "public/assets/bosses/stage-12-null-cathedral-v1.webp",
+      "size": [
+        512,
+        512
+      ],
+      "bytes": 83670,
+      "sha256": "60221381a71a24dbe378c924ae709a22ca9ac17dd10d56f3c8bba99cde2d84fa",
+      "source_size": [
+        1261,
+        1247
+      ],
+      "source_sha256": "5b83696a394515c85d8feaa4abc1d9340745f9ca9fbc6e5b77f06df8d269f334",
+      "source_cell": 1,
+      "source_crop": [
+        64,
+        68,
+        551,
+        535
+      ],
+      "content_rect": [
+        12,
+        22,
+        487,
+        467
+      ]
+    },
+    {
+      "stage": 13,
+      "name": "eclipse-dreadnought",
+      "path": "public/assets/bosses/stage-13-eclipse-dreadnought-v1.webp",
+      "size": [
+        512,
+        512
+      ],
+      "bytes": 100136,
+      "sha256": "bf7c311d474e75331d0d78af258acff557b51547fffb7ec44ad38b620ebd5bf8",
+      "source_size": [
+        1261,
+        1247
+      ],
+      "source_sha256": "5b83696a394515c85d8feaa4abc1d9340745f9ca9fbc6e5b77f06df8d269f334",
+      "source_cell": 2,
+      "source_crop": [
+        80,
+        50,
+        570,
+        494
+      ],
+      "content_rect": [
+        12,
+        35,
+        488,
+        442
+      ]
+    },
+    {
+      "stage": 14,
+      "name": "eventide-nexus",
+      "path": "public/assets/bosses/stage-14-eventide-nexus-v1.webp",
+      "size": [
+        512,
+        512
+      ],
+      "bytes": 100052,
+      "sha256": "0d62d0c6c272a35aa886ce0930e45ac12bb1f0967d93acca41fbba067c504de4",
+      "source_size": [
+        1261,
+        1247
+      ],
+      "source_sha256": "5b83696a394515c85d8feaa4abc1d9340745f9ca9fbc6e5b77f06df8d269f334",
+      "source_cell": 3,
+      "source_crop": [
+        55,
+        42,
+        552,
+        522
+      ],
+      "content_rect": [
+        12,
+        20,
+        488,
+        471
+      ]
+    }
+  ],
+  "prompts": {
+    "early": "Use case: stylized-concept. Asset type: production sprite sheet for a polished top-down vertical space shooter. Exactly TWO columns and TWO rows, four equally sized square cells. Genuine transparent background. One different isolated boss spaceship per cell, centered with 12 percent clear padding, complete intact silhouette, all weapons and wings fully inside its own cell. Orthographic overhead top-down view, all ship noses and gun muzzles point DOWN toward the bottom of the picture. Near-square compact proportions, strong broad readable silhouette, densely armored opaque central hull. Premium vivid mechanical/bio-mechanical sci-fi ship rendering, sharp panel seams, layered armor, rich saturated enamel and metal, beveled edges, delicate wear and restrained little glowing reactor windows. Baked upper-left lighting and self-shadowing, enough midtone detail to read over dark space. No background, no stars, no floor, no smoke, no huge glow cloud, no projectile trails, no labels, no text, no perspective scenery, no watermark. Four genuinely different silhouettes, not ordinary small fighters enlarged. No characters or humanoids. TOP LEFT, CRIMSON BASTION, carrier boss: heavy crimson-and-black five-bore siege carrier, broad pentagonal armored prow facing down, thick sloped shoulders, recessed side hangars, a compact five-aperture fan-shot battery grouped at the lower central prow, amber reactor, gold trim; solid military flagship silhouette. TOP RIGHT, AMETHYST ORRERY, orb boss: spherical violet mechanical reactor body, eight evenly spaced radial weapon nodes integrated into segmented armored petals, amethyst glass core in an opaque titanium shell, compact octagonal outline, subtle lavender energy slits, no empty central hole. BOTTOM LEFT, VERDANT REAPER, mantis boss: emerald green and black predatory assault craft with two wide outer scythe arms and two shorter inner blade emitters, a stout armored thorax, needle cannon at each outer arm tip, silver sharpened edges, lime reactor; aggressive four-pronged silhouette. BOTTOM RIGHT, TIDAL RAZOR, serpent-class boss: sleek compact teal-and-gunmetal serpentine blade cruiser, three downward-facing blade-launcher prongs across its front, swept layered fins and segmented keel, cyan eyes and turbine ports; a mechanical warship rather than a long animal. Each object about as wide as tall.",
+    "middle": "Use case: stylized-concept. Asset type: production sprite sheet for a polished top-down vertical space shooter. Exactly TWO columns and TWO rows, four equally sized square cells. Genuine transparent background. One different isolated boss spaceship per cell, centered with 12 percent clear padding, complete intact silhouette, all weapons and wings fully inside its own cell. Orthographic overhead top-down view, all ship noses and gun muzzles point DOWN toward the bottom of the picture. Near-square compact proportions, strong broad readable silhouette, densely armored opaque central hull. Premium vivid mechanical/bio-mechanical sci-fi ship rendering, sharp panel seams, layered armor, rich saturated enamel and metal, beveled edges, delicate wear and restrained little glowing reactor windows. Baked upper-left lighting and self-shadowing, enough midtone detail to read over dark space. No background, no stars, no floor, no smoke, no huge glow cloud, no projectile trails, no labels, no text, no perspective scenery, no watermark. Four genuinely different silhouettes, not ordinary small fighters enlarged. No characters or humanoids. TOP LEFT, CINDER GATE, gate boss: massive compact charcoal-and-copper fortress craft, blocky twin side pylons joined by an opaque armored central bridge, four downward gun ports arranged across its lower edge and a recessed central beam aperture, ember red slits, furnace orange core, heavy brutalist silhouette, no open middle portal. TOP RIGHT, ASHEN ARK, advanced carrier: distinct arrowhead-and-double-hull command carrier, pale ivory enamel over dark iron ribs with copper and amber details, broad layered forward armored prow, twin thick hangar spines and a five-aperture fan battery at the lower central nose, angular split shoulder silhouette. BOTTOM LEFT, PRISM SOVEREIGN, advanced orb boss: compact angular crystalline reactor vessel, opaque cyan-and-white armored central geode surrounded by eight broad triangular segmented weapon petals, gold connectors, icy blue reactor facets, sharp diamond/octagonal outer silhouette rather than a smooth ball, no central hole. BOTTOM RIGHT, SCYTHE REGENT, advanced mantis boss: silver and deep-magenta assault battleship, two crescent-shaped outer sickle arms with needle cannon tips, two thick inner downward blade launcher arms, broad shielded beetle-like central hull, pink reactor windows, jagged crown shoulders; clearly different architecture from the green mantis model. Each object about as wide as tall.",
+    "late": "Use case: stylized-concept. Asset type: production sprite sheet for a polished top-down vertical space shooter. Exactly TWO columns and TWO rows, four equally sized square cells. Genuine transparent background. One different isolated boss spaceship per cell, centered with 12 percent clear padding, complete intact silhouette, all weapons and wings fully inside its own cell. Orthographic overhead top-down view, all ship noses and gun muzzles point DOWN toward the bottom of the picture. Near-square compact proportions, strong broad readable silhouette, densely armored opaque central hull. Premium vivid mechanical/bio-mechanical sci-fi ship rendering, sharp panel seams, layered armor, rich saturated enamel and metal, beveled edges, delicate wear and restrained little glowing reactor windows. Baked upper-left lighting and self-shadowing, enough midtone detail to read over dark space. No background, no stars, no floor, no smoke, no huge glow cloud, no projectile trails, no labels, no text, no perspective scenery, no watermark. Four genuinely different silhouettes, not ordinary small fighters enlarged. No characters or humanoids. TOP LEFT, TRIARCH HYDRA, hydra boss: violet-and-gold armored tri-headed siege ship, three thick downward cannon necks attached across a wide solid central fortress hull, the central head has a purple void aperture, outer two have blue orb apertures, layered swept dorsal plates; three clearly readable heads, no animal tentacles. TOP RIGHT, NULL CATHEDRAL, advanced gate boss: black obsidian and pale platinum cathedral-like orbital fortress craft, rectangular gothic obelisk shoulders, central armored core with violet beam well and four downward gun mouths across a broad lower bridge, burgundy energy seams and tiny gold panels; imposing stepped castle silhouette but a spaceship, no large open center. BOTTOM LEFT, ECLIPSE DREADNOUGHT, supreme carrier boss: black-and-gold command dreadnought with crimson reactor windows, wide swept crescent wings folded around a heavily armored five-barrel central lower prow, two bulky side hangar decks and rounded radial weapon modules behind its shoulders, stacked central armor plates and high ornate crest, compact powerful flagship profile clearly distinct from a triangle carrier. BOTTOM RIGHT, EVENTIDE NEXUS, supreme orb boss: intricate eight-lobed deep-indigo and pearl-white armored reactor ship, thick overlapping crescent-shaped segmented petals around an opaque magenta core, eight bright small radial gun apertures, gold inner ribs, dark purple outer fin tips, compact ornate star-flower silhouette distinct from both an orb and an angular geode. Each object about as wide as tall."
+  },
+  "cleanupPrompt": "Use case: background-extraction. Edit target: the attached 2x2 four-boss spaceship sprite sheet. Change ONLY background alpha and framing. Preserve all FOUR exact spaceship identities, colors, armor details, number of weapon heads, downward facing directions and 2x2 cell order. Remove ALL white/gray matte, milky haze, fuzzy outer glow and any colored fringe around or behind the hulls. All empty space including holes between arms must be truly TRANSPARENT with zero alpha, not white, gray or checkerboard painted pixels. Opaque solid hulls, including white/ivory armor, must stay fully opaque. Do not erase pale ship armor. Keep only the four crisp clean spaceship cutouts. Reduce each ship within its own square cell so its complete silhouette has a generous 12-percent transparent margin on every side of that cell; restore any tiny cut-off tip if necessary. No object crosses or touches cell boundaries. Exactly two columns and two rows. No shadows on a backdrop, no stars, no effects, no text, no scenery, no redesign.",
+  "initial_source_sha256": {
+    "early": "9b473d81366e38941617de9989d696d22e464596d9e67643cc4697f0314ff9f2",
+    "middle": "93aa974e157ba4c6026bc8ff1988b453b446df020eb663f7320f126db7a336a1",
+    "late": "44c22e5d13c789e2856d6cbfb7b6a6120cd10e45502418df62d95ff33e328dcf"
+  }
+}
