@@ -4,6 +4,7 @@ import { join } from 'node:path'
 // Fail production builds before a Netlify deploy or signed Android release
 // if the shared menu artwork was not copied from public/ into dist/.
 const required = [
+  'assets/ui/space-door-v1.webp',
   'assets/ui/orbital-hangar-v1.png',
   'assets/ui/console-plate-v1.png',
   'assets/raid-fx/combat-atlas-v2.png',
