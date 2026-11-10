@@ -1,3 +1,5 @@
+import { getWreckTexture, preloadWreckArt } from './wreckArt'
+import { sceneryWreckDesign, wreckRunSeed } from './wreckVariety'
 import { createSurfaceCameraFrame, sampleSurfaceCamera, getSurfaceIslandY, positiveSurfaceModulo } from './surfaceMotion'
 import { getSurfaceTerrain, preloadSurfaceArt } from './surfaceArt'
 import { createRaidJourneyView, sampleRaidJourney } from './journey'
@@ -623,7 +625,7 @@ export function getRaidSceneObjectSize(width: number, height: number, layer: Rai
 export function getRaidSceneScenicPosition(width: number, height: number, seconds: number, layer: RaidBackgroundScenicLayer, index: number) {
   const size = getRaidSceneObjectSize(width, height, layer)
   const x = width * layer.x + Math.sin(seconds / 31 + index * 1.7) * width * layer.driftX
-  const y = getRaidSceneScrollableY(seconds, height, layer.speed, layer.yOffset, size.height * 0.62 + height * 0.05) +
+  const y = getRaidSceneScrollableY(seconds, height, layer.speed, layer.yOffset, Math.max(size.width, size.height) * 0.75 + height * 0.05) +
     Math.cos(seconds / 37 + index * 1.3) * height * layer.driftY
   return { ...size, x, y }
 }
@@ -633,7 +635,7 @@ export function getRaidSceneWreckPosition(width: number, height: number, seconds
   return {
     ...size,
     x: width * layer.x,
-    y: getRaidSceneScrollableY(seconds, height, layer.speed, layer.yOffset, size.height * 0.62 + height * 0.05),
+    y: getRaidSceneScrollableY(seconds, height, layer.speed, layer.yOffset, Math.max(size.width, size.height) * 0.75 + height * 0.05),
   }
 }
 
@@ -882,6 +884,8 @@ export class PixiRaidBackground {
   private cosmosEntered = 0
   private cosmosStage = -1
   private cosmosRun = -1
+  private wreckSeed = 0
+  private scenicHasWreckArt = false
   private readonly asteroidSprites = BACKGROUND_ASTEROIDS.map(() => new Sprite(Texture.WHITE))
   private readonly debrisSprites = BACKGROUND_DEBRIS.map(() => new Sprite(Texture.WHITE))
   private readonly finalBattleBackdropGraphics = new Graphics()
@@ -1048,6 +1052,7 @@ export class PixiRaidBackground {
       const { width, height, dpr, palette, quality, time, stageRush, bossIntensity, devilCorruption, finalBattleIntensity = 0 } = frame
       const seconds = time / 1000
       if (this.journeyRun !== (frame.runToken ?? 0)) {
+        this.wreckSeed = wreckRunSeed(frame.runToken ?? 0)
         this.journeyRun = frame.runToken ?? 0
         this.journeyStage = 0; this.journeyPreviousStage = 0; this.journeyArena = 0
       }
@@ -1270,7 +1275,7 @@ export class PixiRaidBackground {
   }
 
   private async loadAssets() {
-    await Promise.all([preloadCosmosArt(), preloadSurfaceArt()])
+    await Promise.all([preloadCosmosArt(), preloadSurfaceArt(), preloadWreckArt()])
     const entries = (Object.entries(RAID_OTHER_ASSET_PATHS) as Array<[PixiRaidAssetKey, string]>).filter(([key]) => key !== 'nukeMissile')
     await Promise.all(entries.map(async ([key, path]) => {
       try {
@@ -1564,7 +1569,11 @@ export class PixiRaidBackground {
     for (let i = 0; i < this.scenicSprites.length; i++) {
       const sprite = this.scenicSprites[i]
       if (i > 0 && (isLow || isMedium)) { sprite.visible = false; continue }
-      const texture = getCosmosLandmark(i === 0 ? 3 : 2)
+      // The fleet landmark keeps its identity throughout stages 11..15.
+      const design = sceneryWreckDesign(this.wreckSeed, i * 2, 0, i === 0 ? 'ship' : 'station')
+      const art = getWreckTexture(design)
+      const texture = art ?? this.assetTextures.get('spaceStation') ?? getCosmosLandmark(i === 0 ? 3 : 2)
+      if (i === 0) this.scenicHasWreckArt = true
       if (!texture) continue
       const p = this.journey.approach
       const size = Math.max(width, height) * (i === 0 ? this.journey.fleetSize : 0.12 + p * 0.22)
@@ -1615,7 +1624,8 @@ export class PixiRaidBackground {
       const glow = this.sceneryBloomSprites[i]
       const source = i === 0 ? this.planetSprites[0] : this.scenicSprites[0]
       const texture = i === 0 && this.journey.enabled ? getJourneyBloom(this.journey.planet) : getCosmosBloom(i === 0 ? (region.landmark < 2 ? region.landmark : 0) : (this.journey.enabled && this.journey.fleetSize > 0 ? 3 : region.landmark))
-      const canonical = i === 0 ? (!this.journey.enabled || this.journey.planet >= 0) : (!this.journey.enabled || this.journey.phase === 'fleet') && this.cosmosRegion >= 2
+      // Wreck lights are painted into their atlas: never overlay an unrelated old hull's bloom.
+      const canonical = i === 0 ? (!this.journey.enabled || this.journey.planet >= 0) : !this.scenicHasWreckArt && (!this.journey.enabled || this.journey.phase === 'fleet') && this.cosmosRegion >= 2
       glow.visible = !isLow && (!isMedium || i === 0) && canonical && shouldDrawRaidGalaxies(stageTheme) && source.visible && Boolean(texture)
       if (!glow.visible || !texture) continue
       const size = Math.max(source.width, source.height) * (256 / 192)
@@ -2142,32 +2152,30 @@ export class PixiRaidBackground {
 
   private updateWrecks(width: number, height: number, seconds: number, stageTheme: number, isLow: boolean, isMedium: boolean) {
     const scene = getRaidBackgroundScene(stageTheme)
-    const texture = this.assetTextures.get('spaceStation')
+    const fallback = this.assetTextures.get('spaceStation')
     const suppressSpaceDebris = isWateryWorldTheme(stageTheme) || isVolcanicWorldTheme(stageTheme)
-    const visibleCount = !texture || isLow || suppressSpaceDebris ? 0 : isMedium ? Math.min(1, scene.wrecks.length) : scene.wrecks.length
+    const visibleCount = isLow || suppressSpaceDebris ? 0 : isMedium ? Math.min(1, scene.wrecks.length) : scene.wrecks.length
     for (let index = 0; index < this.wreckSprites.length; index += 1) {
       const sprite = this.wreckSprites[index]
       const wreck = scene.wrecks[index]
-      sprite.visible = Boolean(texture && wreck && index < visibleCount)
-      if (!texture || !wreck || index >= visibleCount) continue
+      sprite.visible = Boolean(wreck && index < visibleCount)
+      if (!wreck || index >= visibleCount) continue
+      // Selection changes at the padded, fully offscreen wrap, never mid-pass.
+      const pass = Math.floor(seconds / wreck.speed + wreck.yOffset)
+      const design = sceneryWreckDesign(this.wreckSeed + wreck.variant, index, pass)
+      const texture = getWreckTexture(design) ?? fallback
+      if (!texture) { sprite.visible = false; continue }
       sprite.tint = sceneryTint(COSMIC_REGIONS[this.cosmosRegion < 0 ? 0 : this.cosmosRegion].tint, 0.46)
       const position = getRaidSceneWreckPosition(width, height, seconds, wreck)
-      setPixiSpriteContain(
-        sprite,
-        texture,
-        position.x,
-        position.y,
-        position.width,
-        position.height,
-        1,
-        wreck.rotation + seconds * wreck.spin,
-      )
+      setPixiSpriteContain(sprite, texture, position.x, position.y, position.width, position.height, 1,
+        wreck.rotation + seconds * wreck.spin)
     }
   }
 
   private updateScenic(width: number, height: number, seconds: number, stageTheme: number, isLow: boolean, isMedium: boolean) {
     const scene = getRaidBackgroundScene(stageTheme)
     const visibleCount = isLow ? 0 : isMedium ? Math.min(1, scene.scenic.length) : scene.scenic.length
+    this.scenicHasWreckArt = false
     for (let index = 0; index < this.scenicSprites.length; index += 1) {
       const sprite = this.scenicSprites[index]
       const scenic = scene.scenic[index]
@@ -2175,32 +2183,34 @@ export class PixiRaidBackground {
       const landmark = this.cosmosRegion >= 2 ? getCosmosLandmark(region.landmark) : undefined
       if (index === 0 && landmark && !isLow && shouldDrawRaidGalaxies(stageTheme)) {
         const age = Math.max(0, seconds - this.cosmosEntered)
-        const progress = Math.min(1, age / 100)
+        const pass = Math.floor(age / 130)
+        const progress = (age / 130) % 1
         const size = Math.min(width, height) * 0.86
-        sprite.visible = true
-        setPixiSpriteContain(sprite, landmark, width * 0.92 - this.travel.x * width * 0.03,
-          height * (-0.12 + progress * 0.96) - this.travel.y * height * 0.015, size, size,
-          1, -0.12)
+        const design = sceneryWreckDesign(this.wreckSeed, 3, pass, this.cosmosRegion === 2 ? 'station' : 'ship')
+        const art = getWreckTexture(design)
+        const texture = art ?? this.assetTextures.get('spaceStation') ?? landmark
+        this.scenicHasWreckArt = true
+        // Padding covers the rotated silhouette and steering at both wrap points.
+        const padding = size * 0.8 + height * 0.02
+        setPixiSpriteContain(sprite, texture, width * 0.92 - this.travel.x * width * 0.03,
+          -padding + progress * (height + padding * 2) - this.travel.y * height * 0.015,
+          size, size, 1, -0.12)
         sprite.zIndex = 40
         sprite.tint = sceneryTint(region.tint, 0.7)
         continue
       }
       sprite.zIndex = scenic?.layer === 'far' ? 5 : 40 + index * 0.01
       sprite.tint = sceneryTint(region.tint, scenic?.asset === 'sun' ? 0.82 : 0.62)
-      const texture = scenic ? this.assetTextures.get(scenic.asset) : undefined
+      const pass = scenic ? Math.floor(seconds / scenic.speed + scenic.yOffset) : 0
+      const art = scenic?.asset === 'spaceStation'
+        ? getWreckTexture(sceneryWreckDesign(this.wreckSeed, index + 4, pass, 'station')) : undefined
+      const texture = art ?? (scenic ? this.assetTextures.get(scenic.asset) : undefined)
+      if (index === 0) this.scenicHasWreckArt = scenic?.asset === 'spaceStation'
       sprite.visible = Boolean(texture && index < visibleCount)
       if (!texture || !scenic || index >= visibleCount) continue
       const position = getRaidSceneScenicPosition(width, height, seconds, scenic, index)
-      setPixiSpriteContain(
-        sprite,
-        texture,
-        position.x,
-        position.y,
-        position.width,
-        position.height,
-        1,
-        scenic.rotation + seconds * scenic.spin,
-      )
+      setPixiSpriteContain(sprite, texture, position.x, position.y, position.width, position.height, 1,
+        scenic.rotation + seconds * scenic.spin)
     }
   }
 

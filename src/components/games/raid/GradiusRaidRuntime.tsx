@@ -1,3 +1,4 @@
+import { pickGameplayWreckVariant } from './wreckVariety'
 import { getRaidStageEntrySeconds } from './journey'
 import { COSMIC_REGIONS, cosmicRegionIndex } from './cosmos'
 import { CosmosPresentation } from './CosmosPresentation'
@@ -15,7 +16,7 @@ import type { AudioMixSettings, GraphicsQuality } from '../sound'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { GameDialog } from '../../ui/GameDialog'
 import type { CSSProperties } from 'react'
-import { RAID_DERELICT_WRECK_VARIANTS, RAID_DEVIL_MASTER_PROJECTILE_FILTER, RAID_DEVIL_MASTER_PROJECTILE_GLOW_STOPS, RAID_PLAYER_LASER_HEAD_STOPS, RAID_SNAKE_FANG_GLOW_STOPS, RAID_SQUID_BUBBLE_STOPS, RAID_SQUID_INK_STOPS, RAID_VENOM_SPIT_STOPS, drawCanvasSpriteContain, getDerelictWreckVariantData, getDevilMasterProjectileCanvasSprite } from './assets'
+import { RAID_DEVIL_MASTER_PROJECTILE_FILTER, RAID_DEVIL_MASTER_PROJECTILE_GLOW_STOPS, RAID_PLAYER_LASER_HEAD_STOPS, RAID_SNAKE_FANG_GLOW_STOPS, RAID_SQUID_BUBBLE_STOPS, RAID_SQUID_INK_STOPS, RAID_VENOM_SPIT_STOPS, drawCanvasSpriteContain, getDerelictWreckVariantData, getDevilMasterProjectileCanvasSprite } from './assets'
 import type { CanvasSpriteEntry } from './assets'
 import { playCoreLanderPhysicalAttackSound, playPickupVoiceLine, warmPickupVoiceSamples } from './audio'
 import { DEFAULT_RAID_PALETTE, PixiRaidBackground, RAID_BOSS_BACKGROUND_THEME_FINAL, RAID_BOSS_BACKGROUND_THEME_SNAKE, RAID_BOSS_BACKGROUND_THEME_SQUID, drawVolcanicWorldForegroundClouds, drawWateryWorldForegroundClouds, getRaidCameraShakeOffset, isVolcanicWorldTheme, isWateryWorldTheme } from './background'
@@ -262,6 +263,7 @@ export function GradiusRaid({
   const meteorsRef = useRef<MeteorHazard[]>([])
   const ionStrikesRef = useRef<IonStrike[]>([])
   const wrecksRef = useRef<DerelictWreck[]>([])
+  const lastWreckVariantRef = useRef(-1)
   const powerUpsRef = useRef<PowerUp[]>([])
   const sparksRef = useRef<Spark[]>([])
   const ripplesRef = useRef<Ripple[]>([])
@@ -2850,6 +2852,7 @@ export function GradiusRaid({
     meteorsRef.current = []
     ionStrikesRef.current = []
     wrecksRef.current = []
+    lastWreckVariantRef.current = -1
     powerUpsRef.current = []
     recycleSparkList(sparksRef.current)
     recycleRippleList(ripplesRef.current)
@@ -4694,7 +4697,8 @@ export function GradiusRaid({
         } else if (activeRandomEvent.kind === 'wreck' && randomEventSpawnTimerRef.current <= 0 && wrecksRef.current.length < MAX_WRECKS) {
           const leftEntry = Math.random() < 0.5
           const hp = 170 + stageRef.current * 18 + getPowerScore(player) * 5
-          const variant = Math.floor(Math.random() * RAID_DERELICT_WRECK_VARIANTS.length)
+          const variant = pickGameplayWreckVariant(Math.random(), lastWreckVariantRef.current)
+          lastWreckVariantRef.current = variant
           const variantData = getDerelictWreckVariantData(variant)
           const scale = 0.92 + Math.random() * 0.22
           wrecksRef.current.push({

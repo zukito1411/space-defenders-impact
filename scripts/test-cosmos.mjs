@@ -45,7 +45,7 @@ for(let i=0;i<4;i++) {
 }
 // Use real scene methods, stubbing Pixi objects only: no browser/device FPS claim.
 let source=read('src/components/games/raid/background.ts').replace(/^import .*\n/gm,'')
-source=`
+source=read('src/components/games/raid/wreckVariety.ts')+`
 const unit=v=>Math.max(0,Math.min(1,v));
 const sceneryTint=${material.sceneryTint.toString()};
 const createRaidJourneyView=${journey.createRaidJourneyView.toString()};
@@ -61,6 +61,8 @@ const PLANET_DEPTH=[30,20,10],PLANET_PARALLAX=[.018,.009,.004];
 const COSMIC_REGIONS=${JSON.stringify(regions.COSMIC_REGIONS)};
 const cosmicRegionIndex=${cosmicRegionIndex.toString()},edgeFlyby=${edgeFlyby.toString()};
 const frame={width:512,height:512};
+const wreckFrames=Array.from({length:8},(_,id)=>({width:464,height:464,id}));
+const getWreckTexture=i=>wreckFrames[i];
 const getCosmosBackdrop=i=>i>=0&&i<4?frame:undefined,getCosmosLandmark=getCosmosBackdrop,getCosmosBloom=getCosmosBackdrop,getJourneyPlanet=getCosmosBackdrop,getJourneySurface=getCosmosBackdrop,getJourneyBloom=getCosmosBackdrop,getSurfaceTerrain=()=>globalThis.__surfaceTestTexture??frame;
 const DEG=Math.PI/180,COMET_ASSET_HEAD_ANGLE=0;
 const seededNoise=(i,s)=>((i*37+s*19)%100)/100;
@@ -126,6 +128,55 @@ assert.equal(line.rotation,0)
 scene.reducedMotion=true;scene.updateSpeedLines(1000,500,false,false,1)
 assert.ok(scene.speedLineSprites.every(s=>!s.visible))
 scene.reducedMotion=false
+// Eight distinct atlas frames plus legacy station: offscreen changes, fixed pools and stable fleet.
+const wreckScene = new background.PixiRaidBackground()
+const legacy = {width:400,height:400,id:8}
+wreckScene.assetTextures.set('spaceStation',legacy)
+const wreckSpriteCount = background.sprites
+const seen = new Set()
+for (const [w,h] of [[390,844],[1280,720],[2400,600]]) {
+ wreckScene.cosmosRegion=2;wreckScene.cosmosEntered=0
+ for(let t=0;t<1200;t+=.37) {
+  wreckScene.updateWrecks(w,h,t,4,false,false)
+  wreckScene.updateScenic(w,h,t,9,false,false)
+  for(const sprite of [...wreckScene.wreckSprites,...wreckScene.scenicSprites].filter(s=>s.visible)) {
+   if(sprite.texture.id!==undefined)seen.add(sprite.texture.id)
+   assert.equal(sprite.alpha,1)
+  }
+ }
+ const data=background.getRaidBackgroundScene(4).wrecks
+ data.forEach((layer,i)=>{
+  const wrap=(1-layer.yOffset)*layer.speed
+  wreckScene.updateWrecks(w,h,wrap-1e-6,4,false,false)
+  const before=wreckScene.wreckSprites[i],oldTexture=before.texture
+  assert.ok(before.y-Math.hypot(before.width,before.height)/2>h,'design changed before leaving viewport')
+  wreckScene.updateWrecks(w,h,wrap+1e-6,4,false,false)
+  const after=wreckScene.wreckSprites[i]
+  assert.notEqual(oldTexture,after.texture,'pass failed to select another design')
+  assert.ok(after.y+Math.hypot(after.width,after.height)/2<0,'design changed inside viewport')
+ })
+ wreckScene.updateScenic(w,h,129.999999,9,false,false)
+ const primary=wreckScene.scenicSprites[0],old=primary.texture
+ assert.ok(primary.y-Math.hypot(primary.width,primary.height)/2>h)
+ wreckScene.updateScenic(w,h,130.000001,9,false,false)
+ assert.notEqual(primary.texture,old)
+ assert.ok(primary.y+Math.hypot(primary.width,primary.height)/2<0)
+}
+assert.equal(seen.size,9,'background never used all designs')
+wreckScene.journey.enabled=true;wreckScene.journey.fleetSize=.4
+wreckScene.wreckSeed=123
+wreckScene.updateJourneyScenery(390,844,false,false)
+const fleetDesign=wreckScene.scenicSprites[0].texture
+for(const approach of [0,.1,.3,.7,1]) {
+ wreckScene.journey.approach=approach
+ wreckScene.updateJourneyScenery(390,844,false,false)
+ assert.equal(wreckScene.scenicSprites[0].texture,fleetDesign,'approaching fleet morphed')
+}
+wreckScene.updateSceneryBloom(13,false,false)
+assert.equal(wreckScene.sceneryBloomSprites[1].visible,false,'old bloom silhouette overlaid a new wreck')
+wreckScene.updateJourneyScenery(390,844,true,false)
+assert.equal(wreckScene.scenicSprites.filter(s=>s.visible).length,1,'low quality fleet grew')
+assert.equal(background.sprites,wreckSpriteCount,'wreck pass allocated sprites')
 // Full render orchestration: region clocks remain continuous between neighboring stages.
 scene.app={renderer:{resize(){}},canvas:{style:{}}};scene.travel.update=()=>{}
 for(const method of ['updateBaseGraphics','updateNebula','updateBossTint','updateAmbientGlows','updateSurface','updateFinalBattleBackdrop','updateFinalBattleLayer','updateAmbientExplosions','updateStarfield','updateSpeedLines','updateWrecks','updateRareCometFlyby','updateWateryWorldAssetSprites','updateVolcanicWorldAssetSprites']) scene[method]=()=>{}
@@ -156,7 +207,7 @@ assert.equal(travelFrame(6,6,0,0,1.18),true)
 assert.ok(Math.abs(scene.planetSprites[1].x-departureX)<.001 && Math.abs(scene.planetSprites[1].width-departureSize)<.001)
 const frozen=JSON.stringify(scene.journey)
 assert.equal(travelFrame(6,6,0,0,1.18),true);assert.equal(JSON.stringify(scene.journey),frozen,'frozen game time advanced the journey')
-assert.equal(background.sprites,count,'journey render allocated additional sprites')
+assert.equal(background.sprites,wreckSpriteCount,'journey render allocated additional sprites')
 scene.fillRadial=()=>{};scene.drawFinalBattleWeaponProfile=()=>{};scene.drawFinalBattleCruiserTrail=()=>{}
 scene.finalBattleTextures.get=()=>({width:128,height:128})
 scene.updateFinalBattleLayer(1000,500,10,9103,'high',.68)

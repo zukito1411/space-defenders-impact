@@ -4,6 +4,8 @@ import { join } from 'node:path'
 // Fail production builds before a Netlify deploy or signed Android release
 // if the shared menu artwork was not copied from public/ into dist/.
 const required = [
+  'assets/raid-fx/wreck-ships-v1.webp',
+  'assets/raid-fx/wreck-stations-v1.webp',
   'assets/raid-fx/terrain-water-v1.webp',
   'assets/raid-fx/terrain-basalt-v1.webp',
   'assets/raid-fx/destination-worlds-v1.webp',
