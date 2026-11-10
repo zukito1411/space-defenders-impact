@@ -4118,3 +4118,24 @@
     padding: 11px 22px;
   }
 }
+
+/* A short edge-aligned arrival card; no filter, backdrop blur, or per-frame DOM work. */
+.raid__sector-arrival {
+  position: absolute; z-index: 6; left: max(18px, env(safe-area-inset-left)); top: 19%;
+  display: grid; gap: 4px; max-width: min(72vw, 340px); padding: 10px 14px;
+  border-left: 2px solid var(--sector-accent); pointer-events: none;
+  color: #edf5ff; text-shadow: 0 2px 4px #000; opacity: 0;
+  animation: raid-sector-arrival 5.5s ease both;
+}
+.raid__sector-arrival small { color: var(--sector-accent); font-size: 10px; letter-spacing: .22em; }
+.raid__sector-arrival strong { font-size: clamp(17px, 2.3vw, 26px); font-weight: 600; letter-spacing: .04em; }
+.raid__sector-arrival span { font-size: 10px; color: #b6c7d9; letter-spacing: .06em; }
+@keyframes raid-sector-arrival {
+  0%, 10% { opacity: 0; transform: translateX(-12px); }
+  23%, 74% { opacity: 1; transform: translateX(0); }
+  100% { opacity: 0; transform: translateX(0); visibility: hidden; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .raid__sector-arrival { animation-name: raid-sector-arrival-still; }
+  @keyframes raid-sector-arrival-still { 0%, 10%, 100% { opacity: 0; } 23%, 74% { opacity: 1; } }
+}

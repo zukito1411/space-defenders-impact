@@ -4,6 +4,9 @@ import { join } from 'node:path'
 // Fail production builds before a Netlify deploy or signed Android release
 // if the shared menu artwork was not copied from public/ into dist/.
 const required = [
+  'assets/raid-fx/cosmos-regions-v1.webp',
+  'assets/raid-fx/cosmos-landmarks-v1.webp',
+  'audio/cosmos-hull-v1.ogg',
   'assets/raid-fx/player-missiles-v1.webp',
   'assets/raid-fx/nuke-missile-v1.webp',
   'assets/ui/space-door-v1.webp',

@@ -1,3 +1,5 @@
+import { cosmicRegionIndex, COSMIC_REGIONS, edgeFlyby } from './cosmos'
+import { getCosmosBackdrop, getCosmosLandmark, preloadCosmosArt } from './cosmosArt'
 import { projectDepthStar, type DepthStar } from './depthProjection'
 import { RaidTravelMotion } from './travelMotion'
 import { getPublicAssetUrl } from '../sound'
@@ -807,6 +809,7 @@ export type PixiRaidBackgroundFrame = {
   playerX?: number
   playerY?: number
   finalBattleIntensity?: number
+  runToken?: number
 }
 
 export function setPixiSpriteContain(sprite: Sprite, texture: Texture, x: number, y: number, width: number, height: number, alpha: number, rotation = 0) {
@@ -886,6 +889,11 @@ export class PixiRaidBackground {
   private readonly volcanicIslandSprites = createWorldSurfaceSprites(VOLCANIC_WORLD_ISLAND_LAYERS.length)
   private readonly volcanicCloudSprites = createWorldSurfaceSprites(VOLCANIC_WORLD_CLOUD_LAYERS.length)
   private readonly cometFlybySprite = new Sprite(Texture.WHITE)
+  private cosmosRegion = -1
+  private cosmosPrevious = -1
+  private cosmosEntered = 0
+  private cosmosStage = -1
+  private cosmosRun = -1
   private readonly asteroidSprites = BACKGROUND_ASTEROIDS.map(() => new Sprite(Texture.WHITE))
   private readonly debrisSprites = BACKGROUND_DEBRIS.map(() => new Sprite(Texture.WHITE))
   private readonly finalBattleBackdropGraphics = new Graphics()
@@ -938,10 +946,10 @@ export class PixiRaidBackground {
       app.stage.addChild(this.scene)
       app.stage.addChild(this.gpuForeground.root)
       this.scene.addChild(this.baseGraphics)
+      this.galaxySprites.forEach((sprite) => this.scene.addChild(sprite))
       this.scene.addChild(this.nebulaGraphics)
       this.scene.addChild(this.bossTintGraphics)
       this.scene.addChild(this.ambientGlowGraphics)
-      this.galaxySprites.forEach((sprite) => this.scene.addChild(sprite))
       this.farStarLayers.forEach((layer) => this.scene.addChild(layer))
       this.nearStarLayers.forEach((layer) => this.scene.addChild(layer))
       // Bake a small soft point once; never blur or rebuild stars per frame.
@@ -1042,6 +1050,15 @@ export class PixiRaidBackground {
     try {
       const { width, height, dpr, palette, quality, stageTheme, time, stageRush, bossIntensity, devilCorruption, finalBattleIntensity = 0 } = frame
       const seconds = time / 1000
+      const nextRegion = cosmicRegionIndex(stageTheme)
+      const arenaChanged = shouldDrawRaidGalaxies(stageTheme) !== shouldDrawRaidGalaxies(this.cosmosStage)
+      if (this.cosmosRegion !== nextRegion || arenaChanged || this.cosmosRun !== (frame.runToken ?? 0) || seconds < this.cosmosEntered) {
+        this.cosmosPrevious = this.cosmosRegion
+        this.cosmosRegion = nextRegion
+        this.cosmosEntered = seconds
+      }
+      this.cosmosStage = stageTheme
+      this.cosmosRun = frame.runToken ?? 0
       this.travel.update(time, stageRush, getRaidStarfieldSpeedScale(stageTheme), frame.playerX ?? 50, frame.playerY ?? 65)
       const isLow = quality === 'low'
       const isMedium = quality === 'medium'
@@ -1060,6 +1077,8 @@ export class PixiRaidBackground {
       }
 
       this.updateBaseGraphics(palette, width, height, quality, dpr)
+      // An opaque region plate replaces the base quad, rather than covering it.
+      this.baseGraphics.visible = !getCosmosBackdrop(this.cosmosRegion) || !shouldDrawRaidGalaxies(stageTheme)
 
       // Graphics.clear() followed by complex gradients and polygon generation
       // is expensive on Android WebView. Rebuild these layers at 25 Hz,
@@ -1229,6 +1248,7 @@ export class PixiRaidBackground {
   }
 
   private async loadAssets() {
+    await preloadCosmosArt()
     const entries = (Object.entries(RAID_OTHER_ASSET_PATHS) as Array<[PixiRaidAssetKey, string]>).filter(([key]) => key !== 'nukeMissile')
     await Promise.all(entries.map(async ([key, path]) => {
       try {
@@ -1320,7 +1340,7 @@ export class PixiRaidBackground {
   private updateNebula(width: number, height: number, seconds: number, palette: RaidPalette, stageTheme: number, isLow: boolean) {
     const graphics = this.nebulaGraphics
     graphics.clear()
-    const suppress = isWateryWorldTheme(stageTheme) || isVolcanicWorldTheme(stageTheme)
+    const suppress = isWateryWorldTheme(stageTheme) || isVolcanicWorldTheme(stageTheme) || Boolean(getCosmosBackdrop(this.cosmosRegion))
     graphics.visible = !isLow && !suppress
     if (isLow || suppress) return
 
@@ -1367,7 +1387,7 @@ export class PixiRaidBackground {
   }
 
   private updateAmbientGlows(width: number, height: number, isLow: boolean, isMedium: boolean, palette: RaidPalette, stageTheme: number) {
-    const suppress = isWateryWorldTheme(stageTheme) || isVolcanicWorldTheme(stageTheme)
+    const suppress = isWateryWorldTheme(stageTheme) || isVolcanicWorldTheme(stageTheme) || Boolean(getCosmosBackdrop(this.cosmosRegion))
     const key = `${width}x${height}|${isLow}|${isMedium}|${palette.bgA}|${suppress ? 1 : 0}`
     if (this.ambientGlowKey === key) return
     this.ambientGlowKey = key
@@ -1387,6 +1407,26 @@ export class PixiRaidBackground {
   }
 
   private updateGalaxies(width: number, height: number, seconds: number, stageTheme: number, isLow: boolean, isMedium: boolean) {
+    const backdrop = getCosmosBackdrop(this.cosmosRegion)
+    if (backdrop && shouldDrawRaidGalaxies(stageTheme)) {
+      const age = Math.max(0, seconds - this.cosmosEntered)
+      const previous = getCosmosBackdrop(this.cosmosPrevious)
+      const fade = Math.min(1, age / 2.4)
+      for (let i = 0; i < this.galaxySprites.length; i++) {
+        const sprite = this.galaxySprites[i]
+        const outgoing = i === 1
+        sprite.visible = !outgoing || (!isLow && fade < 1 && this.cosmosPrevious !== this.cosmosRegion && Boolean(previous))
+        if (!sprite.visible) continue
+        const texture = outgoing ? previous! : backdrop
+        const extent = Math.max(width, height) * 1.04
+        setPixiSpriteContain(sprite, texture, width * 0.5 + Math.sin(seconds / 150) * width * 0.006,
+          height * 0.5, extent, extent, outgoing ? 1 - fade : 1, 0)
+        // Preserve the quiet center and edge clouds on ultrawide and portrait screens.
+        sprite.scale.set(width * 1.04 / texture.width, height * 1.04 / texture.height)
+        sprite.tint = 0xffffff
+      }
+      return
+    }
     const scene = getRaidBackgroundScene(stageTheme)
     const drift = Math.sin(seconds / 120)
     const visibleCount = isLow || !shouldDrawRaidGalaxies(stageTheme) ? 0 : isMedium ? 1 : scene.galaxies.length
@@ -1688,7 +1728,7 @@ export class PixiRaidBackground {
     this.hideWaterySurfaceSprites()
     const isMedium = quality === 'medium'
     const isWorld = isWateryWorldTheme(stageTheme) || isVolcanicWorldTheme(stageTheme)
-    const visible = quality !== 'low' && (isWorld || shouldDrawRaidSurfaceStage(stageTheme))
+    const visible = quality !== 'low' && (isWorld || (shouldDrawRaidSurfaceStage(stageTheme) && !getCosmosBackdrop(this.cosmosRegion)))
     graphics.visible = visible
     if (!visible) return
 
@@ -1957,6 +1997,20 @@ export class PixiRaidBackground {
     for (let index = 0; index < this.planetSprites.length; index += 1) {
       const sprite = this.planetSprites[index]
       const planet = scene.planets[index]
+      const region = COSMIC_REGIONS[this.cosmosRegion < 0 ? 0 : this.cosmosRegion]
+      const orbital = getCosmosLandmark(region.landmark < 2 ? region.landmark : 0)
+      if (index === 0 && orbital && !isLow && shouldDrawRaidGalaxies(stageTheme)) {
+        const age = Math.max(0, seconds - this.cosmosEntered)
+        const progress = Math.min(1, age / 90)
+        const size = Math.min(width, height) * (region.landmark === 1 ? 1.22 : 1.04)
+        sprite.visible = true
+        setPixiSpriteContain(sprite, orbital, width * (region.landmark === 1 ? 0.94 : 0.04) - this.travel.x * width * 0.018,
+          height * (-0.18 + progress * 0.58) - this.travel.y * height * 0.008, size, size,
+          Math.min(1, age / 2) * (this.cosmosRegion >= 2 ? 0.32 : 0.9), 0)
+        sprite.tint = region.tint
+        continue
+      }
+      sprite.tint = region.tint
       const texture = planet ? this.assetTextures.get(planet.asset) : undefined
       sprite.visible = Boolean(texture && index < visibleCount)
       if (!texture || !planet || index >= visibleCount) continue
@@ -2000,6 +2054,20 @@ export class PixiRaidBackground {
     for (let index = 0; index < this.scenicSprites.length; index += 1) {
       const sprite = this.scenicSprites[index]
       const scenic = scene.scenic[index]
+      const region = COSMIC_REGIONS[this.cosmosRegion < 0 ? 0 : this.cosmosRegion]
+      const landmark = this.cosmosRegion >= 2 ? getCosmosLandmark(region.landmark) : undefined
+      if (index === 0 && landmark && !isLow && shouldDrawRaidGalaxies(stageTheme)) {
+        const age = Math.max(0, seconds - this.cosmosEntered)
+        const progress = Math.min(1, age / 100)
+        const size = Math.min(width, height) * 0.86
+        sprite.visible = true
+        setPixiSpriteContain(sprite, landmark, width * 0.92 - this.travel.x * width * 0.03,
+          height * (-0.12 + progress * 0.96) - this.travel.y * height * 0.015, size, size,
+          Math.min(1, age / 3) * 0.58, -0.12)
+        sprite.tint = region.tint
+        continue
+      }
+      sprite.tint = region.tint
       const texture = scenic ? this.assetTextures.get(scenic.asset) : undefined
       sprite.visible = Boolean(texture && index < visibleCount)
       if (!texture || !scenic || index >= visibleCount) continue
@@ -2364,6 +2432,17 @@ export class PixiRaidBackground {
       const sprite = this.asteroidSprites[index]
       sprite.visible = index < asteroidLimit
       if (!asteroidTexture || index >= asteroidLimit) continue
+      sprite.tint = COSMIC_REGIONS[this.cosmosRegion < 0 ? 0 : this.cosmosRegion].tint
+      const edgeSlot = index - Math.max(0, asteroidLimit - (isMedium ? 1 : 2))
+      if (edgeSlot >= 0) {
+        const pass = edgeFlyby(seconds - this.cosmosEntered, edgeSlot)
+        sprite.visible = pass >= 0
+        if (pass < 0) continue
+        const size = Math.min(width, height) * 0.23
+        setPixiSpriteContain(sprite, asteroidTexture, width * (edgeSlot === 0 ? 0.015 : 0.985),
+          -size + pass * (height + size * 2), size, size, 0.48, seconds * 0.08)
+        continue
+      }
       const asteroid = BACKGROUND_ASTEROIDS[index]
       const y = ((seconds * asteroid.speed + asteroid.delay / 22 + 1) % 1) * height * 1.15 - height * 0.05
       setPixiSpriteContain(sprite, asteroidTexture, width * asteroid.x, y, asteroid.width * 1.5 * scene.asteroidBias, asteroid.height * 1.5 * scene.asteroidBias, asteroid.alpha, seconds * asteroid.spin * DEG / 10)
