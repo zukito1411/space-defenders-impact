@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs'
 import ts from 'typescript'
 const read = (file) => readFileSync(new URL('../'+file,import.meta.url),'utf8')
 const load = (source, jsx=false) => import('data:text/javascript;base64,'+Buffer.from(ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022,jsx:jsx?ts.JsxEmit.React:undefined}}).outputText).toString('base64'))
+const material = await load(read('src/components/games/raid/sceneryMaterial.ts'))
 const regions = await load(read('src/components/games/raid/cosmos.ts'))
 const {cosmicRegionIndex,edgeFlyby,cosmicArrival}=regions
 for (const [stage,index] of [[1,0],[4,0],[5,1],[8,1],[9,2],[12,2],[13,3],[15,3],[999,3],[9101,1],[9102,2],[9103,3],[NaN,0]]) assert.equal(cosmicRegionIndex(stage),index)
@@ -22,6 +23,7 @@ class Rectangle { constructor(x,y,width,height){Object.assign(this,{x,y,width,he
 class Texture {constructor(options){made++;Object.assign(this,options)}}
 const Assets={load:async()=>{loads++;return {width:1024,height:1024,source:{}}}};
 const getPublicAssetUrl=p=>p;
+const bakeSceneryLighting=()=>null;
 `+art
 const atlas=await load(art)
 await Promise.all([atlas.preloadCosmosArt(),atlas.preloadCosmosArt()])
@@ -36,15 +38,22 @@ for(let i=0;i<4;i++) {
 // Use real scene methods, stubbing Pixi objects only: no browser/device FPS claim.
 let source=read('src/components/games/raid/background.ts').replace(/^import .*\n/gm,'')
 source=`
+const unit=v=>Math.max(0,Math.min(1,v));
+const sceneryTint=${material.sceneryTint.toString()};
+const PLANET_DEPTH=[30,20,10],PLANET_PARALLAX=[.018,.009,.004];
 const COSMIC_REGIONS=${JSON.stringify(regions.COSMIC_REGIONS)};
 const cosmicRegionIndex=${cosmicRegionIndex.toString()},edgeFlyby=${edgeFlyby.toString()};
 const frame={width:464,height:464};
-const getCosmosBackdrop=i=>i>=0&&i<4?frame:undefined,getCosmosLandmark=getCosmosBackdrop;
+const getCosmosBackdrop=i=>i>=0&&i<4?frame:undefined,getCosmosLandmark=getCosmosBackdrop,getCosmosBloom=getCosmosBackdrop;
 const DEG=Math.PI/180,COMET_ASSET_HEAD_ANGLE=0;
 const seededNoise=(i,s)=>((i*37+s*19)%100)/100;
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 export let sprites=0;
-class Sprite {constructor(){sprites++;this.visible=false;this.anchor={set(){}};this.scale={set:(v)=>{this.scaleX=v}};this.position={set:(x,y)=>{this.x=x;this.y=y}}}}
+class Sprite {
+ constructor(){sprites++;this.visible=false;this.texture=frame;this.zIndex=0;this.scaleX=this.scaleY=1;this.anchor={set(){}};this.scale={set:(x,y=x)=>{this.scaleX=x;this.scaleY=y}};this.position={set:(x,y)=>{this.x=x;this.y=y}}}
+ get width(){return this.texture.width*this.scaleX} set width(v){this.scaleX=v/this.texture.width}
+ get height(){return this.texture.height*this.scaleY} set height(v){this.scaleY=v/this.texture.height}
+}
 class Texture {static WHITE=frame}
 class Container {}
 class Graphics {constructor(){this.position={set(){}}} clear(){} }
@@ -53,15 +62,20 @@ class RaidTravelMotion {x=0;y=0;}
 `+source
 const background=await load(source)
 const scene=new background.PixiRaidBackground()
-scene.assetTextures.set('asteroid',{width:100,height:100})
+scene.planetSprites.forEach((sprite,i)=>sprite.zIndex=material.PLANET_DEPTH[i])
+for(const key of ['asteroid','planet1','planet2','planet3','planet4','planet5','planetNebula','spaceStation','sun'])scene.assetTextures.set(key,{width:400,height:400})
 const count=background.sprites
 for(const [stage,region] of [[1,0],[5,1],[9,2],[13,3],[9101,1],[9102,2],[9103,3]]) for(const quality of ['low','medium','high']) {
  scene.cosmosRegion=region;scene.cosmosPrevious=(region+3)%4;scene.cosmosEntered=0
  for(const seconds of [0,.5,2,3,8,25,91,1e6]) {
   scene.updateGalaxies(1000,500,seconds,stage,quality==='low',quality==='medium')
   scene.updatePlanets(1000,500,seconds,background.DEFAULT_RAID_PALETTE,stage,quality==='low',quality==='medium')
+  scene.updateWrecks(1000,500,seconds,stage,quality==='low',quality==='medium')
   scene.updateScenic(1000,500,seconds,stage,quality==='low',quality==='medium')
   scene.updateBackgroundObjects(1000,500,seconds,stage,quality==='low',quality==='medium')
+  scene.updateSceneryBloom(stage,quality==='low',quality==='medium')
+  for(const sprite of [...scene.planetSprites,...scene.wreckSprites,...scene.scenicSprites,...scene.asteroidSprites,...scene.debrisSprites].filter(s=>s.visible)) assert.equal(sprite.alpha,1,'solid scenery became transparent')
+  assert.ok(scene.sceneryBloomSprites.filter(s=>s.visible).length <= (quality==='low'?0:quality==='medium'?1:2))
   const galaxies=scene.galaxySprites.filter(s=>s.visible)
   if(stage!==9101&&stage!==9102) {
    assert.equal(galaxies.length,quality==='low'||seconds>=2.4?1:2)
@@ -75,6 +89,21 @@ for(const [stage,region] of [[1,0],[5,1],[9,2],[13,3],[9101,1],[9102,2],[9103,3]
  }
 }
 assert.equal(background.sprites,count,'scene updates allocated new sprites')
+assert.ok(scene.planetSprites[0].zIndex>scene.planetSprites[1].zIndex && scene.planetSprites[1].zIndex>scene.planetSprites[2].zIndex,'near planets must occlude far planets')
+scene.cosmosRegion=0;scene.travel.near=300;scene.travel.rush=0
+scene.updateSpeedLines(1000,500,false,false,1)
+assert.ok(scene.speedLineSprites.some(s=>s.visible&&s.alpha>0),'cruise speed lines are missing')
+const line=scene.speedLineSprites.find(s=>s.visible&&s.alpha>0),beforeY=line.y,beforeAlpha=line.alpha
+scene.travel.near+=1;scene.updateSpeedLines(1000,500,false,false,1)
+assert.ok(line.y>beforeY,'speed lines must follow forward travel, not radiate sideways')
+const cruiseY=line.y
+scene.travel.rush=1;scene.updateSpeedLines(1000,500,false,false,1)
+assert.equal(line.y,cruiseY,'changing rush strength teleported the line phase')
+assert.ok(line.alpha>beforeAlpha,'rush lines must be stronger than cruise')
+assert.equal(line.rotation,0)
+scene.reducedMotion=true;scene.updateSpeedLines(1000,500,false,false,1)
+assert.ok(scene.speedLineSprites.every(s=>!s.visible))
+scene.reducedMotion=false
 // Full render orchestration: region clocks remain continuous between neighboring stages.
 scene.app={renderer:{resize(){}},canvas:{style:{}}};scene.travel.update=()=>{}
 for(const method of ['updateBaseGraphics','updateNebula','updateBossTint','updateAmbientGlows','updateSurface','updateFinalBattleBackdrop','updateFinalBattleLayer','updateAmbientExplosions','updateStarfield','updateSpeedLines','updateWrecks','updateRareCometFlyby','updateWateryWorldAssetSprites','updateVolcanicWorldAssetSprites']) scene[method]=()=>{}
@@ -88,6 +117,10 @@ assert.equal(scene.cosmosEntered,3,'new run failed to reset the orbital reveal')
 assert.equal(renderFrame(9101,4000,2),true)
 assert.equal(renderFrame(6,5000,2),true)
 assert.equal(scene.cosmosEntered,5,'leaving a surface arena failed to reveal its region')
+scene.fillRadial=()=>{};scene.drawFinalBattleWeaponProfile=()=>{};scene.drawFinalBattleCruiserTrail=()=>{}
+scene.finalBattleTextures.get=()=>({width:128,height:128})
+scene.updateFinalBattleLayer(1000,500,10,9103,'high',.68)
+for(const sprite of [...scene.finalBattleSprites,...scene.finalBattleCruiserSprites].filter(s=>s.visible))assert.equal(sprite.alpha,1,'background battle hull became transparent')
 console.log('Cosmos: all regions and special arenas, two pooled atlas sources, transition bounds, rare passes and fixed sprite counts passed')
 // Hook harness checks actual component lifecycle without a browser/audio device.
 const hooks=[],effects=[];let cursor=0,changed=false,tick,hidden=false,enabled=true,disposed=0,plays=0;
