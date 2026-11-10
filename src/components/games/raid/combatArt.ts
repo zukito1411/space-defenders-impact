@@ -39,9 +39,9 @@ const ENEMY_MATERIALS: Partial<Record<Shot['kind'], MaterialSpec>> = {
   plasma: [COMBAT_TILE.alienOrb, 40, 40, false, false],
   orbShot: [COMBAT_TILE.alienOrb, 44, 44, false, false],
   voidShot: [COMBAT_TILE.alienOrb, 52, 52, false, false],
-  blade: [COMBAT_TILE.plasma, 76, 38, true, false],
-  needle: [COMBAT_TILE.ionNeedle, 72, 32, true, false],
-  scatterBoss: [COMBAT_TILE.hotBolt, 62, 38, true, false],
+  blade: [COMBAT_TILE.plasma, 96, 56, true, false],
+  needle: [COMBAT_TILE.ionNeedle, 88, 48, true, false],
+  scatterBoss: [COMBAT_TILE.hotBolt, 80, 56, true, false],
   superShot: [COMBAT_TILE.fireImpact, 50, 50, false, false],
 }
 
@@ -67,18 +67,23 @@ export function isWarmRaidEffectColor(color: string) {
   return warm
 }
 
-function splitAtlas(texture: Texture): Texture[] {
+function splitAtlas(texture: Texture, trimBossProjectiles = false): Texture[] {
   // Generated sheets may be NPOT. WebGL 1 cannot mipmap those sources.
   const powerOfTwo = (value: number) => value > 0 && (value & (value - 1)) === 0
   texture.source.autoGenerateMipmaps = powerOfTwo(texture.source.pixelWidth) && powerOfTwo(texture.source.pixelHeight)
   texture.source.scaleMode = 'linear'
   const width = texture.width / 4
   const height = texture.height / 4
-  return Array.from({ length: 16 }, (_, index) => new Texture({
+  return Array.from({ length: 16 }, (_, index) => {
+    // Normalized boss cells have 32px transparent gutters. Remove only
+    // empty padding and retain 8px for filtering; clouds keep their extent.
+    const inset = trimBossProjectiles && index <= 9 && index !== 5 ? width * (24 / 256) : 2
+    return new Texture({
     source: texture.source,
     // A small inset plus the artwork's gutters prevent neighboring tile bleed.
-    frame: new Rectangle((index % 4) * width + 2, Math.floor(index / 4) * height + 2, width - 4, height - 4),
-  }))
+    frame: new Rectangle((index % 4) * width + inset, Math.floor(index / 4) * height + inset, width - inset * 2, height - inset * 2),
+    })
+  })
 }
 
 function buildMaterials(specs: Partial<Record<Shot['kind'], MaterialSpec>>, target: typeof playerMaterials) {
@@ -103,12 +108,12 @@ export function preloadRaidCombatArt(): Promise<void> {
         rootTextures.push(texture)
       }).catch((error: unknown) => { console.warn('Raid explosion artwork failed to load:', RAID_EXPLOSION_ATLAS_URL, error) })),
       (bossFrames.length ? Promise.resolve() : Assets.load<Texture>(RAID_BOSS_ATLAS_URL).then((texture) => {
-        bossFrames = splitAtlas(texture)
+        bossFrames = splitAtlas(texture, true)
         rootTextures.push(texture)
         const specs: Partial<Record<Shot['kind'], MaterialSpec>> = {
-          enemy: [8, 34, 34, false, false], boss: [7, 52, 42, true, false],
-          plasma: [8, 40, 40, false, false], orbShot: [6, 44, 44, false, false],
-          voidShot: [6, 52, 52, false, false], superShot: [9, 50, 50, false, false],
+          enemy: [8, 34, 34, false, false], boss: [7, 68, 54, true, false],
+          plasma: [8, 54, 54, false, false], orbShot: [6, 60, 60, false, false],
+          voidShot: [6, 70, 70, false, false], superShot: [9, 68, 68, false, false],
         }
         for (const [kind, spec] of Object.entries(specs)) {
           const [tile, width, height, directional, solid] = spec
@@ -144,8 +149,9 @@ export function applyRaidBossArtwork(spec: GpuBossProjectileSpec): Texture | und
     spec.height = width
     spec.rotation -= Math.PI / 2
   }
-  spec.width *= 1.2
-  spec.height *= 1.2
+  const scale = spec.kind === 'poisonCloud' ? 1.2 : 1.7
+  spec.width *= scale
+  spec.height *= scale
   return texture
 }
 
