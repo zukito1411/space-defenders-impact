@@ -1,3 +1,4 @@
+import { impactFrameProgress, impactScale, impactAlpha } from './combatFeel'
 import { Color, Container, Sprite, Texture } from 'pixi.js'
 import type { Renderer } from 'pixi.js'
 import {
@@ -516,7 +517,7 @@ export class RaidGpuForeground {
         const green = (tint >>> 8) & 255
         const blue = tint & 255
         const warm = red > green * 0.95 && red > blue * 1.1
-        const explosion = warm && ripple.size >= 5 ? getRaidExplosionFrame(progress) : undefined
+        const explosion = warm && ripple.size >= 5 ? getRaidExplosionFrame(impactFrameProgress(progress)) : undefined
         if (explosion) {
           let sprite = this.impactNodes[this.impactCount]
           if (!sprite) {
@@ -529,11 +530,11 @@ export class RaidGpuForeground {
           sprite.texture = explosion
           sprite.visible = true
           sprite.position.set(ripple.x * sx, ripple.y * sy)
-          const diameter = Math.max(28, ripple.size * 6.2) * frame.visualScale * (0.85 + progress * 0.3)
+          const diameter = Math.max(28, ripple.size * 6.2) * frame.visualScale * impactScale(progress)
           sprite.width = diameter
           sprite.height = diameter
           sprite.rotation = ripple.id * 2.399
-          sprite.alpha = Math.max(0, 1 - progress * 0.55)
+          sprite.alpha = impactAlpha(progress)
         } else {
           const corona = getRaidCombatFrame(COMBAT_TILE.ionImpact)
           if (corona && progress < 0.65) {

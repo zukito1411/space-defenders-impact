@@ -1,3 +1,5 @@
+import { updateFlightPose, type FlightPose } from './combatFeel'
+import { COMBAT_TILE, drawRaidCombatTexture, getRaidCombatFrame } from './combatArt'
 import type { ShipCosmeticEquipState } from '../../../progression'
 import { drawCanvasSprite, drawSpriteGlow, getShipCanvasSprite } from './assets'
 import type { CanvasSpriteEntry } from './assets'
@@ -351,6 +353,15 @@ export function drawRaidOptions(
 }
 
 export function drawPlayerEngine(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, time: number, engineBoost = 0) {
+  const exhaust = getRaidCombatFrame(COMBAT_TILE.exhaust)
+  if (exhaust) {
+    const boost = clamp(engineBoost, 0, 1.35)
+    const flicker = 1 + Math.sin(time / 41) * 0.025
+    // Baked detail replaces two live gradients and shadow blurs per exhaust.
+    if (drawRaidCombatTexture(ctx, exhaust, x, y + size * 0.63,
+      size * (1.3 + boost * 0.5) * flicker, size * (0.48 + boost * 0.08), -Math.PI / 2, true)) return
+  }
+
   const flicker = Math.sin(time / 105) * 0.04 + Math.sin(time / 53) * 0.018
   const flameHeight = size * (0.48 + flicker) * (1 + clamp(engineBoost, 0, 1.35) * 0.34)
   const flameWidth = size * (0.11 + Math.sin(time / 88) * 0.006)
@@ -1000,6 +1011,8 @@ export function drawSpiegelBurningMirage(
   ctx.restore()
 }
 
+const flightPoses = new Map<string, FlightPose>()
+
 export function drawRaidPlayer(
   ctx: CanvasRenderingContext2D,
   player: Player,
@@ -1015,13 +1028,25 @@ export function drawRaidPlayer(
 ) {
   const x = toX(player.x)
   const y = toY(player.y)
+  let pose = flightPoses.get(color)
+  if (!pose) {
+    if (flightPoses.size >= 8) flightPoses.delete(flightPoses.keys().next().value!)
+    pose = { time, x: player.x, bank: 0 }
+    flightPoses.set(color, pose)
+  }
+  const bank = updateFlightPose(pose, time, player.x)
+  ctx.save()
+  ctx.translate(x, y)
+  ctx.rotate(phase === 'playing' && player.hp > 0 && player.ship.key !== 'coreLander' ? bank : 0)
+  ctx.translate(-x, -y)
+  try {
   const baseSize = viewportWidth < 860 ? 62 : viewportWidth > 1100 ? 86 : 76
   const size = player.ship.key === 'mesiah' ? baseSize * 1.62 : player.ship.key === 'coreLander' ? baseSize * 1.38 : baseSize
   const isDown = phase === 'gameover' || player.hp <= 0
   const rotation = isDown ? 28 * DEG : 0
   const scale = isDown ? 0.88 : 1
   const alpha = isDown ? 0.3 : 1
-  const engineBoost = clamp(player.engineBoost ?? 0, 0, 1)
+  const engineBoost = clamp(player.engineBoost ?? 0, 0, 1.35)
   const coreLanderBurning = isCoreLanderBurning(player)
   const coreLanderCombatModel: CoreLanderCombatModel | null = player.ship.key === 'coreLander' && (visualShipKey === 'godGundam' || visualShipKey === 'spiegel') ? visualShipKey : null
   const renderSize = coreLanderCombatModel ? size * 1.08 : size
@@ -1223,6 +1248,7 @@ export function drawRaidPlayer(
     drawPlayerEngine(ctx, x + ventOffset, engineY, engineSize, time, engineBoost)
     ctx.restore()
   }
+  } finally { ctx.restore() }
 }
 
 export type MasteryVisualStyle = {

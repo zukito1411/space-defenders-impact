@@ -224,9 +224,9 @@ export function movePlayerWithInput(player: Player, dt: number, pointerTarget: V
   player.y = clamp(player.y, 13, 93)
   const moveSpeed = dt > 0 ? Math.hypot(player.x - previousX, player.y - previousY) / dt : 0
   const upwardSpeed = dt > 0 ? Math.max(0, previousY - player.y) / dt : 0
-  const targetEngineBoost = clamp(upwardSpeed / 46, 0, 1.35)
+  const targetEngineBoost = clamp(upwardSpeed / 46 + moveSpeed / 160, 0, 1.35)
   const boostEase = targetEngineBoost > (player.engineBoost ?? 0) ? 11.5 : 5.5
-  player.engineBoost = (player.engineBoost ?? 0) + (targetEngineBoost - (player.engineBoost ?? 0)) * Math.min(1, dt * boostEase)
+  player.engineBoost = (player.engineBoost ?? 0) + (targetEngineBoost - (player.engineBoost ?? 0)) * (1 - Math.exp(-Math.max(0, dt) * boostEase))
   const isSpiegelModel = player.ship.key === 'coreLander' && isSpiegelCombatModel(coreLanderModel)
   const targetAfterimage = clamp(moveSpeed / (isSpiegelModel ? 33 : 38), 0, isSpiegelModel ? 1.12 : 1)
   const afterimageEase = targetAfterimage > (player.spiegelAfterimageStrength ?? 0) ? 16 : 3.2

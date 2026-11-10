@@ -1,3 +1,4 @@
+import { impactFrameProgress, impactScale, impactAlpha } from './combatFeel'
 import { useDoorCallback, useDoorState, useSpaceDoor } from '../../ui/SpaceDoor'
 import { getRaidText } from '../../../i18n'
 import type { LanguageCode } from '../../../i18n'
@@ -2202,10 +2203,10 @@ export function GradiusRaid({
         ctx.beginPath()
         ctx.arc(toX(ripple.x), toY(ripple.y), radius, 0, Math.PI * 2)
         ctx.stroke()
-        const explosion = ripple.size >= 5 && isWarmRaidEffectColor(ripple.color) ? getRaidExplosionFrame(progress) : undefined
+        const explosion = ripple.size >= 5 && isWarmRaidEffectColor(ripple.color) ? getRaidExplosionFrame(impactFrameProgress(progress)) : undefined
         if (explosion) {
-          const diameter = Math.max(28, ripple.size * 6.2) * visualScale * (0.85 + progress * 0.3)
-          ctx.globalAlpha = Math.max(0, 1 - progress * 0.55)
+          const diameter = Math.max(28, ripple.size * 6.2) * visualScale * impactScale(progress)
+          ctx.globalAlpha = impactAlpha(progress)
           drawRaidCombatTexture(ctx, explosion, toX(ripple.x), toY(ripple.y), diameter, diameter, ripple.id * 2.399, false)
         }
       }
@@ -2489,8 +2490,10 @@ export function GradiusRaid({
   }, [addRipple])
 
   const triggerScreenShake = useCallback((strength: number, durationMs: number) => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
     const now = performance.now()
     const current = cameraShakeRef.current
+    if (current.until > now && current.strength > strength) return
     cameraShakeRef.current = {
       until: now + durationMs,
       duration: durationMs,
@@ -3956,6 +3959,7 @@ export function GradiusRaid({
       player.invuln = 0.22
       spawnSparks(player.x, player.y, '#22d3ee', 24, 7)
       addRipple(player.x, player.y, '#22d3ee', player.forceField > 0 ? 12 : 17)
+      if (player.forceField <= 0) triggerScreenShake(1.2, 150)
       playGameSound(player.forceField > 0 ? 'hit' : 'explosion')
       return
     }
@@ -3967,6 +3971,7 @@ export function GradiusRaid({
       playGameSound('hit')
       return
     }
+    triggerScreenShake(player.hp <= scaledAmount ? 2.4 : 0.85, player.hp <= scaledAmount ? 230 : 100)
     player.hp -= scaledAmount
     player.invuln = 1.05
     spawnSparks(player.x, player.y, '#fca5a5', 22, 6)
@@ -3996,7 +4001,7 @@ export function GradiusRaid({
       submitRaidLeaderboardScore(Math.max(playerRef.current.score, remotePlayerRef.current?.score ?? 0))
       reportRaidRunComplete('gameover')
     }
-  }, [addRipple, reportRaidRunComplete, spawnSparks, stopRaidBgm, submitRaidLeaderboardScore])
+  }, [addRipple, reportRaidRunComplete, spawnSparks, stopRaidBgm, submitRaidLeaderboardScore, triggerScreenShake])
 
   const destroyPlayerByBossCollision = useCallback((targetPlayer: Player) => {
     const player = targetPlayer
