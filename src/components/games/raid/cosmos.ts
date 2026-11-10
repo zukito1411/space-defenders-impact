@@ -16,7 +16,19 @@ export function cosmicRegionIndex(stage: number): number {
 export function cosmicArrival(stage: number, surfaceArenas: boolean) {
   if (stage === 9101 || (surfaceArenas && stage === 5)) return { name: 'Pelagic Expanse', detail: 'Ocean arena · Leviathan contact', accent: '#7dd3fc' }
   if (stage === 9102 || (surfaceArenas && stage === 10)) return { name: 'Cinder Rift', detail: 'Volcanic arena · Cobra contact', accent: '#fdba74' }
-  return COSMIC_REGIONS[cosmicRegionIndex(stage)]
+  const region = COSMIC_REGIONS[cosmicRegionIndex(stage)]
+  if (!surfaceArenas) return region
+  const detail = stage <= 1 ? 'Pelagic vector · distant violet world'
+    : stage < 4 ? 'Pelagic Expanse ahead · orbital approach'
+    : stage === 4 ? 'Pelagic high orbit · atmospheric insertion ahead'
+    : stage === 6 ? 'Leaving Pelagic orbit · Cinder vector'
+    : stage < 9 ? 'Cinder Rift ahead · volcanic world approach'
+    : stage === 9 ? 'Cinder high orbit · atmospheric insertion ahead'
+    : stage === 11 ? 'Leaving Cinder orbit · fleet sector vector'
+    : stage < 14 ? 'Final sector ahead · deepfield debris corridor'
+    : stage === 14 ? 'Final battle perimeter · fleet approach'
+    : 'Final battle sector · fleet contact'
+  return { ...region, detail }
 }
 /** Rare edge passes use existing asteroid slots. x stays outside the central 80%. */
 export function edgeFlyby(seconds: number, slot: number) {
@@ -24,4 +36,4 @@ export function edgeFlyby(seconds: number, slot: number) {
   const age = ((Math.max(0, seconds) + slot * 13 + period - 8) % period)
   return age < 3.2 ? age / 3.2 : -1
 }
-export const COSMOS_TEXTURE_BYTES = 2 * 1024 * 1024 * 4 + 512 * 512 * 4
+export const COSMOS_TEXTURE_BYTES = 3 * 1024 * 1024 * 4 + 512 * 512 * 4 + 512 * 256 * 4

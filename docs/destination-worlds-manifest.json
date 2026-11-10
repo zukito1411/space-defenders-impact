@@ -1,0 +1,27 @@
+{
+  "path": "public/assets/raid-fx/destination-worlds-v1.webp",
+  "width": 1024,
+  "height": 1024,
+  "bytes": 196204,
+  "sha256": "985518f71ebcc263b00177870c2f2c0494ca89469aadae0bbb483e92de1d86cc",
+  "generation": "built-in ImageGen",
+  "sourceSha256": "cb0075015c3a7788e7b62efa20d15d09f0fc7051c43ded9bd3d77a93537b6858",
+  "sourceSize": [
+    1254,
+    1254
+  ],
+  "slots": [
+    "violetOceanPlanet",
+    "volcanicPlanet",
+    "violetOceanSurface",
+    "volcanicSurface"
+  ],
+  "slotInsetsPx": [
+    24,
+    24,
+    4,
+    4
+  ],
+  "normalization": "Near-zero alpha noise removed; near-opaque pixels normalized to full coverage; planet silhouettes fitted within 456px; surface cells are opaque with extruded gutters.",
+  "prompt": "Use case: stylized-concept. Asset type: production space-shooter destination planet sprite atlas. A square transparent atlas with exactly TWO columns and TWO rows, equal square cells, no labels or lines. Top left: one complete spherical dark violet ocean planet, glossy near-black purple seas, small scattered obsidian islands, glowing lavender coastal shallows, wispy indigo storm cloud bands, a thin violet atmospheric rim. Top right: one complete spherical volcanic planet, black basalt terrain and glowing orange branching lava rivers, smoky red atmosphere, no giant explosion. Bottom left: a seamless-looking close top-down patch of the SAME violet world's dark purple ocean with a few tiny black islands and pale violet cloud wisps, SQUARE opaque full-bleed surface texture. Bottom right: a close top-down patch of the SAME volcanic world's charcoal black basalt and branching orange-red lava rivers with smoke wisps, SQUARE opaque full-bleed surface texture. All four are realistic cinematic game art with restrained exposure, upper-left sunlight and dark lower-right night-side on the two spheres. Top two spheres each centered occupying 78 percent of their cell with genuinely transparent surrounding space. Bottom two surface tiles completely fill their own cells without margins. No stars, no background nebula, no ships, no text, no arrows, no white halos, no checkerboard remnants. Two planet cutouts on top row, two corresponding surface plates below. Clean physical silhouettes and detailed natural surfaces."
+}

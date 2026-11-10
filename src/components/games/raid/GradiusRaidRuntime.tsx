@@ -1,3 +1,4 @@
+import { getRaidStageEntrySeconds } from './journey'
 import { COSMIC_REGIONS, cosmicRegionIndex } from './cosmos'
 import { CosmosPresentation } from './CosmosPresentation'
 import { missileLaunchScale, homingCruiseSpeed } from './missilePresentation'
@@ -268,6 +269,7 @@ export function GradiusRaid({
   const phaseRef = useRef<GamePhase>('select')
   const raidModeRef = useRef<RaidMode>(initialRaidMode)
   const stageRef = useRef(1)
+  const journeyStageAgeRef = useRef(0)
   const waveRef = useRef(1)
   const spawnTimerRef = useRef(0.5)
   const formationTimerRef = useRef(2.1)
@@ -527,6 +529,8 @@ export function GradiusRaid({
     hostPointer: cloneVec(pointerVisualRef.current),
     guestPointer: cloneVec(remotePointerVisualRef.current),
     stageClear: stageClearRef.current,
+    journeyAge: journeyStageAgeRef.current,
+    stageEntry: stageEntryRef.current,
     unlockedStage: unlockedStageRef.current,
     nukeCooldown: playerRef.current.specialCooldown,
     nukeFlash: nukeFlashRef.current,
@@ -702,9 +706,12 @@ export function GradiusRaid({
     if (state.stageClear > 0) {
       stageEntryRef.current = 0
     } else if (!session?.isHost && prevPhase === 'playing' && state.phase === 'playing' && prevStageTheme !== state.stageTheme) {
-      stageEntryRef.current = STAGE_ENTRY_SECONDS
+      stageEntryRef.current = getRaidStageEntrySeconds(state.stageTheme, raidModeRef.current)
+      journeyStageAgeRef.current = 0
       resetGuestPredictionState()
     }
+    if (Number.isFinite(state.journeyAge)) journeyStageAgeRef.current = Math.max(0, state.journeyAge!)
+    if (Number.isFinite(state.stageEntry)) stageEntryRef.current = Math.max(0, state.stageEntry!)
     unlockedStageRef.current = state.unlockedStage
     nukeFlashRef.current = state.nukeFlash
     nukeStrikeRef.current = state.nukeStrike ? { ...state.nukeStrike } : null
@@ -844,6 +851,11 @@ export function GradiusRaid({
     const guestPlayer = remotePlayerRef.current
     if (!guestPlayer || guestPlayer.hp <= 0) return
 
+    if (stageEntryRef.current > 0) {
+      pointerTargetRef.current = null
+      pointerVisualRef.current = null
+      return
+    }
     // Move own ship locally � never wait for the network
     if (stageClearRef.current > 0) {
       animateStageClearPlayer(guestPlayer, dt, 58)
@@ -907,6 +919,8 @@ export function GradiusRaid({
   const advanceGuestVisuals = useCallback((dt: number) => {
     const session = multiplayerSessionRef.current
     if (!session || session.isHost || phaseRef.current !== 'playing') return
+    journeyStageAgeRef.current += dt
+    stageEntryRef.current = Math.max(0, stageEntryRef.current - dt)
 
     const hostPlayer = playerRef.current
     const bufferedHost = getBufferedPlayerVisual(
@@ -1578,6 +1592,11 @@ export function GradiusRaid({
         quality: gfxQuality,
         stageTheme: backgroundStageTheme,
         runToken: runStartTimeRef.current,
+        stageNumber: stageRef.current,
+        raidMode: raidModeRef.current,
+        stageAge: journeyStageAgeRef.current,
+        clearRemaining: stageClearRef.current,
+        entryRemaining: stageEntryRef.current,
         dpr,
         stageRush,
         playerX: (isGuestView ? remotePlayerRef.current : playerRef.current)?.x ?? 50,
@@ -2371,9 +2390,14 @@ export function GradiusRaid({
     if (gfxProfile.drawOptionShips && ownShipRef && !hideOwnShipForBarrage) drawRaidOptions(ctx, ownShipRef, toX, toY, cssWidth, time, PLAYER_COLOR, getRaidPlayerVisualShipKey(ownShipRef, progressRef.current))
     if (gfxProfile.drawOptionShips && allyShipRef && !hideAllyShipForBarrage) drawRaidOptions(ctx, allyShipRef, toX, toY, cssWidth, time, ALLY_PLAYER_COLOR, getRaidPlayerVisualShipKey(allyShipRef, progressRef.current))
     if (gfxProfile.drawOptionShips && devilAssistShipRef && !hideDevilAssistForBarrage) drawRaidOptions(ctx, devilAssistShipRef, toX, toY, cssWidth, time, '#facc15', getRaidPlayerVisualShipKey(devilAssistShipRef, progressRef.current))
+    const journeyRim = COSMIC_REGIONS[
+      backgroundStageTheme === RAID_BOSS_BACKGROUND_THEME_SQUID || stageRef.current === 4 ? 3
+        : backgroundStageTheme === RAID_BOSS_BACKGROUND_THEME_SNAKE || stageRef.current === 9 ? 1
+          : cosmicRegionIndex(backgroundStageTheme)
+    ].rim
     const sameScreenIdentityAura = sameScreenCoopRef.current
-    if (ownShipRef && !hideOwnShipForBarrage) drawRaidPlayer(ctx, ownShipRef, phaseRef.current, toX, toY, cssWidth, time, PLAYER_COLOR, getCachedEquippedCosmetics(ownShipRef.ship.key), getRaidPlayerVisualShipKey(ownShipRef, progressRef.current), sameScreenIdentityAura ? PLAYER_COLOR : null, COSMIC_REGIONS[cosmicRegionIndex(backgroundStageTheme)].rim)
-    if (allyShipRef && !hideAllyShipForBarrage) drawRaidPlayer(ctx, allyShipRef, phaseRef.current, toX, toY, cssWidth, time, ALLY_PLAYER_COLOR, getCachedEquippedCosmetics(allyShipRef.ship.key), getRaidPlayerVisualShipKey(allyShipRef, progressRef.current), sameScreenIdentityAura ? ALLY_PLAYER_COLOR : null, COSMIC_REGIONS[cosmicRegionIndex(backgroundStageTheme)].rim)
+    if (ownShipRef && !hideOwnShipForBarrage) drawRaidPlayer(ctx, ownShipRef, phaseRef.current, toX, toY, cssWidth, time, PLAYER_COLOR, getCachedEquippedCosmetics(ownShipRef.ship.key), getRaidPlayerVisualShipKey(ownShipRef, progressRef.current), sameScreenIdentityAura ? PLAYER_COLOR : null, journeyRim)
+    if (allyShipRef && !hideAllyShipForBarrage) drawRaidPlayer(ctx, allyShipRef, phaseRef.current, toX, toY, cssWidth, time, ALLY_PLAYER_COLOR, getCachedEquippedCosmetics(allyShipRef.ship.key), getRaidPlayerVisualShipKey(allyShipRef, progressRef.current), sameScreenIdentityAura ? ALLY_PLAYER_COLOR : null, journeyRim)
     if (devilAssistShipRef && !hideDevilAssistForBarrage) drawRaidPlayer(ctx, devilAssistShipRef, phaseRef.current, toX, toY, cssWidth, time, '#facc15', getCachedEquippedCosmetics(devilAssistShipRef.ship.key), getRaidPlayerVisualShipKey(devilAssistShipRef, progressRef.current), null)
 
     if (gfxProfile.drawDecorativeOverlays) {
@@ -2832,6 +2856,7 @@ export function GradiusRaid({
     phaseRef.current = 'playing'
     raidModeRef.current = mode
     stageRef.current = stage
+    journeyStageAgeRef.current = 0
     waveRef.current = stage
     spawnTimerRef.current = 1.25
     formationTimerRef.current = 3.4
@@ -2843,7 +2868,15 @@ export function GradiusRaid({
     bossMessageRef.current = null
     bossEntranceSlamRef.current = 0
     stageClearRef.current = 0
-    stageEntryRef.current = 0
+    stageEntryRef.current = !isEndless && (stage === 5 || stage === 10 || stage >= MAX_RAID_STAGE) ? getRaidStageEntrySeconds(stage, mode) : 0
+    if (stageEntryRef.current > 0) {
+      playerRef.current.y = HEIGHT + 12
+      playerRef.current.invuln = Math.max(playerRef.current.invuln, stageEntryRef.current + 0.35)
+      if (remotePlayerRef.current) {
+        remotePlayerRef.current.y = HEIGHT + 14
+        remotePlayerRef.current.invuln = Math.max(remotePlayerRef.current.invuln, stageEntryRef.current + 0.35)
+      }
+    }
     pendingNextStageRef.current = null
     asteroidClusterTimerRef.current = isBossRush ? 999 : stage >= 2 ? 30 + Math.random() * 24 : getAsteroidClusterInterval()
     asteroidSpawnDelayRef.current = 0
@@ -4232,6 +4265,7 @@ export function GradiusRaid({
 
   const updateGame = useCallback((dt: number) => {
     if (phaseRef.current !== 'playing') return
+    journeyStageAgeRef.current += dt
 
     const player = playerRef.current
     const scoreMult = scoreMultRef.current
@@ -4330,6 +4364,7 @@ export function GradiusRaid({
         const pendingNextStage = pendingNextStageRef.current
         if (pendingNextStage !== null) {
           stageRef.current = pendingNextStage
+          journeyStageAgeRef.current = 0
           waveRef.current = pendingNextStage
           pendingNextStageRef.current = null
           if (pendingNextStage === NORMAL_RAID_DEVIL_BONUS_STAGE) {
@@ -4343,7 +4378,7 @@ export function GradiusRaid({
         }
         player.x = 50
         player.y = HEIGHT + 12
-        player.invuln = Math.max(player.invuln, STAGE_ENTRY_SECONDS + 0.35)
+        player.invuln = Math.max(player.invuln, getRaidStageEntrySeconds(stageRef.current, raidModeRef.current) + 0.35)
         enemiesRef.current = []
         asteroidsRef.current = []
         meteorsRef.current = []
@@ -4357,18 +4392,18 @@ export function GradiusRaid({
         spawnLockRef.current = 1.2
         spawnTimerRef.current = 1.1
         formationTimerRef.current = 2.2
-        stageEntryRef.current = STAGE_ENTRY_SECONDS
+        stageEntryRef.current = getRaidStageEntrySeconds(stageRef.current, raidModeRef.current)
         pointerTargetRef.current = null
         pointerVisualRef.current = null
         if (remotePlayer) {
           remotePlayer.x = 58
           remotePlayer.y = HEIGHT + 14
-          remotePlayer.invuln = Math.max(remotePlayer.invuln, STAGE_ENTRY_SECONDS + 0.35)
+          remotePlayer.invuln = Math.max(remotePlayer.invuln, getRaidStageEntrySeconds(stageRef.current, raidModeRef.current) + 0.35)
         }
         const nextDevilAssistPlayer = devilAssistPlayerRef.current
         if (nextDevilAssistPlayer) {
           nextDevilAssistPlayer.y = HEIGHT + 14
-          nextDevilAssistPlayer.invuln = Math.max(nextDevilAssistPlayer.invuln, STAGE_ENTRY_SECONDS + 0.35)
+          nextDevilAssistPlayer.invuln = Math.max(nextDevilAssistPlayer.invuln, getRaidStageEntrySeconds(stageRef.current, raidModeRef.current) + 0.35)
         }
         remotePointerTargetRef.current = null
         remotePointerVisualRef.current = null
@@ -4378,7 +4413,7 @@ export function GradiusRaid({
 
     if (stageEntryRef.current > 0) {
       stageEntryRef.current = Math.max(0, stageEntryRef.current - dt)
-      const entryProgress = 1 - stageEntryRef.current / STAGE_ENTRY_SECONDS
+      const entryProgress = 1 - stageEntryRef.current / getRaidStageEntrySeconds(stageRef.current, raidModeRef.current)
       const easedEntry = 1 - Math.pow(1 - clamp(entryProgress, 0, 1), 3)
       player.x += (50 - player.x) * Math.min(1, dt * 6.4)
       player.y = HEIGHT + 12 + (82 - (HEIGHT + 12)) * easedEntry
@@ -7350,7 +7385,7 @@ export function GradiusRaid({
         {showPerfHud && <div ref={perfHudRef} className="raid__perf-hud" aria-hidden="true">Measuring FPS…</div>}
       </div>
 
-      <CosmosPresentation stage={snapshot.stageTheme} phase={snapshot.phase} surfaceArenas={snapshot.raidMode !== 'endless'} bossActive={bossIncoming || snapshot.enemies.some((enemy) => enemy.isBoss)} />
+      <CosmosPresentation stageClear={snapshot.stageClear} stage={snapshot.stageTheme} phase={snapshot.phase} surfaceArenas={snapshot.raidMode !== 'endless'} bossActive={bossIncoming || snapshot.enemies.some((enemy) => enemy.isBoss)} />
 
       {bossEntranceSlamActive && (
         <div
