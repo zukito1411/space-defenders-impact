@@ -14,7 +14,7 @@ import { createGpuBossProjectileCanvas, getGpuBossProjectileSpec } from './gpuBo
 import type { GpuBossProjectileSpec } from './gpuBossProjectiles'
 import { RaidGpuBossBodies } from './gpuBossBodies'
 import type { RaidVisibilityBounds } from './visibility'
-import { COMBAT_TILE, getRaidCombatFrame, getRaidCombatRootTextures, getRaidExplosionFrame, getRaidProjectileMaterial, preloadRaidCombatArt } from './combatArt'
+import { COMBAT_TILE, getRaidBossFrame, getRaidCombatFrame, getRaidCombatRootTextures, getRaidExplosionFrame, getRaidProjectileMaterial, preloadRaidCombatArt } from './combatArt'
 
 export type RaidGpuForegroundFrame = {
   width: number
@@ -100,6 +100,10 @@ const HUES = [-18, 24, -8, 36, -30, 12, 44, -40]
  * game sprites. No extra full-screen GL context is created.
  * Physics, collision, networking and bosses never depend on GPU visibility.
  */
+const BOSS_ART_TILES: Partial<Record<GpuBossProjectileSpec['kind'], number>> = {
+  squidBubble: 0, squidInk: 1, squidSpine: 2, snakeFang: 3, venomSpit: 4, poisonCloud: 5,
+}
+
 export class RaidGpuForeground {
   readonly root = new Container()
   private readonly particles = new Container()
@@ -428,9 +432,8 @@ export class RaidGpuForeground {
     if (!spec) return false
     if (spec.kind !== 'beam' && !raidObjectInView(frame.bounds, shot.x, shot.y,
       spec.width * 50 / Math.max(1, frame.width), spec.height * 50 / Math.max(1, frame.height))) return true
-    const illustrated = spec.kind === 'poisonCloud' || spec.kind === 'venomSpit'
-      ? getRaidCombatFrame(COMBAT_TILE.venom)
-      : spec.kind === 'squidInk' ? getRaidCombatFrame(COMBAT_TILE.ink) : undefined
+    const tile = BOSS_ART_TILES[spec.kind]
+    const illustrated = tile === undefined ? undefined : getRaidBossFrame(tile)
     const key = 'boss-bullet:' + spec.kind
     let texture = illustrated ?? this.textures.get(key)?.texture
     if (!texture) {
@@ -443,9 +446,10 @@ export class RaidGpuForeground {
     node.anchor.set(0.5)
     node.texture = texture
     node.position.set(spec.x, spec.y)
-    node.width = spec.width * (illustrated ? 1.2 : 1)
-    node.height = spec.height * (illustrated ? 1.2 : 1)
-    node.rotation = spec.rotation
+    const directionalFang = illustrated && (spec.kind === 'snakeFang' || spec.kind === 'squidSpine')
+    node.width = (directionalFang ? spec.height : spec.width) * (illustrated ? 1.2 : 1)
+    node.height = (directionalFang ? spec.width : spec.height) * (illustrated ? 1.2 : 1)
+    node.rotation = spec.rotation - (directionalFang ? Math.PI / 2 : 0)
     node.alpha = spec.alpha
     return true
   }

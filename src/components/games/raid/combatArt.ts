@@ -2,9 +2,10 @@ import { Assets, Color, Rectangle, Texture } from 'pixi.js'
 import { getPublicAssetUrl } from '../sound'
 import type { Shot } from './types'
 
-export const RAID_COMBAT_ATLAS_URL = getPublicAssetUrl('assets/raid-fx/combat-atlas-v1.png')
-export const RAID_EXPLOSION_ATLAS_URL = getPublicAssetUrl('assets/raid-fx/explosion-atlas-v1.png')
-export const RAID_COMBAT_ART_URLS = [RAID_COMBAT_ATLAS_URL, RAID_EXPLOSION_ATLAS_URL]
+export const RAID_COMBAT_ATLAS_URL = getPublicAssetUrl('assets/raid-fx/combat-atlas-v2.png')
+export const RAID_EXPLOSION_ATLAS_URL = getPublicAssetUrl('assets/raid-fx/explosion-atlas-v2.png')
+export const RAID_BOSS_ATLAS_URL = getPublicAssetUrl('assets/raid-fx/boss-atlas-v1.png')
+export const RAID_COMBAT_ART_URLS = [RAID_COMBAT_ATLAS_URL, RAID_EXPLOSION_ATLAS_URL, RAID_BOSS_ATLAS_URL]
 
 export const COMBAT_TILE = {
   plasma: 0, hotBolt: 1, ionNeedle: 2, alienOrb: 3,
@@ -23,11 +24,11 @@ export type CombatProjectileMaterial = {
 
 type MaterialSpec = readonly [tile: number, width: number, height: number, directional: boolean, solid: boolean]
 const PLAYER_MATERIALS: Partial<Record<Shot['kind'], MaterialSpec>> = {
-  pulse: [COMBAT_TILE.plasma, 48, 36, true, false],
-  laser: [COMBAT_TILE.plasma, 126, 38, true, false],
-  spread: [COMBAT_TILE.hotBolt, 62, 38, true, false],
-  scatter: [COMBAT_TILE.ionNeedle, 48, 36, true, false],
-  needle: [COMBAT_TILE.plasma, 70, 32, true, false],
+  pulse: [COMBAT_TILE.plasma, 58, 54, true, false],
+  laser: [COMBAT_TILE.plasma, 126, 62, true, false],
+  spread: [COMBAT_TILE.hotBolt, 72, 58, true, false],
+  scatter: [COMBAT_TILE.ionNeedle, 58, 54, true, false],
+  needle: [COMBAT_TILE.plasma, 78, 52, true, false],
   rocket: [COMBAT_TILE.missile, 70, 48, true, true],
   homing: [COMBAT_TILE.missile, 58, 42, true, true],
 }
@@ -45,6 +46,7 @@ const ENEMY_MATERIALS: Partial<Record<Shot['kind'], MaterialSpec>> = {
 
 let combatFrames: Texture[] = []
 let explosionFrames: Texture[] = []
+let bossFrames: Texture[] = []
 const rootTextures: Texture[] = []
 const playerMaterials: Partial<Record<Shot['kind'], CombatProjectileMaterial>> = {}
 const enemyMaterials: Partial<Record<Shot['kind'], CombatProjectileMaterial>> = {}
@@ -98,9 +100,13 @@ export function preloadRaidCombatArt(): Promise<void> {
         explosionFrames = splitAtlas(texture)
         rootTextures.push(texture)
       }).catch((error: unknown) => { console.warn('Raid explosion artwork failed to load:', RAID_EXPLOSION_ATLAS_URL, error) })),
+      (bossFrames.length ? Promise.resolve() : Assets.load<Texture>(RAID_BOSS_ATLAS_URL).then((texture) => {
+        bossFrames = splitAtlas(texture)
+        rootTextures.push(texture)
+      }).catch((error: unknown) => { console.warn('Raid boss artwork failed to load:', RAID_BOSS_ATLAS_URL, error) })),
     ]).then(() => {
       // Retry missing art on the next preparation instead of caching failure.
-      if (!combatFrames.length || !explosionFrames.length) warmPromise = null
+      if (!combatFrames.length || !explosionFrames.length || !bossFrames.length) warmPromise = null
     })
   }
   return warmPromise
@@ -109,6 +115,8 @@ export function preloadRaidCombatArt(): Promise<void> {
 export function getRaidProjectileMaterial(kind: Shot['kind'], enemy = false) {
   return (enemy ? enemyMaterials : playerMaterials)[kind]
 }
+
+export function getRaidBossFrame(tile: number): Texture | undefined { return bossFrames[tile] }
 
 export function getRaidCombatFrame(tile: number): Texture | undefined { return combatFrames[tile] }
 
