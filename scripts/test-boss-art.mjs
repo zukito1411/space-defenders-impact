@@ -20,9 +20,15 @@ for (const kind of ['squidBubble','squidInk','squidSpine','snakeFang','venomSpit
   const spec = {kind,width:30,height:60,rotation:Math.PI/2,alpha:0.7,x:120,y:80}
   const texture = art.applyRaidBossArtwork(spec)
   assert.ok(texture, `${kind} has no shared artwork`)
+  if (kind === 'poisonCloud') {
+    assert.equal(texture.frame.width,252,'cloud footprint must retain its original frame')
+    assert.equal(spec.width,36,'cloud rendering size must retain its original scale')
+  } else {
+    assert.equal(texture.frame.width,208,'empty padding still shrinks the projectile art')
+  }
   if (kind === 'snakeFang' || kind === 'squidSpine') {
-    assert.equal(spec.width,72)
-    assert.equal(spec.height,36)
+    assert.equal(spec.width,102)
+    assert.equal(spec.height,51)
     assert.equal(spec.rotation,0, 'right-facing sprite orientation incorrect')
     assert.equal(art.isRaidBossArtSolid(kind),true)
   }
