@@ -1,17 +1,19 @@
 export type DepthStar = { x: number; y: number; size: number; alpha: number; rotation: number }
 const unit = (n: number) => Math.max(0, Math.min(1, n))
-/** One pooled quad per near star; perspective and edge fading, no geometry rebuild. */
+/** Depth planes for a forward-scrolling raid, not radial head-on warp. */
 export function projectDepthStar(seedX: number, seedY: number, seedZ: number, travel: number,
   width: number, height: number, cameraX: number, cameraY: number, out: DepthStar) {
-  const phase = ((seedZ + travel / 900) % 1 + 1) % 1
-  const z = 1 - phase * 0.88
-  const scale = Math.min(width, height) * 0.35 / z
-  const cx = width * 0.5, cy = height * 0.32
-  out.x = cx + ((seedX - 0.5) * 2.4 - cameraX * 0.055) * scale
-  out.y = cy + ((seedY - 0.5) * 1.8 - cameraY * 0.035) * scale
-  const edge = unit(Math.min(out.x / width, (width - out.x) / width, out.y / height, (height - out.y) / height) * 12)
-  out.alpha = (0.18 + phase * 0.65) * unit((z - 0.12) / 0.1) * unit((1 - z) / 0.12) * edge
-  out.size = Math.min(3, Math.max(0.6, 0.4 / z))
-  out.rotation = Math.atan2(out.y - cy, out.x - cx)
-  return phase
+  const depth = unit(seedZ)
+  const distance = 1 - depth * 0.78
+  const w = Math.max(1, width), h = Math.max(1, height)
+  const padding = 24
+  const travelHeight = h + padding * 2
+  const cycle = ((seedY + travel * (0.16 + depth * 0.95) / travelHeight) % 1 + 1) % 1
+  out.x = seedX * w - cameraX * w * 0.004 / distance
+  out.y = cycle * travelHeight - padding - cameraY * h * 0.003 / distance
+  const edge = unit(Math.min(out.x, w - out.x, out.y, h - out.y) / padding)
+  out.alpha = (0.16 + depth * 0.58) * edge
+  out.size = 0.65 + depth * depth * 1.8
+  out.rotation = Math.PI / 2
+  return depth
 }

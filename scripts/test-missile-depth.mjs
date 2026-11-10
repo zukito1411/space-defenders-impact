@@ -12,7 +12,22 @@ const far=output(),near=output()
 projectDepthStar(0.55,0.55,0.2,0,1000,500,0,0,far)
 projectDepthStar(0.55,0.55,0.8,0,1000,500,0,0,near)
 assert.ok(near.size>far.size && near.alpha>far.alpha,'near stars must read larger and brighter')
-assert.ok(Math.abs(near.x-500)>Math.abs(far.x-500),'projection should separate by depth')
+const steeredFar=output(),steeredNear=output()
+projectDepthStar(0.55,0.55,0.2,0,1000,500,1,0,steeredFar)
+projectDepthStar(0.55,0.55,0.8,0,1000,500,1,0,steeredNear)
+assert.ok(Math.abs(steeredNear.x-near.x)>Math.abs(steeredFar.x-far.x),'near stars need stronger steering parallax')
+for(const x of [0.2,0.8]) {
+ const a=output(),b=output(),c=output(),d=output()
+ projectDepthStar(x,0.2,0.2,0,1000,500,0,0,a)
+ projectDepthStar(x,0.2,0.2,100,1000,500,0,0,b)
+ projectDepthStar(x,0.2,0.8,0,1000,500,0,0,c)
+ projectDepthStar(x,0.2,0.8,100,1000,500,0,0,d)
+ assert.equal(a.x,b.x,'forward travel must not fan out sideways')
+ assert.equal(c.x,d.x,'near stars must not fan out sideways')
+ assert.ok(b.y>a.y && d.y>c.y,'all depths should follow forward traversal')
+ assert.ok(d.y-c.y>b.y-a.y,'near objects must pass faster')
+ assert.equal(a.rotation,Math.PI/2)
+}
 for(const z of [0,0.1,0.5,0.9,0.999999]) for(const travel of [0,200,900,900000]) {
  const star=output()
  projectDepthStar(0.3,0.7,z,travel,1000,500,1,-1,star)
@@ -20,8 +35,8 @@ for(const z of [0,0.1,0.5,0.9,0.999999]) for(const travel of [0,200,900,900000])
  assert.ok(star.alpha>=0 && star.alpha<=1)
  assert.ok(star.size>=0.6 && star.size<=3)
 }
-for(const z of [0,0.999999]) {
- const star=output();projectDepthStar(0.5,0.5,z,0,1000,500,0,0,star)
+for(const y of [0,0.999999]) {
+ const star=output();projectDepthStar(0.5,y,0.5,0,1000,500,0,0,star)
  assert.ok(star.alpha<0.001,'depth wrap must fade rather than flash')
 }
 assert.ok(72*missileLaunchScale('rocket')>=58 && 72*missileLaunchScale('rocket')<72)
