@@ -1,3 +1,5 @@
+import { createSurfaceCameraFrame, sampleSurfaceCamera, getSurfaceIslandY, positiveSurfaceModulo } from './surfaceMotion'
+import { getSurfaceTerrain, preloadSurfaceArt } from './surfaceArt'
 import { createRaidJourneyView, sampleRaidJourney } from './journey'
 import type { RaidJourneyInput } from './journey'
 import { sceneryTint, PLANET_DEPTH, PLANET_PARALLAX } from './sceneryMaterial'
@@ -8,7 +10,7 @@ import { RaidTravelMotion } from './travelMotion'
 import { getPublicAssetUrl } from '../sound'
 import type { GraphicsQuality } from '../sound'
 import { getRaidAlienSpriteUrl, getRaidEliteSpriteUrl, getRaidShipSpriteUrl } from '../RaidShipSprite'
-import { Application, Assets, Container, FillGradient, Graphics, Sprite, Texture } from 'pixi.js'
+import { Application, Assets, Container, FillGradient, Graphics, Sprite, Texture, TilingSprite } from 'pixi.js'
 import { RAID_OTHER_ASSET_PATHS, drawCanvasImageContain, getRaidOtherCanvasSprite } from './assets'
 import type { RaidOtherAssetKey } from './assets'
 import { COMET_ASSET_HEAD_ANGLE, DEG } from './constants'
@@ -161,7 +163,6 @@ const WATERY_WORLD_CLOUD_LAYERS: WorldCloudLayer[] = [
   { asset: 'clouds2', band: 'high', x: 0.86, ySeed: 0.9, speed: 0.014, width: 0.64, height: 0.24, alpha: 0.28, rotation: 10 * DEG, drift: 0.014 },
 ]
 
-const WATERY_WORLD_ISLAND_SCROLL_SPEED = 0.024
 
 const WATERY_WORLD_ISLAND_LAYERS: WorldIslandLayer[] = [
   { asset: 'octiIsland', x: 0.55, ySeed: 0.08, size: 0.46, alpha: 0.56, rotation: 2 * DEG, drift: 0, singlePass: true },
@@ -172,7 +173,6 @@ const WATERY_WORLD_ISLAND_LAYERS: WorldIslandLayer[] = [
   { asset: 'island2', x: 0.12, ySeed: 0.92, size: 0.18, alpha: 0.42, rotation: -18 * DEG, drift: 0 },
 ]
 
-const WATERY_WORLD_ISLAND_TRAVEL_SIZE = Math.max(...WATERY_WORLD_ISLAND_LAYERS.map((layer) => layer.size))
 
 const VOLCANIC_WORLD_CLOUD_LAYERS: WorldCloudLayer[] = [
   { asset: 'volcanicClouds2', band: 'low', x: 0.22, ySeed: 0.1, speed: 0.028, width: 0.9, height: 0.34, alpha: 0.64, rotation: -5 * DEG, drift: 0.034 },
@@ -182,7 +182,6 @@ const VOLCANIC_WORLD_CLOUD_LAYERS: WorldCloudLayer[] = [
   { asset: 'volcanicClouds2', band: 'high', x: 0.86, ySeed: 0.92, speed: 0.013, width: 0.66, height: 0.24, alpha: 0.26, rotation: 9 * DEG, drift: 0.014 },
 ]
 
-const VOLCANIC_WORLD_ISLAND_SCROLL_SPEED = 0.024
 
 const VOLCANIC_WORLD_ISLAND_LAYERS: WorldIslandLayer[] = [
   { asset: 'snakeVolcano', x: 0.54, ySeed: 0.08, size: 0.5, alpha: 0.64, rotation: -2 * DEG, drift: 0, singlePass: true },
@@ -193,7 +192,6 @@ const VOLCANIC_WORLD_ISLAND_LAYERS: WorldIslandLayer[] = [
   { asset: 'volcano2', x: 0.13, ySeed: 0.92, size: 0.18, alpha: 0.44, rotation: 16 * DEG, drift: 0 },
 ]
 
-const VOLCANIC_WORLD_ISLAND_TRAVEL_SIZE = Math.max(...VOLCANIC_WORLD_ISLAND_LAYERS.map((layer) => layer.size))
 
 export const BACKGROUND_SPEED_LINES = [0.045, 0.955, 0.105, 0.895] as const
 
@@ -845,7 +843,8 @@ export class PixiRaidBackground {
   private readonly scene = new Container()
   private readonly skyScene = new Container()
   private readonly worldScene = new Container()
-  private readonly journeySurfaceSprite = new Sprite(Texture.WHITE)
+  private readonly journeySurfaceSprite = new TilingSprite({ texture: Texture.WHITE, width: 1, height: 1 })
+  private readonly surfaceCamera = createSurfaceCameraFrame()
   private readonly journey = createRaidJourneyView()
   private readonly journeyInput: RaidJourneyInput = { stageTheme: 1 }
   private journeyStage = 0
@@ -1084,6 +1083,10 @@ export class PixiRaidBackground {
       this.travel.update(time, stageRush, getRaidStarfieldSpeedScale(stageTheme), frame.playerX ?? 50, frame.playerY ?? 65)
       const isLow = quality === 'low'
       const isMedium = quality === 'medium'
+      const groundTexture = getSurfaceTerrain(isWateryWorldTheme(groundTheme) ? 0 : 1)
+        ?? getJourneySurface(isWateryWorldTheme(groundTheme) ? 0 : 1)
+      sampleSurfaceCamera(seconds, width, height, dpr, this.travel.x, this.travel.y,
+        groundTexture?.width ?? 512, this.surfaceCamera)
 
       if (this.width !== width || this.height !== height || this.dpr !== dpr) {
         this.width = width
@@ -1162,18 +1165,12 @@ export class PixiRaidBackground {
       } else if (quality !== 'low' && isVolcanicWorldTheme(groundTheme)) {
         this.updateVolcanicWorldAssetSprites(width, height, seconds, quality)
       }
-      // Boss Rush's water and volcanic arenas use their own surface layers.
-      // Apply depth here, after their per-frame positions have been reset.
+      // Ground UVs and landmarks already share their camera offsets.
+      // Only higher-altitude weather receives this independent parallax.
       if (quality !== 'low' && (isWateryWorldTheme(groundTheme) || isVolcanicWorldTheme(groundTheme))) {
         const dx = -this.travel.x * width
         const dy = -this.travel.y * height
-        const islands = isWateryWorldTheme(groundTheme) ? this.wateryIslandSprites : this.volcanicIslandSprites
         const clouds = isWateryWorldTheme(groundTheme) ? this.wateryCloudSprites : this.volcanicCloudSprites
-        for (const sprite of islands) {
-          if (!sprite.visible) continue
-          sprite.x += dx * 0.025
-          sprite.y += dy * 0.012
-        }
         for (const sprite of clouds) {
           if (!sprite.visible) continue
           sprite.x += dx * 0.065
@@ -1273,7 +1270,7 @@ export class PixiRaidBackground {
   }
 
   private async loadAssets() {
-    await preloadCosmosArt()
+    await Promise.all([preloadCosmosArt(), preloadSurfaceArt()])
     const entries = (Object.entries(RAID_OTHER_ASSET_PATHS) as Array<[PixiRaidAssetKey, string]>).filter(([key]) => key !== 'nukeMissile')
     await Promise.all(entries.map(async ([key, path]) => {
       try {
@@ -1589,17 +1586,26 @@ export class PixiRaidBackground {
     this.worldScene.pivot.set(width * 0.5, height * 0.5)
     this.worldScene.position.set(width * 0.5, height * 0.5)
     this.worldScene.scale.set(zoom)
-    const texture = world ? getJourneySurface(isWateryWorldTheme(groundTheme) ? 0 : 1) : undefined
-    this.journeySurfaceSprite.visible = Boolean(texture && world)
+    const kind = isWateryWorldTheme(groundTheme) ? 0 : 1
+    const texture = world ? (getSurfaceTerrain(kind) ?? getJourneySurface(kind)) : undefined
+    const sprite = this.journeySurfaceSprite
+    sprite.visible = Boolean(texture && world)
     if (texture) {
-      const onDestinationStage = this.journeyStage === 5 || this.journeyStage === 10
-      const surfaceAge = this.journeyInput.raidMode === 'endless'
-        ? Math.max(0, (this.journeyInput.arenaAge ?? 0) - 2.4)
-        : onDestinationStage ? Math.max(0, (this.journeyInput.stageAge ?? 0) - 2.4) : 0
-      setPixiSpriteContain(this.journeySurfaceSprite, texture, width * 0.5,
-        height * (0.5 + Math.min(0.12, surfaceAge * 0.0015)), width, height, 1)
-      // Overscan keeps the ground plate covered during ascent zoom/parallax.
-      this.journeySurfaceSprite.scale.set(width * 1.35 / texture.width, height * 1.35 / texture.height)
+      sprite.texture = texture
+      // This is one repeated quad. Its geometry covers the camera, while the
+      // material retains square, native-density texels at every aspect ratio.
+      const left = -width * 0.175, top = -height * 0.175
+      sprite.position.set(left, top)
+      sprite.scale.set(1)
+      sprite.width = width * 1.35
+      sprite.height = height * 1.35
+      const tile = this.surfaceCamera.tileSize
+      sprite.tileScale.set(tile / texture.width, tile / texture.height)
+      sprite.tilePosition.set(
+        positiveSurfaceModulo(this.surfaceCamera.x - left, tile),
+        positiveSurfaceModulo(this.surfaceCamera.scroll + this.surfaceCamera.y - top, tile),
+      )
+      sprite.alpha = 1
     }
   }
 
@@ -1673,27 +1679,26 @@ export class PixiRaidBackground {
 
   private updateWateryWorldAssetSprites(width: number, height: number, seconds: number, quality: GraphicsQuality) {
     const islandCount = quality === 'medium' ? 3 : WATERY_WORLD_ISLAND_LAYERS.length
-    const islandTravelSize = Math.min(width, height) * WATERY_WORLD_ISLAND_TRAVEL_SIZE
     for (let index = 0; index < WATERY_WORLD_ISLAND_LAYERS.length; index += 1) {
       const layer = WATERY_WORLD_ISLAND_LAYERS[index]
       const texture = this.assetTextures.get(layer.asset)
       const visible = Boolean(texture && index < islandCount)
       const drawSize = Math.min(width, height) * layer.size
-      const x = width * layer.x
-      const baseY = getWaterySurfaceLayerY(seconds, height, WATERY_WORLD_ISLAND_SCROLL_SPEED, layer.ySeed, islandTravelSize)
+      const x = width * layer.x + this.surfaceCamera.x
+      const baseY = getSurfaceIslandY(this.surfaceCamera, layer.ySeed)
       for (let tileIndex = 0; tileIndex < WORLD_SURFACE_TILE_OFFSETS.length; tileIndex += 1) {
         const sprite = this.wateryIslandSprites[getWorldSurfaceSpriteIndex(index, tileIndex)]
         if (!texture || !visible || (layer.singlePass && WORLD_SURFACE_TILE_OFFSETS[tileIndex] !== 0)) {
           sprite.visible = false
           continue
         }
-        const y = getWorldSurfaceCopyY(baseY, height, islandTravelSize, tileIndex)
+        const y = baseY + WORLD_SURFACE_TILE_OFFSETS[tileIndex] * this.surfaceCamera.span
         if (!isWorldSurfaceCopyVisible(y, height, drawSize)) {
           sprite.visible = false
           continue
         }
-        setPixiSpriteContain(sprite, texture, x, y, drawSize, drawSize, layer.alpha, layer.rotation)
-        sprite.tint = 0xd8c8ff
+        setPixiSpriteContain(sprite, texture, x, y, drawSize, drawSize, 1, layer.rotation)
+        sprite.tint = sceneryTint(0xd8c8ff, 0.66 + layer.alpha * 0.2)
       }
     }
 
@@ -1725,27 +1730,26 @@ export class PixiRaidBackground {
 
   private updateVolcanicWorldAssetSprites(width: number, height: number, seconds: number, quality: GraphicsQuality) {
     const islandCount = quality === 'medium' ? 3 : VOLCANIC_WORLD_ISLAND_LAYERS.length
-    const islandTravelSize = Math.min(width, height) * VOLCANIC_WORLD_ISLAND_TRAVEL_SIZE
     for (let index = 0; index < VOLCANIC_WORLD_ISLAND_LAYERS.length; index += 1) {
       const layer = VOLCANIC_WORLD_ISLAND_LAYERS[index]
       const texture = this.assetTextures.get(layer.asset)
       const visible = Boolean(texture && index < islandCount)
       const drawSize = Math.min(width, height) * layer.size
-      const x = width * layer.x
-      const baseY = getWaterySurfaceLayerY(seconds, height, VOLCANIC_WORLD_ISLAND_SCROLL_SPEED, layer.ySeed, islandTravelSize)
+      const x = width * layer.x + this.surfaceCamera.x
+      const baseY = getSurfaceIslandY(this.surfaceCamera, layer.ySeed)
       for (let tileIndex = 0; tileIndex < WORLD_SURFACE_TILE_OFFSETS.length; tileIndex += 1) {
         const sprite = this.volcanicIslandSprites[getWorldSurfaceSpriteIndex(index, tileIndex)]
         if (!texture || !visible || (layer.singlePass && WORLD_SURFACE_TILE_OFFSETS[tileIndex] !== 0)) {
           sprite.visible = false
           continue
         }
-        const y = getWorldSurfaceCopyY(baseY, height, islandTravelSize, tileIndex)
+        const y = baseY + WORLD_SURFACE_TILE_OFFSETS[tileIndex] * this.surfaceCamera.span
         if (!isWorldSurfaceCopyVisible(y, height, drawSize)) {
           sprite.visible = false
           continue
         }
-        setPixiSpriteContain(sprite, texture, x, y, drawSize, drawSize, layer.alpha, layer.rotation)
-        sprite.tint = 0xffd6c0
+        setPixiSpriteContain(sprite, texture, x, y, drawSize, drawSize, 1, layer.rotation)
+        sprite.tint = sceneryTint(0xffd6c0, 0.66 + layer.alpha * 0.2)
       }
     }
 
@@ -1817,7 +1821,7 @@ export class PixiRaidBackground {
     this.hideWaterySurfaceSprites()
     const isMedium = quality === 'medium'
     const isWorld = isWateryWorldTheme(stageTheme) || isVolcanicWorldTheme(stageTheme)
-    if (isWorld && getJourneySurface(isWateryWorldTheme(stageTheme) ? 0 : 1)) { graphics.visible = false; return }
+    if (isWorld && (getSurfaceTerrain(isWateryWorldTheme(stageTheme) ? 0 : 1) ?? getJourneySurface(isWateryWorldTheme(stageTheme) ? 0 : 1))) { graphics.visible = false; return }
     if (isWorld && quality === 'low') {
       graphics.visible = true
       graphics.rect(0, 0, width, height).fill(isWateryWorldTheme(stageTheme) ? 0x110a26 : 0x210b08)

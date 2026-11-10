@@ -36,4 +36,5 @@ export function edgeFlyby(seconds: number, slot: number) {
   const age = ((Math.max(0, seconds) + slot * 13 + period - 8) % period)
   return age < 3.2 ? age / 3.2 : -1
 }
-export const COSMOS_TEXTURE_BYTES = 3 * 1024 * 1024 * 4 + 512 * 512 * 4 + 512 * 256 * 4
+// A full 512px RGBA terrain mip chain uses 1,398,100 bytes.
+export const COSMOS_TEXTURE_BYTES = 3 * 1024 * 1024 * 4 + 512 * 512 * 4 + 512 * 256 * 4 + 2 * 1398100
