@@ -1,28 +1,32 @@
 import type * as React from 'react'
 
-export function StatPill({ icon, val, color }: { icon: string; val: number; color: string }) {
+export function StatPill({ label, val, color }: { label: string; val: number; color: string }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, background: '#111914', border: `1px solid ${color}55`, borderRadius: 4, padding: '5px 9px', boxShadow: 'inset 0 0 0 1px #00000088' }}>
-      <span style={{ color: '#9ab5a8', fontSize: '0.72rem', letterSpacing: 1.1 }}>{icon}</span>
-      <span style={{ color, fontWeight: 800, fontSize: '0.92rem', minWidth: 92, textAlign: 'right', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{typeof val === 'number' ? val.toLocaleString() : val}</span>
+    <div className="defense-stat" style={{ '--stat-color': color } as React.CSSProperties}>
+      <span className="defense-stat__label">{label}</span>
+      <span className="defense-stat__value">{val.toLocaleString()}</span>
     </div>
   )
 }
 
 export function btnStyle(bg: string, color: string, bold = false): React.CSSProperties {
+  const primary = bg === '#18e6c4' || bg === '#194a34'
   return {
-    background: bg,
-    color,
-    border: '1px solid #5c7e6a',
-    borderRadius: 4,
+    ...(primary ? {
+      '--control-top': '#f8cf83',
+      '--control-bottom': '#d69b43',
+      '--control-border': '#ffe2a9',
+      '--control-ink': '#ffe3b5',
+    } : {}),
+    '--control-accent': color === '#000' ? '#73e5ee' : color,
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
     padding: '6px 12px',
-    cursor: 'pointer',
     fontWeight: bold ? 800 : 600,
     fontSize: '0.76rem',
-    transition: 'filter 0.15s',
-    fontFamily: 'inherit',
     letterSpacing: 0.6,
     textTransform: 'uppercase',
-    boxShadow: 'inset 0 0 0 1px #00000088',
-  }
+  } as React.CSSProperties
 }

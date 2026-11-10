@@ -2,10 +2,18 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 
 import App from './App.tsx'
+import { getPublicAssetUrl } from './components/games/sound'
 
 import './index.css'
+import './game-ui.css'
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
+const root = document.getElementById('root')!
+// Resolve generated art through the same base URL as the game's ship assets,
+// including Electron's file URL and the Android packaged web directory.
+root.style.setProperty('--ui-hangar-art', `url("${getPublicAssetUrl('assets/ui/orbital-hangar-v1.png')}")`)
+root.style.setProperty('--ui-console-texture', `url("${getPublicAssetUrl('assets/ui/console-plate-v1.png')}")`)
+
+ReactDOM.createRoot(root).render(
   <React.StrictMode>
     <App />
   </React.StrictMode>,

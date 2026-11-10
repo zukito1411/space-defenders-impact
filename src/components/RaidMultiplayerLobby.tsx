@@ -1,3 +1,4 @@
+import { GameButton } from './ui/GameButton'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { RaidShipSprite } from './games/RaidShipSprite'
 import { getLanguageText, getRaidText, type LanguageCode } from '../i18n'
@@ -441,9 +442,9 @@ export function RaidMultiplayerLobby({ playerName, language, connectionMode, onB
     <div className="mode-screen">
       <div className="mode-screen__stars" />
       <div className="mode-screen__panel raid-lobby">
-        <button className="mode-screen__back" onClick={onBack}>
+        <GameButton tone="quiet" className="mode-screen__back" onClick={onBack}>
           {text.back}
-        </button>
+        </GameButton>
 
         <div className="mode-screen__eyebrow">{isLocalMode ? text.localEyebrow : text.eyebrow}</div>
         <h1>{isLocalMode ? text.localTitle : text.title}</h1>
@@ -473,6 +474,7 @@ export function RaidMultiplayerLobby({ playerName, language, connectionMode, onB
               <button
                 key={ship.key}
                 data-ship={ship.key}
+                aria-pressed={selectedShipKey === ship.key}
                 className={selectedShipKey === ship.key ? 'raid-lobby__ship raid-lobby__ship--active' : 'raid-lobby__ship'}
                 type="button"
                 onClick={() => chooseShip(ship.key)}
@@ -489,26 +491,35 @@ export function RaidMultiplayerLobby({ playerName, language, connectionMode, onB
 
         <div className={isLocalMode && !canHostLocalRelay ? 'raid-lobby__actions raid-lobby__actions--join-only' : 'raid-lobby__actions'}>
           {canHostLocalRelay ? (
-            <button disabled={connecting} onClick={hostRoom}>
+            <GameButton disabled={connecting} onClick={hostRoom}>
               {isLocalMode ? text.startLanHost : text.hostRoom}
-            </button>
+            </GameButton>
           ) : null}
           <label className={isLocalMode ? 'raid-lobby__join raid-lobby__join--local' : 'raid-lobby__join'}>
             {isLocalMode ? (
               <input
                 value={localHostInput}
                 placeholder={text.localHostPlaceholder}
+                aria-label={text.localHostAddress}
+                autoCapitalize="off"
+                autoCorrect="off"
+                spellCheck={false}
                 onChange={(event) => setLocalHostInput(event.target.value)}
               />
             ) : null}
             <input
               value={joinCode}
               placeholder={text.roomPlaceholder}
-              onChange={(event) => setJoinCode(event.target.value)}
+              aria-label={text.roomCode}
+              maxLength={12}
+              autoCapitalize="characters"
+              autoCorrect="off"
+              spellCheck={false}
+              onChange={(event) => setJoinCode(event.target.value.toUpperCase())}
             />
-            <button disabled={connecting} onClick={joinRoom}>
+            <GameButton disabled={connecting} onClick={joinRoom}>
               {text.join}
-            </button>
+            </GameButton>
           </label>
         </div>
 
@@ -536,13 +547,13 @@ export function RaidMultiplayerLobby({ playerName, language, connectionMode, onB
             </div>
 
             <div className="raid-lobby__room-actions">
-              <button onClick={toggleReady}>{ownPlayer?.ready ? text.cancelReady : text.ready}</button>
+              <GameButton aria-pressed={Boolean(ownPlayer?.ready)} onClick={toggleReady}>{ownPlayer?.ready ? text.cancelReady : text.ready}</GameButton>
               {canStart && ownPlayer?.host ? (
-                <button onClick={startCoop}>{text.startCoop}</button>
+                <GameButton tone="primary" onClick={startCoop}>{text.startCoop}</GameButton>
               ) : null}
-              <button className="raid-lobby__secondary" onClick={leaveRoom}>
+              <GameButton tone="quiet" className="raid-lobby__secondary" onClick={leaveRoom}>
                 {text.leave}
-              </button>
+              </GameButton>
             </div>
 
             {canStart ? (

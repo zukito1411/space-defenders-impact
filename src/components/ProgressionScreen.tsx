@@ -1,3 +1,4 @@
+import { GameButton } from './ui/GameButton'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import {
   getCompletionPercent,
@@ -326,9 +327,9 @@ export function ProgressionScreen({
     <div className="progress-screen">
       <div className="progress-screen__stars" />
       <section className="progress-panel" aria-labelledby="progress-title">
-        <button className="progress-panel__back" type="button" onClick={onBack}>
+        <GameButton tone="quiet" className="progress-panel__back" onClick={onBack}>
           {text.back}
-        </button>
+        </GameButton>
 
         <header className="progress-panel__header">
           <span>{text.deckTitle}</span>

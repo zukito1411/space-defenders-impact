@@ -7,6 +7,7 @@ import { RAID_ALIEN_SPRITE_COUNT, RAID_ELITE_SPRITE_COUNT, getRaidAlienSpriteUrl
 import { getGameAudioMixSettings, getGameSoundBgmDuckProfile, getGameSoundEnabled, getGraphicsQuality, getPublicAssetUrl, playGameSound, registerGameSoundDucker, setGameAudioMixSettings, setGraphicsQuality, stopBGM } from '../sound'
 import type { AudioMixSettings, GraphicsQuality } from '../sound'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { GameDialog } from '../../ui/GameDialog'
 import type { CSSProperties } from 'react'
 import { RAID_DERELICT_WRECK_VARIANTS, RAID_DEVIL_MASTER_PROJECTILE_FILTER, RAID_DEVIL_MASTER_PROJECTILE_GLOW_STOPS, RAID_PLAYER_LASER_HEAD_STOPS, RAID_SNAKE_FANG_GLOW_STOPS, RAID_SQUID_BUBBLE_STOPS, RAID_SQUID_INK_STOPS, RAID_VENOM_SPIT_STOPS, drawCanvasSpriteContain, getDerelictWreckVariantData, getDevilMasterProjectileCanvasSprite } from './assets'
 import type { CanvasSpriteEntry } from './assets'
@@ -22,6 +23,7 @@ import { createAsteroidHazard, getAsteroidClusterInterval, getRandomEventDuratio
 import { RAID_FX_CANVAS_CONTEXT_SETTINGS, getRaidGraphicsProfile, makeRaidViewportMetrics } from './graphics'
 import { createRaidVisibilityBounds, raidObjectInView } from './visibility'
 import { isGpuEnemyShot, isGpuPlayerShot } from './gpuForeground'
+import { drawRaidCombatTexture, getRaidExplosionFrame, getRaidProjectileMaterial, isWarmRaidEffectColor } from './combatArt'
 import { clearRaidSpatialHash, createRaidSpatialHash, insertRaidSpatialHash, queryRaidSpatialHash } from './spatialHash'
 import type { RaidViewportMetrics } from './graphics'
 import { clearPickupLoadout, extendLoadoutForSuperBoss, getFormationEnemyCount, getFormationSpawnSeconds, getPowerScore, getSingleEnemySpawnSeconds, resetStageLoadout } from './loadout'
@@ -33,6 +35,7 @@ import { clonePlayer, getCheckpointStage, getDefaultPlayerVisualShipKey, getGodG
 import type { AsteroidHazard, BossDefeatExplosionEvent, BossKind, BossMessage, CameraShakeState, CoreLanderCombatModel, DerelictWreck, Enemy, FormationStyle, GamePhase, GodGundamBarrage, GodGundamPassiveStrike, IonStrike, MeteorHazard, MiniBossKind, MirageBossKind, MultiplayerAsteroidSnapshot, MultiplayerConnectionQuality, MultiplayerEnemySnapshot, MultiplayerHostState, MultiplayerInput, MultiplayerPlayerSnapshot, NukeStrike, Player, PowerKind, PowerUp, RaidAssetPreloadState, RaidBgmMode, RaidDifficulty, RaidMode, RaidMultiplayerSession, RaidRandomEvent, RaidRandomEventKind, RelayGameMessage, Ripple, ShipOption, Shot, Snapshot, Spark, Vec, WeaponKey } from './types'
 import { acquireRipple, acquireSpark, buildEnemyCollisionBuckets, clamp, collectShotCollisionCandidates, compactInPlace, createEnemyCollisionBuckets, distSq, drawRadialEllipse, getCachedProjectileOrbSprite, getCachedProjectileTrailSprite, getEliteEnemyChance, getMaxActiveEliteEnemies, pickEliteEnemyKind, readRaidPalette, recycleRipple, recycleRippleList, recycleSpark, recycleSparkList, takeLastFilteredMapped, updateRipplesInPlace, updateSparksInPlace } from './utils'
 import type { EnemyCollisionBuckets } from './utils'
+import { RaidFrameTimings } from './frameTimings'
 
 let shotId = 1
 
@@ -127,6 +130,7 @@ export function GradiusRaid({
   const rootRef = useRef<HTMLDivElement | null>(null)
   const pixiBackgroundHostRef = useRef<HTMLDivElement | null>(null)
   const pixiBackgroundRef = useRef<PixiRaidBackground | null>(null)
+  const rendererPreparationRef = useRef<Promise<boolean> | null>(null)
   const fxCanvasRef = useRef<HTMLCanvasElement | null>(null)
   const fxCanvasContextRef = useRef<CanvasRenderingContext2D | null>(null)
   const perfHudRef = useRef<HTMLDivElement | null>(null)
@@ -136,23 +140,18 @@ export function GradiusRaid({
   })
   const showPerfHudRef = useRef(showPerfHud)
   showPerfHudRef.current = showPerfHud
-  // Single JS render scheduler: limit 90/120Hz Android displays to 60Hz,
-  // and adapt *visual draws only* if full-screen Canvas/WebGL is overloaded.
-  // This avoids burning GPU/CPU time on more frames than the phone can show.
+  const frameTimingsRef = useRef<RaidFrameTimings | null>(null)
+  if (!frameTimingsRef.current) frameTimingsRef.current = new RaidFrameTimings()
+  // Present at the display's native rAF cadence. Graphics quality and render
+  // resolution remain the player's selection, never an automatic FPS fallback.
   const perfBudgetRef = useRef({
-    lastDraw: 0, interval: 0, slowFrames: 0, fastFrames: 0,
     windowStart: 0, ticks: 0, frames: 0, simMs: 0, drawMs: 0, maxFrameMs: 0,
     backgroundMs: 0, gpuSubmitMs: 0, canvasMs: 0, bossMs: 0,
   })
-  // Fractional accumulator preserves ~60Hz at 75/90/120Hz display rates,
-  // rather than wrongly dropping 90Hz panels to 45 FPS.
-  const frameClockRef = useRef({ lastRafTime: 0, accumulatedMs: 0 })
   const drawCostsRef = useRef({ backgroundMs: 0, gpuSubmitMs: 0, canvasMs: 0, bossMs: 0 })
-  const adaptiveResolutionRef = useRef({ scale: 1, lastChangeMs: 0, fastFrames: 0 })
   const rafRef = useRef(0)
   const lastTimeRef = useRef(0)
   const lastRenderTimeRef = useRef(0)
-  const lastIdleDrawTimeRef = useRef(0)
   const lastVisualRetirementRef = useRef(0)
   const graphicsQualityRef = useRef<GraphicsQuality>(getGraphicsQuality())
   const viewportMetricsRef = useRef<RaidViewportMetrics | null>(null)
@@ -1405,7 +1404,7 @@ export function GradiusRaid({
     const refreshViewportMetrics = () => {
       const root = rootRef.current
       if (!root) return
-      viewportMetricsRef.current = makeRaidViewportMetrics(root, graphicsQualityRef.current, isCoOpActive(), adaptiveResolutionRef.current.scale)
+      viewportMetricsRef.current = makeRaidViewportMetrics(root, graphicsQualityRef.current, isCoOpActive())
     }
 
     refreshViewportMetrics()
@@ -1428,7 +1427,9 @@ export function GradiusRaid({
     const background = new PixiRaidBackground()
     pixiBackgroundRef.current = background
 
-    void background.init(host).then((ready) => {
+    const preparation = background.init(host)
+    rendererPreparationRef.current = preparation
+    void preparation.then((ready) => {
       if (cancelled) {
         background.destroy()
         return
@@ -1439,6 +1440,7 @@ export function GradiusRaid({
     return () => {
       cancelled = true
       if (pixiBackgroundRef.current === background) pixiBackgroundRef.current = null
+      if (rendererPreparationRef.current === preparation) rendererPreparationRef.current = null
       background.destroy()
     }
   }, [])
@@ -1460,9 +1462,8 @@ export function GradiusRaid({
     const gfxQuality = graphicsQualityRef.current
     const multiplayerActive = isCoOpActive()
     let viewport = viewportMetricsRef.current
-    if (!viewport || viewport.quality !== gfxQuality || viewport.multiplayer !== multiplayerActive ||
-      viewport.adaptiveScale !== adaptiveResolutionRef.current.scale) {
-      viewport = makeRaidViewportMetrics(root, gfxQuality, multiplayerActive, adaptiveResolutionRef.current.scale)
+    if (!viewport || viewport.quality !== gfxQuality || viewport.multiplayer !== multiplayerActive) {
+      viewport = makeRaidViewportMetrics(root, gfxQuality, multiplayerActive)
       viewportMetricsRef.current = viewport
     }
     const { cssWidth, cssHeight, dpr, profile: gfxProfile, visualScale } = viewport
@@ -1580,6 +1581,8 @@ export function GradiusRaid({
       dpr,
       visualScale,
       time,
+      guestView: Boolean(multiplayerSessionRef.current && !multiplayerSessionRef.current.isHost),
+      measureGpu: measured,
       bounds: drawBounds,
       drawAdvancedShotFx: gfxProfile.drawAdvancedShotFx,
       drawRipples: gfxProfile.drawRipples,
@@ -2190,11 +2193,27 @@ export function GradiusRaid({
         ctx.beginPath()
         ctx.arc(toX(ripple.x), toY(ripple.y), radius, 0, Math.PI * 2)
         ctx.stroke()
+        const explosion = ripple.size >= 5 && isWarmRaidEffectColor(ripple.color) ? getRaidExplosionFrame(progress) : undefined
+        if (explosion) {
+          const diameter = Math.max(28, ripple.size * 6.2) * visualScale * (0.85 + progress * 0.3)
+          ctx.globalAlpha = Math.max(0, 1 - progress * 0.55)
+          drawRaidCombatTexture(ctx, explosion, toX(ripple.x), toY(ripple.y), diameter, diameter, ripple.id * 2.399, false)
+        }
       }
     }
     ctx.globalAlpha = 1
 
+    const drawAtlasShot = (shot: Shot, enemy = false) => {
+      const material = getRaidProjectileMaterial(shot.kind, enemy)
+      if (!material) return false
+      const heading = Math.atan2(shot.vy * cssHeight, shot.vx * cssWidth)
+      return drawRaidCombatTexture(ctx, material.texture, toX(shot.x), toY(shot.y),
+        material.width * visualScale, material.height * visualScale,
+        material.directional ? heading : time * 0.0003 + shot.id, !material.solid)
+    }
+
     const drawPlayerShot = (shot: Shot) => {
+      if (drawAtlasShot(shot)) return
       if (!gfxProfile.drawAdvancedShotFx) {
         if (isCoreLanderAoeShot(shot)) {
           if (shot.kind === 'spiegelKunai') {
@@ -2278,6 +2297,7 @@ export function GradiusRaid({
       // Beam columns may cross the screen even when their origin is outside.
       if (shot.kind !== 'beam' && !raidObjectInView(drawBounds, shot.x, shot.y, shot.radius + 16)) continue
       if (gpuForegroundDrawn && isGpuEnemyShot(shot, gfxProfile.drawAdvancedShotFx)) continue
+      if (!gpuForegroundDrawn && drawAtlasShot(shot, true)) continue
       if (!gfxProfile.drawAdvancedShotFx) {
         if (shot.kind === 'beam') drawTrail(shot, 'rgba(56,189,248,0.88)', 82, 9)
         else drawOrb(shot, shot.kind === 'poisonCloud' || shot.kind === 'venomSpit' || shot.kind === 'snakeFang' || shot.kind === 'devilSnakeHead' ? 'rgba(132,204,22,0.68)' : shot.kind === 'squidInk' || shot.kind === 'squidSpine' ? 'rgba(244,114,182,0.78)' : 'rgba(251,113,133,0.78)', shot.kind === 'squidBubble' ? 12 : 8)
@@ -2695,6 +2715,8 @@ export function GradiusRaid({
     const sameScreen = sameScreenCoopRef.current
     if (session && !session.isHost) return
     await preloadRaidAssetsForMenu(true)
+    if (rendererPreparationRef.current) await rendererPreparationRef.current
+    if (!rootRef.current?.isConnected) return
     progressRef.current = loadProgress()
     shipCosmeticsCacheRef.current.clear()
 
@@ -6603,8 +6625,11 @@ export function GradiusRaid({
   const getRaidFocusableControls = useCallback(() => {
     const root = rootRef.current
     if (!root) return []
-    return Array.from(root.querySelectorAll<HTMLElement>('button:not(:disabled), [tabindex]:not([tabindex="-1"])')).filter((control) => {
-      if (control.tabIndex < 0) return false
+    const dialogs = document.querySelectorAll<HTMLElement>('[role="dialog"][aria-modal="true"]')
+    const overlays = root.querySelectorAll<HTMLElement>('.raid__overlay')
+    const scope = dialogs[dialogs.length - 1] ?? overlays[overlays.length - 1] ?? root
+    return Array.from(scope.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), [tabindex]:not([tabindex="-1"])')).filter((control) => {
+      if (control.tabIndex < 0 || control.closest('[inert]')) return false
       const rect = control.getBoundingClientRect()
       return rect.width > 0 && rect.height > 0 && getComputedStyle(control).visibility !== 'hidden'
     })
@@ -6617,6 +6642,7 @@ export function GradiusRaid({
     const currentIndex = active ? controls.indexOf(active) : -1
     const nextIndex = currentIndex < 0 ? (direction > 0 ? 0 : controls.length - 1) : (currentIndex + direction + controls.length) % controls.length
     controls[nextIndex]?.focus()
+    controls[nextIndex]?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
   }, [getRaidFocusableControls])
 
   const activateRaidFocusedControl = useCallback(() => {
@@ -6630,6 +6656,12 @@ export function GradiusRaid({
   }, [getRaidFocusableControls])
 
   const activateRaidBackControl = useCallback(() => {
+    const dialogs = document.querySelectorAll<HTMLElement>('[role="dialog"][aria-modal="true"]')
+    const dialog = dialogs[dialogs.length - 1]
+    if (dialog) {
+      dialog.querySelector<HTMLElement>('[data-dialog-dismiss]')?.click()
+      return
+    }
     if (phaseRef.current === 'playing') {
       pauseGame()
       return
@@ -6782,25 +6814,14 @@ export function GradiusRaid({
 
   useEffect(() => {
     const tick = (time: number) => {
-      // Android often schedules requestAnimationFrame at 90-120Hz. Running
-      // expensive gameplay + two fullscreen renderers at that refresh rate
-      // wastes work and can cause sustained low FPS and thermal throttling.
-      const frameClock = frameClockRef.current
-      const rawRafDelta = frameClock.lastRafTime > 0
-        ? Math.min(100, Math.max(0, time - frameClock.lastRafTime))
-        : 1000 / 60
-      frameClock.lastRafTime = time
-      frameClock.accumulatedMs = Math.min(1000 / 30, frameClock.accumulatedMs + rawRafDelta)
-      if (frameClock.accumulatedMs < 1000 / 60 - 0.5) {
-        rafRef.current = requestAnimationFrame(tick)
-        return
-      }
-      frameClock.accumulatedMs = Math.max(0, frameClock.accumulatedMs - 1000 / 60)
-      const frameDelta = Math.max(0, time - lastTimeRef.current)
-      const dt = Math.min(0.033, frameDelta / 1000 || 0)
+      const frameDelta = lastTimeRef.current > 0 ? Math.max(0, time - lastTimeRef.current) : 0
+      // Keep the existing long-frame simulation guard; high-refresh displays
+      // receive their actual shorter dt rather than repeated 60 Hz positions.
+      const dt = Math.min(0.033, frameDelta / 1000)
       lastTimeRef.current = time
       const perf = perfBudgetRef.current
-      const simulationStart = performance.now()
+      const measured = showPerfHudRef.current
+      const simulationStart = measured ? performance.now() : 0
       pollRaidGamepads(time)
       const entranceSlamActive = phaseRef.current === 'playing' && bossEntranceSlamRef.current > 0
       if (bossEntranceSlamRef.current > 0) {
@@ -6820,88 +6841,30 @@ export function GradiusRaid({
         sendMultiplayerInput(time)
       }
       if (session) updateMultiplayerConnection(time)
-      const simulationMs = performance.now() - simulationStart
+      const simulationMs = measured ? performance.now() - simulationStart : 0
       const phase = phaseRef.current
-      const isIdlePhase = phase === 'select' || phase === 'briefing' || phase === 'paused'
-      const onPhone = Boolean(viewportMetricsRef.current?.isSmallViewport)
-      // If a phone cannot consistently present 60 costly WebGL+Canvas
-      // frames, temporarily settle at 30 visual FPS. Game state, input,
-      // collision, movement and network continue ticking up to 60Hz.
-      const desiredInterval = isIdlePhase ? 33 : onPhone ? perf.interval : 0
-      let drewFrame = false
-      let drawMs = 0
-      if (!desiredInterval || time - perf.lastDraw >= desiredInterval - 1) {
-        perf.lastDraw = time
-        if (isIdlePhase) lastIdleDrawTimeRef.current = time
-        const drawStart = performance.now()
-        drawFxCanvas(time)
-        drawMs = performance.now() - drawStart
-        drewFrame = true
-        if (onPhone && !isIdlePhase) {
-          const overloaded = drawMs > 19 || frameDelta > 29
-          if (overloaded) {
-            perf.slowFrames += 1
-            perf.fastFrames = 0
-          } else {
-            perf.slowFrames = Math.max(0, perf.slowFrames - 1)
-            if (perf.interval > 0 && drawMs < 10 && frameDelta < 25) perf.fastFrames += 1
-            else perf.fastFrames = 0
-          }
-          if (perf.interval === 0 && perf.slowFrames >= 8) {
-            perf.interval = 33
-            perf.slowFrames = 0
-          }
-          if (perf.interval > 0 && perf.fastFrames >= 110) {
-            perf.interval = 0
-            perf.fastFrames = 0
-          }
-
-          // Dynamic resolution responds only to sustained *drawing* overload.
-          // Simulation-bound frames cannot be fixed by reducing pixel count.
-          // A long cooldown prevents rapid WebGL render-target reallocations.
-          const adaptive = adaptiveResolutionRef.current
-          if (perf.interval > 0 && perf.slowFrames >= 55 &&
-            (drawMs > 19 || frameDelta > 31) && simulationMs < 11 &&
-            time - adaptive.lastChangeMs > 8000 && adaptive.scale > 0.75) {
-            adaptive.scale = Math.max(0.75, Math.round((adaptive.scale - 0.1) * 100) / 100)
-            adaptive.lastChangeMs = time
-            adaptive.fastFrames = 0
-            perf.slowFrames = 0
-            viewportMetricsRef.current = null
-          }
-          if (perf.interval === 0 && drawMs < 10 && frameDelta < 23 && simulationMs < 10) {
-            adaptive.fastFrames += 1
-          } else {
-            adaptive.fastFrames = 0
-          }
-          if (adaptive.scale < 1 && adaptive.fastFrames >= 260 &&
-            time - adaptive.lastChangeMs > 18000) {
-            adaptive.scale = Math.min(1, Math.round((adaptive.scale + 0.1) * 100) / 100)
-            adaptive.lastChangeMs = time
-            adaptive.fastFrames = 0
-            viewportMetricsRef.current = null
-          }
-        }
-      }
-      if (showPerfHudRef.current) {
+      const drawStart = measured ? performance.now() : 0
+      drawFxCanvas(time)
+      const drawMs = measured ? performance.now() - drawStart : 0
+      if (measured) {
+        frameTimingsRef.current!.sample(frameDelta)
         if (perf.windowStart === 0) perf.windowStart = time
         perf.ticks += 1
         perf.simMs += simulationMs
-        if (drewFrame) {
-          perf.frames += 1
-          perf.drawMs += drawMs
-          const costs = drawCostsRef.current
-          perf.backgroundMs += costs.backgroundMs
-          perf.gpuSubmitMs += costs.gpuSubmitMs
-          perf.canvasMs += costs.canvasMs
-          perf.bossMs += costs.bossMs
-        }
+        perf.frames += 1
+        perf.drawMs += drawMs
+        const costs = drawCostsRef.current
+        perf.backgroundMs += costs.backgroundMs
+        perf.gpuSubmitMs += costs.gpuSubmitMs
+        perf.canvasMs += costs.canvasMs
+        perf.bossMs += costs.bossMs
         perf.maxFrameMs = Math.max(perf.maxFrameMs, frameDelta)
         if (time - perf.windowStart >= 1000) {
           const windowMs = time - perf.windowStart
           const renderFps = Math.round(perf.frames * 1000 / Math.max(1, windowMs))
           const avgSim = (perf.simMs / Math.max(1, perf.ticks)).toFixed(1)
           const avgDraw = (perf.drawMs / Math.max(1, perf.frames)).toFixed(1)
+          const quantiles = frameTimingsRef.current!.percentiles()
           const perDraw = Math.max(1, perf.frames)
           const gpu = pixiBackgroundRef.current?.getRaidGpuStats()
           const bubbleCount = enemyShotsRef.current.reduce((count, shot) => count + (shot.kind === 'squidBubble' ? 1 : 0), 0)
@@ -6916,7 +6879,7 @@ export function GradiusRaid({
           const scoutCount = pilot.ship.key === 'mesiah'
             ? normalizeMesiahScoutDrones(pilot).filter(scout => scout.active).length : 0
           if (perfHudRef.current) perfHudRef.current.textContent =
-            `FPS ${renderFps} | Sim ${avgSim}ms | Draw ${avgDraw}ms | GPU submit ${(perf.gpuSubmitMs / perDraw).toFixed(1)}ms | BG ${(perf.backgroundMs / perDraw).toFixed(1)}ms | Canvas ${(perf.canvasMs / perDraw).toFixed(1)}ms | Boss ${(perf.bossMs / perDraw).toFixed(1)}ms | Spike ${Math.round(perf.maxFrameMs)}ms | DPR ${viewportMetricsRef.current?.dpr.toFixed(2) ?? '?'} | Scouts ${scoutCount} | Shots ${liveShots.length}/${enemyShotsRef.current.length} (homing ${homingCount}, needle ${needleCount}) | Bubbles ${bubbleCount} | GPU nodes ${gpu?.shots ?? 0} | GPU textures ${gpu?.textures ?? 0} | WebGL ${gpu?.gpuFrameMs === null || gpu?.gpuFrameMs === undefined ? 'n/a' : gpu.gpuFrameMs.toFixed(1) + 'ms'} | Boss atlas ${gpu?.bossTextureMB ?? 0}MB`
+            `FPS ${renderFps} | Frame p50/p95/p99 ${quantiles.p50.toFixed(1)}/${quantiles.p95.toFixed(1)}/${quantiles.p99.toFixed(1)}ms | Sim ${avgSim}ms | Draw ${avgDraw}ms | GPU submit ${(perf.gpuSubmitMs / perDraw).toFixed(1)}ms | BG ${(perf.backgroundMs / perDraw).toFixed(1)}ms | Canvas ${(perf.canvasMs / perDraw).toFixed(1)}ms | Boss ${(perf.bossMs / perDraw).toFixed(1)}ms | Spike ${Math.round(perf.maxFrameMs)}ms | DPR ${viewportMetricsRef.current?.dpr.toFixed(2) ?? '?'} | Scouts ${scoutCount} | Shots ${liveShots.length}/${enemyShotsRef.current.length} (homing ${homingCount}, needle ${needleCount}) | Bubbles ${bubbleCount} | GPU nodes ${gpu?.shots ?? 0} | GPU textures ${gpu?.textures ?? 0} | WebGL ${gpu?.gpuFrameMs === null || gpu?.gpuFrameMs === undefined ? 'n/a' : gpu.gpuFrameMs.toFixed(1) + 'ms'} | Boss atlas ${gpu?.bossTextureMB ?? 0}MB`
           perf.windowStart = time
           perf.frames = 0
           perf.ticks = 0
@@ -6929,6 +6892,7 @@ export function GradiusRaid({
           perf.bossMs = 0
         }
       } else {
+        frameTimingsRef.current!.reset()
         perf.windowStart = 0
         perf.frames = 0
         perf.ticks = 0
@@ -6958,9 +6922,6 @@ export function GradiusRaid({
       } else if (rafRef.current === 0) {
         // Reset last-time so the first tick after resuming doesn't produce a huge dt spike.
         lastTimeRef.current = performance.now()
-        frameClockRef.current.lastRafTime = 0
-        frameClockRef.current.accumulatedMs = 0
-        perfBudgetRef.current.lastDraw = 0
         rafRef.current = requestAnimationFrame(tick)
       }
     }
@@ -7283,13 +7244,13 @@ export function GradiusRaid({
       }}
     >
       {sameScreenAlly ? (
-        <div className="raid__hud raid__hud--same-screen">
+        <div className="raid__hud raid__hud--same-screen" inert={snapshot.phase !== 'playing'}>
           {renderPilotHud(player, 'p1', 'P1', hudText.space)}
-          <button className="raid__pause raid__pause--center" type="button" onClick={pauseGame}>{hudText.pause}</button>
+          <button className="raid__pause raid__pause--center" type="button" onClick={pauseGame} aria-label={hudText.pause} title={`${hudText.pause} (Esc)`}><span className="raid__pause-mark" aria-hidden="true">Ⅱ</span></button>
           {renderPilotHud(sameScreenAlly, 'p2', 'P2', 'Shift')}
         </div>
       ) : (
-        <div className="raid__hud">
+        <div className="raid__hud" inert={snapshot.phase !== 'playing'}>
           <div className="raid__stat">
             <span>{hudText.score}</span>
             <b>{player.score.toLocaleString()}</b>
@@ -7323,17 +7284,12 @@ export function GradiusRaid({
             disabled={!nukeReady}
             aria-label={nukeReady ? specialLaunchLabel : nukeStageLocked ? specialLockedLabel : snapshot.phase === 'playing' ? `${specialCoolingLabel} ${nukeCooldown} ${hudText.seconds}` : specialAvailableLabel}
           >
-            <span className="raid__nuke-mark" aria-hidden="true">
-              <i />
-              <i />
-              <i />
-            </span>
             <span className="raid__nuke-text">
               <b>{nukeDisplay}</b>
               <small>{nukeHint}</small>
             </span>
           </button>
-          <button className="raid__pause" type="button" onClick={pauseGame}>{hudText.pause}</button>
+          <button className="raid__pause" type="button" onClick={pauseGame} aria-label={hudText.pause} title={`${hudText.pause} (Esc)`}><span className="raid__pause-mark" aria-hidden="true">Ⅱ</span></button>
         </div>
       )}
 
@@ -7365,11 +7321,6 @@ export function GradiusRaid({
           onClick={() => activateNuke()}
           aria-label={specialLaunchLabel}
         >
-          <span className="raid__nuke-quick-mark" aria-hidden="true">
-            <i />
-            <i />
-            <i />
-          </span>
           <span className="raid__nuke-quick-text">{specialLabel}</span>
         </button>
       )}
@@ -7419,7 +7370,7 @@ export function GradiusRaid({
       )}
 
       {snapshot.phase !== 'playing' && snapshot.phase === 'paused' && (
-        <div className="raid__overlay">
+        <GameDialog className="raid__overlay" aria-label={menuText.paused} onDismiss={canControlOverlay ? resumeGame : undefined}>
           <div className="raid__panel raid__panel--pause">
             <div className="raid__kicker">{menuText.combatHold}</div>
             <h2>{menuText.paused}</h2>
@@ -7428,17 +7379,17 @@ export function GradiusRaid({
               <span>{hudText.score} {player.score.toLocaleString()}</span>
             </div>
             <div className="raid__pause-actions">
-              {canControlOverlay ? <button type="button" className="raid__start" onClick={resumeGame}>{menuText.continue}</button> : null}
+              {canControlOverlay ? <button type="button" className="raid__start" data-dialog-dismiss onClick={resumeGame}>{menuText.continue}</button> : null}
               <button type="button" className="raid__menu-button" onClick={() => setSettingsOpen(true)}>{menuText.settings}</button>
               {canControlOverlay ? <button type="button" className="raid__menu-button" onClick={() => resetGame()}>{menuText.restart}</button> : null}
-              <button type="button" className="raid__menu-button" onClick={exitRaid}>{hudText.exit}</button>
+              <button type="button" className="raid__menu-button" data-dialog-dismiss onClick={exitRaid}>{hudText.exit}</button>
             </div>
           </div>
-        </div>
+        </GameDialog>
       )}
 
       {settingsOpen && (snapshot.phase === 'paused' || snapshot.phase === 'select' || snapshot.phase === 'gameover') && (
-        <div className="raid__settings-overlay" role="dialog" aria-modal="true" aria-label={menuText.settings}>
+        <GameDialog className="raid__settings-overlay" aria-label={menuText.settings} onDismiss={() => setSettingsOpen(false)}>
           <div className="raid__panel raid__panel--settings">
             <div className="raid__kicker">{menuText.settings}</div>
             <h2>{menuText.audioSettings}</h2>
@@ -7449,6 +7400,7 @@ export function GradiusRaid({
                   <button
                     key={q}
                     type="button"
+                    aria-pressed={graphicsQuality === q}
                     className={graphicsQuality === q ? 'raid__gfx-btn raid__gfx-btn--active' : 'raid__gfx-btn'}
                     onClick={() => applyGraphicsQuality(q)}
                   >
@@ -7487,14 +7439,14 @@ export function GradiusRaid({
               </div>
             </div>
             <div className="raid__pause-actions">
-              <button type="button" className="raid__start" onClick={() => setSettingsOpen(false)}>{menuText.close}</button>
+              <button type="button" className="raid__start" data-dialog-dismiss onClick={() => setSettingsOpen(false)}>{menuText.close}</button>
             </div>
           </div>
-        </div>
+        </GameDialog>
       )}
 
       {difficultyOpen && (snapshot.phase === 'paused' || snapshot.phase === 'select' || snapshot.phase === 'gameover') && (
-        <div className="raid__settings-overlay" role="dialog" aria-modal="true" aria-label={menuText.selectDifficulty}>
+        <GameDialog className="raid__settings-overlay" aria-label={menuText.selectDifficulty} onDismiss={() => setDifficultyOpen(false)}>
           <div className="raid__panel raid__panel--settings raid__panel--difficulty">
             <div className="raid__kicker">{menuText.difficulty}</div>
             <h2>{menuText.selectDifficulty}</h2>
@@ -7504,6 +7456,7 @@ export function GradiusRaid({
                   <button
                     key={option.key}
                     type="button"
+                    aria-pressed={selectedDifficulty === option.key}
                     className={`raid__difficulty-card raid__difficulty-card--${option.key}${selectedDifficulty === option.key ? ' raid__difficulty-card--active' : ''}`}
                     onClick={() => { setSelectedDifficulty(option.key); raidDifficultyRef.current = option.key }}
                   >
@@ -7514,10 +7467,10 @@ export function GradiusRaid({
               </div>
             </div>
             <div className="raid__pause-actions">
-              <button type="button" className="raid__start" onClick={() => setDifficultyOpen(false)}>{menuText.close}</button>
+              <button type="button" className="raid__start" data-dialog-dismiss onClick={() => setDifficultyOpen(false)}>{menuText.close}</button>
             </div>
           </div>
-        </div>
+        </GameDialog>
       )}
 
       {snapshot.phase === 'briefing' && (
@@ -7703,7 +7656,7 @@ export function GradiusRaid({
                   {menuText.startNewLaunch}
                 </button>
               ) : null}
-              <button type="button" className="raid__menu-button" onClick={exitRaid}>
+              <button type="button" className="raid__menu-button" data-dialog-dismiss onClick={exitRaid}>
                 {menuText.close}
               </button>
             </div>
@@ -7712,7 +7665,7 @@ export function GradiusRaid({
       )}
 
       {stagePickerOpen && !isEndlessRun && !isBossRushRun && snapshot.phase !== 'playing' && snapshot.phase !== 'paused' && snapshot.phase !== 'briefing' && snapshot.phase !== 'victory' && (
-        <div className="raid__stage-modal" role="dialog" aria-modal="true" aria-label={menuText.selectStageTitle}>
+        <GameDialog className="raid__stage-modal" aria-label={menuText.selectStageTitle} onDismiss={() => setStagePickerOpen(false)}>
           <div className="raid__stage-modal-panel">
             <div className="raid__kicker">{menuText.selectStageTitle}</div>
             <div className="raid__stage-select raid__stage-select--modal">
@@ -7731,12 +7684,12 @@ export function GradiusRaid({
               ))}
             </div>
             <div className="raid__pause-actions">
-              <button type="button" className="raid__menu-button raid__menu-button--wide" onClick={() => setStagePickerOpen(false)}>
+              <button type="button" className="raid__menu-button raid__menu-button--wide" data-dialog-dismiss onClick={() => setStagePickerOpen(false)}>
                 {menuText.back}
               </button>
             </div>
           </div>
-        </div>
+        </GameDialog>
       )}
       {snapshot.phase !== 'playing' && snapshot.phase !== 'paused' && snapshot.phase !== 'briefing' && snapshot.phase !== 'victory' && (
         <div className="raid__overlay">
@@ -7760,6 +7713,7 @@ export function GradiusRaid({
                         locked ? 'raid__ship-card--locked' : '',
                       ].filter(Boolean).join(' ')}
                       disabled={locked}
+                      aria-pressed={selectedShipKey === ship.key}
                       onClick={() => {
                         if (!locked) chooseShip(ship)
                       }}
@@ -7803,7 +7757,7 @@ export function GradiusRaid({
                 <button type="button" className="raid__start" onClick={exitRaid}>{menuText.exitCoop}</button>
               )}
               {canControlOverlay ? (
-                <button type="button" className="raid__menu-button" onClick={exitRaid}>{hudText.exit}</button>
+                <button type="button" className="raid__menu-button" data-dialog-dismiss onClick={exitRaid}>{hudText.exit}</button>
               ) : null}
             </div>
           </div>

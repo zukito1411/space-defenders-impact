@@ -1,27 +1,27 @@
-# Air Raid hybrid GPU foreground (v14+)
+# Gradius Raid hybrid foreground renderer
 
-Air Raid now uses **one PixiJS WebGL renderer** for both world scenery and high-volume foreground actors, while retaining the transparent Canvas 2D overlay for advanced boss and player presentation.
+One Pixi/WebGL application draws scenery and the foreground. A transparent Canvas overlay keeps the existing player presentation, animated bosses, scripted attacks and warning telegraphs.
 
-## Migrated to Pixi/WebGL
+## Atlas-based effects
 
-- Regular alien ships use pooled Pixi sprites. Their color treatment is prepared once into small, bounded texture buckets; image placement and a subtle brightness pulse happen in the GPU sprite batch.
-- Alien glows share cached textures rather than repeatedly drawing Canvas radial filters.
-- Common player and enemy bullets use cached orb/trail textures, a shared GPU container and a bounded pool of 192 inactive sprites. Guest client-side predicted shots are handled separately from host shots.
-- Sparks and ripples use one additive Pixi Graphics layer instead of individual Canvas draws.
-- The same Pixi application presents updated background scenery and foreground actors once per game frame. Background geometry retains its lower refresh schedule and foreground positions update on each animation frame.
-- Actual viewport dimensions and the existing 64–144 CSS-pixel overscan decide which GPU objects become visible.
-- Invisible objects remain in the authoritative simulation until their own physics, collision, stage or lifetime logic ends.
+`combatArt.ts` loads two shared RGBA sources and derives frame textures without duplicating image backing storage. The projectile sheet provides plasma filaments, metal warheads, ion needles, enemy energy, ink, poison vapor, sparks, shock fronts and impact coronas. The explosion sheet provides sixteen frames from ignition through fire and smoke. See [artwork and prompts](raid-combat-artwork.md).
 
-## Preserved in Canvas 2D
+Generated materials replace repeated per-projectile Canvas gradients for common weapons. Beams with gameplay-specific geometry, Core Lander attacks, Spiegel attacks and the animated boss bodies keep their original presentation paths. Boss beam dimensions and warning placement are unchanged.
 
-Player and ally ships, mini-bosses and bosses, sophisticated weapon animations, long beam columns, attack warnings and full-screen cutscene overlays still render in Canvas 2D. Their combat logic and hitboxes are unchanged. This is an incremental migration, not a pixel-identical full engine replacement.
+Each live projectile owns a reused sprite keyed by its numeric ID and source namespace. Additive energy and normally blended missile/vapor art are grouped separately. Short local muzzle flashes use the particle reserve; delayed remote snapshots do not generate mid-flight muzzle flashes.
 
-## Runtime safety
+Impact visuals derive from existing ripple ages and colors. Warm large impacts animate fire and smoke; energy impacts use a corona. Existing rings and spark counts remain. The effect renderer does not add collision objects, change damage, or expand multiplayer messages.
 
-If WebGL initialization or the GPU actor scene fails, the gameplay Canvas path continues drawing actors, while Pixi scenery is presented if possible. GPU sprite instances are recycled in bounded pools. Unused texture entries are retired without deleting the shared Canvas sprite cache contents.
+## Preparation and lifetime
 
-The static art of normal aliens uses a baked filter with slight GPU-based pulsing, which is visually close to but not pixel-identical to the previous animated Canvas color filter. Existing effects layering may differ slightly when the advanced Canvas layer overlaps GPU actors.
+The asset preloader decodes both atlases. The foreground creates warm sprite reserves, bakes the normal-alien variants and fallback boss projectile textures, then uploads textures through `renderer.prepare.upload`. Local launch waits for that preparation. Texture preparation stays outside live attack bursts.
 
-## Profiling and remaining work
+Atlas frames share globally cached sources, so destroying a raid scene does not destroy those shared images. Scene-owned fallback rasters and sprite nodes are released by foreground teardown. Texture-cache maintenance reuses a scratch set and runs at most once per second when needed.
 
-The JavaScript/TypeScript and Android APK CI pipelines validate compilation and packaging, **not measured on-device FPS**. Test a normal wave, several dozen incoming shots, a boss fight and co-op on the same phone. Profile p50/p95/p99 frame times and first-time GPU uploads. Further candidates include complex projectile effects and cached ship/boss textures, provided draw-order regressions are addressed.
+A failed atlas load preserves the original art path. Failed GPU foreground initialization/rendering leaves the Canvas path available. This fallback retains the original appearance; it is not a measured performance guarantee.
+
+## Presentation cadence
+
+Every visible animation-frame callback presents the scene. There is no automatic 60/30 FPS scheduler or adaptive resolution reduction. Quality follows the player's explicit selection. Background geometry keeps its existing cache cadence while world and combat sprites move each frame.
+
+The optional performance HUD includes callback-interval percentiles and asynchronous GPU timing. TypeScript checks establish compilation only. Visual equivalence, effect readability, device FPS, memory and thermal behavior require a later runtime comparison.

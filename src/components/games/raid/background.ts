@@ -855,6 +855,10 @@ export function getRaidCameraShakeOffset(shake: CameraShakeState, time: number, 
 
 export class PixiRaidBackground {
   private app: Application | null = null
+  private destroyed = false
+  private renderErrorReported = false
+  private foregroundPrepared = false
+  private cancelForegroundPreparation: (() => void) | null = null
   private readonly scene = new Container()
   private readonly gpuForeground = new RaidGpuForeground()
   private readonly baseGraphics = new Graphics()
@@ -888,7 +892,7 @@ export class PixiRaidBackground {
   private baseKey = ''
   private starfieldKey = ''
   private ambientGlowKey = ''
-  // Large Pixi vector layers do not need tessellation on every 60Hz frame.
+  // Large Pixi vector layers do not need tessellation on every display frame.
   // Moving stars, planets and world sprites still update each display frame.
   private geometryCacheKey = ''
   private lastGeometryUpdateMs = Number.NEGATIVE_INFINITY
@@ -898,7 +902,7 @@ export class PixiRaidBackground {
   private gpuTimerGl: WebGL2RenderingContext | null = null
   private gpuTimerExt: { TIME_ELAPSED_EXT: number; GPU_DISJOINT_EXT: number } | null = null
   private gpuTimerQuery: WebGLQuery | null = null
-  private gpuTimerFrames = 0
+  private lastGpuSampleTime = 0
   private gpuTimerDisabled = false
   private lastGpuElapsedMs: number | null = null
 
@@ -914,7 +918,14 @@ export class PixiRaidBackground {
         autoStart: false,
         antialias: false,
         preference: 'webgl',
+        powerPreference: 'high-performance',
       })
+      // React can unmount this instance while WebGL initialization is pending.
+      // Never let an obsolete instance replace the current instance's canvas.
+      if (this.destroyed) {
+        app.destroy({ removeView: true }, { children: true })
+        return false
+      }
       this.app = app
       app.stage.addChild(this.scene)
       app.stage.addChild(this.gpuForeground.root)
@@ -952,14 +963,35 @@ export class PixiRaidBackground {
       host.textContent = ''
       host.appendChild(canvas)
       await this.loadAssets()
+      if (this.app !== app) return false
+      const cancelled = new Promise<boolean>((resolve) => {
+        this.cancelForegroundPreparation = () => resolve(false)
+      })
+      const prepared = await Promise.race([
+        this.gpuForeground.prepare(app.renderer).then(() => true).catch((error: unknown) => {
+          if (!this.destroyed) console.warn('Raid GPU foreground preparation failed; using Canvas combat rendering:', error)
+          return false
+        }),
+        cancelled,
+      ])
+      this.cancelForegroundPreparation = null
+      if (this.app !== app) return false
+      this.foregroundPrepared = prepared
+      if (!prepared) this.gpuForeground.root.visible = false
       return true
-    } catch {
+    } catch (error) {
+      if (!this.destroyed) console.warn('Raid WebGL renderer initialization failed:', error)
       this.destroy()
       return false
     }
   }
 
   destroy() {
+    if (this.destroyed) return
+    this.destroyed = true
+    this.foregroundPrepared = false
+    this.cancelForegroundPreparation?.()
+    this.cancelForegroundPreparation = null
     if (this.gpuTimerGl && this.gpuTimerQuery) {
       try { this.gpuTimerGl.deleteQuery(this.gpuTimerQuery) } catch { /* context lost */ }
       this.gpuTimerQuery = null
@@ -1048,7 +1080,11 @@ export class PixiRaidBackground {
       // Present with the foreground once per rAF, not twice. Geometry,
       // scenery and textures are updated here on their existing cadence.
       return true
-    } catch {
+    } catch (error) {
+      if (!this.renderErrorReported) {
+        this.renderErrorReported = true
+        console.warn('Raid background update failed:', error)
+      }
       return false
     }
   }
@@ -1061,8 +1097,8 @@ export class PixiRaidBackground {
 
   getRaidGpuStats() { return { ...this.gpuForeground.getStats(), gpuFrameMs: this.lastGpuElapsedMs } }
 
-  private renderWithGpuTimer(app: Application) {
-    if (this.gpuTimerDisabled) { app.render(); return }
+  private renderWithGpuTimer(app: Application, measure: boolean, time: number) {
+    if (!measure || this.gpuTimerDisabled) { app.render(); return }
     try {
       if (!this.gpuTimerGl) {
         // Pixi can use WebGL1, where the WebGL2 timer API is unavailable.
@@ -1092,11 +1128,12 @@ export class PixiRaidBackground {
           this.gpuTimerQuery = null
         }
       }
-      // Sample at ~3Hz, avoiding per-frame query allocations or a GPU sync.
-      const sample = gl && ext && !this.gpuTimerQuery && ++this.gpuTimerFrames % 20 === 0
+      // Time-based sampling stays cheap even on 144/240 Hz screens. No GPU wait.
+      const sample = gl && ext && !this.gpuTimerQuery && time - this.lastGpuSampleTime >= 300
       if (sample) {
         const query = gl!.createQuery()
         if (query) {
+          this.lastGpuSampleTime = time
           gl!.beginQuery(ext!.TIME_ELAPSED_EXT, query)
           this.gpuTimerQuery = query
           try { app.render() } finally { gl!.endQuery(ext!.TIME_ELAPSED_EXT) }
@@ -1115,13 +1152,17 @@ export class PixiRaidBackground {
   renderForeground(frame: RaidGpuForegroundFrame) {
     const app = this.app
     if (!app) return false
-    const foregroundReady = this.gpuForeground.update(frame)
+    const foregroundReady = this.foregroundPrepared && this.gpuForeground.update(frame)
     try {
       // Present scenery even if the GPU actor layer fails; Canvas will draw
       // those actors itself, avoiding a black screen on unsupported devices.
-      this.renderWithGpuTimer(app)
+      this.renderWithGpuTimer(app, frame.measureGpu, frame.time)
       return foregroundReady
-    } catch {
+    } catch (error) {
+      if (!this.renderErrorReported) {
+        this.renderErrorReported = true
+        console.warn('Raid WebGL rendering failed:', error)
+      }
       this.gpuForeground.root.visible = false
       return false
     }

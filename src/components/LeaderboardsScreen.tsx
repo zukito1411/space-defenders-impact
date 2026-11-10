@@ -7,6 +7,7 @@ import {
   type LeaderboardMode,
 } from '../leaderboards'
 import { getLanguageText, type LanguageCode } from '../i18n'
+import { GameButton } from './ui/GameButton'
 
 type LeaderboardsScreenProps = {
   playerName: string
@@ -51,23 +52,25 @@ export function LeaderboardsScreen({ playerName, language, onBack }: Leaderboard
       <div className="leaderboards-screen__stars" />
       <div className="leaderboards-screen__shell">
         <header className="leaderboards-screen__header">
-          <button className="leaderboards-screen__back" onClick={onBack}>
+          <GameButton tone="quiet" className="leaderboards-screen__back" onClick={onBack}>
             {text.back}
-          </button>
+          </GameButton>
           <div>
             <span className="leaderboards-screen__eyebrow">{text.eyebrow}</span>
             <h1>{text.title}</h1>
             <p>{text.signedIn} <strong>{playerName}</strong></p>
           </div>
-          <button className="leaderboards-screen__refresh" onClick={loadLeaderboards} disabled={loading}>
+          <GameButton className="leaderboards-screen__refresh" onClick={loadLeaderboards} disabled={loading}>
             {loading ? text.syncing : text.refresh}
-          </button>
+          </GameButton>
         </header>
 
         <div className="leaderboards-screen__modes" aria-label="Leaderboard modes">
           {LEADERBOARD_MODES.map((mode) => (
             <button
               key={mode.key}
+              type="button"
+              aria-pressed={activeMode === mode.key}
               className={`leaderboards-screen__mode${activeMode === mode.key ? ' leaderboards-screen__mode--active' : ''}`}
               onClick={() => setActiveMode(mode.key)}
             >

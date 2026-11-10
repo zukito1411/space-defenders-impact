@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type * as React from 'react'
+import { GameDialog } from '../ui/GameDialog'
 import { getGameAudioMixSettings, getGameSoundEnabled, getGraphicsQuality, playGameSound, setGameAudioMixSettings, setGameSoundEnabled, setGraphicsQuality, startBGM, stopBGM } from './sound'
 import type { AudioMixSettings, GraphicsQuality } from './sound'
 import type { CoinOption } from './types'
@@ -2151,7 +2152,7 @@ export function SpaceImpactDefense({ availableCoins, onClose, initialMode = 'nor
           100% { transform: translate(-50%, -50%) scale(2.4); opacity: 0; }
         }
       `}</style>
-      <div ref={gameRootRef} style={{
+      <div className={`defense-game${isCompact ? ' defense-game--compact' : ''}`} ref={gameRootRef} style={{
       position: 'fixed', inset: 0, zIndex: 1000,
       background: 'radial-gradient(120% 180% at 10% 0%, #203228 0%, #0c1411 42%, #070b09 100%)',
       display: 'flex', flexDirection: 'column',
@@ -2165,30 +2166,29 @@ export function SpaceImpactDefense({ availableCoins, onClose, initialMode = 'nor
           position: 'fixed',
           inset: 0,
           pointerEvents: 'none',
-          background: 'repeating-linear-gradient(0deg, #00000000 0 10px, #00ff7a0a 10px 12px)',
-          animation: 'scanline 4s linear infinite',
+          background: 'repeating-linear-gradient(0deg, transparent 0 10px, #73e5ee05 10px 11px)',
           zIndex: 0,
         }} />
       )}
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: (isCompact || isLandscapeMobile) ? 3 : 6, width: '100%', maxWidth: chromeMaxW, position: 'relative', zIndex: 1, flexShrink: 0 }}>
-        <button onClick={closeDefenseGame} style={btnStyle('#3a120f', '#f9d7bf')} aria-label={defenseText.close}>X</button>
-        <div style={{ flex: 1, textAlign: 'center', fontWeight: 900, fontSize: isCompact ? '0.9rem' : '1.05rem', color: '#ffcf86', letterSpacing: 1.6, whiteSpace: 'nowrap', textTransform: 'uppercase', textShadow: '0 0 12px #ff7b2f66' }}>
+      <div className="defense-header" style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: (isCompact || isLandscapeMobile) ? 3 : 6, width: '100%', maxWidth: chromeMaxW, position: 'relative', zIndex: 1, flexShrink: 0 }}>
+        <button type="button" className="defense-header__exit" onClick={closeDefenseGame} style={btnStyle('#3a120f', '#f9d7bf')} aria-label={defenseText.close}>{defenseText.close}</button>
+        <div className="defense-header__title" style={{ flex: 1, textAlign: 'center', fontWeight: 900, fontSize: isCompact ? '0.9rem' : '1.05rem', color: '#ffcf86', letterSpacing: 1.6, whiteSpace: 'nowrap', textTransform: 'uppercase', textShadow: '0 0 12px #ff7b2f66' }}>
           {defenseText.title}
         </div>
-        <button onClick={() => setShowSettingsModal(true)} style={btnStyle('#2d2148', '#d3c6ff')} aria-label={defenseText.settings}>{defenseText.settings}</button>
+        <button onClick={() => setShowSettingsModal(true)} style={btnStyle('#2d2148', '#d3c6ff')} aria-label={defenseText.settings}><span>{defenseText.settings}</span></button>
       </div>
 
       {/* Stats row */}
-      <div style={{ display: 'grid', gridTemplateColumns: isCompact ? 'repeat(2,minmax(0,1fr))' : 'repeat(4,minmax(0,1fr))', gap: (isCompact || isLandscapeMobile) ? 4 : 8, alignItems: 'stretch', width: '100%', maxWidth: chromeMaxW, marginBottom: (isCompact || isLandscapeMobile) ? 4 : 8, position: 'relative', zIndex: 1, flexShrink: 0 }}>
-        <StatPill icon={defenseText.stats.credits} val={uiGold} color="#ffd666" />
-        <StatPill icon={defenseText.stats.hull} val={uiLives} color="#fb7185" />
-        <StatPill icon={defenseText.stats.score} val={uiScore} color="#18e6c4" />
-        <StatPill icon={defenseText.stats.best} val={uiHighScore} color="#7c5dff" />
+      <div className="defense-stats" style={{ display: 'grid', gridTemplateColumns: isCompact ? 'repeat(2,minmax(0,1fr))' : 'repeat(4,minmax(0,1fr))', gap: (isCompact || isLandscapeMobile) ? 4 : 8, alignItems: 'stretch', width: '100%', maxWidth: chromeMaxW, marginBottom: (isCompact || isLandscapeMobile) ? 4 : 8, position: 'relative', zIndex: 1, flexShrink: 0 }}>
+        <StatPill label={defenseText.stats.credits} val={uiGold} color="#ffd666" />
+        <StatPill label={defenseText.stats.hull} val={uiLives} color="#fb7185" />
+        <StatPill label={defenseText.stats.score} val={uiScore} color="#18e6c4" />
+        <StatPill label={defenseText.stats.best} val={uiHighScore} color="#7c5dff" />
       </div>
 
       {/* Wave bar */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: (isCompact || isLandscapeMobile) ? 4 : 8, width: '100%', maxWidth: chromeMaxW, flexWrap: isCompact ? 'wrap' : 'nowrap', position: 'relative', zIndex: 1, background: '#101714', border: '1px solid #335545', borderRadius: 6, padding: (isCompact || isLandscapeMobile) ? '4px 6px' : '6px 8px', boxShadow: 'inset 0 0 0 1px #00000088', flexShrink: 0 }}>
+      <div className="defense-wavebar" style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: (isCompact || isLandscapeMobile) ? 4 : 8, width: '100%', maxWidth: chromeMaxW, flexWrap: isCompact ? 'wrap' : 'nowrap', position: 'relative', zIndex: 1, background: '#101714', border: '1px solid #335545', borderRadius: 6, padding: (isCompact || isLandscapeMobile) ? '4px 6px' : '6px 8px', boxShadow: 'inset 0 0 0 1px #00000088', flexShrink: 0 }}>
         <span style={{ color: '#b9d7c8', fontSize: isCompact ? '0.75rem' : '0.86rem', whiteSpace: 'nowrap' }}>
           {uiEndless
             ? <><b style={{ color: '#ff8800' }}>{defenseText.mode.endless}</b> | {defenseText.mode.stage} <b style={{ color: '#ff8800' }}>{uiStage}</b> | {defenseText.mode.wave} <b style={{ color: '#ffd666' }}>{uiWave}</b>/{WAVES_PER_STAGE}</>
@@ -2199,10 +2199,10 @@ export function SpaceImpactDefense({ availableCoins, onClose, initialMode = 'nor
         </div>
         {canStartWave && !isOver && (
           <div style={{ display: 'flex', gap: 6 }}>
-            <button onClick={startWave} style={btnStyle(isBossNextWave ? '#8a1f1f' : '#194a34', '#f8ffe7', true)}>
+            <button className="defense-launch" onClick={startWave} style={btnStyle(isBossNextWave ? '#8a1f1f' : '#194a34', '#f8ffe7', true)}>
               {isBossNextWave ? `${defenseText.controls.bossWave} ${nextWaveNum}` : uiState === 'idle' ? defenseText.controls.startWaveOne : `${defenseText.controls.startWave} ${nextWaveNum}`}
             </button>
-            <button onClick={() => setAutoPlayWave(!autoPlayWave)} title={autoPlayWave ? defenseText.controls.disableAuto : defenseText.controls.enableAuto} style={btnStyle(autoPlayWave ? '#6f5b2d' : '#3b3f45', '#fff', true)}>
+            <button aria-pressed={autoPlayWave} onClick={() => setAutoPlayWave(!autoPlayWave)} title={autoPlayWave ? defenseText.controls.disableAuto : defenseText.controls.enableAuto} style={btnStyle(autoPlayWave ? '#6f5b2d' : '#3b3f45', '#fff', true)}>
               {autoPlayWave ? defenseText.controls.auto : defenseText.controls.manual}
             </button>
           </div>
@@ -2210,14 +2210,14 @@ export function SpaceImpactDefense({ availableCoins, onClose, initialMode = 'nor
         {uiState === 'wave' && (
           <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
             <span style={{ color: '#ffd666', fontWeight: 700 }}>{defenseText.controls.waveInProgress}</span>
-            <button onClick={() => setAutoPlayWave(!autoPlayWave)} title={autoPlayWave ? defenseText.controls.disableAuto : defenseText.controls.enableAuto} style={btnStyle(autoPlayWave ? '#6f5b2d' : '#3b3f45', '#fff', true)}>
+            <button aria-pressed={autoPlayWave} onClick={() => setAutoPlayWave(!autoPlayWave)} title={autoPlayWave ? defenseText.controls.disableAuto : defenseText.controls.enableAuto} style={btnStyle(autoPlayWave ? '#6f5b2d' : '#3b3f45', '#fff', true)}>
               {autoPlayWave ? defenseText.controls.auto : defenseText.controls.manual}
             </button>
           </div>
         )}
       </div>
 
-      <div style={{
+      <div className="defense-commandbar" style={{
         display: isCompact ? 'flex' : 'grid',
         gridTemplateColumns: isCompact ? undefined : 'repeat(5,minmax(0,1fr))',
         gap: isCompact ? 5 : 6,
@@ -2251,6 +2251,7 @@ export function SpaceImpactDefense({ availableCoins, onClose, initialMode = 'nor
       <div style={{ display: 'flex', flexDirection: isCompact ? 'column' : 'row', alignItems: isCompact ? 'center' : 'flex-start', gap: isCompact ? 4 : 8, width: '100%', maxWidth: chromeMaxW, position: 'relative', zIndex: 1, flex: isCompact ? 1 : undefined, minHeight: isCompact ? 0 : undefined, overflow: (isCompact || isLandscapeMobile) ? 'hidden' : undefined, flexShrink: isLandscapeMobile ? 0 : undefined }}>
         {/* Board */}
         <div
+          className="defense-board"
           ref={boardRef}
           style={{
             position: 'relative', width: boardW, height: boardH, flexShrink: 0, border: '2px solid #4c6f5c', borderRadius: 4, overflow: 'hidden', userSelect: 'none',
@@ -2938,7 +2939,7 @@ export function SpaceImpactDefense({ availableCoins, onClose, initialMode = 'nor
 
           {/* Overlay: stage_complete */}
           {uiState === 'stage_complete' && (
-            <div style={{
+            <div className="defense-stage-clear" style={{
               position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.80)',
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12,
               zIndex: 130,
@@ -3227,7 +3228,7 @@ export function SpaceImpactDefense({ availableCoins, onClose, initialMode = 'nor
 
           {/* Overlay: gameover / victory */}
           {isOver && (
-            <div style={{
+            <div className="defense-end-screen" style={{
               position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)',
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14,
               zIndex: 135,
@@ -3243,7 +3244,7 @@ export function SpaceImpactDefense({ availableCoins, onClose, initialMode = 'nor
               }}>
                 {uiState === 'victory' ? (
                   <>
-                    <div style={{ fontSize: '2.5rem', fontWeight: 900, color: '#18e6c4' }}>🏆 {defenseText.overlays.victory}</div>
+                    <div style={{ fontSize: '2.5rem', fontWeight: 900, color: '#18e6c4' }}>{defenseText.overlays.victory}</div>
                     <div style={{ color: '#ddd', fontSize: '0.95rem' }}>{defenseText.overlays.conquered}</div>
                     <div style={{ color: '#ff8800', fontWeight: 900, fontSize: '1rem', textTransform: 'uppercase', letterSpacing: 1 }}>{defenseText.overlays.unlockedEndless}</div>
                     <div style={{ color: '#ffd666', fontWeight: 800, fontSize: '1.1rem' }}>{defenseText.overlays.score}: {uiScore.toLocaleString()}</div>
@@ -3252,7 +3253,7 @@ export function SpaceImpactDefense({ availableCoins, onClose, initialMode = 'nor
                   </>
                 ) : (
                   <>
-                    <div style={{ fontSize: '2.5rem', fontWeight: 900, color: '#fb7185' }}>💥 {defenseText.overlays.gameOver}</div>
+                    <div style={{ fontSize: '2.5rem', fontWeight: 900, color: '#fb7185' }}>{defenseText.overlays.gameOver}</div>
                     <div style={{ color: '#ddd', fontSize: '1.1rem' }}>{defenseText.overlays.score}: <b style={{ color: '#ffd666' }}>{uiScore.toLocaleString()}</b></div>
                     <div style={{ color: '#aaa', fontSize: '0.9rem' }}>{defenseText.overlays.best}: {uiHighScore.toLocaleString()}</div>
                     <button type="button" onClick={restart} style={btnStyle('#18e6c4', '#000', true)}>↺ {defenseText.overlays.playAgain}</button>
@@ -3264,15 +3265,21 @@ export function SpaceImpactDefense({ availableCoins, onClose, initialMode = 'nor
         </div>
 
         {/* Sidebar */}
-        <div style={{ flex: isCompact ? 1 : isLandscapeMobile ? 1 : '0 0 auto', minWidth: isCompact ? boardW : 0, width: isCompact ? boardW : undefined, display: 'flex', flexDirection: 'column', gap: isCompact ? 3 : 6, minHeight: 0, overflow: 'hidden', maxHeight: isLandscapeMobile ? boardH : undefined, overflowY: isLandscapeMobile ? 'auto' : undefined }}>
+        <div className="defense-sidebar" style={{ flex: isCompact ? 1 : isLandscapeMobile ? 1 : '0 0 auto', minWidth: isCompact ? boardW : 0, width: isCompact ? boardW : undefined, display: 'flex', flexDirection: 'column', gap: isCompact ? 3 : 6, minHeight: 0, overflow: 'hidden', maxHeight: isLandscapeMobile ? boardH : undefined, overflowY: isLandscapeMobile ? 'auto' : undefined }}>
           {(!isCompact && !isLandscapeMobile) && <div style={{ color: '#aaa', fontSize: '0.78rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 }}>{defenseText.sidebar.deployShip}</div>}
-          <div style={{ display: 'grid', gridTemplateColumns: compactTowerShop ? 'repeat(5,minmax(0,1fr))' : isLandscapeMobile ? 'repeat(2,minmax(0,1fr))' : '1fr', gridTemplateRows: compactTowerShop ? 'repeat(2, 58px)' : undefined, gap: isCompact ? 4 : 5, flex: compactTowerShop ? '0 0 auto' : isCompact ? 1 : undefined, minHeight: isCompact ? 0 : undefined }}>
+          <div className="defense-shop" style={{ display: 'grid', gridTemplateColumns: compactTowerShop ? 'repeat(5,minmax(0,1fr))' : isLandscapeMobile ? 'repeat(2,minmax(0,1fr))' : '1fr', gridTemplateRows: compactTowerShop ? 'repeat(2, 58px)' : undefined, gap: isCompact ? 4 : 5, flex: compactTowerShop ? '0 0 auto' : isCompact ? 1 : undefined, minHeight: isCompact ? 0 : undefined }}>
             {TOWER_TYPES.map(t => {
               const isDreadnoughtCapped = t.key === 'dreadnought' && dreadnoughtLimitReached
               const towerCopy = getTowerText(t.key)
               return (
               <button
                 key={t.key}
+                type="button"
+                className="defense-tower"
+                aria-pressed={selectedTowerKey === t.key}
+                aria-label={`${towerCopy.label}, ${t.cost} ${defenseText.towerActions.cr}. ${towerCopy.desc}`}
+                data-unaffordable={uiGold < t.cost}
+                disabled={isDreadnoughtCapped && selectedTowerKey !== t.key}
                 onClick={() => {
                   if (isDreadnoughtCapped && selectedTowerKey !== t.key) {
                     playGameSound('hit')
@@ -3283,9 +3290,7 @@ export function SpaceImpactDefense({ availableCoins, onClose, initialMode = 'nor
                   setSelectedTowerOnGrid(null)
                 }}
                 style={{
-                  background: selectedTowerKey === t.key ? t.color + '33' : '#111',
-                  border: `2px solid ${selectedTowerKey === t.key ? t.color : '#333'}`,
-                  borderRadius: 8,
+                  '--tower-color': t.color,
                   padding: compactTowerShop ? '3px 4px' : isCompact ? '4px 5px' : '6px 7px',
                   cursor: isDreadnoughtCapped && selectedTowerKey !== t.key ? 'not-allowed' : 'pointer',
                   color: '#fff',
@@ -3293,13 +3298,12 @@ export function SpaceImpactDefense({ availableCoins, onClose, initialMode = 'nor
                   transition: 'all 0.15s',
                   height: isCompact ? '100%' : undefined,
                   boxSizing: 'border-box',
-                  opacity: isDreadnoughtCapped && selectedTowerKey !== t.key ? 0.55 : 1,
-                }}
+                } as React.CSSProperties}
               >
                 {isCompact ? (
                   /* Portrait compact: icon centred, name + cost + desc stacked */
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: compactTowerShop ? 1 : 2, height: '100%', width: '100%' }}>
-                    <div style={{
+                    <div className="defense-tower__art" style={{
                       width: compactTowerShop ? 24 : 28, height: compactTowerShop ? 24 : 28, borderRadius: 8,
                       border: `1px solid ${t.color}55`,
                       background: 'linear-gradient(180deg,#182330,#0a0f18)',
@@ -3308,14 +3312,14 @@ export function SpaceImpactDefense({ availableCoins, onClose, initialMode = 'nor
                     }}>
                       <TowerShip tType={t.key} color={t.color} size={compactTowerShop ? 16 : 18} />
                     </div>
-                    <span style={{ fontWeight: 800, color: t.color, fontSize: compactTowerShop ? '0.55rem' : '0.68rem', textAlign: 'center', lineHeight: 1.05, width: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{towerCopy.label}</span>
-                    <span style={{ color: '#ffd666', fontSize: compactTowerShop ? '0.52rem' : '0.62rem', fontWeight: 700, lineHeight: 1 }}>{t.key === 'dreadnought' ? `${t.cost} ${dreadnoughtFieldCount}/${DREADNOUGHT_FIELD_LIMIT}` : t.cost}</span>
+                    <span className="defense-tower__name" style={{ fontWeight: 800, color: t.color, fontSize: compactTowerShop ? '0.55rem' : '0.68rem', textAlign: 'center', lineHeight: 1.05, width: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{towerCopy.label}</span>
+                    <span className="defense-tower__cost" style={{ color: '#ffd666', fontSize: compactTowerShop ? '0.52rem' : '0.62rem', fontWeight: 700, lineHeight: 1 }}>{t.key === 'dreadnought' ? `${t.cost} ${dreadnoughtFieldCount}/${DREADNOUGHT_FIELD_LIMIT}` : t.cost}</span>
                     {!compactTowerShop && <span style={{ color: '#888', fontSize: '0.55rem', textAlign: 'center', lineHeight: 1.2, width: '100%', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{towerCopy.desc}</span>}
                   </div>
                 ) : (
                   /* Landscape mobile (2-col) and desktop (1-col): icon left, name + cost + desc on right */
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <div style={{
+                    <div className="defense-tower__art" style={{
                       width: isLandscapeMobile ? 32 : 44, height: isLandscapeMobile ? 32 : 44, borderRadius: 10,
                       border: `1px solid ${t.color}55`,
                       background: 'linear-gradient(180deg,#182330,#0a0f18)',
@@ -3326,8 +3330,8 @@ export function SpaceImpactDefense({ availableCoins, onClose, initialMode = 'nor
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 4 }}>
-                        <span style={{ fontWeight: 800, color: t.color, fontSize: isLandscapeMobile ? '0.76rem' : '0.85rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{towerCopy.label}</span>
-                        <span style={{ color: '#ffd666', fontSize: isLandscapeMobile ? '0.68rem' : '0.76rem', whiteSpace: 'nowrap', flexShrink: 0 }}>{defenseText.towerActions.cr} {t.cost}{t.key === 'dreadnought' ? ` | ${dreadnoughtFieldCount}/${DREADNOUGHT_FIELD_LIMIT}` : ''}</span>
+                        <span className="defense-tower__name" style={{ fontWeight: 800, color: t.color, fontSize: isLandscapeMobile ? '0.76rem' : '0.85rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{towerCopy.label}</span>
+                        <span className="defense-tower__cost" style={{ color: '#ffd666', fontSize: isLandscapeMobile ? '0.68rem' : '0.76rem', whiteSpace: 'nowrap', flexShrink: 0 }}>{defenseText.towerActions.cr} {t.cost}{t.key === 'dreadnought' ? ` | ${dreadnoughtFieldCount}/${DREADNOUGHT_FIELD_LIMIT}` : ''}</span>
                       </div>
                       <div style={{ color: '#888', fontSize: isLandscapeMobile ? '0.62rem' : '0.7rem', marginTop: 2, lineHeight: 1.3, whiteSpace: isLandscapeMobile ? 'nowrap' : undefined, overflow: 'hidden', textOverflow: 'ellipsis' }}>{towerCopy.desc}</div>
                     </div>
@@ -3339,7 +3343,7 @@ export function SpaceImpactDefense({ availableCoins, onClose, initialMode = 'nor
           </div>
 
           {isCompact && (
-            <div style={{
+            <div className="defense-selection" style={{
               minHeight: 42,
               borderRadius: 7,
               border: `1px solid ${selectedTowerDef ? selectedTowerDef.color + '88' : '#2f4b40'}`,
@@ -3381,44 +3385,8 @@ export function SpaceImpactDefense({ availableCoins, onClose, initialMode = 'nor
             </div>
           )}
 
-          {isCompact && (
-            <div style={{
-              flex: 1,
-              minHeight: 118,
-              marginTop: 4,
-              borderRadius: 8,
-              border: '1px solid #2f5f74',
-              background: 'linear-gradient(135deg,#07131f 0%,#0b2019 58%,#07110d 100%)',
-              boxShadow: 'inset 0 0 0 1px #000000aa, inset 0 0 28px #38bdf81a',
-              display: 'grid',
-              gridTemplateColumns: '96px 1fr',
-              alignItems: 'center',
-              gap: 10,
-              padding: '8px 10px',
-              overflow: 'hidden',
-              position: 'relative',
-            }}>
-              <div style={{ position: 'absolute', inset: 0, background: 'repeating-linear-gradient(0deg, transparent 0 9px, #38bdf80d 9px 10px)', pointerEvents: 'none' }} />
-              <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <EarthHQIcon size={82} />
-              </div>
-              <div style={{ position: 'relative', minWidth: 0 }}>
-                <div style={{ color: '#dff7ff', fontWeight: 900, fontSize: '0.86rem', letterSpacing: 1, textShadow: '0 0 10px #38bdf866' }}>{defenseText.sidebar.earthHq}</div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,minmax(0,1fr))', gap: 5, marginTop: 8 }}>
-                  <div style={{ color: '#9cc3b3', fontSize: '0.62rem', fontWeight: 800 }}>{defenseText.sidebar.level} <b style={{ color: '#ffd666' }}>{uiHqLevel}</b>/{HQ_MAX_LEVEL}</div>
-                  <div style={{ color: '#9cc3b3', fontSize: '0.62rem', fontWeight: 800 }}>{defenseText.sidebar.hull} <b style={{ color: '#fb7185' }}>{uiLives}</b>/{hqMaxLives}</div>
-                  <div style={{ color: '#9cc3b3', fontSize: '0.62rem', fontWeight: 800 }}>{defenseText.mode.modeLabel} <b style={{ color: uiEndless ? '#ff8800' : '#18e6c4' }}>{uiEndless ? defenseText.mode.endless : defenseText.mode.normal}</b></div>
-                  <div style={{ color: '#9cc3b3', fontSize: '0.62rem', fontWeight: 800 }}>{defenseText.mode.next} <b style={{ color: isBossNextWave ? '#ffb4b4' : '#8bffdf' }}>{isBossNextWave ? defenseText.mode.boss : defenseText.mode.wave}</b></div>
-                </div>
-                <div style={{ marginTop: 8, height: 7, borderRadius: 4, background: '#081018', border: '1px solid #24445c', overflow: 'hidden' }}>
-                  <div style={{ width: `${Math.max(0, Math.min(100, (uiLives / hqMaxLives) * 100))}%`, height: '100%', background: 'linear-gradient(90deg,#fb7185,#ffd666,#7dd3fc)', boxShadow: '0 0 10px #7dd3fc88' }} />
-                </div>
-              </div>
-            </div>
-          )}
-
           {selectedTowerOnGrid && !isCompact && !isLandscapeMobile && (
-            <div style={{ marginTop: 8, background: '#111', border: `2px solid ${selectedTowerOnGrid.towerDef.color}`, borderRadius: 8, padding: 10 }}>
+            <div className="defense-selection" style={{ marginTop: 8, background: '#111', border: `2px solid ${selectedTowerOnGrid.towerDef.color}`, borderRadius: 8, padding: 10 }}>
               <div style={{ color: selectedTowerOnGrid.towerDef.color, fontWeight: 800, fontSize: '0.9rem' }}>{getTowerText(selectedTowerOnGrid.type).label} {defenseText.towerActions.lv}{selectedTowerOnGrid.level}</div>
               <div style={{ color: '#aaa', fontSize: '0.75rem', margin: '4px 0' }}>{defenseText.sidebar.dmg}: {(selectedTowerOnGrid.towerDef.dmg * (1 + (selectedTowerOnGrid.level - 1) * 0.5)).toFixed(0)} | {defenseText.sidebar.range}: {selectedTowerOnGrid.towerDef.range}</div>
               {getTowerSynergy(selectedTowerOnGrid).active && (
@@ -3444,15 +3412,16 @@ export function SpaceImpactDefense({ availableCoins, onClose, initialMode = 'nor
           )}
 
           {!isCompact && !isLandscapeMobile && (
-            <div style={{ marginTop: 'auto', color: '#6f7e76', fontSize: '0.7rem', lineHeight: 1.45 }}>
+            <details className="defense-sidebar__hints" style={{ marginTop: 'auto', fontSize: '0.7rem', lineHeight: 1.45 }}>
+              <summary>{language === 'zh' ? '操作指南' : language === 'ja' ? '操作ガイド' : language === 'ko' ? '조작 안내' : 'Controls & tactics'}</summary>
               {defenseText.sidebar.hints.map((hint) => <div key={hint}>• {hint}</div>)}
-            </div>
+            </details>
           )}
         </div>
       </div>
 
       {showSettingsModal && (
-        <div style={{
+        <GameDialog className="defense-dialog" aria-labelledby="defense-settings-title" onDismiss={() => setShowSettingsModal(false)} style={{
           position: 'fixed',
           inset: 0,
           background: 'rgba(0,0,0,0.58)',
@@ -3462,7 +3431,7 @@ export function SpaceImpactDefense({ availableCoins, onClose, initialMode = 'nor
           justifyContent: 'center',
           padding: 10,
         }} onMouseDown={() => setShowSettingsModal(false)}>
-          <div style={{
+          <div className="defense-dialog__panel" style={{
             width: '100%',
             maxWidth: 560,
             maxHeight: 'min(88vh, 760px)',
@@ -3475,11 +3444,11 @@ export function SpaceImpactDefense({ availableCoins, onClose, initialMode = 'nor
             color: '#d7dde5',
           }} onMouseDown={(e) => e.stopPropagation()}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-              <div style={{ fontSize: '0.98rem', fontWeight: 900, letterSpacing: 1.1, color: '#d7ecff' }}>{defenseText.settingsPanel.title}</div>
-              <button type="button" onClick={() => setShowSettingsModal(false)} style={btnStyle('#2f3c4f', '#dce7f7', true)}>{defenseText.settingsPanel.close}</button>
+              <div id="defense-settings-title" style={{ fontSize: '0.98rem', fontWeight: 900, letterSpacing: 1.1, color: '#d7ecff' }}>{defenseText.settingsPanel.title}</div>
+              <button type="button" data-dialog-dismiss onClick={() => setShowSettingsModal(false)} style={btnStyle('#2f3c4f', '#dce7f7', true)}>{defenseText.settingsPanel.close}</button>
             </div>
 
-            <div style={{ marginBottom: 12, background: '#0f1727', border: '1px solid #2f3b53', borderRadius: 8, padding: 10 }}>
+            <div className="defense-dialog__section" style={{ marginBottom: 12, background: '#0f1727', border: '1px solid #2f3b53', borderRadius: 8, padding: 10 }}>
               <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#9fc7ff', marginBottom: 8 }}>{defenseText.settingsPanel.layoutMode}</div>
               <div style={{ display: 'grid', gridTemplateColumns: isCompact ? '1fr' : 'repeat(3, minmax(0,1fr))', gap: 8 }}>
                 {([
@@ -3490,12 +3459,9 @@ export function SpaceImpactDefense({ availableCoins, onClose, initialMode = 'nor
                   <button
                     key={mode.key}
                     type="button"
+                    aria-pressed={mobileLayoutMode === mode.key}
                     onClick={() => { void applyMobileLayoutMode(mode.key) }}
                     style={{
-                      border: `1px solid ${mobileLayoutMode === mode.key ? '#75b8ff' : '#30435e'}`,
-                      background: mobileLayoutMode === mode.key ? '#1c2f4a' : '#121c2c',
-                      color: mobileLayoutMode === mode.key ? '#dff0ff' : '#adc1d8',
-                      borderRadius: 8,
                       padding: '8px 9px',
                       textAlign: 'left',
                       cursor: 'pointer',
@@ -3512,19 +3478,16 @@ export function SpaceImpactDefense({ availableCoins, onClose, initialMode = 'nor
               {defenseText.settingsPanel.orientationNote}
             </div>
 
-            <div style={{ marginBottom: 12, background: '#0f1727', border: '1px solid #2f3b53', borderRadius: 8, padding: 10 }}>
+            <div className="defense-dialog__section" style={{ marginBottom: 12, background: '#0f1727', border: '1px solid #2f3b53', borderRadius: 8, padding: 10 }}>
               <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#ffd29f', marginBottom: 8 }}>{defenseText.settingsPanel.graphics}</div>
               <div style={{ display: 'grid', gridTemplateColumns: isCompact ? 'repeat(2,minmax(0,1fr))' : 'repeat(4,minmax(0,1fr))', gap: 8 }}>
                 {(['low', 'medium', 'high', 'max'] as GraphicsQuality[]).map(quality => (
                   <button
                     key={quality}
                     type="button"
+                    aria-pressed={graphicsQuality === quality}
                     onClick={() => applyGraphicsQuality(quality)}
                     style={{
-                      border: `1px solid ${graphicsQuality === quality ? '#ffcf86' : '#30435e'}`,
-                      background: graphicsQuality === quality ? '#3a2817' : '#121c2c',
-                      color: graphicsQuality === quality ? '#fff2d8' : '#adc1d8',
-                      borderRadius: 8,
                       padding: '8px 9px',
                       cursor: 'pointer',
                       fontWeight: 900,
@@ -3541,10 +3504,10 @@ export function SpaceImpactDefense({ availableCoins, onClose, initialMode = 'nor
               </div>
             </div>
 
-            <div style={{ marginBottom: 12, background: '#0f1727', border: '1px solid #2f3b53', borderRadius: 8, padding: 10 }}>
+            <div className="defense-dialog__section" style={{ marginBottom: 12, background: '#0f1727', border: '1px solid #2f3b53', borderRadius: 8, padding: 10 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                 <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#9ff2cc' }}>{defenseText.settingsPanel.audio}</div>
-                <button type="button" onClick={toggleSound} style={btnStyle('#102b20', '#9ef2cc', true)}>{soundOn ? defenseText.settingsPanel.sfxOn : defenseText.settingsPanel.sfxOff}</button>
+                <button type="button" aria-pressed={soundOn} onClick={toggleSound} style={btnStyle('#102b20', '#9ef2cc', true)}>{soundOn ? defenseText.settingsPanel.sfxOn : defenseText.settingsPanel.sfxOff}</button>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: isCompact ? '1fr' : 'repeat(2,minmax(0,1fr))', gap: 8, marginTop: 8 }}>
                 {([
@@ -3572,7 +3535,7 @@ export function SpaceImpactDefense({ availableCoins, onClose, initialMode = 'nor
               {defenseText.settingsPanel.saved}
             </div>
           </div>
-        </div>
+        </GameDialog>
       )}
     </div>
     </>

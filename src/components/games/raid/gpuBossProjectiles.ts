@@ -22,49 +22,62 @@ export type GpuBossProjectileSpec = {
 
 export function getGpuBossProjectileSpec(
   shot: Shot, visualScale: number, width: number, height: number, time: number,
+  out: GpuBossProjectileSpec,
 ): GpuBossProjectileSpec | null {
+  const kind = shot.kind
+  if (kind !== 'poisonCloud' && kind !== 'squidBubble' && kind !== 'squidInk' &&
+    kind !== 'venomSpit' && kind !== 'snakeFang' && kind !== 'squidSpine' &&
+    !(kind === 'beam' && shot.life !== undefined)) return null
   const x = shot.x * width / 100
   const y = shot.y * height / 100
   const heading = Math.atan2(shot.vy, shot.vx)
-  if (shot.kind === 'poisonCloud') {
+  out.kind = kind as GpuBossProjectileKind
+  out.x = x
+  out.y = y
+  if (kind === 'poisonCloud') {
     const lifeRatio = clamp((shot.life ?? 1) / Math.max(0.01, shot.maxLife ?? 1), 0, 1)
-    const age = 1 - lifeRatio
-    const radius = Math.max(18, shot.radius * 7.8 * visualScale) * (0.86 + age * 0.34)
-    return { kind: 'poisonCloud', x, y, width: radius * 2.3, height: radius * 2.3, rotation: time / 5000 + shot.id, alpha: 0.42 * Math.sin(lifeRatio * Math.PI) }
-  }
-  if (shot.kind === 'squidBubble') {
+    const radius = Math.max(18, shot.radius * 7.8 * visualScale) * (0.86 + (1 - lifeRatio) * 0.34)
+    out.width = out.height = radius * 2.3
+    out.rotation = time / 5000 + shot.id
+    out.alpha = 0.42 * Math.sin(lifeRatio * Math.PI)
+  } else if (kind === 'squidBubble') {
     const radius = Math.max(Math.max(8, 26 - (shot.splitLevel ?? 0) * 5), shot.radius * visualScale * 7)
     const pulse = 0.85 + Math.sin(time / 160 + shot.id) * 0.12
-    return { kind: 'squidBubble', x, y, width: radius * 2.24 * pulse, height: radius * 2.24 * pulse, rotation: time / 1100, alpha: 0.92 }
-  }
-  if (shot.kind === 'squidInk') {
+    out.width = out.height = radius * 2.24 * pulse
+    out.rotation = time / 1100
+    out.alpha = 0.92
+  } else if (kind === 'squidInk') {
     const radius = Math.max(9, shot.radius * visualScale * 5.2)
     const pulse = 0.82 + Math.sin(time / 115 + shot.id) * 0.12
-    return { kind: 'squidInk', x, y, width: radius * 4.2 * pulse, height: radius * 2.3, rotation: heading, alpha: 0.9 }
-  }
-  if (shot.kind === 'venomSpit') {
+    out.width = radius * 4.2 * pulse
+    out.height = radius * 2.3
+    out.rotation = heading
+    out.alpha = 0.9
+  } else if (kind === 'venomSpit') {
     const radius = Math.max(8, shot.radius * visualScale * 4.6)
     const pulse = 0.86 + Math.sin(time / 130 + shot.id * 1.7) * 0.13
-    return { kind: 'venomSpit', x, y, width: radius * 2.3 * pulse, height: radius * 2.1 * pulse, rotation: heading * 0.25, alpha: 0.93 }
-  }
-  if (shot.kind === 'snakeFang' || shot.kind === 'squidSpine') {
-    const length = shot.kind === 'snakeFang' ? Math.max(24, visualScale * 26) : Math.max(22, visualScale * 24)
-    const broad = shot.kind === 'snakeFang' ? Math.max(8, visualScale * 8) : Math.max(7, visualScale * 7)
-    return { kind: shot.kind, x, y, width: broad * 3.8, height: length * 1.5, rotation: heading + Math.PI / 2, alpha: 1 }
-  }
-  if (shot.kind === 'beam' && shot.life !== undefined) {
-    const ratio = clamp(shot.life / Math.max(0.01, shot.maxLife ?? 1), 0, 1)
+    out.width = radius * 2.3 * pulse
+    out.height = radius * 2.1 * pulse
+    out.rotation = heading * 0.25
+    out.alpha = 0.93
+  } else if (kind === 'snakeFang' || kind === 'squidSpine') {
+    const length = kind === 'snakeFang' ? Math.max(24, visualScale * 26) : Math.max(22, visualScale * 24)
+    const broad = kind === 'snakeFang' ? Math.max(8, visualScale * 8) : Math.max(7, visualScale * 7)
+    out.width = broad * 3.8
+    out.height = length * 1.5
+    out.rotation = heading + Math.PI / 2
+    out.alpha = 1
+  } else {
+    const ratio = clamp((shot.life ?? 0) / Math.max(0.01, shot.maxLife ?? 1), 0, 1)
     const beamWidth = Math.max(42, shot.radius * width / 100 * 2.2)
-    const length = Math.hypot(width, height) * 1.45
     const vertical = shot.angle === undefined
-    return {
-      kind: 'beam', x: vertical ? x : x, y: vertical ? height * 0.5 : y,
-      width: vertical ? height : length, height: beamWidth * 1.44,
-      rotation: vertical ? Math.PI / 2 : shot.angle ?? 0,
-      alpha: Math.min(1, Math.sin(ratio * Math.PI) * 1.25),
-    }
+    out.y = vertical ? height * 0.5 : y
+    out.width = vertical ? height : Math.hypot(width, height) * 1.45
+    out.height = beamWidth * 1.44
+    out.rotation = vertical ? Math.PI / 2 : shot.angle ?? 0
+    out.alpha = Math.min(1, Math.sin(ratio * Math.PI) * 1.25)
   }
-  return null
+  return out
 }
 
 const colorStops = {

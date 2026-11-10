@@ -1,5 +1,8 @@
+import { getRaidShipSpriteUrl } from './games/RaidShipSprite'
 import { getLanguageText, getRaidText, getReleaseText, type LanguageCode } from '../i18n'
 import type { ProgressUpdate, RunResult } from '../progression'
+import { GameButton } from './ui/GameButton'
+import { GameDialog } from './ui/GameDialog'
 
 type RunResultsOverlayProps = {
   result: RunResult
@@ -24,12 +27,14 @@ export function RunResultsOverlay({ result, update, language, onClose }: RunResu
   ]
 
   return (
-    <div className={`result-overlay result-overlay--${result.status}`} role="dialog" aria-modal="true" aria-labelledby="result-title">
+    <GameDialog className={`result-overlay result-overlay--${result.status}`} aria-labelledby="result-title" onDismiss={onClose}>
       <div className="result-overlay__panel">
         <div className="result-overlay__hero">
+          <img className="result-overlay__ship" src={getRaidShipSpriteUrl(result.shipKey ?? 'dreadnought')} alt="" aria-hidden="true" draggable={false} />
           <span>{modeText.title} {modeText.label}</span>
           <h2 id="result-title">{statusLabel}</h2>
-          <p>{text.combatReport} - {scoreDisplay.toLocaleString()} {text.score}</p>
+          <p>{text.combatReport}</p>
+          <div className="result-overlay__score"><small>{result.teamScore ? text.teamScore : text.score}</small><strong>{scoreDisplay.toLocaleString()}</strong></div>
         </div>
 
         <div className="result-overlay__stats">
@@ -89,9 +94,9 @@ export function RunResultsOverlay({ result, update, language, onClose }: RunResu
           </section>
         ) : null}
 
-        <button type="button" onClick={onClose}>{text.continue}</button>
+        <GameButton data-dialog-dismiss tone="primary" onClick={onClose}>{text.continue}</GameButton>
       </div>
-    </div>
+    </GameDialog>
   )
 }
 

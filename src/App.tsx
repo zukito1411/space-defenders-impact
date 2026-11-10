@@ -1,10 +1,13 @@
 import './App.css'
+import { GameButton, GameMenuAction } from './components/ui/GameButton'
+import { GameDialog } from './components/ui/GameDialog'
+import { GameMenuHints } from './components/ui/GameMenuHints'
 import { LeaderboardsScreen } from './components/LeaderboardsScreen'
 import { ProgressionScreen } from './components/ProgressionScreen'
 import { RaidMultiplayerLobby, type RaidMultiplayerConnectionMode, type RaidMultiplayerSession } from './components/RaidMultiplayerLobby'
 import { RunResultsOverlay } from './components/RunResultsOverlay'
 import { GradiusRaid, preloadGradiusRaidAssets, type RaidAssetPreloadState } from './components/games/GradiusRaid'
-import { getRaidAlienSpriteUrl, getRaidEliteSpriteUrl, getRaidShipSpriteUrl, RaidShipSprite } from './components/games/RaidShipSprite'
+import { getRaidAlienSpriteUrl, getRaidEliteSpriteUrl, RaidShipSprite } from './components/games/RaidShipSprite'
 import { SpaceImpactDefense } from './components/games/SpaceImpactDefense'
 import { getPublicAssetUrl } from './components/games/sound'
 import {
@@ -144,30 +147,6 @@ const RAID_STORY_SCENE_VISUALS = [
 
 function isMenuBgmScreen(screen: ScreenState) {
   return screen !== 'game'
-}
-
-function MenuShipSprite({ shipKey }: { shipKey: string }) {
-  return (
-    <img
-      className="start-screen__asset-sprite"
-      src={getRaidShipSpriteUrl(shipKey)}
-      alt=""
-      aria-hidden="true"
-      draggable={false}
-    />
-  )
-}
-
-function MenuAlienSprite({ variant }: { variant: number }) {
-  return (
-    <img
-      className="start-screen__asset-sprite"
-      src={getRaidAlienSpriteUrl(variant)}
-      alt=""
-      aria-hidden="true"
-      draggable={false}
-    />
-  )
 }
 
 function getHangarAttackClass(shipKey: string) {
@@ -582,7 +561,11 @@ function App() {
     if (screen === 'game') return
     const focusableSelector = 'button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])'
     const isTypingTarget = (target: Element | null) => target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement
-    const getFocusableControls = () => Array.from(document.querySelectorAll<HTMLElement>(focusableSelector)).filter((control) => {
+    const getMenuScope = (): HTMLElement | Document => {
+      const dialogs = document.querySelectorAll<HTMLElement>('[role="dialog"][aria-modal="true"]')
+      return dialogs[dialogs.length - 1] ?? document
+    }
+    const getFocusableControls = () => Array.from(getMenuScope().querySelectorAll<HTMLElement>(focusableSelector)).filter((control) => {
       if (control.tabIndex < 0) return false
       const rect = control.getBoundingClientRect()
       return rect.width > 0 && rect.height > 0 && getComputedStyle(control).visibility !== 'hidden'
@@ -594,14 +577,16 @@ function App() {
       const currentIndex = active ? controls.indexOf(active) : -1
       const nextIndex = currentIndex < 0 ? (direction > 0 ? 0 : controls.length - 1) : (currentIndex + direction + controls.length) % controls.length
       controls[nextIndex]?.focus()
+      controls[nextIndex]?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
     }
     const activateFocusedControl = () => {
+      const controls = getFocusableControls()
       const active = document.activeElement instanceof HTMLElement ? document.activeElement : null
-      if (active && !isTypingTarget(active)) {
+      if (active && controls.includes(active) && !isTypingTarget(active)) {
         active.click()
         return
       }
-      const firstButton = getFocusableControls().find((control) => control instanceof HTMLButtonElement)
+      const firstButton = controls.find((control) => control instanceof HTMLButtonElement)
       firstButton?.focus()
     }
     const activateBackControl = () => {
@@ -610,7 +595,15 @@ function App() {
         active.blur()
         return
       }
-      const backControl = document.querySelector<HTMLElement>('.mode-screen__back, .leaderboards-screen__back, .progress-panel__back, .cutscene__skip, .raid__menu-button')
+      const scope = getMenuScope()
+      if (scope !== document) {
+        const dismiss = scope.querySelector<HTMLElement>('[data-dialog-dismiss]')
+        if (dismiss) {
+          dismiss.click()
+          return
+        }
+      }
+      const backControl = scope.querySelector<HTMLElement>('.mode-screen__back, .leaderboards-screen__back, .progress-panel__back, .cutscene__skip, .raid__menu-button')
       backControl?.click()
     }
     const handleKeydown = (event: KeyboardEvent) => {
@@ -633,6 +626,12 @@ function App() {
         activateBackControl()
       }
     }
+    const focusFrame = window.requestAnimationFrame(() => {
+      const scope = getMenuScope()
+      if (scope !== document || isTypingTarget(document.activeElement)) return
+      const firstAction = document.querySelector<HTMLElement>('[data-menu-default]:not(:disabled)')
+      firstAction?.focus({ preventScroll: true })
+    })
     const getPressedButtons = (gamepad: Gamepad) => {
       const pressed = new Set<number>()
       gamepad.buttons.forEach((button, index) => {
@@ -679,6 +678,7 @@ function App() {
     window.addEventListener('keydown', handleKeydown)
     return () => {
       window.cancelAnimationFrame(raf)
+      window.cancelAnimationFrame(focusFrame)
       window.removeEventListener('keydown', handleKeydown)
     }
   }, [screen])
@@ -907,7 +907,7 @@ function App() {
   }
 
   const playerNamePrompt = showPlayerNamePrompt ? (
-    <div className="player-name-modal" role="dialog" aria-modal="true" aria-labelledby="player-name-title">
+    <GameDialog className="player-name-modal" aria-labelledby="player-name-title" onDismiss={hasStoredPlayerName() ? () => setShowPlayerNamePrompt(false) : undefined}>
       <form
         className="player-name-modal__panel"
         onSubmit={(event) => {
@@ -915,11 +915,16 @@ function App() {
           savePlayerName()
         }}
       >
-        <span className="player-name-modal__eyebrow">{text.player.registration}</span>
+        <div className="player-name-modal__heading">
+          <span className="player-name-modal__eyebrow">{text.player.registration}</span>
+          {hasStoredPlayerName() && <GameButton tone="quiet" data-dialog-dismiss onClick={() => setShowPlayerNamePrompt(false)}>{raidText.menu.close}</GameButton>}
+        </div>
         <h2 id="player-name-title">{text.player.chooseName}</h2>
         <p>{text.player.nameUse}</p>
         <input
-          autoFocus
+          data-dialog-initial-focus
+          aria-label={text.player.placeholder}
+          autoComplete="nickname"
           maxLength={18}
           value={playerNameDraft}
           onChange={(event) => {
@@ -932,6 +937,9 @@ function App() {
         {playerNameRestoreMode ? (
           <input
             maxLength={32}
+            aria-label={text.player.recoveryPlaceholder}
+            autoComplete="off"
+            autoCapitalize="characters"
             value={recoveryCodeDraft}
             onChange={(event) => {
               setRecoveryCodeDraft(event.target.value)
@@ -941,11 +949,11 @@ function App() {
           />
         ) : null}
         {playerNameError ? <small className="player-name-modal__error">{playerNameError}</small> : null}
-        <button type="submit" disabled={!playerNameDraft.trim() || playerNameSaving || (playerNameRestoreMode && !recoveryCodeDraft.trim())}>
+        <GameButton type="submit" tone="primary" disabled={!playerNameDraft.trim() || playerNameSaving || (playerNameRestoreMode && !recoveryCodeDraft.trim())}>
           {playerNameSaving ? text.player.checking : playerNameRestoreMode ? text.player.restore : text.player.confirm}
-        </button>
+        </GameButton>
       </form>
-    </div>
+    </GameDialog>
   ) : null
 
   const closeGame = () => {
@@ -985,152 +993,66 @@ function App() {
         <label className="language-picker">
           <span>{text.language}</span>
           <select value={language} onChange={(event) => handleLanguageChange(event.target.value)}>
-            {LANGUAGE_OPTIONS.map((option) => (
-              <option key={option.code} value={option.code}>
-                {option.label}
-              </option>
-            ))}
+            {LANGUAGE_OPTIONS.map((option) => <option key={option.code} value={option.code}>{option.label}</option>)}
           </select>
         </label>
-        <div className="start-screen__stars" />
-        <div className="start-screen__nebula start-screen__nebula--a" />
-        <div className="start-screen__nebula start-screen__nebula--b" />
-        <div className="start-screen__battlefield">
-          <div className="start-screen__beam start-screen__beam--a" />
-          <div className="start-screen__beam start-screen__beam--b" />
-          <div className="start-screen__beam start-screen__beam--c" />
-          <div className="start-screen__sprite-fleet" aria-hidden="true">
-            <div className="start-screen__sprite-ship start-screen__sprite-ship--rocket">
-              <MenuShipSprite shipKey="rocket" />
-            </div>
-            <div className="start-screen__sprite-ship start-screen__sprite-ship--xwing">
-              <MenuShipSprite shipKey="xwing" />
-            </div>
-            <div className="start-screen__sprite-ship start-screen__sprite-ship--dreadnought">
-              <MenuShipSprite shipKey="dreadnought" />
-            </div>
-            <div className="start-screen__sprite-ship start-screen__sprite-ship--alien-a">
-              <MenuAlienSprite variant={1} />
-            </div>
-            <div className="start-screen__sprite-ship start-screen__sprite-ship--alien-b">
-              <MenuAlienSprite variant={3} />
-            </div>
-          </div>
-        </div>
-
-        <div className="start-screen__content">
+        <main className="start-screen__content">
           <div className="start-screen__command-panel">
             <div className="start-screen__brand">
               <span className="start-screen__signal" />
               <span>{text.title.brand}</span>
               <span className="start-screen__version">{text.title.version}</span>
             </div>
-
-            <div className="start-screen__pilot">
-              <span>{text.player.commander}</span>
-              <strong>{playerName}</strong>
-              <button onClick={() => setShowPlayerNamePrompt(true)}>{text.player.change}</button>
-              <span role="status" title={cloudSyncStatus === 'connected' ? 'Cloud profile connected' : cloudSyncStatus === 'conflict' ? 'Name already taken online. Choose a different name to sync.' : 'Offline pilot: progress saved locally and will reconnect automatically.'}
-                style={{ fontSize: '0.7rem', opacity: 0.85 }}>
-                {cloudSyncStatus === 'connected' ? 'Cloud connected' : cloudSyncStatus === 'conflict' ? 'Name conflict · local save safe' : 'Offline · local save'}
-              </span>
-            </div>
-
             <div className="start-screen__title-lockup">
               <div className="start-screen__eyebrow">{text.title.eyebrow}</div>
               <h1>{text.title.name}</h1>
               <p>{text.title.subtitle}</p>
             </div>
 
-            <div className="start-screen__status-grid" aria-label="Command status">
-              <div className="start-screen__status">
-                <span>{text.title.sector}</span>
-                <strong>Sol-3</strong>
-              </div>
-              <div className="start-screen__status">
-                <span>{text.title.threat}</span>
-                <strong>Omega</strong>
-              </div>
-              <div className="start-screen__status">
-                <span>{text.title.fleet}</span>
-                <strong>{text.title.ready}</strong>
-              </div>
-            </div>
+            <nav className="start-screen__actions" aria-label={releaseText.deckTitle}>
+              <GameMenuAction
+                primary data-menu-default
+                label={text.title.raidTitle}
+                detail={raidAssetsReady ? text.title.raidCopy : `${raidText.menu.loadingAssets} ${raidAssetPreloadPercent}%`}
+                disabled={!raidAssetsReady} onClick={startRocketRaid}
+              />
+              <GameMenuAction label={text.leaderboards.modes.ship_defense_normal.title} detail={text.title.normalTitle} onClick={startCutscene} />
+              {canPlayEndless && <GameMenuAction label={text.title.endlessTitle} detail={text.leaderboards.modes.ship_defense_endless.title} onClick={startEndless} />}
+            </nav>
 
-            <div className="start-screen__hangar" aria-hidden="true">
-              <div className="start-screen__hangar-ship start-screen__hangar-ship--one">
-                <MenuShipSprite shipKey="fast" />
-              </div>
-              <div className="start-screen__hangar-ship start-screen__hangar-ship--two">
-                <MenuShipSprite shipKey="gatling" />
-              </div>
-              <div className="start-screen__hangar-ship start-screen__hangar-ship--three">
-                <MenuShipSprite shipKey="laser" />
-              </div>
-              <div className="start-screen__hangar-ship start-screen__hangar-ship--four">
-                <MenuShipSprite shipKey="spaceEt" />
-              </div>
-              <div className="start-screen__hangar-ship start-screen__hangar-ship--enemy">
-                <MenuAlienSprite variant={2} />
-              </div>
-            </div>
-
-            <div className={canPlayEndless ? 'start-screen__actions' : 'start-screen__actions start-screen__actions--three'} aria-label="Game modes">
-              <button
-                className={raidAssetsReady ? "start-screen__button start-screen__button--raid" : "start-screen__button start-screen__button--raid start-screen__button--loading"}
-                onClick={startRocketRaid}
-                disabled={!raidAssetsReady}
-              >
-                <span className="start-screen__button-kicker">{text.title.raidKicker}</span>
-                <span className="start-screen__button-title">{text.title.raidTitle}</span>
-                <span className="start-screen__button-copy">
-                  {raidAssetsReady ? text.title.raidCopy : `${raidText.menu.loadingAssets} ${raidAssetPreloadPercent}%`}
-                </span>
-              </button>
-              <button className="start-screen__button" onClick={startCutscene}>
-                <span className="start-screen__button-kicker">{text.title.storyKicker}</span>
-                <span className="start-screen__button-title">{text.title.normalTitle}</span>
-                <span className="start-screen__button-copy">{text.title.normalCopy}</span>
-              </button>
-              {canPlayEndless && (
-                <button className="start-screen__button start-screen__button--endless" onClick={startEndless}>
-                  <span className="start-screen__button-kicker">{text.title.endlessKicker}</span>
-                  <span className="start-screen__button-title">{text.title.endlessTitle}</span>
-                  <span className="start-screen__button-copy">{text.title.endlessCopy}</span>
-                </button>
-              )}
-              <button className="start-screen__button start-screen__button--leaderboards" onClick={() => setScreen('leaderboards')}>
-                <span className="start-screen__button-kicker">{text.title.recordsKicker}</span>
-                <span className="start-screen__button-title">{text.title.recordsTitle}</span>
-                <span className="start-screen__button-copy">{text.title.recordsCopy}</span>
-              </button>
-            </div>
-
-            <div className="start-screen__command-deck" aria-label={releaseText.deckTitle}>
-              <button type="button" onClick={() => setScreen('profile')}>{releaseText.profile}</button>
-              <button type="button" onClick={() => setScreen('achievements')}>{releaseText.achievements}</button>
-              <button type="button" onClick={() => setScreen('codex')}>{releaseText.codex}</button>
-              <button type="button" onClick={() => setScreen('stageMap')}>{releaseText.stageMap}</button>
-            </div>
-
-            <div className="start-screen__footer">
-              <span>{text.title.copyright}</span>
-              <span>{text.title.musicCredit}</span>
+            <div className="start-screen__pilot">
+              <div className="start-screen__pilot-identity"><span>{text.player.commander}</span><strong>{playerName}</strong></div>
+              <GameButton tone="quiet" onClick={() => setShowPlayerNamePrompt(true)}>{text.player.change}</GameButton>
+              <span className={`start-screen__sync start-screen__sync--${cloudSyncStatus}`} role="status" title={cloudSyncStatus === 'connected' ? 'Cloud profile connected' : cloudSyncStatus === 'conflict' ? 'Name already taken online. Choose a different name to sync.' : 'Offline pilot: progress saved locally and will reconnect automatically.'}>
+                <i aria-hidden="true" />
+                {cloudSyncStatus === 'connected' ? 'Cloud connected' : cloudSyncStatus === 'conflict' ? 'Name conflict · local save safe' : 'Offline · local save'}
+              </span>
             </div>
           </div>
-        </div>
-        {!raidAssetsReady && (
-          <div className="start-screen__asset-loading" role="status" aria-live="polite">
-            <div className="start-screen__asset-loading-panel">
-              <span>{raidText.menu.loadingAssets}</span>
-              <strong>{raidAssetPreloadPercent}%</strong>
-              <div className="start-screen__asset-loading-bar" aria-hidden="true">
-                <i style={{ width: `${raidAssetPreloadPercent}%` }} />
-              </div>
-              <p>{raidText.menu.loadingAssetsCopy}</p>
-            </div>
+
+          <nav className="start-screen__command-deck" aria-label={releaseText.deckTitle}>
+            <GameButton tone="quiet" onClick={() => setScreen('leaderboards')}>{text.title.recordsTitle}</GameButton>
+            <GameButton tone="quiet" onClick={() => setScreen('profile')}>{releaseText.profile}</GameButton>
+            <GameButton tone="quiet" onClick={() => setScreen('achievements')}>{releaseText.achievements}</GameButton>
+            <GameButton tone="quiet" onClick={() => setScreen('codex')}>{releaseText.codex}</GameButton>
+            <GameButton tone="quiet" onClick={() => setScreen('stageMap')}>{releaseText.stageMap}</GameButton>
+          </nav>
+          <GameMenuHints language={language} showBack={false} />
+          <div className="start-screen__footer">
+            <span>{text.title.copyright}</span>
+            <span>{text.title.musicCredit}</span>
           </div>
-        )}
+          {!raidAssetsReady && (
+            <div className="start-screen__asset-loading" role="status" aria-live="polite">
+              <div className="start-screen__asset-loading-panel">
+                <span>{raidText.menu.loadingAssets}</span><strong>{raidAssetPreloadPercent}%</strong>
+                <div className="start-screen__asset-loading-bar" role="progressbar" aria-label={raidText.menu.loadingAssets} aria-valuemin={0} aria-valuemax={100} aria-valuenow={raidAssetPreloadPercent}>
+                  <i style={{ width: `${raidAssetPreloadPercent}%` }} />
+                </div>
+              </div>
+            </div>
+          )}
+        </main>
         {playerNamePrompt}
         {runResultsOverlay}
       </div>
@@ -1450,9 +1372,9 @@ function App() {
         <div className="raid-hangar">
           <div className="raid-hangar__stars" />
           <div className="raid-hangar__panel">
-            <button className="mode-screen__back" type="button" onClick={() => setScreen('rocketMode')}>
+            <GameButton tone="quiet" className="mode-screen__back" type="button" onClick={() => setScreen('rocketMode')}>
               {text.rocketMode.back}
-            </button>
+            </GameButton>
 
             <div className="raid-hangar__intro">
               <span>{text.raidHangar.eyebrow}</span>
@@ -1553,6 +1475,7 @@ function App() {
                     key={ship.key}
                     type="button"
                     className={ship.key === selectedShip.key ? 'raid-hangar__ship-button raid-hangar__ship-button--active' : 'raid-hangar__ship-button'}
+                    aria-pressed={ship.key === selectedShip.key}
                     onClick={() => setHangarShipKey(ship.key)}
                   >
                     <span className={unlocked ? 'raid-hangar__ship-thumb' : 'raid-hangar__ship-thumb raid-hangar__ship-thumb--locked'}>
@@ -1574,52 +1497,32 @@ function App() {
   if (screen === 'rocketMode') {
     return (
       <div className="mode-screen">
-        <div className="mode-screen__stars" />
         <div className="mode-screen__panel">
           <div className="mode-screen__topbar">
             <div className="mode-screen__topbar-group">
-              <button className="mode-screen__utility" type="button" onClick={() => setScreen('missions')}>
+              <GameButton tone="quiet" className="mode-screen__utility" type="button" onClick={() => setScreen('missions')}>
                 {releaseText.missions}
-              </button>
-              <button className="mode-screen__utility" type="button" onClick={() => setScreen('raidHangar')}>
+              </GameButton>
+              <GameButton tone="quiet" className="mode-screen__utility" type="button" onClick={() => setScreen('raidHangar')}>
                 {text.rocketMode.hangar}
-              </button>
+              </GameButton>
             </div>
-            <button className="mode-screen__back" onClick={() => setScreen('title')}>
+            <GameButton tone="quiet" className="mode-screen__back" onClick={() => setScreen('title')}>
               {text.rocketMode.back}
-            </button>
+            </GameButton>
           </div>
 
           <div className="mode-screen__eyebrow">{text.rocketMode.eyebrow}</div>
           <h1>{text.rocketMode.title}</h1>
           <p>{text.rocketMode.copy}</p>
 
-          <div className="mode-screen__actions mode-screen__actions--raid">
-            <button className="mode-screen__button" onClick={() => startRocketRaidSingle('campaign')}>
-              <span>{text.rocketMode.single}</span>
-              <strong className="mode-screen__button-fit-text">{text.rocketMode.start}</strong>
-            </button>
-            <button
-              className="mode-screen__button mode-screen__button--endless"
-              disabled={!canPlayGradiusEndless}
-              onClick={() => startRocketRaidSingle('endless')}
-            >
-              <span>{text.rocketMode.endless}</span>
-              <strong className="mode-screen__button-fit-text">{canPlayGradiusEndless ? text.rocketMode.startEndless : text.rocketMode.endlessLocked}</strong>
-            </button>
-            <button
-              className="mode-screen__button mode-screen__button--boss-rush"
-              disabled={!canPlayGradiusEndless}
-              onClick={() => startRocketRaidSingle('bossRush')}
-            >
-              <span>{text.rocketMode.bossRush}</span>
-              <strong className="mode-screen__button-fit-text">{canPlayGradiusEndless ? text.rocketMode.startBossRush : text.rocketMode.bossRushLocked}</strong>
-            </button>
-            <button className="mode-screen__button mode-screen__button--accent" onClick={() => setScreen('raidCoopMode')}>
-              <span>{text.rocketMode.twoPlayers}</span>
-              <strong className="mode-screen__button-fit-text">{text.rocketMode.multiplayer}</strong>
-            </button>
-          </div>
+          <nav className="mode-screen__actions mode-screen__actions--raid" aria-label={text.rocketMode.title}>
+            <GameMenuAction primary data-menu-default label={text.rocketMode.single} detail={text.rocketMode.start} onClick={() => startRocketRaidSingle('campaign')} />
+            <GameMenuAction label={text.rocketMode.endless} detail={canPlayGradiusEndless ? text.rocketMode.startEndless : text.rocketMode.endlessLocked} disabled={!canPlayGradiusEndless} onClick={() => startRocketRaidSingle('endless')} />
+            <GameMenuAction label={text.rocketMode.bossRush} detail={canPlayGradiusEndless ? text.rocketMode.startBossRush : text.rocketMode.bossRushLocked} disabled={!canPlayGradiusEndless} onClick={() => startRocketRaidSingle('bossRush')} />
+            <GameMenuAction label={text.rocketMode.twoPlayers} detail={text.rocketMode.multiplayer} onClick={() => setScreen('raidCoopMode')} />
+          </nav>
+          <GameMenuHints language={language} />
         </div>
 
         {playerNamePrompt}
@@ -1634,52 +1537,27 @@ function App() {
 
     return (
       <div className="mode-screen">
-        <div className="mode-screen__stars" />
         <div className="mode-screen__panel">
-          <button className="mode-screen__back" onClick={() => setScreen('rocketMode')}>
+          <GameButton tone="quiet" className="mode-screen__back" onClick={() => setScreen('rocketMode')}>
             {text.lobby.back}
-          </button>
+          </GameButton>
 
           <div className="mode-screen__eyebrow">{text.lobby.modeEyebrow}</div>
           <h1>{text.lobby.modeTitle}</h1>
           <p>{canUseLocalCoop ? text.lobby.modeCopy : canUseSameScreenCoop ? text.lobby.sameScreenModeCopy : text.lobby.onlineCoopDesc}</p>
 
-          <div className={canUseLocalCoop || canUseSameScreenCoop ? 'mode-screen__actions mode-screen__actions--coop' : 'mode-screen__actions mode-screen__actions--coop mode-screen__actions--coop-online-only'}>
-            {canUseSameScreenCoop ? (
-              <button
-                className="mode-screen__button mode-screen__button--same-screen"
-                onClick={() => setScreen('raidSameScreenBriefing')}
-              >
-                <span>{text.lobby.sameScreenCoop}</span>
-                <strong>{text.lobby.sameScreenCoopTitle}</strong>
-                <small>{text.lobby.sameScreenCoopDesc}</small>
-              </button>
-            ) : null}
-            {canUseLocalCoop ? (
-              <button
-                className="mode-screen__button mode-screen__button--local"
-                onClick={() => {
-                  setRaidMultiplayerConnectionMode('local')
-                  setScreen('raidMultiplayer')
-                }}
-              >
-                <span>{text.lobby.localCoop}</span>
-                <strong>{text.lobby.localCoopTitle}</strong>
-                <small>{text.lobby.localCoopDesc}</small>
-              </button>
-            ) : null}
-            <button
-              className="mode-screen__button mode-screen__button--accent"
-              onClick={() => {
-                setRaidMultiplayerConnectionMode('online')
-                setScreen('raidMultiplayer')
-              }}
-            >
-              <span>{text.lobby.onlineCoop}</span>
-              <strong>{text.lobby.onlineCoopTitle}</strong>
-              <small>{text.lobby.onlineCoopDesc}</small>
-            </button>
-          </div>
+          <nav className="mode-screen__actions mode-screen__actions--coop" aria-label={text.lobby.modeTitle}>
+            {canUseSameScreenCoop && <GameMenuAction primary data-menu-default label={text.lobby.sameScreenCoopTitle} detail={text.lobby.sameScreenCoopDesc} onClick={() => setScreen('raidSameScreenBriefing')} />}
+            {canUseLocalCoop && <GameMenuAction label={text.lobby.localCoopTitle} detail={text.lobby.localCoopDesc} onClick={() => {
+              setRaidMultiplayerConnectionMode('local')
+              setScreen('raidMultiplayer')
+            }} />}
+            <GameMenuAction label={text.lobby.onlineCoopTitle} detail={text.lobby.onlineCoopDesc} onClick={() => {
+              setRaidMultiplayerConnectionMode('online')
+              setScreen('raidMultiplayer')
+            }} />
+          </nav>
+          <GameMenuHints language={language} />
         </div>
 
         {playerNamePrompt}
@@ -1693,11 +1571,10 @@ function App() {
 
     return (
       <div className="mode-screen">
-        <div className="mode-screen__stars" />
         <div className="mode-screen__panel mode-screen__panel--briefing">
-          <button className="mode-screen__back" onClick={() => setScreen('raidCoopMode')}>
+          <GameButton tone="quiet" className="mode-screen__back" onClick={() => setScreen('raidCoopMode')}>
             {text.lobby.back}
-          </button>
+          </GameButton>
 
           <div className="mode-screen__eyebrow">{text.lobby.sameScreenEyebrow}</div>
           <h1>{text.lobby.sameScreenTitle}</h1>
@@ -1725,6 +1602,7 @@ function App() {
                     key={ship.key}
                     type="button"
                     className={sameScreenGuestShipKey === ship.key ? 'same-screen-ships__button same-screen-ships__button--active' : 'same-screen-ships__button'}
+                    aria-pressed={sameScreenGuestShipKey === ship.key}
                     onClick={() => setSameScreenGuestShipKey(ship.key)}
                   >
                     <RaidShipSprite shipKey={spriteKey} size={ship.key === 'mesiah' || ship.key === 'coreLander' ? 50 : 42} />

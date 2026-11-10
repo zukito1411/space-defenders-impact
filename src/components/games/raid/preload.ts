@@ -1,6 +1,7 @@
 import { getRaidAlienSpriteUrl, getRaidEliteSpriteUrl, getRaidShipSpriteUrl, RAID_ALIEN_SPRITE_COUNT, RAID_ELITE_SPRITE_COUNT } from '../RaidShipSprite'
 import { getPublicAssetUrl } from '../sound'
 import { Assets } from 'pixi.js'
+import { RAID_COMBAT_ART_URLS, preloadRaidCombatArt } from './combatArt'
 import { RAID_COBRA_BOSS_ASSET_PATH, RAID_CORE_LANDER_BARRAGE_ASSET_PATHS, RAID_CORE_LANDER_COMBAT_MODELS, RAID_DERELICT_WRECK_ASSET_PATH, RAID_DERELICT_WRECK_VARIANTS, RAID_DEVIL_BOSS_ASSET_PATHS, RAID_DEVIL_BOSS_POSES, RAID_DEVIL_MASTER_PROJECTILE_ASSET_PATH, RAID_FINAL_BOSS_ASSET_PATH, RAID_OTHER_ASSET_PATHS, RAID_SQUID_BOSS_ASSET_PATH, getCobraBossCanvasSprite, getDerelictWreckCanvasSprite, getDevilBossCanvasSprite, getDevilMasterProjectileCanvasSprite, getEliteAlienCanvasSprite, getFinalBossCanvasSprite, getGodGundamBarrageCanvasSprite, getNormalAlienCanvasSprite, getRaidOtherCanvasSprite, getShipCanvasSprite, getSquidBossCanvasSprite, warmRaidCanvasFilterVariants } from './assets'
 import type { CanvasSpriteEntry, GodGundamBarragePose, RaidOtherAssetKey } from './assets'
 import { DEFAULT_PICKUP_VOICE_SAMPLE_URL, PICKUP_VOICE_SAMPLE_URLS } from './audio'
@@ -14,7 +15,7 @@ export const RAID_IMAGE_CACHE_NAME = 'space-defender-raid-images-v1'
 
 export const RAID_AUDIO_CACHE_NAME = 'space-defender-audio-v1'
 
-export const RAID_PERSISTENT_CACHE_VERSION = 'gradius-raid-assets-v3'
+export const RAID_PERSISTENT_CACHE_VERSION = 'gradius-raid-assets-v4'
 
 export const RAID_PERSISTENT_CACHE_STORAGE_KEY = 'gradiusRaidPersistentAssetCache'
 
@@ -58,6 +59,7 @@ export function warmRaidCanvasAssets() {
 
 export function getRaidPersistentImageUrls() {
   const urls = new Set<string>()
+  for (const url of RAID_COMBAT_ART_URLS) urls.add(url)
   urls.add(getPublicAssetUrl(RAID_FINAL_BOSS_ASSET_PATH))
   urls.add(getPublicAssetUrl(RAID_SQUID_BOSS_ASSET_PATH))
   urls.add(getPublicAssetUrl(RAID_COBRA_BOSS_ASSET_PATH))
@@ -266,6 +268,7 @@ export function getRaidPixiBackgroundAssetCount() {
 
 export function getRaidPixiBackgroundAssetUrls() {
   return [...new Set([
+    ...RAID_COMBAT_ART_URLS,
     ...Object.values(RAID_OTHER_ASSET_PATHS).map((path) => getPublicAssetUrl(path)),
     getRaidShipSpriteUrl('rocket'),
     getRaidShipSpriteUrl('laser'),
@@ -300,7 +303,8 @@ export function preloadRaidPixiBackgroundAssets(onProgress?: (loaded: number, to
   onProgress?.(loaded, total)
   const warmPromise = Promise.all(entries.map(async (url) => {
     try {
-      await Assets.load(url)
+      if (RAID_COMBAT_ART_URLS.includes(url)) await preloadRaidCombatArt()
+      else await Assets.load(url)
     } catch {
       // Keep preload progress moving; missing Pixi textures simply do not render.
     } finally {

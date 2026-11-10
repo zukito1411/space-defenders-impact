@@ -107,15 +107,14 @@ export type RaidViewportMetrics = {
   profile: RaidGraphicsProfile
   quality: GraphicsQuality
   multiplayer: boolean
-  adaptiveScale: number
 }
 
-export function makeRaidViewportMetrics(root: HTMLElement, quality: GraphicsQuality, multiplayer: boolean, adaptiveScale = 1): RaidViewportMetrics {
+export function makeRaidViewportMetrics(root: HTMLElement, quality: GraphicsQuality, multiplayer: boolean): RaidViewportMetrics {
   const cssWidth = Math.max(1, root.clientWidth || (typeof window !== 'undefined' ? window.innerWidth : 1) || 1)
   const cssHeight = Math.max(1, root.clientHeight || (typeof window !== 'undefined' ? window.innerHeight : 1) || 1)
   const isSmallViewport = cssWidth <= 860 || cssHeight <= 560
   const profile = getRaidGraphicsProfile(quality, isSmallViewport, multiplayer)
-  const dpr = Math.max(0.7, Math.min(profile.dprCap, typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1) * adaptiveScale)
+  const dpr = Math.max(0.7, Math.min(profile.dprCap, typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1))
   const isDesktopViewport = cssWidth > 1100 && cssHeight > 700
   const visualScale = clamp(Math.min(cssWidth, cssHeight) / (isDesktopViewport ? 760 : 560), 0.72, isDesktopViewport ? 1.08 : 1.28)
   return {
@@ -130,6 +129,5 @@ export function makeRaidViewportMetrics(root: HTMLElement, quality: GraphicsQual
     profile,
     quality,
     multiplayer,
-    adaptiveScale,
   }
 }

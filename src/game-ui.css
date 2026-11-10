@@ -1,0 +1,448 @@
+/* Shared flight-deck materials. Loaded after the legacy scene styles so that
+   controls stay consistent without changing combat animation or canvas layers. */
+:root {
+  --ui-void: #04080f;
+  --ui-panel: #0b1421;
+  --ui-panel-raised: #142336;
+  --ui-line: #32495e;
+  --ui-line-soft: #203346;
+  --ui-text: #edf6ff;
+  --ui-muted: #9aafc1;
+  --ui-cyan: #73e5ee;
+  --ui-gold: #ffc76b;
+  --ui-danger: #ff7b87;
+  --ui-font: 'Bahnschrift', 'DIN Alternate', 'Trebuchet MS', 'Noto Sans', sans-serif;
+  --ui-display: 'Bahnschrift', 'Arial Narrow', 'Trebuchet MS', sans-serif;
+  --ui-mono: 'Cascadia Code', 'Consolas', monospace;
+}
+
+#root .app { background: var(--ui-void); }
+
+/* Material and interaction only: scene-specific sizing and positioning remain
+   with each HUD. Narrative progress markers keep their original small hitboxes. */
+#root button:not(:where(.cutscene__dot, .raid-story__dot, .raid__ending-signal, .raid__pause)) {
+  border: 1px solid var(--control-border, var(--ui-line));
+  border-radius: 3px;
+  background: #0b151f;
+  border-image-source: var(--ui-console-texture);
+  border-image-slice: 96 fill;
+  border-image-width: 8px;
+  border-image-repeat: stretch;
+  color: var(--control-ink, var(--ui-text));
+  font-family: var(--ui-font);
+  font-weight: 700;
+  box-shadow: 0 2px 6px #0006;
+  text-shadow: none;
+  transition: border-color 120ms ease, background-color 120ms ease, box-shadow 120ms ease, translate 120ms ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#root button:not(:where(.cutscene__dot, .raid-story__dot, .raid__ending-signal, .raid__pause)):enabled:hover {
+  border-color: var(--control-accent, var(--ui-cyan));
+  box-shadow: 0 0 10px #83c1d820, 0 2px 6px #0006;
+  filter: brightness(1.08);
+}
+
+#root button:not(:where(.cutscene__dot, .raid-story__dot, .raid__ending-signal, .raid__pause)):enabled:active {
+  translate: 0 2px;
+  box-shadow: inset 0 2px 5px #0008;
+}
+
+#root button:not(:where(.cutscene__dot, .raid-story__dot, .raid__ending-signal, .raid__pause)):focus-visible {
+  outline: 2px solid var(--ui-cyan);
+  outline-offset: 3px;
+  border-color: var(--ui-cyan);
+}
+
+#root button:disabled { opacity: 0.46; cursor: not-allowed; filter: none; }
+
+#root button:is([aria-pressed='true'], [aria-selected='true'], [class*='--active'], [class*='--equipped']):not(:where(.cutscene__dot, .raid-story__dot, .raid__ending-signal, .raid__pause)) {
+  --control-border: var(--control-accent, var(--ui-cyan));
+  --control-top: #1b3b4b;
+  --control-bottom: #102632;
+  color: var(--ui-gold);
+  outline: 1px solid #cda45a99;
+  outline-offset: -2px;
+  box-shadow: 0 0 12px #efbb651a;
+}
+
+#root .game-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 44px;
+  padding: 10px 16px;
+  font-size: 0.78rem;
+  letter-spacing: 0.065em;
+  text-transform: uppercase;
+  line-height: 1.25;
+}
+
+.game-button > span:empty { display: none; }
+.game-button--quiet { --control-top: #102031; --control-bottom: #0a1522; --control-ink: #b6cbdd; }
+.game-button--danger { --control-top: #48222e; --control-bottom: #28141f; --control-border: #864652; --control-accent: var(--ui-danger); }
+.game-button--primary, .game-menu-action--primary {
+  --control-top: #f8cf83;
+  --control-bottom: #d69b43;
+  --control-border: #ffe2a9;
+  --control-ink: #ffe3b5;
+  --control-accent: #fff0c9;
+}
+
+#root .game-menu-action {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: center;
+  min-height: 82px;
+  min-width: 0;
+  width: 100%;
+  padding: 14px 20px;
+  text-align: left;
+  text-transform: none;
+}
+#root :is(.game-menu-action, .raid__ship-card):disabled { opacity: 0.65; }
+
+#root .game-menu-action--primary { color: var(--ui-gold); box-shadow: 0 0 18px #d69b4320, 0 3px 8px #0008; }
+.game-menu-action__copy { display: grid; gap: 5px; min-width: 0; }
+.game-menu-action__copy strong { font-family: var(--ui-display); font-size: clamp(1.05rem, 1.9vw, 1.35rem); line-height: 1.12; letter-spacing: 0.045em; text-transform: uppercase; overflow-wrap: anywhere; }
+.game-menu-action__copy small { color: inherit; font-size: 0.76rem; font-weight: 400; line-height: 1.4; overflow-wrap: anywhere; opacity: 0.74; }
+
+.game-menu-hints { display: flex; flex-wrap: wrap; align-items: center; gap: 18px; color: #849cb1; font-size: 0.64rem; }
+.game-menu-hints > span { display: inline-flex; align-items: center; gap: 7px; }
+.game-menu-hints kbd { display: inline-grid; place-items: center; min-width: 25px; height: 23px; padding: 2px 5px; border: 1px solid #31485c; border-bottom-width: 2px; border-radius: 2px; background: #0a1623; color: #b4cadb; font: 0.62rem var(--ui-mono); }
+.mode-screen__panel > .game-menu-hints { margin-top: 24px; }
+
+/* Shared readable fields, including player registration and LAN room codes. */
+#root :is(input:not([type='range']):not([type='checkbox']), select, textarea) {
+  min-width: 0;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--ui-line);
+  border-radius: 3px;
+  background: #060e19;
+  color: var(--ui-text);
+  font-family: var(--ui-font);
+  box-shadow: inset 0 2px 5px #0005;
+}
+#root input::placeholder { color: #7991a7; opacity: 1; }
+#root :is(input, select, textarea):focus-visible { outline: 2px solid var(--ui-cyan); outline-offset: 2px; }
+#root input[type='range'] { accent-color: var(--ui-cyan); min-height: 28px; cursor: pointer; }
+#root select option { background: #0b1421; color: var(--ui-text); }
+
+/* Title: one launch menu in front of the fleet, with a separate utility rail. */
+#root .start-screen {
+  height: 100dvh;
+  min-height: 0;
+  justify-content: flex-start;
+  background-color: #04080f;
+  background-image: var(--ui-hangar-art);
+  background-position: center;
+  background-size: cover;
+  font-family: var(--ui-font);
+}
+#root .start-screen::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(90deg, #02060b38, transparent 75%), linear-gradient(0deg, #02060b99, transparent 22%);
+}
+#root .start-screen__content {
+  z-index: 2;
+  align-items: stretch;
+  justify-content: center;
+  width: min(1480px, 100%);
+  height: 100%;
+  max-height: none;
+  margin-inline: auto;
+  padding: max(48px, env(safe-area-inset-top, 0px)) clamp(24px, 6vw, 96px) max(22px, env(safe-area-inset-bottom, 0px));
+  text-align: left;
+  gap: 22px;
+  overflow-y: auto;
+}
+#root .start-screen__command-panel {
+  width: min(560px, 52%);
+  display: grid;
+  gap: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+#root .start-screen__command-panel::before, #root .start-screen__command-panel::after { display: none; }
+#root .start-screen__brand { font-family: var(--ui-mono); font-size: 0.63rem; gap: 10px; letter-spacing: 0.12em; color: var(--ui-muted); }
+#root .start-screen__signal { width: 6px; height: 6px; border-radius: 1px; box-shadow: 0 0 10px #73e5ee77; background: var(--ui-cyan); animation: none; }
+#root .start-screen__version { padding: 3px 6px; background: none; border-color: var(--ui-line); color: var(--ui-muted); font-size: 0.6rem; }
+#root .start-screen__title-lockup { justify-items: start; gap: 12px; }
+#root .start-screen__eyebrow { font-size: 0.7rem; letter-spacing: 0.26em; color: var(--ui-cyan); }
+#root .start-screen h1 {
+  max-width: 14ch;
+  font-family: var(--ui-display);
+  font-size: clamp(3rem, 5.3vw, 5.5rem);
+  font-weight: 900;
+  font-stretch: condensed;
+  font-style: italic;
+  line-height: 0.95;
+  letter-spacing: -0.035em;
+  text-transform: uppercase;
+  text-shadow: 0 3px 0 #203448, 0 12px 32px #0009;
+  color: #f5f9fc;
+}
+#root .start-screen__title-lockup p { max-width: 42ch; color: var(--ui-muted); font-size: 0.84rem; line-height: 1.5; }
+#root .start-screen__actions { display: grid; grid-template-columns: 1fr; width: 100%; gap: 10px; margin: 0; }
+#root .start-screen__pilot { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 12px; width: 100%; justify-self: start; padding: 14px 0 0; border: 0; border-top: 1px solid var(--ui-line-soft); border-radius: 0; background: none; font-family: var(--ui-font); text-align: left; }
+.start-screen__pilot-identity { display: grid; gap: 3px; min-width: 0; }
+#root .start-screen__pilot-identity > span { font-size: 0.6rem; color: var(--ui-muted); letter-spacing: 0.15em; }
+#root .start-screen__pilot strong { max-width: 100%; font-size: 0.9rem; }
+#root .start-screen__pilot .game-button { min-height: 36px; padding: 7px 12px; font-size: 0.65rem; }
+.start-screen__sync { grid-column: 1 / -1; display: flex; align-items: center; gap: 7px; color: var(--ui-muted); font-size: 0.65rem; font-weight: 400; text-transform: none; }
+.start-screen__sync i { width: 5px; height: 5px; border-radius: 50%; background: #8b9bae; flex-shrink: 0; }
+.start-screen__sync--connected i { background: var(--ui-cyan); }
+.start-screen__sync--conflict i { background: var(--ui-gold); }
+#root .start-screen__command-deck { display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 8px; width: 100%; margin: 0; }
+#root .start-screen__command-deck button { display: inline-flex; gap: 8px; min-height: 42px; padding: 9px 13px; font-size: 0.68rem; letter-spacing: 0.04em; }
+#root .start-screen__footer { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 20px; width: 100%; margin: 0; padding: 0; border: 0; color: #6e879d; font-size: 0.6rem; letter-spacing: 0.025em; }
+#root .language-picker { top: max(14px, env(safe-area-inset-top, 0px)); right: max(18px, env(safe-area-inset-right, 0px)); gap: 8px; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; backdrop-filter: none; font-family: var(--ui-font); }
+#root .language-picker > span { font-size: 0.6rem; color: var(--ui-muted); }
+#root .language-picker select { min-height: 34px; font-size: 0.67rem; padding: 5px 9px; }
+
+#root .start-screen__asset-loading { position: static; transform: none; width: min(560px, 52%); margin: 0; }
+#root .start-screen__asset-loading-panel { grid-template-columns: 1fr auto; gap: 7px; padding: 10px 0; border: 0; border-radius: 0; box-shadow: none; background: none; }
+#root .start-screen__asset-loading-panel span { font-size: 0.6rem; color: var(--ui-muted); letter-spacing: 0.1em; }
+#root .start-screen__asset-loading-panel strong { font: 0.7rem var(--ui-mono); }
+#root .start-screen__asset-loading-bar { grid-column: 1 / -1; height: 4px; border: 0; border-radius: 0; background: #203346; }
+#root .start-screen__asset-loading-bar i { border-radius: 0; background: var(--ui-cyan); box-shadow: none; }
+
+/* Mission selection, records, hangar and progression use the same deck shell. */
+#root :is(.mode-screen, .leaderboards-screen, .progress-screen, .raid-hangar) { font-family: var(--ui-font); background-color: var(--ui-void); background-image: linear-gradient(#03070c85, #03070cd4), var(--ui-hangar-art); background-position: center; background-size: cover; }
+#root :is(.mode-screen__stars, .leaderboards-screen__stars, .progress-screen__stars, .raid-hangar__stars) { display: none; }
+#root :is(.mode-screen__panel, .leaderboards-screen__shell, .progress-panel, .raid-hangar__panel, .raid__panel, .raid__stage-modal-panel, .player-name-modal__panel, .result-overlay__panel, .defense-dialog__panel) {
+  border: 1px solid var(--ui-line);
+  border-radius: 4px;
+  background: #0b151f;
+  border-image-source: var(--ui-console-texture);
+  border-image-slice: 96 fill;
+  border-image-width: 14px;
+  border-image-repeat: stretch;
+  color: var(--ui-text);
+  box-shadow: inset 0 2px 0 #ffffff0c, inset 0 -4px 0 #0005, 0 20px 70px #0009;
+  backdrop-filter: none;
+  font-family: var(--ui-font);
+}
+#root :is(.mode-screen__panel, .leaderboards-screen__shell, .progress-panel, .raid-hangar__panel) { border-top: 2px solid #73e5ee77; }
+#root :is(.mode-screen__eyebrow, .raid__kicker, .leaderboards-screen__eyebrow, .progress-panel__header > span, .raid-hangar__intro > span, .player-name-modal__eyebrow) { color: var(--ui-cyan); font-family: var(--ui-mono); font-size: 0.65rem; letter-spacing: 0.18em; }
+#root :is(.mode-screen h1, .raid__panel h2, .leaderboards-screen__header h1, .progress-panel__header h1, .raid-hangar__intro h1, .player-name-modal h2, .result-overlay__hero h2) { font-family: var(--ui-display); font-weight: 900; letter-spacing: 0.01em; text-transform: uppercase; text-shadow: none; }
+#root :is(.mode-screen p, .progress-panel__header p, .raid-hangar__intro p) { color: var(--ui-muted); line-height: 1.5; }
+#root .mode-screen { padding: max(24px, env(safe-area-inset-top, 0px)) max(24px, env(safe-area-inset-right, 0px)) max(24px, env(safe-area-inset-bottom, 0px)) max(24px, env(safe-area-inset-left, 0px)); }
+#root .mode-screen__panel { width: min(760px, 100%); padding: 86px clamp(20px, 4vw, 40px) 32px; margin: auto; }
+#root .mode-screen__panel h1 { font-size: clamp(2.1rem, 5vw, 3.4rem); margin: 9px 0 12px; line-height: 1.04; }
+#root .mode-screen__panel > p { max-width: 58ch; font-size: 0.88rem; margin: 0; }
+#root .mode-screen__topbar { left: 20px; right: 20px; top: 18px; gap: 12px; }
+#root :is(.mode-screen__back, .mode-screen__utility) { min-height: 40px; padding: 9px 12px; font-size: 0.68rem; }
+#root .mode-screen__actions:is(.mode-screen__actions--raid, .mode-screen__actions--coop) { display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 26px; }
+#root .mode-screen__actions--briefing { gap: 12px; }
+#root .mode-screen__actions--briefing button { min-height: 48px; padding: 12px; }
+#root .mode-screen__button--accent { --control-top: #f8cf83; --control-bottom: #d69b43; --control-border: #ffe2a9; --control-ink: #ffe3b5; }
+#root .leaderboards-screen__shell { padding: 24px; max-height: calc(100dvh - 40px); overflow-y: auto; }
+#root .leaderboards-screen__header h1 { font-size: clamp(1.8rem, 4vw, 3rem); }
+#root :is(.leaderboards-screen__back, .leaderboards-screen__refresh, .progress-panel__back) { min-height: 42px; font-size: 0.7rem; }
+#root .leaderboards-screen__modes { padding: 10px 0; gap: 6px; }
+#root .leaderboards-screen__mode { border-radius: 2px; min-height: 58px; padding: 10px 8px; }
+#root .leaderboards-screen__board { border-radius: 2px; border-color: var(--ui-line); background: #070f19; }
+#root .leaderboards-screen__row { border-radius: 2px; border: 0; border-bottom: 1px solid var(--ui-line-soft); background: #0c1826; }
+#root .leaderboards-screen__row:nth-child(1) .leaderboards-screen__rank { color: var(--ui-gold); }
+#root .leaderboards-screen__row--player { border-left: 3px solid var(--ui-cyan); background: #132c3b; }
+#root .leaderboards-screen__score { font-family: var(--ui-mono); color: var(--ui-gold); font-size: 1rem; }
+#root .progress-panel { max-height: calc(100dvh - 40px); padding: 22px; }
+#root .progress-panel__header { margin: 18px 0 24px; text-align: left; padding-bottom: 20px; border-bottom: 1px solid var(--ui-line); }
+#root .progress-panel__header h1 { font-size: clamp(2rem, 4.5vw, 3.6rem); line-height: 1; margin: 8px 0; }
+#root .progress-panel__header p { font-size: 0.84rem; }
+#root :is(.progress-card, .unlock-card, .mission-card, .enemy-almanac__entry, .enemy-almanac__boss-card, .codex-cutscene-launcher, .same-screen-briefing__card, .raid-lobby__room, .raid-lobby__lan-card, .raid-lobby__player, .raid-hangar__systems > div, .raid-hangar__cosmetic) { border-radius: 3px; border-color: var(--ui-line-soft); background: linear-gradient(150deg, #142334, #0b1623); box-shadow: inset 0 1px 0 #ffffff08; }
+#root :is(.progress-card > span, .progress-account__identity > span, .progress-account__recovery > span, .unlock-card__body > span) { color: var(--ui-cyan); letter-spacing: 0.1em; }
+#root :is(.progress-card strong, .raid-hangar__stats b) { font-variant-numeric: tabular-nums; }
+#root :is(.unlock-tab, .progress-card__actions button, .progress-cosmetic, .progress-ship-color__button) { min-height: 40px; }
+#root :is(.raid-hangar__ship-button, .same-screen-ships__button, .raid-lobby__ship) { position: relative; min-height: 86px; padding: 10px 6px; }
+#root :is(.raid-hangar__ship-button--active, .same-screen-ships__button--active, .raid-lobby__ship--active, .raid__ship-card--active)::after { content: ''; position: absolute; right: 6px; top: 6px; width: 6px; height: 6px; background: var(--ui-cyan); box-shadow: 0 0 8px #73e5ee55; pointer-events: none; }
+#root :is(.raid-lobby__room-code strong, .raid-lobby input[maxlength='12']) { font-family: var(--ui-mono); letter-spacing: 0.16em; color: var(--ui-gold); }
+#root .raid-lobby__room-actions > button { min-height: 46px; }
+
+/* Combat HUDs: flat, compact instruments; stronger treatment only for actions. */
+#root :is(.raid__stat, .raid__hp, .raid__pilot-heading, .raid__pilot-special, .defense-stat, .defense-wavebar) { border: 1px solid var(--ui-line); border-radius: 2px; background: #07111ee6; box-shadow: inset 0 1px 0 #ffffff08; backdrop-filter: none; }
+#root .raid__stat { border-top-color: #4c6a80; }
+#root .raid__stat span { color: var(--ui-muted); letter-spacing: 0.1em; font-size: 0.6rem; }
+#root .raid__stat b { font-family: var(--ui-font); font-variant-numeric: tabular-nums; }
+#root .raid__stat--weapon b { color: var(--ui-cyan); }
+#root .raid__stat--level b { color: var(--ui-gold); }
+#root .raid__hud { font-family: var(--ui-font); }
+#root .raid__exit { min-height: 36px; display: inline-flex; align-items: center; justify-content: center; }
+/* Pause is a 28px engraved control inside a 44px hit target. It never fills a
+   HUD grid cell, and it deliberately opts out of the menu button material. */
+#root .raid__hud:not(.raid__hud--same-screen) { grid-template-columns: repeat(4, minmax(88px, auto)) minmax(116px, 1fr) auto; padding-right: 48px; }
+#root .raid__pause { position: absolute; top: 0; right: 0; display: grid; place-items: center; width: 44px; min-width: 44px; height: 44px; min-height: 44px; padding: 0; border: 0; border-radius: 0; background: none; color: #d2dde5; box-shadow: none; backdrop-filter: none; letter-spacing: 0; text-shadow: none; pointer-events: auto; }
+#root .raid__pause::before { content: ''; position: absolute; inset: 8px; border: 1px solid transparent; border-image-source: var(--ui-console-texture); border-image-slice: 96 fill; border-image-width: 5px; border-image-repeat: stretch; pointer-events: none; }
+.raid__pause-mark { position: relative; font: 600 14px/1 var(--ui-mono); letter-spacing: -1px; transform: translateX(-0.5px); }
+#root .raid__pause:hover::before { filter: brightness(1.3); }
+#root .raid__pause:active::before { filter: brightness(0.8); }
+#root .raid__pause:focus-visible { outline: 1px solid var(--ui-cyan); outline-offset: -5px; }
+#root .raid__hud--same-screen { grid-template-columns: minmax(0, 1fr) 44px minmax(0, 1fr); }
+#root .raid__pause--center { position: relative; top: auto; right: auto; justify-self: center; }
+#root .raid__nuke { --control-accent: var(--ui-gold); }
+#root .raid__nuke--ready { --control-top: #49351d; --control-bottom: #281f15; --control-border: #bd9250; --control-ink: #ffe1a3; }
+#root .raid__nuke-text b { color: inherit; }
+#root .raid__connection { border-radius: 2px; border-color: var(--ui-line); font-family: var(--ui-font); }
+#root .raid__panel { border-top: 2px solid #73e5ee77; max-height: calc(100dvh - 40px); overflow-y: auto; padding: 26px; }
+#root .raid__overlay { overflow-y: auto; background: radial-gradient(ellipse at 50% 10%, #10263d66, #02060dda); }
+#root .raid__overlay > .raid__panel { margin: auto; }
+#root .raid__panel h2 { font-size: clamp(2rem, 5.4vw, 3.7rem); }
+#root :is(.raid__settings-section, .raid__briefing-card, .raid__boss-briefing-card) { border-radius: 3px; border-color: var(--ui-line); background: #07111e; }
+#root .raid__settings-heading { color: var(--ui-cyan); }
+#root .raid__volume-control { color: var(--ui-muted); }
+#root .raid__volume-control b { color: var(--ui-cyan); font-family: var(--ui-mono); }
+#root .raid__ship-card { min-height: 150px; border-radius: 3px; }
+#root .raid__ship-card small { color: var(--ui-muted); }
+#root :is(.raid__start, .raid__briefing-launch) { --control-top: #f8cf83; --control-bottom: #d69b43; --control-border: #ffe2a9; --control-ink: #ffe3b5; min-height: 46px; }
+#root :is(.raid__gfx-btn, .raid__stage-button, .raid__menu-button) { min-height: 40px; border-radius: 3px; }
+#root .raid__difficulty-card b { text-shadow: none; }
+
+/* Tower defense opts into the shared controls instead of inline color blocks. */
+#root .defense-game { background: radial-gradient(ellipse at 50% 0, #163047, #060d17 70%) !important; font-family: var(--ui-font) !important; }
+#root .defense-header__title { color: var(--ui-text) !important; font-family: var(--ui-display); text-shadow: none !important; }
+#root .defense-stat { min-width: 0; padding: 7px 10px; gap: 8px; display: flex; justify-content: space-between; align-items: center; }
+#root .defense-game--compact .defense-stats { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; }
+#root .defense-game--compact .defense-stat { flex-direction: column; align-items: flex-start; gap: 2px; }
+.defense-stat__label { color: var(--ui-muted); font-size: 0.62rem; letter-spacing: 0.1em; text-transform: uppercase; }
+.defense-stat__value { color: var(--stat-color, var(--ui-text)); font-size: 0.95rem; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+#root .defense-wavebar { border-color: var(--ui-line) !important; background: #0a1725 !important; border-radius: 3px !important; box-shadow: none !important; }
+#root .defense-commandbar > button { min-height: 36px; }
+#root .defense-board { border-color: #3b5e77 !important; border-radius: 3px !important; }
+#root .defense-shop { gap: 5px; }
+#root .defense-tower { --control-accent: var(--tower-color); border-color: var(--ui-line); }
+#root .defense-tower[aria-pressed='true'] { --control-top: #1b3444; --control-bottom: #102232; }
+#root .defense-tower__art { border-radius: 3px !important; background: #0c1b2a !important; }
+#root .defense-tower__name { color: var(--ui-text) !important; }
+#root .defense-tower[data-unaffordable='true']:not([aria-pressed='true']) { --control-ink: var(--ui-muted); }
+#root .defense-tower[data-unaffordable='true'] .defense-tower__cost { color: var(--ui-danger) !important; }
+#root .defense-selection { border-color: var(--ui-line) !important; background: #0b1928 !important; border-radius: 3px !important; }
+#root .defense-sidebar__hints { color: var(--ui-muted) !important; }
+#root .defense-sidebar__hints summary { cursor: pointer; padding: 8px 0; color: var(--ui-cyan); }
+#root .defense-dialog__section { border-color: var(--ui-line) !important; border-radius: 3px !important; background: #08121f !important; }
+#root .defense-dialog button { min-height: 40px; }
+#root .defense-stage-clear, #root .defense-end-screen { background: #030914e8 !important; padding: max(20px, env(safe-area-inset-top, 0px)) 20px max(20px, env(safe-area-inset-bottom, 0px)); text-align: center; }
+#root .defense-end-screen > div { padding: 30px; border: 1px solid var(--ui-line); border-top: 2px solid var(--ui-cyan); border-radius: 3px; background: linear-gradient(150deg, #142536, #0a1522); max-width: min(560px, 100%); max-height: 90dvh; overflow-y: auto; }
+
+/* Modal presentation and the debrief share one frame and action hierarchy. */
+#root :is(.player-name-modal, .result-overlay, .defense-dialog, .raid__settings-overlay, .raid__stage-modal) { background: #02060de8; backdrop-filter: none; padding: max(18px, env(safe-area-inset-top, 0px)) max(18px, env(safe-area-inset-right, 0px)) max(18px, env(safe-area-inset-bottom, 0px)) max(18px, env(safe-area-inset-left, 0px)); overflow-y: auto; }
+#root :is(.player-name-modal__panel, .result-overlay__panel, .defense-dialog__panel) { border-top: 2px solid var(--ui-cyan); }
+#root .player-name-modal__panel { width: min(460px, 100%); padding: 28px; gap: 16px; max-height: calc(100dvh - 40px); overflow-y: auto; }
+#root .player-name-modal { z-index: 2100; }
+#root .result-overlay { z-index: 2200; }
+.player-name-modal__heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+#root .player-name-modal__eyebrow { display: flex; align-items: center; gap: 10px; }
+#root .player-name-modal__heading .game-button { min-height: 34px; padding: 7px 11px; width: auto; font-size: 0.64rem; }
+#root .player-name-modal h2 { font-size: 1.75rem; line-height: 1.1; }
+#root .player-name-modal p { color: var(--ui-muted); font-size: 0.86rem; }
+#root .player-name-modal__panel > .game-button { width: 100%; min-height: 46px; }
+#root .result-overlay__panel { width: min(700px, 100%); padding: 28px; max-height: calc(100dvh - 40px); }
+#root .result-overlay--victory .result-overlay__panel { border-top-color: var(--ui-gold); }
+#root .result-overlay--gameover .result-overlay__panel { border-top-color: var(--ui-danger); }
+#root .result-overlay__hero { display: grid; justify-items: center; gap: 8px; padding: 0 0 22px; border-bottom: 1px solid var(--ui-line); }
+#root .result-overlay__hero h2 { font-size: clamp(1.8rem, 5vw, 2.8rem); line-height: 1.1; margin: 0; }
+#root .result-overlay__hero p { margin: 0; color: var(--ui-muted); font-size: 0.72rem; }
+.result-overlay__ship { width: 88px; height: 88px; object-fit: contain; margin: 0 0 8px; }
+.result-overlay__score { display: grid; gap: 4px; margin-top: 8px; text-align: center; }
+.result-overlay__score small { color: var(--ui-muted); text-transform: uppercase; letter-spacing: 0.16em; font-size: 0.6rem; }
+.result-overlay__score strong { color: var(--ui-gold); font: 700 clamp(2rem, 7vw, 3.8rem)/1 var(--ui-mono); }
+#root .result-overlay__stats { gap: 1px; border: 1px solid var(--ui-line-soft); background: var(--ui-line-soft); margin-top: 20px; }
+#root .result-overlay__stats > div { border: 0; border-radius: 0; padding: 12px; background: #0a1725; box-shadow: none; }
+#root .result-overlay__stats strong { font-size: 1rem; font-variant-numeric: tabular-nums; }
+#root :is(.result-overlay__unlocks, .result-overlay__pilot-card) { border-radius: 3px; border-color: var(--ui-line-soft); background: #0a1725; }
+#root .result-overlay__panel > .game-button { position: sticky; bottom: 0; width: 100%; min-height: 48px; margin-top: 18px; }
+
+/* Menus expose scroll position; the playfield retains its clean viewport. */
+#root :is(.start-screen__content, .mode-screen, .progress-panel, .leaderboards-screen__shell, .raid-hangar__panel, .raid__panel, .result-overlay__panel, .player-name-modal__panel, .defense-dialog__panel) { scrollbar-width: thin; scrollbar-color: #365167 #08121e; }
+#root :is(.start-screen__content, .mode-screen, .progress-panel, .leaderboards-screen__shell, .raid-hangar__panel, .raid__panel, .result-overlay__panel, .player-name-modal__panel, .defense-dialog__panel)::-webkit-scrollbar { display: block; width: 5px; height: 5px; }
+#root :is(.start-screen__content, .mode-screen, .progress-panel, .leaderboards-screen__shell, .raid-hangar__panel, .raid__panel, .result-overlay__panel, .player-name-modal__panel, .defense-dialog__panel)::-webkit-scrollbar-thumb { background: #365167; border-radius: 2px; }
+
+@media (max-width: 860px) {
+  #root .raid__hud:not(.raid__hud--same-screen) { grid-template-columns: repeat(4, minmax(0, 1fr)); padding-right: 42px; column-gap: 4px; }
+  #root .raid__pause { top: -7px; right: -3px; }
+  #root .raid__pause--center { top: -7px; right: auto; }
+}
+
+/* Portrait: keep the scene visible behind a compact, reachable launch menu. */
+@media (max-width: 760px) {
+  #root .start-screen__content { justify-content: flex-start; padding: max(66px, calc(env(safe-area-inset-top, 0px) + 48px)) 22px max(20px, env(safe-area-inset-bottom, 0px)); gap: 18px; }
+  #root .start-screen__command-panel { width: min(540px, 100%); margin: auto auto 0; gap: 20px; }
+  #root .start-screen__title-lockup { gap: 10px; }
+  #root .start-screen h1 { font-size: clamp(2.75rem, 11vw, 4.3rem); max-width: 10ch; }
+  #root .start-screen__eyebrow { font-size: 0.63rem; letter-spacing: 0.16em; }
+  #root .start-screen__title-lockup p { max-width: 34ch; font-size: 0.78rem; }
+  #root .start-screen__brand { font-size: 0.58rem; }
+  #root .start-screen__command-deck { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); max-width: 540px; margin: 0 auto; gap: 6px; }
+  #root .start-screen__command-deck button { min-height: 48px; padding: 8px 6px; flex-direction: column; gap: 5px; font-size: 0.56rem; letter-spacing: 0; overflow-wrap: anywhere; }
+  #root .start-screen__command-deck button:first-child { grid-column: span 2; flex-direction: row; }
+  #root .start-screen__footer { max-width: 540px; margin: 0 auto; font-size: 0.52rem; }
+  #root .start-screen__asset-loading { width: 100%; max-width: 540px; margin: 0 auto; }
+  #root .start-screen { background-position: 68% center; }
+  #root .start-screen::after { background: linear-gradient(180deg, #04080f22, #04080f99 55%, #04080fd4); }
+  #root .game-menu-action { min-height: 68px; padding: 12px 16px; }
+  .game-menu-action__copy strong { font-size: clamp(0.86rem, 3.5vw, 1.03rem); }
+  .game-menu-action__copy small { font-size: 0.7rem; }
+  #root .mode-screen { padding: max(12px, env(safe-area-inset-top, 0px)) max(12px, env(safe-area-inset-right, 0px)) max(12px, env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px)); }
+  #root .mode-screen__panel { padding: 76px 18px 24px; }
+  #root .mode-screen__panel h1 { font-size: 2.1rem; }
+  #root .mode-screen__panel > p { font-size: 0.8rem; }
+  #root .mode-screen__topbar { left: 14px; right: 14px; top: 14px; gap: 8px; }
+  #root .mode-screen__topbar-group { gap: 6px; }
+  #root :is(.mode-screen__back, .mode-screen__utility) { padding: 8px 9px; gap: 5px; font-size: 0.62rem; }
+  #root :is(.progress-screen, .leaderboards-screen) { padding: 12px; }
+  #root :is(.progress-panel, .leaderboards-screen__shell) { padding: 16px; max-height: calc(100dvh - 24px); }
+  #root .leaderboards-screen__mode { min-height: 54px; }
+  #root .leaderboards-screen__mode strong { font-size: 0.72rem; }
+  #root .leaderboards-screen__score { font-size: 0.85rem; }
+  #root .raid__panel { padding: 20px 14px; }
+  #root :is(.player-name-modal__panel, .result-overlay__panel) { padding: 22px 18px; }
+  #root .defense-stat { padding: 5px 7px; }
+  .defense-stat__label { font-size: 0.56rem; letter-spacing: 0.04em; }
+  .defense-stat__value { font-size: 0.82rem; }
+}
+
+/* Short displays and phone landscape scroll their menus instead of clipping. */
+@media (max-height: 900px) and (min-width: 761px) {
+  #root .start-screen__content { justify-content: flex-start; padding-top: 36px; gap: 16px; }
+  #root .start-screen__command-panel { gap: 16px; }
+  #root .start-screen h1 { font-size: clamp(2.8rem, 4vw, 4rem); }
+  #root .start-screen__title-lockup { gap: 8px; }
+  #root .start-screen__actions .game-menu-action { min-height: 70px; padding-block: 12px; }
+  #root .start-screen__pilot { padding-top: 10px; }
+}
+@media (max-height: 520px) and (min-width: 641px) {
+  #root .start-screen__content { padding: max(36px, env(safe-area-inset-top, 0px)) 24px 16px; gap: 14px; }
+  #root .start-screen__command-panel { width: min(560px, 70%); margin: 0; gap: 14px; }
+  #root .start-screen__brand { display: none; }
+  #root .start-screen h1 { font-size: 2.65rem; max-width: 17ch; }
+  #root .start-screen__title-lockup p { display: none; }
+  #root .start-screen__actions .game-menu-action { min-height: 62px; padding: 10px 14px; }
+  #root .start-screen__command-deck { display: flex; flex-wrap: wrap; max-width: none; margin: 0; }
+  #root .start-screen__command-deck button { min-height: 40px; flex-direction: row; font-size: 0.6rem; padding: 8px 12px; }
+  #root .start-screen__footer { max-width: none; margin: 0; }
+  #root .mode-screen__panel { margin-block: 0; padding-top: 68px; }
+  #root .mode-screen__actions:is(.mode-screen__actions--raid, .mode-screen__actions--coop) { gap: 8px; margin-top: 18px; }
+  #root .mode-screen__actions .game-menu-action { min-height: 68px; padding-block: 10px; }
+}
+
+@media (pointer: coarse) {
+  #root :is(.raid__gfx-btn, .raid__stage-button, .raid__menu-button, .unlock-tab, .progress-card__actions button, .mode-screen__back, .mode-screen__utility) { min-height: 44px; }
+  .game-menu-hints { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #root button, #root button::before, #root button::after,
+  #root :is(.start-screen, .mode-screen, .progress-screen, .leaderboards-screen, .raid-hangar, .player-name-modal, .result-overlay, .defense-dialog, .raid__panel) *,
+  #root :is(.start-screen, .mode-screen, .progress-screen, .leaderboards-screen, .raid-hangar, .player-name-modal, .result-overlay, .defense-dialog, .raid__panel) *::before,
+  #root :is(.start-screen, .mode-screen, .progress-screen, .leaderboards-screen, .raid-hangar, .player-name-modal, .result-overlay, .defense-dialog, .raid__panel) *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+  #root button:active { translate: none; }
+}

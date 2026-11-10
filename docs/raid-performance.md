@@ -1,17 +1,30 @@
-# Air Raid viewport and rendering performance
+# Gradius Raid rendering and performance
 
-This implementation adapts the patterns in `tales-of-leighneron-2-5d` (ChunkManager, chunkNeighborhood, GeographyWorker, RenderBudget) to the **100×100 logical Air Raid playfield**:
+The visible game submits one WebGL presentation and its Canvas overlay per native `requestAnimationFrame` callback. There is no application 60 FPS cap, no automatic 30 FPS fallback, and no automatic render-resolution reduction. The browser, display refresh rate and hardware still determine the attainable frame rate. Hidden tabs suspend the loop, and the existing 33 ms simulation-delta guard prevents a large resume jump.
 
-- Actual phone/tablet/desktop CSS dimensions determine the render overscan band, from 64 to 144 CSS pixels, converted separately into game-space X and Y margins.
-- Background Pixi/WebGL geometry is refreshed at a separate cadence from gameplay. GPU-backed scenery stays smooth; Canvas 2D combat and input use the full requestAnimationFrame cadence.
-- Normal enemies, shots, asteroids, pickups, sparks, ripples, wrecks and meteors are skipped during drawing when entirely outside the padded viewport. Beam columns and gameplay telegraphs remain active.
-- A 2× larger retirement band is used **only** for cosmetic spark/ripple objects, at most every 500 ms. Combat simulation, collision, boss phases, loot and multiplayer synchronization must never depend on rendering visibility.
-- Normal-enemy raster buffers release their backing storage after enemies die, with eight retirements per maintenance pass.
-- The main static sprite filter cache is LRU and capped by estimated RGBA backing bytes: 64 MiB on mobile, 160 MiB elsewhere. Evicted ImageBitmaps are closed immediately.
-- One Web Worker uses OffscreenCanvas to pre-rasterize static filter variants and transfer ImageBitmaps to the renderer, with a bounded one-batch-in-flight pipeline. On unsupported WebViews, asynchronous idle-sliced preparation is used instead. **No live collision or physics simulation is transferred to a worker**, because late replies could corrupt deterministic game state.
+The player's selected quality profile still controls its existing DPR and effect budgets. This change does not lower those profile values or remove ship/boss animations, warning beams, combat entities or collision checks.
 
-## Limits and verification
+## Rendering strategy
 
-Rendering is not fully GPU-only: Pixi handles the background with WebGL, while gameplay still uses Canvas 2D. A future foreground GPU batching migration requires dedicated profiling and visual/collision regression tests. The worker offloads independent asset preparation, not all drawing.
+- One Pixi/WebGL renderer presents scenery, pooled aliens, projectile art, particles and impact animation. Canvas retains animated bosses, player ships, scripted weapon attacks, warning telegraphs and cutscenes.
+- Ordinary player projectiles use generated atlas art, including plasma, lasers, spread shots, ion needles, rockets and homing missiles. Compatible enemy projectiles use the same source atlas. Their simulation objects, damage and hitboxes are unchanged.
+- Two atlas images contain the combat artwork and sixteen explosion animation frames. Frame textures share the two underlying GPU sources instead of uploading one image per bullet or animation frame.
+- Atlases decode in asset preloading, then upload through Pixi's preparation queue before a local run starts. Missing art keeps the original Canvas/cached-GPU paths available.
+- The foreground prepares 256 reusable projectile nodes, 96 particle nodes, eight impact nodes and 48 alien sprite pairs during loading. These are warm reserves, not caps on live projectiles. Up to 512 inactive projectile nodes are retained for subsequent bursts.
+- Additive energy and normally blended missile/smoke art use separate containers. This keeps material changes out of the middle of the main projectile batches.
+- Numeric projectile keys replace per-frame source-prefix strings. Boss projectile transforms reuse one scratch record. Color parsing is cached. Each normal alien variant uses one high-detail raster rather than generating new size buckets after rotation or resizing.
+- Original shockwave rings remain, with additional textured shock fronts, impact coronas and fire-to-smoke animation. Existing sparks gain textured streaks and fragments. Short muzzle flashes are local visual feedback, not additional network events.
+- Cosmetic visibility culling does not remove authoritative combat objects. Existing broad-phase collision indexing, cosmetic retirement and bounded Canvas caches remain in place.
+- Expensive background vector tessellation retains its existing 40/80 ms cache cadence; scrolling world sprites and foreground transforms update on every submitted frame. This is a geometry cache, not a foreground frame cap.
 
-Verify on a physical Android device: play from start to a busy wave and a boss; assess p50/p95/p99 frame times, memory use, scene transitions, landscape rotation, coop guest state and large beam telegraphs. Builds alone do not prove device FPS.
+## Optional instrumentation
+
+The performance HUD records frame intervals in a fixed 256-sample ring. It sorts a scratch copy once per report and shows p50/p95/p99 frame intervals alongside CPU simulation/draw timings, GPU submission time, draw-layer costs, object counts and DPR. These intervals describe callback pacing, not proof that every submitted frame reached the display.
+
+GPU timing queries run only while the HUD is enabled, at most once every 300 ms, and are read only after the driver reports completion. Ordinary play does not poll GPU timing. No synchronous GPU wait or pixel readback is introduced.
+
+## Verification boundary
+
+Validation for this change is TypeScript checking only. The game was not launched; Playwright, device profiling and production builds were not run. No before/after FPS, percentile improvement, zero-stutter guarantee or hardware-performance claim has been established.
+
+A later authorized device comparison should use the same viewport, display rate, quality, ship/loadout and busy-wave/boss/co-op scenario. Check frame percentiles, texture upload behavior, memory, input response, warning readability and WebGL/Canvas fallback before claiming a measured improvement.

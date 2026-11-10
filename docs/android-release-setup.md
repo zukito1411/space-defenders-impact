@@ -26,9 +26,9 @@ If the vault is missing or made public after APKs have shipped, stop releasing, 
 
 ## Performance diagnostics
 
-Air Raid caps high-refresh Android requestAnimationFrame execution at approximately 60 Hz. When sustained frame cost is too high on a small viewport, visual draws can adapt to around 30 Hz while gameplay/input still run at up to 60 Hz. High-volume GPU particles use shared textures rather than per-frame Pixi vector tessellation.
+Air Raid presents at the display's native requestAnimationFrame cadence, without an application FPS cap, automatic 30 FPS fallback, or automatic resolution reduction. Generated combat atlases and warm sprite reserves move common projectile/effect work into shared GPU batches. Quality follows the player's explicit graphics setting. Actual FPS still depends on device and display capability.
 
-In Air Raid, open **Pause → Settings → Show FPS and performance timings (Air Raid)**. The overlay reports actual displayed FPS, average simulation CPU time, average render CPU time, and the maximum frame interval over a one-second window. These help distinguish logic/CPU costs from drawing/GPU/thermal limits; the build process cannot measure physical-device FPS.
+In Air Raid, open **Pause → Settings → Show FPS and performance timings (Air Raid)**. The overlay reports actual displayed FPS, average simulation CPU time, average render CPU time, the maximum frame interval over a one-second window, and p50/p95/p99 callback intervals over the latest 256 samples. These help distinguish logic/CPU costs from drawing/GPU/thermal limits; the build process cannot measure physical-device FPS.
 
 ## Links
 
