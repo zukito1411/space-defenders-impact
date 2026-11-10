@@ -132,6 +132,8 @@ export type Enemy = Vec & {
   color: string
   pattern: number
   bossKind: BossKind | null
+  /** Canonical art identity; optional for compatibility with older co-op packets. */
+  bossArtStage?: number
   miniBossKind: MiniBossKind | null
   shieldTime: number
   originX: number

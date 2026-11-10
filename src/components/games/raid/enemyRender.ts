@@ -1,4 +1,4 @@
-import { RAID_ALIEN_SPRITE_COUNT, RAID_ELITE_SPRITE_COUNT } from '../RaidShipSprite'
+import { drawGenericBossShip } from './genericBossRender'
 import { drawCanvasSpriteContain, drawSpriteGlow, getCanvasSpriteDimensions, getEliteAlienCanvasSprite, getEnemyCanvasSize, getNormalAlienCanvasSprite, getNormalAlienImageFilter } from './assets'
 import { DEG, STAGE_CLEAR_SECONDS } from './constants'
 import type { BossKind, Enemy, MirageBossKind } from './types'
@@ -194,14 +194,7 @@ export function drawRaidEnemy(
       }
       return
     }
-    const bossSpriteVariant = Math.abs(Math.trunc(enemy.id + enemy.variant * 11 + enemy.pattern * 3)) % (RAID_ALIEN_SPRITE_COUNT + RAID_ELITE_SPRITE_COUNT)
-    const sprite = bossSpriteVariant < RAID_ALIEN_SPRITE_COUNT
-      ? getNormalAlienCanvasSprite(bossSpriteVariant)
-      : getEliteAlienCanvasSprite(bossSpriteVariant - RAID_ALIEN_SPRITE_COUNT)
-    const bossFilter = enemy.bossKind === 'super'
-        ? 'brightness(1.14) contrast(1.18) saturate(1.38)'
-        : 'brightness(1.16) contrast(1.18) saturate(1.34)'
-    drawCanvasSpriteContain(ctx, sprite, x, y, size * 1.04, bossFilter, defeatFade, rotation, floatScale, enemy.color)
+    drawGenericBossShip(ctx, enemy, x, y, size, rotation, floatScale, defeatFade)
     ctx.save()
     ctx.translate(x, y)
     ctx.globalAlpha *= defeatFade

@@ -1,9 +1,11 @@
+import { getGenericBossArt } from './bossCatalog'
+import { getPublicAssetUrl } from '../sound'
 import { useEffect, useRef } from 'react'
 import { drawDevilGundamBoss, drawFinalBossSpriteBody, drawGalacticSnakeBoss, drawGalacticSquidBoss } from './bossRender'
 import { BOSS_COLORS, BRIEFING_PICKUP_TYPES, HEIGHT, PICKUP_PREVIEW_SEEDS, WIDTH } from './constants'
 import { drawPowerUpCanvas } from './effectsRender'
 import { preloadRaidCanvasAssets } from './preload'
-import type { BriefingBossKind, PowerKind } from './types'
+import type { BossKind, PowerKind } from './types'
 
 export function getBriefingPickupType(item: string) {
   const label = item.split(':')[0]
@@ -61,10 +63,13 @@ export function PickupPreviewCanvas({ type }: { type: PowerKind }) {
   return <canvas className="raid__pickup-preview" ref={canvasRef} aria-hidden="true" />
 }
 
-export function BossBriefingCanvas({ kind }: { kind: BriefingBossKind }) {
+export function BossBriefingCanvas({ kind, stage }: { kind: BossKind; stage?: number }) {
+  const art = getGenericBossArt(kind, stage)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
 
   useEffect(() => {
+    // Ordinary boss portraits are static and lazy: no raid-wide prewarm or extra RAF loop.
+    if (art) return
     void preloadRaidCanvasAssets()
     let raf = 0
     const draw = (time: number) => {
@@ -132,7 +137,8 @@ export function BossBriefingCanvas({ kind }: { kind: BriefingBossKind }) {
 
     raf = requestAnimationFrame(draw)
     return () => cancelAnimationFrame(raf)
-  }, [kind])
+  }, [kind, art])
 
+  if (art) return <img className="raid__boss-briefing-preview raid__boss-briefing-preview--ship" src={getPublicAssetUrl(art.assetPath)} loading="lazy" decoding="async" draggable={false} alt={art.name} />
   return <canvas className="raid__boss-briefing-preview" ref={canvasRef} aria-hidden="true" />
 }

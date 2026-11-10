@@ -29,7 +29,9 @@ import {
   type CoreLanderModel,
 } from '../progression'
 import { getLanguageText, getRaidText, getReleaseText, type LanguageCode } from '../i18n'
-import { BossBriefingCanvas, type BriefingBossKind } from './games/GradiusRaid'
+import { BossBriefingCanvas } from './games/GradiusRaid'
+import type { BossKind } from './games/raid/types'
+import { CAMPAIGN_BOSS_ART, GENERIC_BOSS_KINDS, getGenericBossArt } from './games/raid/bossCatalog'
 import { getRaidAlienSpriteUrl, getRaidEliteSpriteUrl, getRaidShipSpriteUrl, RAID_ALIEN_SPRITE_COUNT, RAID_ELITE_SPRITE_COUNT } from './games/RaidShipSprite'
 import { getPublicAssetUrl } from './games/sound'
 import './ProgressionScreen.css'
@@ -150,12 +152,13 @@ const SHIP_PREVIEW_VISUAL_STYLES: Record<string, ShipPreviewVisualStyle> = {
   },
 }
 type StageBossEntry = {
-  kind: BriefingBossKind
+  kind: BossKind
+  stageNumber?: number
   name: string
   stage: string
   behavior: readonly string[]
 }
-const RAID_BOSS_STAGES: Record<BriefingBossKind, number> = {
+const RAID_BOSS_STAGES: Partial<Record<BossKind, number>> = {
   squid: 5,
   snake: 10,
   final: 15,
@@ -315,7 +318,7 @@ export function ProgressionScreen({
   const [previewCosmeticShip, setPreviewCosmeticShip] = useState<string | null>(null)
   const [showRecoveryCode, setShowRecoveryCode] = useState(false)
   const [activeUnlockTab, setActiveUnlockTab] = useState<UnlockTab>('raid')
-  const stageBossEntries = getStageBossEntries(raidText.briefingPanels, text.enemyAlmanac.devilBoss)
+  const stageBossEntries = getStageBossEntries(raidText.briefingPanels, text.enemyAlmanac.devilBoss, text.enemyAlmanac.bossBehaviors, text.stage)
   const raidModeTitle = languageText.leaderboards.modes.gradius_solo.title
   const defenseModeTitle = languageText.leaderboards.modes.ship_defense_normal.title
 
@@ -667,19 +670,12 @@ function EnemyAlmanac({
           <p>{text.enemyAlmanac.bossPoolDesc}</p>
         </header>
         <div className="enemy-almanac__sprite-strip" aria-hidden="true">
-          {NORMAL_ALIEN_VARIANTS.slice(0, 4).map((variant) => {
-            const encountered = raidBestStage >= (NORMAL_ALIEN_UNLOCK_STAGES[variant] ?? 1)
+          {GENERIC_BOSS_KINDS.map((kind) => {
+            const art = getGenericBossArt(kind)!
+            const encountered = raidBestStage >= (kind === 'super' ? 15 : art.stage)
             return (
-              <span key={`normal-${variant}`} className={encountered ? 'enemy-almanac__pool-sprite' : 'enemy-almanac__pool-sprite enemy-almanac__pool-sprite--locked'}>
-                <img src={getRaidAlienSpriteUrl(variant)} alt="" draggable={false} />
-              </span>
-            )
-          })}
-          {ELITE_ALIEN_VARIANTS.slice(0, 4).map((variant) => {
-            const encountered = raidBestStage >= (ELITE_ALIEN_UNLOCK_STAGES[variant] ?? 2)
-            return (
-              <span key={`elite-${variant}`} className={encountered ? 'enemy-almanac__pool-sprite' : 'enemy-almanac__pool-sprite enemy-almanac__pool-sprite--locked'}>
-                <img src={getRaidEliteSpriteUrl(variant)} alt="" draggable={false} />
+              <span key={kind} title={art.name} className={encountered ? 'enemy-almanac__pool-sprite' : 'enemy-almanac__pool-sprite enemy-almanac__pool-sprite--locked'}>
+                <img src={getPublicAssetUrl(art.assetPath)} alt="" loading="lazy" decoding="async" draggable={false} />
               </span>
             )
           })}
@@ -695,15 +691,15 @@ function EnemyAlmanac({
           {stageBossEntries.map((boss) => {
             const encountered = boss.kind === 'devil'
               ? Boolean(progress.codex.devil_gundam) || hasProgressionUnlockOverride()
-              : raidBestStage >= RAID_BOSS_STAGES[boss.kind]
+              : raidBestStage >= (boss.stageNumber ?? RAID_BOSS_STAGES[boss.kind] ?? Infinity)
             return (
-              <article key={boss.kind} className={encountered ? 'enemy-almanac__boss-card' : 'enemy-almanac__boss-card enemy-almanac__boss-card--locked'}>
+              <article key={`${boss.kind}:${boss.stageNumber ?? 'special'}`} className={encountered ? 'enemy-almanac__boss-card' : 'enemy-almanac__boss-card enemy-almanac__boss-card--locked'}>
                 <header className="enemy-almanac__boss-card-title">
                   <span>{boss.stage}</span>
                   <h3>{encountered ? boss.name : text.enemyAlmanac.unknownBoss}</h3>
                 </header>
                 <div className="enemy-almanac__boss-art">
-                  {encountered ? <BossBriefingCanvas kind={boss.kind} /> : <div className="enemy-almanac__boss-locked" aria-hidden="true"><span /></div>}
+                  {encountered ? <BossBriefingCanvas kind={boss.kind} stage={boss.stageNumber} /> : <div className="enemy-almanac__boss-locked" aria-hidden="true"><span /></div>}
                 </div>
                 <div className="enemy-almanac__boss-lore">
                   {encountered ? boss.behavior.map((line) => <p key={line}>{line}</p>) : <p>{text.enemyAlmanac.unencountered}</p>}
@@ -1260,14 +1256,18 @@ function getUnlockBadgeTier(id: AchievementId | CodexId): UnlockBadgeTier {
   return UNLOCK_BADGE_TIERS[id] ?? 'standard'
 }
 
-function getStageBossEntries(briefingPanels: ReturnType<typeof getRaidText>['briefingPanels'], devilBoss: StageBossEntry) {
-  const entries: StageBossEntry[] = []
+function getStageBossEntries(briefingPanels: ReturnType<typeof getRaidText>['briefingPanels'], devilBoss: StageBossEntry,
+  behaviors: ReturnType<typeof getReleaseText>['enemyAlmanac']['bossBehaviors'], stageLabel: string) {
+  const entries: StageBossEntry[] = CAMPAIGN_BOSS_ART.map((art) => ({
+    kind: art.kind, name: art.name, stage: `${stageLabel} ${art.stage}`, stageNumber: art.stage, behavior: behaviors[art.kind],
+  }))
   for (const panel of briefingPanels) {
     if (!('bosses' in panel)) continue
     for (const boss of panel.bosses as readonly StageBossEntry[]) {
       entries.push(boss)
     }
   }
+  entries.sort((a, b) => (a.stageNumber ?? RAID_BOSS_STAGES[a.kind] ?? 99) - (b.stageNumber ?? RAID_BOSS_STAGES[b.kind] ?? 99))
   entries.push(devilBoss)
   return entries
 }
