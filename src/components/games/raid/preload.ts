@@ -1,3 +1,4 @@
+import { WRECK_ART_URLS, preloadWreckArt } from './wreckArt'
 import { SURFACE_ART_URLS, preloadSurfaceArt } from './surfaceArt'
 import { COSMOS_ART_URLS, preloadCosmosArt } from './cosmosArt'
 import { COSMOS_AMBIENCE_URL } from './CosmosPresentation'
@@ -18,7 +19,7 @@ export const RAID_IMAGE_CACHE_NAME = 'space-defender-raid-images-v1'
 
 export const RAID_AUDIO_CACHE_NAME = 'space-defender-audio-v1'
 
-export const RAID_PERSISTENT_CACHE_VERSION = 'gradius-raid-assets-v7'
+export const RAID_PERSISTENT_CACHE_VERSION = 'gradius-raid-assets-v8'
 
 export const RAID_PERSISTENT_CACHE_STORAGE_KEY = 'gradiusRaidPersistentAssetCache'
 
@@ -62,7 +63,7 @@ export function warmRaidCanvasAssets() {
 
 export function getRaidPersistentImageUrls() {
   const urls = new Set<string>()
-  for (const url of [...RAID_COMBAT_ART_URLS, ...COSMOS_ART_URLS, ...SURFACE_ART_URLS]) urls.add(url)
+  for (const url of [...RAID_COMBAT_ART_URLS, ...COSMOS_ART_URLS, ...SURFACE_ART_URLS, ...WRECK_ART_URLS]) urls.add(url)
   urls.add(getPublicAssetUrl(RAID_FINAL_BOSS_ASSET_PATH))
   urls.add(getPublicAssetUrl(RAID_SQUID_BOSS_ASSET_PATH))
   urls.add(getPublicAssetUrl(RAID_COBRA_BOSS_ASSET_PATH))
@@ -275,6 +276,7 @@ export function getRaidPixiBackgroundAssetUrls() {
     ...RAID_COMBAT_ART_URLS,
     ...COSMOS_ART_URLS,
     ...SURFACE_ART_URLS,
+    ...WRECK_ART_URLS,
     ...Object.values(RAID_OTHER_ASSET_PATHS).map((path) => getPublicAssetUrl(path)),
     getRaidShipSpriteUrl('rocket'),
     getRaidShipSpriteUrl('laser'),
@@ -311,6 +313,7 @@ export function preloadRaidPixiBackgroundAssets(onProgress?: (loaded: number, to
     try {
       if (RAID_COMBAT_ART_URLS.includes(url)) await preloadRaidCombatArt()
       else if (COSMOS_ART_URLS.includes(url)) await preloadCosmosArt()
+      else if (WRECK_ART_URLS.includes(url)) await preloadWreckArt()
       else if (SURFACE_ART_URLS.includes(url)) await preloadSurfaceArt()
       else await Assets.load(url)
     } catch {

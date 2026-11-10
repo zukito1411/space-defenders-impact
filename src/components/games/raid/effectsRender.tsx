@@ -598,9 +598,8 @@ export function drawDerelictWreck(
   ctx.save()
   ctx.translate(x, y)
   ctx.rotate((wreck.rotation ?? 0) + Math.sin(time / 1300 + wreck.phase) * 0.08)
-  ctx.shadowBlur = 14
-  ctx.shadowColor = 'rgba(239,68,68,0.28)'
-  const drewSprite = drawCanvasImageContain(ctx, sprite, 0, 0, w, h, RAID_DERELICT_WRECK_FILTER, 0.92)
+  // Local lights are baked into the art; keep solid hulls opaque, without a live blur.
+  const drewSprite = drawCanvasImageContain(ctx, sprite.loaded ? sprite : getDerelictWreckCanvasSprite(8), 0, 0, w, h, RAID_DERELICT_WRECK_FILTER, 1)
   if (!drewSprite) {
     const hull = ctx.createLinearGradient(-w * 0.5, -h * 0.5, w * 0.5, h * 0.5)
     hull.addColorStop(0, '#94a3b8')

@@ -1,0 +1,93 @@
+{
+  "size": [
+    1024,
+    1024
+  ],
+  "cells": [
+    2,
+    2
+  ],
+  "frame_inset": 24,
+  "normalization": "alpha <32 removed; alpha >=200 opaque; fit each silhouette inside 456px with 28px minimum gutter",
+  "assets": [
+    {
+      "path": "public/assets/raid-fx/wreck-ships-v1.webp",
+      "source_sha256": "356fb7233335b09b425cbebf7542b2f9413b94283f7584e30d38cedc2ac4197e",
+      "sha256": "6151fb0f00c9f2c997225883f64e2cffd7bb88b7b1a52be01a2cc5711cecf852",
+      "bytes": 209542,
+      "content_rects": [
+        [
+          80,
+          28,
+          351,
+          456
+        ],
+        [
+          614,
+          28,
+          308,
+          456
+        ],
+        [
+          77,
+          540,
+          357,
+          456
+        ],
+        [
+          563,
+          540,
+          410,
+          456
+        ]
+      ]
+    },
+    {
+      "path": "public/assets/raid-fx/wreck-stations-v1.webp",
+      "source_sha256": "7a7503fcd90ee084bce48b37c736171e80bc67f6833ffcaa6a1f02e1dfbb39d3",
+      "sha256": "23899b189bf35ec233a027bce4354d280cb8f6161971e8241f165d445ededefa",
+      "bytes": 217174,
+      "content_rects": [
+        [
+          53,
+          28,
+          405,
+          456
+        ],
+        [
+          540,
+          49,
+          456,
+          413
+        ],
+        [
+          39,
+          540,
+          433,
+          456
+        ],
+        [
+          566,
+          540,
+          404,
+          456
+        ]
+      ]
+    }
+  ],
+  "generation": "Built-in ImageGen, two independently generated transparent 2x2 atlases",
+  "prompts": {
+    "ships": "Production 2D space-shooter sprite atlas, exactly TWO columns and TWO rows of four equally sized SQUARE cells on genuine transparent background. One independent isolated wreck centered in each cell, all complete silhouettes visible, ample 12 percent transparent gutters, no neighboring objects overlap cells. Top-down three-quarter overhead view, length vertical in the image, each object's full silhouette is slightly taller than wide (roughly 0.85 width to height), substantial compact readable body. Realistic detailed gunmetal, worn ceramic armor, small muted safety decals, deep opaque shadows, delicate dim emergency lights; upper-left lighting consistent on all objects. Damaged abandoned objects, clean silhouettes, no stars, no scenery, no planets, no labels, no border, no giant explosions or long smoke trails. No bright matte fringe. Each design must have a radically different outer silhouette, not merely recolors. TOP LEFT: a fractured military carrier hull with a broad wedge prow, split flight deck and broken side hangars, navy and white panels with restrained amber lights. TOP RIGHT: a derelict cargo hauler with a central spine and uneven clusters of missing boxy cargo pods, rusty ochre and steel. BOTTOM LEFT: a shattered civilian exploration cruiser, long rounded central cabin, two broken curved engine nacelles, pale ceramic and muted cyan lights. BOTTOM RIGHT: an abandoned alien biomechanical cruiser husk, compact claw-like crescent silhouette and ribbed carapace, charcoal violet and dim magenta fissures. These are four genuinely different large shipwreck designs; no space stations.",
+    "stations": "Production 2D space-shooter sprite atlas, exactly TWO columns and TWO rows of four equally sized SQUARE cells on genuine transparent background. One independent isolated wreck centered in each cell, all complete silhouettes visible, ample 12 percent transparent gutters, no neighboring objects overlap cells. Top-down three-quarter overhead view, length vertical in the image, each object's full silhouette is slightly taller than wide (roughly 0.85 width to height), substantial compact readable body. Realistic detailed gunmetal, worn ceramic armor, small muted safety decals, deep opaque shadows, delicate dim emergency lights; upper-left lighting consistent on all objects. Damaged abandoned objects, clean silhouettes, no stars, no scenery, no planets, no labels, no border, no giant explosions or long smoke trails. No bright matte fringe. Each design must have a radically different outer silhouette, not merely recolors. TOP LEFT: a broken orbital habitat ring with one missing quadrant and a thick central support spine, muted ivory and steel. TOP RIGHT: a damaged three-arm solar research station, wide three-pronged silhouette, fractured rectangular blue solar panels and white module pods. BOTTOM LEFT: a wrecked industrial refinery, compact pair of bulky drum tanks, lattice gantries, torn dock and copper pipes, rusty orange steel. BOTTOM RIGHT: a shattered hexagonal communications hub, angular central pressure vessel with asymmetrical antenna masts and four short broken trusses, pale gray and restrained cyan lights. These are four genuinely different broken space station architectures; no spaceship hulls."
+  },
+  "designs": [
+    "fractured-carrier",
+    "cargo-hauler",
+    "exploration-cruiser",
+    "alien-husk",
+    "broken-habitat",
+    "solar-research",
+    "orbital-refinery",
+    "communications-hub"
+  ]
+}

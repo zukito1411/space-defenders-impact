@@ -1,3 +1,4 @@
+import { getWreckCanvasSprite } from './wreckArt'
 import { getRaidAlienSpriteUrl, getRaidEliteSpriteUrl, getRaidShipSpriteUrl, RAID_ALIEN_SPRITE_COUNT, RAID_ELITE_SPRITE_COUNT } from '../RaidShipSprite'
 import { getPublicAssetUrl } from '../sound'
 import { getCobraBossBodyTextureCanvas, getSquidBossTentacleTextureCanvas } from './bossRender'
@@ -1184,7 +1185,9 @@ export function getDerelictWreckVariantData(variant: number) {
   return RAID_DERELICT_WRECK_VARIANTS[getDerelictWreckVariantIndex(variant)]
 }
 
-export function getDerelictWreckCanvasSprite(_variant: number) {
+export function getDerelictWreckCanvasSprite(variant: number) {
+  const atlas = getWreckCanvasSprite(getDerelictWreckVariantIndex(variant))
+  if (atlas) return atlas
   const cacheKey = 'other-image:derelict-space-station-full'
   const existing = canvasSpriteCache.get(cacheKey)
   if (existing) return existing
