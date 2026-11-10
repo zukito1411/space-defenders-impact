@@ -4,6 +4,7 @@ import ts from 'typescript'
 const read = (file) => readFileSync(new URL('../'+file,import.meta.url),'utf8')
 const load = (source, jsx=false) => import('data:text/javascript;base64,'+Buffer.from(ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022,jsx:jsx?ts.JsxEmit.React:undefined}}).outputText).toString('base64'))
 const material = await load(read('src/components/games/raid/sceneryMaterial.ts'))
+const journey = await load(read('src/components/games/raid/journey.ts'))
 const regions = await load(read('src/components/games/raid/cosmos.ts'))
 const {cosmicRegionIndex,edgeFlyby,cosmicArrival}=regions
 for (const [stage,index] of [[1,0],[4,0],[5,1],[8,1],[9,2],[12,2],[13,3],[15,3],[999,3],[9101,1],[9102,2],[9103,3],[NaN,0]]) assert.equal(cosmicRegionIndex(stage),index)
@@ -27,7 +28,11 @@ const bakeSceneryLighting=()=>null;
 `+art
 const atlas=await load(art)
 await Promise.all([atlas.preloadCosmosArt(),atlas.preloadCosmosArt()])
-assert.equal(atlas.loads,2);assert.equal(atlas.made,8)
+assert.equal(atlas.loads,3);assert.equal(atlas.made,12)
+assert.equal(atlas.getJourneyPlanet(0).source,atlas.getJourneyPlanet(1).source)
+assert.equal(atlas.getJourneyPlanet(0).source,atlas.getJourneySurface(0).source)
+assert.equal(atlas.getJourneyPlanet(0).frame.width,464)
+assert.equal(atlas.getJourneySurface(1).frame.width,504)
 for(let i=0;i<4;i++) {
  const tile=atlas.getCosmosBackdrop(i),landmark=atlas.getCosmosLandmark(i)
  assert.equal(tile.frame.width,504);assert.equal(landmark.frame.width,464)
@@ -40,11 +45,16 @@ let source=read('src/components/games/raid/background.ts').replace(/^import .*\n
 source=`
 const unit=v=>Math.max(0,Math.min(1,v));
 const sceneryTint=${material.sceneryTint.toString()};
+const createRaidJourneyView=${journey.createRaidJourneyView.toString()};
+const ease=n=>{const t=unit(n);return t*t*(3-2*t)};
+const JOURNEY_CLEAR_SECONDS=3.15;
+const getRaidStageEntrySeconds=${journey.getRaidStageEntrySeconds.toString()};
+const sampleRaidJourney=${journey.sampleRaidJourney.toString()};
 const PLANET_DEPTH=[30,20,10],PLANET_PARALLAX=[.018,.009,.004];
 const COSMIC_REGIONS=${JSON.stringify(regions.COSMIC_REGIONS)};
 const cosmicRegionIndex=${cosmicRegionIndex.toString()},edgeFlyby=${edgeFlyby.toString()};
 const frame={width:464,height:464};
-const getCosmosBackdrop=i=>i>=0&&i<4?frame:undefined,getCosmosLandmark=getCosmosBackdrop,getCosmosBloom=getCosmosBackdrop;
+const getCosmosBackdrop=i=>i>=0&&i<4?frame:undefined,getCosmosLandmark=getCosmosBackdrop,getCosmosBloom=getCosmosBackdrop,getJourneyPlanet=getCosmosBackdrop,getJourneySurface=getCosmosBackdrop,getJourneyBloom=getCosmosBackdrop;
 const DEG=Math.PI/180,COMET_ASSET_HEAD_ANGLE=0;
 const seededNoise=(i,s)=>((i*37+s*19)%100)/100;
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -55,7 +65,7 @@ class Sprite {
  get height(){return this.texture.height*this.scaleY} set height(v){this.scaleY=v/this.texture.height}
 }
 class Texture {static WHITE=frame}
-class Container {}
+class Container {constructor(){this.position={set(){}};this.pivot={set(){}};this.scale={set(){}}} }
 class Graphics {constructor(){this.position={set(){}}} clear(){} }
 class RaidGpuForeground {}
 class RaidTravelMotion {x=0;y=0;}
@@ -117,11 +127,29 @@ assert.equal(scene.cosmosEntered,3,'new run failed to reset the orbital reveal')
 assert.equal(renderFrame(9101,4000,2),true)
 assert.equal(renderFrame(6,5000,2),true)
 assert.equal(scene.cosmosEntered,5,'leaving a surface arena failed to reveal its region')
+// Real render orchestration for a linked campaign journey; one world plane, no new per-frame sprites.
+const travelFrame=(stage,theme,age,clear=0,entry=0)=>scene.render({width:1000,height:500,dpr:1,palette:background.DEFAULT_RAID_PALETTE,quality:'high',stageTheme:theme,time:age*1000+10000,runToken:10,stageNumber:stage,raidMode:'campaign',stageAge:age,clearRemaining:clear,entryRemaining:entry,stageRush:clear>0?1:0,bossIntensity:0,devilCorruption:0})
+assert.equal(travelFrame(2,2,0),true);const distant=scene.planetSprites[0].width
+assert.equal(travelFrame(4,4,30),true);assert.ok(scene.planetSprites[0].width>distant)
+assert.equal(travelFrame(4,4,33,1e-8),true)
+assert.ok(scene.worldScene.visible && scene.worldScene.alpha>0 && scene.worldScene.alpha<1)
+const approachWidth=scene.planetSprites[0].width
+assert.equal(travelFrame(5,9101,0,0,2.4),true)
+assert.ok(Math.abs(scene.planetSprites[0].width-approachWidth)<.001,'orbital/surface handoff jumped in render dimensions')
+assert.equal(travelFrame(5,9101,3),true)
+assert.equal(scene.skyScene.visible,false);assert.equal(scene.solidScenery.visible,false);assert.equal(scene.worldScene.alpha,1)
+assert.equal(travelFrame(5,9101,40,1e-8),true)
+const departureX=scene.planetSprites[1].x,departureSize=scene.planetSprites[1].width
+assert.equal(travelFrame(6,6,0,0,1.18),true)
+assert.ok(Math.abs(scene.planetSprites[1].x-departureX)<.001 && Math.abs(scene.planetSprites[1].width-departureSize)<.001)
+const frozen=JSON.stringify(scene.journey)
+assert.equal(travelFrame(6,6,0,0,1.18),true);assert.equal(JSON.stringify(scene.journey),frozen,'frozen game time advanced the journey')
+assert.equal(background.sprites,count,'journey render allocated additional sprites')
 scene.fillRadial=()=>{};scene.drawFinalBattleWeaponProfile=()=>{};scene.drawFinalBattleCruiserTrail=()=>{}
 scene.finalBattleTextures.get=()=>({width:128,height:128})
 scene.updateFinalBattleLayer(1000,500,10,9103,'high',.68)
 for(const sprite of [...scene.finalBattleSprites,...scene.finalBattleCruiserSprites].filter(s=>s.visible))assert.equal(sprite.alpha,1,'background battle hull became transparent')
-console.log('Cosmos: all regions and special arenas, two pooled atlas sources, transition bounds, rare passes and fixed sprite counts passed')
+console.log('Cosmos: all regions and special arenas, three pooled atlas sources, transition bounds, rare passes and fixed sprite counts passed')
 // Hook harness checks actual component lifecycle without a browser/audio device.
 const hooks=[],effects=[];let cursor=0,changed=false,tick,hidden=false,enabled=true,disposed=0,plays=0;
 const audioObjects=[]

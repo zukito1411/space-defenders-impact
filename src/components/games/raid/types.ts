@@ -350,6 +350,8 @@ export type MultiplayerHostState = {
   selectedShipKey: string
   hostPointer: Vec | null
   guestPointer: Vec | null
+  journeyAge?: number
+  stageEntry?: number
   stageClear: number
   unlockedStage: number
   nukeCooldown: number

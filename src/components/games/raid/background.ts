@@ -1,6 +1,8 @@
+import { createRaidJourneyView, sampleRaidJourney } from './journey'
+import type { RaidJourneyInput } from './journey'
 import { sceneryTint, PLANET_DEPTH, PLANET_PARALLAX } from './sceneryMaterial'
 import { cosmicRegionIndex, COSMIC_REGIONS, edgeFlyby } from './cosmos'
-import { getCosmosBackdrop, getCosmosLandmark, getCosmosBloom, preloadCosmosArt } from './cosmosArt'
+import { getCosmosBackdrop, getCosmosLandmark, getCosmosBloom, getJourneyPlanet, getJourneySurface, getJourneyBloom, preloadCosmosArt } from './cosmosArt'
 import { projectDepthStar, type DepthStar } from './depthProjection'
 import { RaidTravelMotion } from './travelMotion'
 import { getPublicAssetUrl } from '../sound'
@@ -769,7 +771,7 @@ export function getRaidStarfieldCacheKey(width: number, height: number, quality:
 
 export type PixiRaidAssetKey = RaidOtherAssetKey
 
-export type PixiRaidBackgroundFrame = {
+export type PixiRaidBackgroundFrame = RaidJourneyInput & {
   palette: RaidPalette
   width: number
   height: number
@@ -841,6 +843,16 @@ export class PixiRaidBackground {
   private foregroundPrepared = false
   private cancelForegroundPreparation: (() => void) | null = null
   private readonly scene = new Container()
+  private readonly skyScene = new Container()
+  private readonly worldScene = new Container()
+  private readonly journeySurfaceSprite = new Sprite(Texture.WHITE)
+  private readonly journey = createRaidJourneyView()
+  private readonly journeyInput: RaidJourneyInput = { stageTheme: 1 }
+  private journeyStage = 0
+  private journeyPreviousStage = 0
+  private journeyArena = 0
+  private journeyArenaSince = 0
+  private journeyRun = -1
   private readonly solidScenery = new Container({ sortableChildren: true })
   private readonly sceneryBloomSprites = [new Sprite(Texture.WHITE), new Sprite(Texture.WHITE)]
   private reducedMotion = false
@@ -923,13 +935,14 @@ export class PixiRaidBackground {
       this.reducedMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
       app.stage.addChild(this.scene)
       app.stage.addChild(this.gpuForeground.root)
-      this.scene.addChild(this.baseGraphics)
-      this.galaxySprites.forEach((sprite) => this.scene.addChild(sprite))
-      this.scene.addChild(this.nebulaGraphics)
-      this.scene.addChild(this.bossTintGraphics)
-      this.scene.addChild(this.ambientGlowGraphics)
-      this.farStarLayers.forEach((layer) => this.scene.addChild(layer))
-      this.nearStarLayers.forEach((layer) => this.scene.addChild(layer))
+      this.scene.addChild(this.skyScene)
+      this.skyScene.addChild(this.baseGraphics)
+      this.galaxySprites.forEach((sprite) => this.skyScene.addChild(sprite))
+      this.skyScene.addChild(this.nebulaGraphics)
+      this.skyScene.addChild(this.bossTintGraphics)
+      this.skyScene.addChild(this.ambientGlowGraphics)
+      this.farStarLayers.forEach((layer) => this.skyScene.addChild(layer))
+      this.nearStarLayers.forEach((layer) => this.skyScene.addChild(layer))
       // Bake a small soft point once; never blur or rebuild stars per frame.
       const starCanvas = document.createElement('canvas')
       starCanvas.width = starCanvas.height = 64
@@ -950,19 +963,19 @@ export class PixiRaidBackground {
         sprite.anchor.set(0.5)
         sprite.tint = index % 9 === 0 ? 0xffe5bf : 0xdbeafe
         sprite.visible = false
-        this.scene.addChild(sprite)
+        this.skyScene.addChild(sprite)
       })
-      this.scene.addChild(this.surfaceGraphics)
-      this.scene.addChild(this.speedLineGraphics)
+      this.worldScene.addChild(this.journeySurfaceSprite)
+      this.worldScene.addChild(this.surfaceGraphics)
+      // Speed lines are added above the world plane below.
       this.speedLineSprites.forEach((sprite) => {
         sprite.texture = this.depthStarTexture ?? Texture.WHITE
         sprite.anchor.set(0.5)
-        this.scene.addChild(sprite)
       })
-      this.wateryIslandSprites.forEach((sprite) => this.scene.addChild(sprite))
-      this.wateryCloudSprites.forEach((sprite) => this.scene.addChild(sprite))
-      this.volcanicIslandSprites.forEach((sprite) => this.scene.addChild(sprite))
-      this.volcanicCloudSprites.forEach((sprite) => this.scene.addChild(sprite))
+      this.wateryIslandSprites.forEach((sprite) => this.worldScene.addChild(sprite))
+      this.wateryCloudSprites.forEach((sprite) => this.worldScene.addChild(sprite))
+      this.volcanicIslandSprites.forEach((sprite) => this.worldScene.addChild(sprite))
+      this.volcanicCloudSprites.forEach((sprite) => this.worldScene.addChild(sprite))
       this.scene.addChild(this.finalBattleBackdropGraphics)
       this.scene.addChild(this.solidScenery)
       this.sceneryBloomSprites.forEach((sprite) => { sprite.blendMode = 'add'; sprite.visible = false; this.solidScenery.addChild(sprite) })
@@ -970,6 +983,9 @@ export class PixiRaidBackground {
       this.wreckSprites.forEach((sprite, index) => { sprite.zIndex = 35 + index * 0.01; this.solidScenery.addChild(sprite) })
       this.scenicSprites.forEach((sprite) => this.solidScenery.addChild(sprite))
       this.finalBattleSprites.forEach((sprite, index) => { sprite.zIndex = 45 + index * 0.01; this.solidScenery.addChild(sprite) })
+      this.scene.addChild(this.worldScene)
+      this.scene.addChild(this.speedLineGraphics)
+      this.speedLineSprites.forEach((sprite) => this.scene.addChild(sprite))
       this.scene.addChild(this.finalBattleGraphics)
       this.finalBattleCruiserSprites.forEach((sprite, index) => { sprite.zIndex = 50 + index * 0.01; this.solidScenery.addChild(sprite) })
       this.cometFlybySprite.zIndex = 55
@@ -1030,8 +1046,32 @@ export class PixiRaidBackground {
     if (!app) return false
 
     try {
-      const { width, height, dpr, palette, quality, stageTheme, time, stageRush, bossIntensity, devilCorruption, finalBattleIntensity = 0 } = frame
+      const { width, height, dpr, palette, quality, time, stageRush, bossIntensity, devilCorruption, finalBattleIntensity = 0 } = frame
       const seconds = time / 1000
+      if (this.journeyRun !== (frame.runToken ?? 0)) {
+        this.journeyRun = frame.runToken ?? 0
+        this.journeyStage = 0; this.journeyPreviousStage = 0; this.journeyArena = 0
+      }
+      if (frame.stageNumber !== undefined && frame.stageNumber !== this.journeyStage) {
+        this.journeyPreviousStage = this.journeyStage
+        this.journeyStage = frame.stageNumber
+      }
+      const incomingArena = isWateryWorldTheme(frame.stageTheme) || isVolcanicWorldTheme(frame.stageTheme) ? frame.stageTheme : 0
+      if (incomingArena && this.journeyArena !== incomingArena) {
+        this.journeyArena = incomingArena
+        this.journeyArenaSince = frame.stageAge ?? 0
+      } else if (!incomingArena && !(frame.clearRemaining ?? 0) && (frame.stageAge ?? 0) > 14) this.journeyArena = 0
+      this.journeyInput.stageTheme = frame.stageTheme
+      this.journeyInput.stageNumber = frame.stageNumber
+      this.journeyInput.raidMode = frame.raidMode
+      this.journeyInput.stageAge = frame.stageAge
+      this.journeyInput.clearRemaining = frame.clearRemaining
+      this.journeyInput.entryRemaining = frame.entryRemaining
+      this.journeyInput.departureArena = this.journeyArena
+      this.journeyInput.arenaAge = Math.max(0, (frame.stageAge ?? 0) - this.journeyArenaSince)
+      sampleRaidJourney(this.journeyInput, this.journey, this.journeyPreviousStage)
+      const stageTheme = this.journey.worldAlpha < 0.999 ? this.journey.skyTheme : (this.journey.worldTheme || frame.stageTheme)
+      const groundTheme = this.journey.worldTheme || frame.stageTheme
       const nextRegion = cosmicRegionIndex(stageTheme)
       const arenaChanged = shouldDrawRaidGalaxies(stageTheme) !== shouldDrawRaidGalaxies(this.cosmosStage)
       if (this.cosmosRegion !== nextRegion || arenaChanged || this.cosmosRun !== (frame.runToken ?? 0) || seconds < this.cosmosEntered) {
@@ -1068,7 +1108,7 @@ export class PixiRaidBackground {
       // Independent Pixi sprite scrolling and the foreground canvas retain
       // the native requestAnimationFrame cadence.
       const geometryKey = [
-        width, height, dpr, quality, stageTheme,
+        width, height, dpr, quality, stageTheme, groundTheme,
         palette.baseTop, palette.baseMid, palette.baseBottom,
         palette.surfaceMode, palette.surfaceA, palette.surfaceB, palette.surfaceC,
         palette.bgA, palette.bgB, palette.nebulaA, palette.nebulaB,
@@ -1087,7 +1127,7 @@ export class PixiRaidBackground {
         this.updateNebula(width, height, seconds, palette, stageTheme, isLow)
         this.updateBossTint(width, height, seconds, palette, bossIntensity, devilCorruption, isLow)
         this.updateAmbientGlows(width, height, isLow, isMedium, palette, stageTheme)
-        this.updateSurface(width, height, seconds, palette, quality, stageTheme)
+        this.updateSurface(width, height, seconds, palette, quality, groundTheme)
         this.updateFinalBattleBackdrop(width, height, seconds, stageTheme, quality, finalBattleIntensity)
         this.updateFinalBattleLayer(width, height, seconds, stageTheme, quality, finalBattleIntensity)
         this.updateAmbientExplosions(width, height, seconds, isLow, isMedium, stageTheme)
@@ -1101,6 +1141,7 @@ export class PixiRaidBackground {
       this.updatePlanets(width, height, seconds, palette, stageTheme, isLow, isMedium)
       this.updateWrecks(width, height, seconds, stageTheme, isLow, isMedium)
       this.updateScenic(width, height, seconds, stageTheme, isLow, isMedium)
+      this.updateJourneyScenery(width, height, isLow, isMedium)
       this.updateSceneryBloom(stageTheme, isLow, isMedium)
       this.updateRareCometFlyby(width, height, seconds, isLow, isMedium, stageTheme)
       this.updateBackgroundObjects(width, height, seconds, stageTheme, isLow, isMedium)
@@ -1116,18 +1157,18 @@ export class PixiRaidBackground {
       // Scrolling water/volcano island and cloud sprites are inexpensive
       // position/visibility updates. They MUST advance each render frame,
       // independently of the 40-80 ms cached vector-ground redraw cadence.
-      if (quality !== 'low' && isWateryWorldTheme(stageTheme)) {
+      if (quality !== 'low' && isWateryWorldTheme(groundTheme)) {
         this.updateWateryWorldAssetSprites(width, height, seconds, quality)
-      } else if (quality !== 'low' && isVolcanicWorldTheme(stageTheme)) {
+      } else if (quality !== 'low' && isVolcanicWorldTheme(groundTheme)) {
         this.updateVolcanicWorldAssetSprites(width, height, seconds, quality)
       }
       // Boss Rush's water and volcanic arenas use their own surface layers.
       // Apply depth here, after their per-frame positions have been reset.
-      if (quality !== 'low' && !space) {
+      if (quality !== 'low' && (isWateryWorldTheme(groundTheme) || isVolcanicWorldTheme(groundTheme))) {
         const dx = -this.travel.x * width
         const dy = -this.travel.y * height
-        const islands = isWateryWorldTheme(stageTheme) ? this.wateryIslandSprites : this.volcanicIslandSprites
-        const clouds = isWateryWorldTheme(stageTheme) ? this.wateryCloudSprites : this.volcanicCloudSprites
+        const islands = isWateryWorldTheme(groundTheme) ? this.wateryIslandSprites : this.volcanicIslandSprites
+        const clouds = isWateryWorldTheme(groundTheme) ? this.wateryCloudSprites : this.volcanicCloudSprites
         for (const sprite of islands) {
           if (!sprite.visible) continue
           sprite.x += dx * 0.025
@@ -1139,6 +1180,7 @@ export class PixiRaidBackground {
           sprite.y += dy * 0.03
         }
       }
+      this.updateJourneyWorld(width, height, groundTheme)
       // Present with the foreground once per rAF, not twice. Geometry,
       // scenery and textures are updated here on their existing cadence.
       return true
@@ -1516,18 +1558,64 @@ export class PixiRaidBackground {
     }
   }
 
+  private updateJourneyScenery(width: number, height: number, isLow: boolean, isMedium: boolean) {
+    if (!this.journey.enabled) return
+    if (this.journey.fleetSize <= 0) {
+      if (this.journey.phase === 'descent' || this.journey.phase === 'ascent') for (const sprite of this.scenicSprites) sprite.visible = false
+      return
+    }
+    for (let i = 0; i < this.scenicSprites.length; i++) {
+      const sprite = this.scenicSprites[i]
+      if (i > 0 && (isLow || isMedium)) { sprite.visible = false; continue }
+      const texture = getCosmosLandmark(i === 0 ? 3 : 2)
+      if (!texture) continue
+      const p = this.journey.approach
+      const size = Math.max(width, height) * (i === 0 ? this.journey.fleetSize : 0.12 + p * 0.22)
+      setPixiSpriteContain(sprite, texture, width * (i === 0 ? 0.83 - p * 0.12 : -0.18 + p * 0.3),
+        height * (i === 0 ? 0.14 + p * 0.19 : 0.21), size, size, 1, i === 0 ? -0.12 : 0.08)
+      sprite.tint = sceneryTint(COSMIC_REGIONS[3].tint, i === 0 ? 0.62 : 0.44)
+      sprite.zIndex = this.journey.departing >= 0 ? (i === 0 ? 15 : 12) : (i === 0 ? 40 : 34)
+    }
+  }
+
+  private updateJourneyWorld(width: number, height: number, groundTheme: number) {
+    const world = isWateryWorldTheme(groundTheme) || isVolcanicWorldTheme(groundTheme)
+    const alpha = this.journey.enabled ? this.journey.worldAlpha : (world ? 1 : 0)
+    this.worldScene.visible = world && alpha > 0
+    this.worldScene.alpha = alpha
+    this.skyScene.visible = alpha < 0.999
+    this.solidScenery.visible = alpha < 0.999
+    const zoom = this.reducedMotion ? 1 : this.journey.worldZoom
+    this.worldScene.pivot.set(width * 0.5, height * 0.5)
+    this.worldScene.position.set(width * 0.5, height * 0.5)
+    this.worldScene.scale.set(zoom)
+    const texture = world ? getJourneySurface(isWateryWorldTheme(groundTheme) ? 0 : 1) : undefined
+    this.journeySurfaceSprite.visible = Boolean(texture && world)
+    if (texture) {
+      const onDestinationStage = this.journeyStage === 5 || this.journeyStage === 10
+      const surfaceAge = this.journeyInput.raidMode === 'endless'
+        ? Math.max(0, (this.journeyInput.arenaAge ?? 0) - 2.4)
+        : onDestinationStage ? Math.max(0, (this.journeyInput.stageAge ?? 0) - 2.4) : 0
+      setPixiSpriteContain(this.journeySurfaceSprite, texture, width * 0.5,
+        height * (0.5 + Math.min(0.12, surfaceAge * 0.0015)), width, height, 1)
+      // Overscan keeps the ground plate covered during ascent zoom/parallax.
+      this.journeySurfaceSprite.scale.set(width * 1.35 / texture.width, height * 1.35 / texture.height)
+    }
+  }
+
   private updateSceneryBloom(stageTheme: number, isLow: boolean, isMedium: boolean) {
     const region = COSMIC_REGIONS[this.cosmosRegion < 0 ? 0 : this.cosmosRegion]
     for (let i = 0; i < this.sceneryBloomSprites.length; i++) {
       const glow = this.sceneryBloomSprites[i]
       const source = i === 0 ? this.planetSprites[0] : this.scenicSprites[0]
-      const texture = getCosmosBloom(i === 0 ? (region.landmark < 2 ? region.landmark : 0) : region.landmark)
-      const canonical = i === 0 || this.cosmosRegion >= 2
+      const texture = i === 0 && this.journey.enabled ? getJourneyBloom(this.journey.planet) : getCosmosBloom(i === 0 ? (region.landmark < 2 ? region.landmark : 0) : (this.journey.enabled && this.journey.fleetSize > 0 ? 3 : region.landmark))
+      const canonical = i === 0 ? (!this.journey.enabled || this.journey.planet >= 0) : (!this.journey.enabled || this.journey.phase === 'fleet') && this.cosmosRegion >= 2
       glow.visible = !isLow && (!isMedium || i === 0) && canonical && shouldDrawRaidGalaxies(stageTheme) && source.visible && Boolean(texture)
       if (!glow.visible || !texture) continue
       const size = Math.max(source.width, source.height) * (256 / 192)
+      if (size > Math.max(this.width, this.height) * 2) { glow.visible = false; continue }
       setPixiSpriteContain(glow, texture, source.x, source.y, size, size, i === 0 ? 0.38 : 0.24, source.rotation)
-      glow.tint = region.tint
+      glow.tint = i === 0 && this.journey.enabled ? (this.journey.planet === 0 ? 0xdbc4ff : 0xffb377) : region.tint
       // A nearer opaque surface also occludes bloom from farther objects.
       glow.zIndex = source.zIndex - 0.001
     }
@@ -1729,6 +1817,12 @@ export class PixiRaidBackground {
     this.hideWaterySurfaceSprites()
     const isMedium = quality === 'medium'
     const isWorld = isWateryWorldTheme(stageTheme) || isVolcanicWorldTheme(stageTheme)
+    if (isWorld && getJourneySurface(isWateryWorldTheme(stageTheme) ? 0 : 1)) { graphics.visible = false; return }
+    if (isWorld && quality === 'low') {
+      graphics.visible = true
+      graphics.rect(0, 0, width, height).fill(isWateryWorldTheme(stageTheme) ? 0x110a26 : 0x210b08)
+      return
+    }
     const visible = quality !== 'low' && (isWorld || (shouldDrawRaidSurfaceStage(stageTheme) && !getCosmosBackdrop(this.cosmosRegion)))
     graphics.visible = visible
     if (!visible) return
@@ -1996,6 +2090,24 @@ export class PixiRaidBackground {
 
     for (let index = 0; index < this.planetSprites.length; index += 1) {
       const sprite = this.planetSprites[index]
+      if (this.journey.enabled && index < 2) {
+        const departing = index === 1
+        const key = departing ? this.journey.departing : this.journey.planet
+        const texture = key >= 0 ? getJourneyPlanet(key) : undefined
+        const visible = Boolean(texture && key >= 0 && (this.journey.worldAlpha < 0.999))
+        sprite.visible = visible
+        if (visible && texture) {
+          const size = Math.max(width, height) * (departing ? this.journey.departureSize : this.journey.size)
+          const x = departing ? this.journey.departureX : this.journey.x
+          const y = departing ? this.journey.departureY : this.journey.y
+          setPixiSpriteContain(sprite, texture, width * x - this.travel.x * width * 0.012,
+            height * y - this.travel.y * height * 0.006, this.reducedMotion ? Math.min(size, Math.max(width,height)) : size,
+            this.reducedMotion ? Math.min(size, Math.max(width,height)) : size, 1, 0)
+          sprite.tint = sceneryTint(0xffffff, departing ? 0.92 - Math.min(1, (this.journeyInput.stageAge ?? 0) / 14) * (this.journey.phase === 'ascent' ? 0 : 0.2) : 0.92)
+          sprite.zIndex = departing ? 30 : this.journey.departing >= 0 ? 20 : 30
+        }
+        continue
+      }
       const planet = scene.planets[index]
       const region = COSMIC_REGIONS[this.cosmosRegion < 0 ? 0 : this.cosmosRegion]
       const orbital = getCosmosLandmark(region.landmark < 2 ? region.landmark : 0)
@@ -2012,8 +2124,8 @@ export class PixiRaidBackground {
       }
       sprite.tint = sceneryTint(region.tint, index === 1 ? 0.68 : 0.5)
       const texture = planet ? this.assetTextures.get(planet.asset) : undefined
-      sprite.visible = Boolean(texture && index < visibleCount)
-      if (!texture || !planet || index >= visibleCount) continue
+      sprite.visible = Boolean(texture && index < visibleCount && !(this.journey.enabled && this.journey.phase === 'descent'))
+      if (!sprite.visible || !texture || !planet || index >= visibleCount) continue
       const radius = getRaidScenePlanetRadius(Math.min(width, height), scene, planet, stageTheme, Math.min(index, 2))
       const depth = 0.7 + index * 0.25
       const y = getRaidScenePlanetY(planet, height, seconds * (index === 0 ? 0.75 : index === 1 ? 0.12 : 0.05), radius * 2)

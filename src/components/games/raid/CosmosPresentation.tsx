@@ -6,8 +6,8 @@ import type { GamePhase } from './types'
 export const COSMOS_AMBIENCE_URL = getPublicAssetUrl('audio/cosmos-hull-v1.ogg')
 
 /** One decoder, three baked sound layers; no AudioContext graph or rAF audio work. */
-export function CosmosPresentation({ stage, phase, surfaceArenas, bossActive }: {
-  stage: number; phase: GamePhase; surfaceArenas: boolean; bossActive: boolean
+export function CosmosPresentation({ stage, phase, surfaceArenas, bossActive, stageClear = 0 }: {
+  stage: number; phase: GamePhase; surfaceArenas: boolean; bossActive: boolean; stageClear?: number
 }) {
   const [arrivalSerial, setArrivalSerial] = useState(0)
   const lastArrival = useRef(-1)
@@ -59,8 +59,14 @@ export function CosmosPresentation({ stage, phase, surfaceArenas, bossActive }: 
     }
   }, [])
   const arrival = cosmicArrival(stage, surfaceArenas)
+  const flight = stageClear > 0 && surfaceArenas
+    ? stage === 4 ? 'DESCENDING · PELAGIC EXPANSE'
+      : stage === 9 ? 'DESCENDING · CINDER RIFT'
+        : stage === 5 || stage === 10 ? 'ASCENDING · ORBITAL DEPARTURE'
+          : stage === 14 ? 'APPROACHING · FINAL BATTLE SECTOR' : ''
+    : ''
   // Keep mounted through pause so the arrival animation cannot restart on resume.
-  return <div key={`${stage}-${arrivalSerial}`} className="raid__sector-arrival" style={{ '--sector-accent': arrival.accent, animationPlayState: phase === 'paused' ? 'paused' : 'running', visibility: phase === 'playing' ? 'visible' : 'hidden' } as CSSProperties} aria-hidden="true">
-    <small>SECTOR {String(stage).padStart(2, '0')}</small><strong>{arrival.name}</strong><span>{arrival.detail}</span>
+  return <div key={`${stage}-${arrivalSerial}-${flight}`} className="raid__sector-arrival" style={{ '--sector-accent': arrival.accent, animationPlayState: phase === 'paused' ? 'paused' : 'running', visibility: phase === 'playing' ? 'visible' : 'hidden' } as CSSProperties} aria-hidden="true">
+    <small>{flight || `SECTOR ${String(stage).padStart(2, '0')}`}</small><strong>{arrival.name}</strong><span>{arrival.detail}</span>
   </div>
 }
