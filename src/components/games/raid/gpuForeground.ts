@@ -1,3 +1,5 @@
+import { RAID_ALIEN_SPRITE_COUNT } from '../RaidShipSprite'
+import { getRaidFighter, getRaidFighterCharge } from './stageEncounters'
 import { impactFrameProgress, explosionDiameter, impactAlpha } from './combatFeel'
 import { Color, Container, Sprite, Texture } from 'pixi.js'
 import type { Renderer } from 'pixi.js'
@@ -157,7 +159,7 @@ export class RaidGpuForeground {
     this.ensureParticleTextures()
     const glow = getCachedSpriteGlow('rgba(239,35,60,0.34)', 128)
     if (glow) this.alienGlowTexture = this.cachedTexture('alien-glow', glow.canvas, false)
-    for (let variant = 0; variant < 8; variant += 1) this.alienTexture(variant)
+    for (let variant = 0; variant < RAID_ALIEN_SPRITE_COUNT; variant += 1) this.alienTexture(variant)
     for (let index = 0; index < 48; index += 1) {
       const ship = new Sprite(Texture.WHITE)
       const glowSprite = new Sprite(Texture.WHITE)
@@ -264,7 +266,8 @@ export class RaidGpuForeground {
     const source = getCanvasSpriteDimensions(asset)
     if (!source.width || !source.height) return null
     // One full-detail raster per variant; resizing never creates new textures.
-    const edge = 320
+    const fighter = getRaidFighter(variant)
+    const edge = fighter ? 192 : 320
     const key = 'alien:' + asset.cacheKey + ':' + edge
     const existing = this.textures.get(key)
     if (existing) return existing.texture
@@ -276,7 +279,7 @@ export class RaidGpuForeground {
     if (!ctx) return null
     ctx.imageSmoothingEnabled = true
     ctx.imageSmoothingQuality = 'high'
-    ctx.filter = 'brightness(1.19) contrast(1.12) saturate(1.38) hue-rotate(' + HUES[Math.abs(Math.trunc(variant)) % HUES.length] + 'deg)'
+    ctx.filter = fighter ? 'none' : 'brightness(1.19) contrast(1.12) saturate(1.38) hue-rotate(' + HUES[Math.abs(Math.trunc(variant)) % HUES.length] + 'deg)'
     ctx.drawImage(source.source, 0, 0, canvas.width, canvas.height)
     ctx.filter = 'none'
     return this.cachedTexture(key, canvas, true)
@@ -291,7 +294,7 @@ export class RaidGpuForeground {
       if (alien.isBoss || alien.isMiniBoss) continue
       if (!raidObjectInView(frame.bounds, alien.x, alien.y, alien.radius + 5)) continue
       const size = getEnemyCanvasSize(alien, frame.width) * (frame.width > 1100 ? 0.96 : 1)
-      const texture = this.alienTexture(alien.variant)
+      const texture = this.alienTexture(alien.variant) ?? this.alienTexture(0)
       if (!texture) continue
       this.visibleEnemies.add(alien.id)
       let pair = this.enemyNodes.get(alien.id)
@@ -318,7 +321,24 @@ export class RaidGpuForeground {
       pair.ship.position.set(alien.x * sx, alien.y * sy)
       pair.ship.alpha = pulse
       pair.ship.tint = (alien.hitFlash ?? 0) > 0.03 ? 0xffe8e8 : 0xffffff
-      if (this.alienGlowTexture) {
+      if (getRaidFighter(alien.variant)) {
+        const hit = Math.min(1, (alien.hitFlash ?? 0) / .16)
+        const charge = getRaidFighterCharge(alien)
+        const effect = hit ? getRaidCombatFrame(COMBAT_TILE.ionImpact) : charge ? getRaidCombatFrame(COMBAT_TILE.charge) : undefined
+        if (pair.glow.parent !== this.impacts) this.impacts.addChild(pair.glow)
+        pair.glow.visible = Boolean(effect)
+        if (effect) {
+          const edge = size * (hit ? .74 : .46)
+          pair.glow.texture = effect
+          pair.glow.blendMode = 'add'
+          pair.glow.width = edge
+          pair.glow.height = edge
+          pair.glow.position.set(alien.x * sx, alien.y * sy + size * (hit ? .02 : .34))
+          pair.glow.alpha = hit || charge
+        }
+      } else if (this.alienGlowTexture) {
+        if (pair.glow.parent !== this.glowLayer) this.glowLayer.addChild(pair.glow)
+        pair.glow.blendMode = 'normal'
         pair.glow.texture = this.alienGlowTexture
         pair.glow.width = size * 1.2
         pair.glow.height = size * 1.04

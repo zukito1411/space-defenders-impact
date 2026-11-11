@@ -6,6 +6,12 @@ import { join } from 'node:path'
 const campaignBossAssets = JSON.parse(readFileSync('docs/campaign-boss-art-manifest.json', 'utf8')).assets
 const required = [
   ...campaignBossAssets.map((asset) => asset.path.replace(/^public\//, '')),
+  'assets/aliens/fighter-auric-artillery-v1.webp',
+  'assets/aliens/fighter-cinder-interceptor-v1.webp',
+  'assets/aliens/fighter-crimson-ram-v1.webp',
+  'assets/aliens/fighter-jade-sensor-v1.webp',
+  'assets/aliens/fighter-needle-scout-v1.webp',
+  'assets/aliens/fighter-violet-gunship-v1.webp',
   'assets/raid-fx/wreck-ships-v1.webp',
   'assets/raid-fx/wreck-stations-v1.webp',
   'assets/raid-fx/terrain-water-v1.webp',

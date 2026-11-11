@@ -29,21 +29,6 @@ export function resetStageLoadout(player: Player) {
   player.weaponCooldowns = { ...EMPTY_WEAPON_TIMERS }
 }
 
-export function getFormationEnemyCount(wave: number) {
-  const lateStageTrim = wave > 10 ? Math.ceil((wave - 10) / 2) : 0
-  return Math.min(8, Math.max(4, 3 + Math.floor(wave / 2) - lateStageTrim))
-}
-
-export function getFormationSpawnSeconds(wave: number) {
-  const lateStageBreathingRoom = Math.max(0, wave - 10) * 0.16
-  return Math.max(2.15, 4.6 - wave * 0.12 + lateStageBreathingRoom)
-}
-
-export function getSingleEnemySpawnSeconds(wave: number) {
-  const lateStageBreathingRoom = Math.max(0, wave - 10) * 0.05
-  return Math.max(0.62, 1.25 - wave * 0.045 + lateStageBreathingRoom)
-}
-
 export function extendLoadoutForSuperBoss(player: Player) {
   if (player.shield > 0) {
     player.shield = Math.min(8, player.shield + 3)

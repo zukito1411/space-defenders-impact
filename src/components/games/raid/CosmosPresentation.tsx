@@ -6,8 +6,8 @@ import type { GamePhase } from './types'
 export const COSMOS_AMBIENCE_URL = getPublicAssetUrl('audio/cosmos-hull-v1.ogg')
 
 /** One decoder, three baked sound layers; no AudioContext graph or rAF audio work. */
-export function CosmosPresentation({ stage, phase, surfaceArenas, bossActive, stageClear = 0 }: {
-  stage: number; phase: GamePhase; surfaceArenas: boolean; bossActive: boolean; stageClear?: number
+export function CosmosPresentation({ stage, phase, surfaceArenas, bossActive, stageClear = 0, encounterDetail }: {
+  stage: number; phase: GamePhase; surfaceArenas: boolean; bossActive: boolean; stageClear?: number; encounterDetail?: string
 }) {
   const [arrivalSerial, setArrivalSerial] = useState(0)
   const lastArrival = useRef(-1)
@@ -68,5 +68,6 @@ export function CosmosPresentation({ stage, phase, surfaceArenas, bossActive, st
   // Keep mounted through pause so the arrival animation cannot restart on resume.
   return <div key={`${stage}-${arrivalSerial}-${flight}`} className="raid__sector-arrival" style={{ '--sector-accent': arrival.accent, animationPlayState: phase === 'paused' ? 'paused' : 'running', visibility: phase === 'playing' ? 'visible' : 'hidden' } as CSSProperties} aria-hidden="true">
     <small>{flight || `SECTOR ${String(stage).padStart(2, '0')}`}</small><strong>{arrival.name}</strong><span>{arrival.detail}</span>
+    {!flight && encounterDetail && <span>{encounterDetail}</span>}
   </div>
 }

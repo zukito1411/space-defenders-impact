@@ -1,3 +1,4 @@
+import { fireRaidFighter, getRaidFighter, getRaidFighterPathX, getRaidReserveVariant, getRaidStageEncounter, getRaidWingSize, getRaidWingSlot, LEGACY_FIGHTER_COUNT, RAID_STAGE_ENEMY_LIMIT } from './stageEncounters'
 import { BOSS_BREAKUP_DELAYS, drawBossImpact, getBossBreakupPoint, recordBossImpact } from './bossDamageFx'
 import { prefersRaidReducedMotion } from './commandBossRender'
 import { drawIncomingHazard, drawRecoveryCue, findIncomingHazard, needsRepair, passesNearPilot } from './flightCues'
@@ -15,7 +16,7 @@ import type { LanguageCode } from '../../../i18n'
 import { isCreatorPlayerName, submitLeaderboardScore } from '../../../leaderboards'
 import { getCoreLanderModel, getEquippedShipCosmetics, hasProgressionUnlockOverride, isCoreLanderUnlocked, loadProgress } from '../../../progression'
 import type { RunResult, RunStatus, ShipCosmeticEquipState } from '../../../progression'
-import { RAID_ALIEN_SPRITE_COUNT, RAID_ELITE_SPRITE_COUNT, getRaidAlienSpriteUrl, getRaidEliteSpriteUrl, RaidShipSprite } from '../RaidShipSprite'
+import { RAID_ELITE_SPRITE_COUNT, getRaidAlienSpriteUrl, getRaidEliteSpriteUrl, RaidShipSprite } from '../RaidShipSprite'
 import { getGameAudioMixSettings, getGameSoundBgmDuckProfile, getGameSoundEnabled, getGraphicsQuality, getPublicAssetUrl, playGameSound, playRaidCue, registerGameSoundDucker, setGameAudioMixSettings, setGraphicsQuality, stopBGM } from '../sound'
 import type { AudioMixSettings, GraphicsQuality } from '../sound'
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -40,13 +41,13 @@ import type { GpuBossProjectileSpec } from './gpuBossProjectiles'
 import { applyRaidBossArtwork, isRaidBossArtSolid, drawRaidCombatTexture, getRaidExplosionFrame, getRaidProjectileMaterial, isWarmRaidEffectColor } from './combatArt'
 import { clearRaidSpatialHash, createRaidSpatialHash, insertRaidSpatialHash, queryRaidSpatialHash } from './spatialHash'
 import type { RaidViewportMetrics } from './graphics'
-import { clearPickupLoadout, extendLoadoutForSuperBoss, getFormationEnemyCount, getFormationSpawnSeconds, getPowerScore, getSingleEnemySpawnSeconds, resetStageLoadout } from './loadout'
+import { clearPickupLoadout, extendLoadoutForSuperBoss, getPowerScore, resetStageLoadout } from './loadout'
 import { acquireHomingTarget, animateStageClearPlayer, applyRiftPullToPlayer, applyStartingStageLevel, fullyBuffRaidPlayer, getCoreLanderFireInterval, getGodGundamBarrageBossDamage, getGodGundamBarrageDamageMultiplier, getGodGundamMeleeDamagePerSecond, getGodGundamMeleeRange, getGodGundamPassivePose, getGodGundamStageAttackBonus, getNukeBossDamage, getNukeCooldownSeconds, getPlayerBaseAttack, getRiftCenter, getSpiegelShadowCloneDamageMultiplier, hasSpiegelShadowClones, isCoreLanderBurning, levelUpPlayer, movePlayerWithInput, revivePlayerForBossClear, updatePlayerTimers } from './mechanics'
 import { clampNetworkVelocity, cloneAsteroid, cloneDerelictWreck, cloneEnemy, cloneIonStrike, cloneMeteor, cloneRaidRandomEvent, cloneVec, compactPlayer, compactVec, getBufferedAsteroidVisuals, getBufferedEnemyVisuals, getBufferedPlayerVisual, getConnectionLabel, getGuestShotTtlMs, getOwnCorrectionBlend, getPlayerPickupAudioKind, getRemoteInterpolationDelayMs, hasClearedRaidInProgress, isNetworkVisible, keepNetworkVisibleInPlace, reconcilePlayerVisual, updateDerelictWreckMotion } from './network'
 import { drawRaidOptions, drawRaidPlayer, getCoreBlastSprite } from './playerRender'
 import { getRaidAssetPreloadInitialState, preloadGradiusRaidAssets, warmRaidGeneratedEffectSprites } from './preload'
 import { clonePlayer, getCheckpointStage, getDefaultPlayerVisualShipKey, getGodGundamGameplayRenderSize, getHighScore, getInitialPlayer, getMesiahVisualShipKeyFromProgress, getOptionSupportStacks, getPlayerCoreLanderCombatModel, getRaidPlayerVisualShipKey, getShipByKey, getUnlockedStage, isCoreLanderAoeShot, isGodGundamBarragePilot, normalizeMesiahDrones, normalizeMesiahScoutDrones, powerColor, sanitizePlayerVisualShipKey, saveCheckpointStage, saveHighScore, saveUnlockedStage } from './state'
-import type { AsteroidHazard, BossDefeatExplosionEvent, BossKind, BossMessage, CameraShakeState, CoreLanderCombatModel, DerelictWreck, Enemy, FormationStyle, GamePhase, GodGundamBarrage, GodGundamPassiveStrike, IonStrike, MeteorHazard, MiniBossKind, MirageBossKind, MultiplayerAsteroidSnapshot, MultiplayerConnectionQuality, MultiplayerEnemySnapshot, MultiplayerHostState, MultiplayerInput, MultiplayerPlayerSnapshot, NukeStrike, Player, PowerKind, PowerUp, RaidAssetPreloadState, RaidBgmMode, RaidDifficulty, RaidMode, RaidMultiplayerSession, RaidRandomEvent, RaidRandomEventKind, RelayGameMessage, Ripple, ShipOption, Shot, Snapshot, Spark, Vec, WeaponKey } from './types'
+import type { AsteroidHazard, BossDefeatExplosionEvent, BossKind, BossMessage, CameraShakeState, CoreLanderCombatModel, DerelictWreck, Enemy, EnemySpawnProfile, GamePhase, GodGundamBarrage, GodGundamPassiveStrike, IonStrike, MeteorHazard, MiniBossKind, MirageBossKind, MultiplayerAsteroidSnapshot, MultiplayerConnectionQuality, MultiplayerEnemySnapshot, MultiplayerHostState, MultiplayerInput, MultiplayerPlayerSnapshot, NukeStrike, Player, PowerKind, PowerUp, RaidAssetPreloadState, RaidBgmMode, RaidDifficulty, RaidMode, RaidMultiplayerSession, RaidRandomEvent, RaidRandomEventKind, RelayGameMessage, Ripple, ShipOption, Shot, Snapshot, Spark, Vec, WeaponKey } from './types'
 import { acquireRipple, acquireSpark, buildEnemyCollisionBuckets, clamp, collectShotCollisionCandidates, compactInPlace, createEnemyCollisionBuckets, distSq, drawRadialEllipse, getCachedProjectileOrbSprite, getCachedProjectileTrailSprite, getEliteEnemyChance, getMaxActiveEliteEnemies, pickEliteEnemyKind, readRaidPalette, recycleRipple, recycleRippleList, recycleSpark, recycleSparkList, takeLastFilteredMapped, updateRipplesInPlace, updateSparksInPlace } from './utils'
 import type { EnemyCollisionBuckets } from './utils'
 import { RaidFrameTimings } from './frameTimings'
@@ -279,7 +280,9 @@ export function GradiusRaid({
   const journeyStageAgeRef = useRef(0)
   const waveRef = useRef(1)
   const spawnTimerRef = useRef(0.5)
-  const formationTimerRef = useRef(2.1)
+  const formationTimerRef = useRef(1.8)
+  const wingSerialRef = useRef(0)
+  const reserveSerialRef = useRef(0)
   const bossTimerRef = useRef(28)
   const spawnLockRef = useRef(0)
   const powerDropCooldownRef = useRef(0)
@@ -2904,8 +2907,10 @@ export function GradiusRaid({
     stageRef.current = stage
     journeyStageAgeRef.current = 0
     waveRef.current = stage
-    spawnTimerRef.current = 1.25
-    formationTimerRef.current = 3.4
+    spawnTimerRef.current = 3.2
+    formationTimerRef.current = 1.8
+    wingSerialRef.current = 0
+    reserveSerialRef.current = 0
     bossTimerRef.current = forceLocalDevilTest ? 3.2 : isBossRush ? 2.4 : isEndless ? 28 + Math.random() * 18 : stage === MAX_RAID_STAGE ? 24 : 36
     spawnLockRef.current = 0
     powerDropCooldownRef.current = 0
@@ -3728,7 +3733,7 @@ export function GradiusRaid({
   // Keep the stable ref current so predictGuestPlayer can call firePlayer without a forward-reference issue
   firePlayerRef.current = firePlayer
 
-  const spawnEnemyAt = useCallback((x: number, y: number, wave: number, pattern: number, trainSlot = 0, style?: FormationStyle, eliteKind?: MiniBossKind | null) => {
+  const spawnEnemyAt = useCallback((x: number, y: number, wave: number, pattern: number, trainSlot = 0, profile?: EnemySpawnProfile, eliteKind?: MiniBossKind | null) => {
     const powerPressure = getPowerScore(playerRef.current)
     const stage = stageRef.current
     let activeEliteCount = 0
@@ -3736,42 +3741,45 @@ export function GradiusRaid({
       if (enemy.isMiniBoss && enemy.hp > 0) activeEliteCount += 1
     }
     const eliteCap = getMaxActiveEliteEnemies(stage, isCoOpActive())
-    const randomEliteKind = eliteKind === undefined && activeEliteCount < eliteCap && Math.random() < getEliteEnemyChance(stage, wave, trainSlot, Boolean(style))
+    const randomEliteKind = eliteKind === undefined && activeEliteCount < eliteCap && Math.random() < getEliteEnemyChance(stage, wave, trainSlot, profile?.motion !== undefined)
       ? pickEliteEnemyKind(stage, wave, trainSlot)
       : null
     const kind = eliteKind === undefined ? randomEliteKind : eliteKind
     const isElite = Boolean(kind)
-    const color = style?.color ?? DARK_ENEMY_COLORS[Math.floor(Math.random() * DARK_ENEMY_COLORS.length)]
+    const variant = profile?.variant ?? (enemyId + 1) % LEGACY_FIGHTER_COUNT
+    const fighter = isElite ? undefined : getRaidFighter(variant)
+    const color = fighter?.color ?? DARK_ENEMY_COLORS[Math.floor(Math.random() * DARK_ENEMY_COLORS.length)]
     const eliteX = clamp(Math.random() < 0.62 ? x + (Math.random() - 0.5) * 32 : 8 + Math.random() * 84, 8, 92)
-    const originX = isElite ? clamp(eliteX + (Math.random() - 0.5) * 18, 12, 88) : style?.originX ?? x
+    const originX = isElite ? clamp(eliteX + (Math.random() - 0.5) * 18, 12, 88) : x
     const hp = 2 + Math.floor(wave / 2) + Math.floor(powerPressure / 4)
     const eliteHpMultiplier = kind === 'brood' ? 12 : kind === 'lancer' ? 9.2 : 10.4
     const eliteStagePressure = Math.max(0, stage - 1)
     const eliteHp = Math.round((38 + hp * eliteHpMultiplier + eliteStagePressure * 11.5 + wave * 3.4 + powerPressure * 4.2) * (isCoOpActive() ? 1.36 : 1) * enemyHpMultRef.current)
-    const normalHp = Math.max(1, Math.round(hp * enemyHpMultRef.current))
+    const normalHp = Math.max(1, Math.round(hp * (fighter?.hull ?? 1) * enemyHpMultRef.current))
     enemiesRef.current.push({
       id: enemyId++,
       x: isElite ? eliteX : x,
       y: isElite ? Math.min(y, -7 - Math.random() * 16) : y,
-      vx: kind === 'lancer' ? (Math.random() < 0.5 ? -1 : 1) * 10 : (Math.random() - 0.5) * (isElite ? 7 : 4),
-      vy: isElite ? kind === 'brood' ? 10.4 : kind === 'lancer' ? 13.2 : 11.8 : 14 + Math.random() * 7 + wave * 0.38,
+      vx: fighter ? 0 : kind === 'lancer' ? (Math.random() < 0.5 ? -1 : 1) * 10 : (Math.random() - 0.5) * (isElite ? 7 : 4),
+      vy: isElite ? kind === 'brood' ? 10.4 : kind === 'lancer' ? 13.2 : 11.8 : (profile?.speed ?? fighter?.speed ?? (14 + Math.random() * 7 + wave * 0.38)),
       hp: isElite ? eliteHp : normalHp,
       maxHp: isElite ? eliteHp : normalHp,
-      radius: isElite ? kind === 'brood' ? 6.4 : kind === 'lancer' ? 5.7 : 6 : 3.7,
-      variant: isElite ? enemyId % RAID_ELITE_SPRITE_COUNT : enemyId % RAID_ALIEN_SPRITE_COUNT,
+      radius: isElite ? kind === 'brood' ? 6.4 : kind === 'lancer' ? 5.7 : 6 : (fighter?.radius ?? 3.7),
+      variant: isElite ? enemyId % RAID_ELITE_SPRITE_COUNT : variant,
       isBoss: false,
       isMiniBoss: isElite,
-      fireCooldown: isElite ? kind === 'lancer' ? 0.95 : kind === 'brood' ? 1.28 : 1.08 : Math.max(1.25, 2.1 + Math.random() * 2.1 - wave * 0.04 - powerPressure * 0.025),
-      phase: Math.random() * Math.PI * 2,
+      fireCooldown: isElite ? kind === 'lancer' ? 0.95 : kind === 'brood' ? 1.28 : 1.08 : fighter ? 1.05 + trainSlot * 0.23 : Math.max(1.25, 2.1 + Math.random() * 2.1 - wave * 0.04 - powerPressure * 0.025),
+      phase: profile?.phase ?? Math.random() * Math.PI * 2,
       color: isElite ? MINI_BOSS_COLORS[kind ?? 'stalker'] : color,
-      pattern: isElite ? kind === 'brood' ? 7 : kind === 'lancer' ? 8 : 5 : style?.pattern ?? pattern,
+      pattern: isElite ? kind === 'brood' ? 7 : kind === 'lancer' ? 8 : 5 : pattern,
       bossKind: null,
       miniBossKind: kind,
       shieldTime: isElite ? 0.45 : 0,
       originX,
-      amplitude: isElite ? kind === 'brood' ? 12 + Math.random() * 8 : kind === 'lancer' ? 24 + Math.random() * 14 : 18 + Math.random() * 10 : style?.amplitude ?? (8 + Math.random() * 14),
+      amplitude: isElite ? kind === 'brood' ? 12 + Math.random() * 8 : kind === 'lancer' ? 24 + Math.random() * 14 : 18 + Math.random() * 10 : 8 + Math.random() * 14,
       trainSlot,
-      pathSpeed: isElite ? kind === 'lancer' ? 0.105 : 0.076 : style?.pathSpeed ?? (0.06 + Math.random() * 0.035),
+      ...(fighter && { formationMotion: profile?.motion, formationAge: 0 }),
+      pathSpeed: isElite ? kind === 'lancer' ? 0.105 : 0.076 : 0.06 + Math.random() * 0.035,
       chargeCooldown: isElite ? kind === 'lancer' ? 3.4 : kind === 'brood' ? 4.8 : 4 : 999,
       chargeTimer: 0,
       chargeLane: 50,
@@ -3781,25 +3789,18 @@ export function GradiusRaid({
   }, [])
 
   const spawnFormation = useCallback(() => {
-    const wave = waveRef.current
-    const pattern = Math.floor(Math.random() * 4)
-    const count = getFormationEnemyCount(wave)
-    const originX = 18 + Math.random() * 64
-    const formationStyle: FormationStyle = {
-      color: DARK_ENEMY_COLORS[Math.floor(Math.random() * DARK_ENEMY_COLORS.length)],
-      pattern,
-      originX,
-      amplitude: 10 + Math.random() * 18,
-      pathSpeed: 0.06 + Math.random() * 0.035,
+    const stage = stageRef.current
+    const serial = wingSerialRef.current
+    let liveEnemies = 0
+    for (const enemy of enemiesRef.current) {
+      if (enemy.hp > 0) liveEnemies += 1
     }
+    const count = getRaidWingSize(stage, serial, liveEnemies)
+    if (!count) return
+    wingSerialRef.current += 1
     for (let i = 0; i < count; i += 1) {
-      const x =
-        pattern === 0 ? originX :
-          pattern === 1 ? originX + Math.sin(i * 0.42) * 5 :
-            pattern === 2 ? originX + (i % 2 === 0 ? -3 : 3) :
-              originX + Math.cos(i * 0.35) * 4
-      const y = -6 - i * 6.2
-      spawnEnemyAt(clamp(x, 6, 94), y, wave, pattern, i, formationStyle)
+      const slot = getRaidWingSlot(stage, serial, i)
+      spawnEnemyAt(slot.x, slot.y, waveRef.current, 0, i, slot, null)
     }
   }, [spawnEnemyAt])
 
@@ -4249,13 +4250,18 @@ export function GradiusRaid({
       return
     }
 
+    if (getRaidFighter(enemy.variant)) {
+      fireRaidFighter(enemy, player, MULTIPLAYER_MAX_ENEMY_SHOTS - 8 - enemyShotsRef.current.length, emitCommandBossShot)
+      return
+    }
+
     if (Math.random() < 0.76) {
       const aimX = player.x - enemy.x
       const aimY = player.y - enemy.y
       const mag = Math.sqrt((aimX) * (aimX) + (aimY) * (aimY)) || 1
       enemyShotsRef.current.push({ id: shotId++, x: enemy.x, y: enemy.y + 2, vx: (aimX / mag) * 29, vy: (aimY / mag) * 29, damage: 1, kind: 'enemy', radius: 1.25 })
     }
-  }, [])
+  }, [emitCommandBossShot])
 
   const updateGame = useCallback((dt: number) => {
     if (phaseRef.current !== 'playing') return
@@ -4393,8 +4399,10 @@ export function GradiusRaid({
         asteroidClusterTimerRef.current = raidModeRef.current === 'bossRush' ? 999 : getAsteroidClusterInterval()
         randomEventTimerRef.current = raidModeRef.current === 'bossRush' ? 999 : getRandomEventInterval()
         spawnLockRef.current = 1.2
-        spawnTimerRef.current = 1.1
-        formationTimerRef.current = 2.2
+        spawnTimerRef.current = 3.2
+        formationTimerRef.current = 1.8
+        wingSerialRef.current = 0
+        reserveSerialRef.current = 0
         stageEntryRef.current = getRaidStageEntrySeconds(stageRef.current, raidModeRef.current)
         pointerTargetRef.current = null
         pointerVisualRef.current = null
@@ -4635,11 +4643,14 @@ export function GradiusRaid({
     }
     if (canSpawnStageEnemies && !bossActive && !ambushActive && formationTimerRef.current <= 0) {
       spawnFormation()
-      formationTimerRef.current = getFormationSpawnSeconds(waveRef.current)
+      formationTimerRef.current = getRaidStageEncounter(stageRef.current).interval
     }
     if (canSpawnStageEnemies && !bossActive && !ambushActive && spawnTimerRef.current <= 0) {
-      spawnEnemyAt(10 + Math.random() * 80, -6, waveRef.current, Math.floor(Math.random() * 4))
-      spawnTimerRef.current = getSingleEnemySpawnSeconds(waveRef.current)
+      if (enemiesRef.current.length < RAID_STAGE_ENEMY_LIMIT) {
+        const variant = getRaidReserveVariant(stageRef.current, reserveSerialRef.current++)
+        spawnEnemyAt(16 + Math.random() * 68, -6, waveRef.current, Math.floor(Math.random() * 4), 0, { variant })
+      }
+      spawnTimerRef.current = getRaidStageEncounter(stageRef.current).interval * 0.62
     }
     const anyRandomEventActive = Boolean(randomEventRef.current) || meteorsRef.current.length > 0 || ionStrikesRef.current.length > 0 || wrecksRef.current.length > 0
     const anyAsteroidEventActive = asteroidWarningRef.current > 0 || asteroidSpawnDelayRef.current > 0 || asteroidsRef.current.length > 0
@@ -4995,8 +5006,10 @@ export function GradiusRaid({
                         bossKind === 'serpent' ? 20 + Math.cos(bossMotionT * 1.1) * 5 :
                           bossKind === 'orb' ? 17 + Math.sin(bossMotionT * 1.8) * 4 :
                             18
+      const fighter = !enemy.isBoss && !enemy.isMiniBoss ? getRaidFighter(enemy.variant) : undefined
+      if (fighter) enemy.formationAge = (enemy.formationAge ?? 0) + dt
       const trainT = (enemy.y - enemy.trainSlot * 6.2) * enemy.pathSpeed + enemy.phase
-      const trainX =
+      const trainX = fighter ? getRaidFighterPathX(enemy) :
         enemy.pattern === 0 ? enemy.originX + Math.sin(trainT) * enemy.amplitude :
           enemy.pattern === 1 ? enemy.originX + Math.sin(trainT) * enemy.amplitude + Math.sin(trainT * 2.1) * 5 :
             enemy.pattern === 2 ? enemy.originX + Math.sin(trainT * 0.72) * enemy.amplitude * 0.7 :
@@ -5558,7 +5571,7 @@ export function GradiusRaid({
           ? Math.max(0.42, nextBossFireCooldown * bossAttackCooldownScale)
           : enemy.isMiniBoss
             ? Math.max(miniKind === 'lancer' ? 1.12 : 1.28, 1.84 - stageRef.current * 0.018 + Math.random() * 0.5)
-            : Math.max(1.05, 2.4 + Math.random() * 1.9 - waveRef.current * 0.05))
+            : fighter?.cooldown ?? Math.max(1.05, 2.4 + Math.random() * 1.9 - waveRef.current * 0.05))
         : nextFire
       enemy.chargeCooldown = chargeCooldown
       enemy.chargeTimer = chargeTimer
@@ -5576,7 +5589,7 @@ export function GradiusRaid({
       enemy.hitFlash = Math.max(0, (enemy.hitFlash ?? 0) - dt)
       if (enemy.bossImpactTime) enemy.bossImpactTime = Math.max(0, enemy.bossImpactTime - dt)
       const enemyMargin = enemy.isBoss || enemy.isMiniBoss ? 90 : 28
-      const enemyOnField = enemy.y > -enemyMargin && enemy.y < HEIGHT + enemyMargin && enemy.x > -enemyMargin && enemy.x < WIDTH + enemyMargin
+      const enemyOnField = enemy.y > -(fighter ? 40 : enemyMargin) && enemy.y < HEIGHT + enemyMargin && enemy.x > -enemyMargin && enemy.x < WIDTH + enemyMargin
       if ((enemy.isBoss || enemy.isMiniBoss || enemyOnField) && enemy.hp > 0) {
         enemies[liveEnemyCount] = enemy
         liveEnemyCount += 1
@@ -7424,7 +7437,16 @@ export function GradiusRaid({
         {showPerfHud && <div ref={perfHudRef} className="raid__perf-hud" aria-hidden="true">Measuring FPS…</div>}
       </div>
 
-      <CosmosPresentation stageClear={snapshot.stageClear} stage={snapshot.stageTheme} phase={snapshot.phase} surfaceArenas={snapshot.raidMode !== 'endless'} bossActive={bossIncoming || snapshot.enemies.some((enemy) => enemy.isBoss)} />
+      <CosmosPresentation
+        stageClear={snapshot.stageClear}
+        stage={snapshot.stageTheme}
+        phase={snapshot.phase}
+        surfaceArenas={snapshot.raidMode !== 'endless'}
+        bossActive={bossIncoming || snapshot.enemies.some((enemy) => enemy.isBoss)}
+        encounterDetail={snapshot.raidMode !== 'bossRush' && snapshot.stageTheme <= MAX_RAID_STAGE
+          ? raidText.hud.formationIntel[getRaidStageEncounter(snapshot.stageTheme).wings[0][0]]
+          : undefined}
+      />
 
       {bossEntranceSlamActive && (
         <div
