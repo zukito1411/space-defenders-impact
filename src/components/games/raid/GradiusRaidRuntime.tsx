@@ -1,3 +1,4 @@
+import { getHullImpactDirection } from './flightEffects'
 import { pushSquidBubble } from './bubbleRecoil'
 import { createRaidMainShotEmitter } from './playerMuzzle'
 import { getRaidShipBaseVisualKey } from './shipArtwork'
@@ -41,7 +42,7 @@ import { createRaidVisibilityBounds, raidObjectInView } from './visibility'
 import { isGpuEnemyShot, isGpuPlayerShot } from './gpuForeground'
 import { getGpuBossProjectileSpec } from './gpuBossProjectiles'
 import type { GpuBossProjectileSpec } from './gpuBossProjectiles'
-import { applyRaidBossArtwork, isRaidBossArtSolid, drawRaidCombatTexture, getRaidExplosionFrame, getRaidProjectileMaterial, isWarmRaidEffectColor } from './combatArt'
+import { applyRaidBossArtwork, isRaidBossArtSolid, COMBAT_TILE, drawRaidCombatTexture, getRaidCombatFrame, getRaidExplosionFrame, getRaidProjectileMaterial, isWarmRaidEffectColor } from './combatArt'
 import { clearRaidSpatialHash, createRaidSpatialHash, insertRaidSpatialHash, queryRaidSpatialHash } from './spatialHash'
 import type { RaidViewportMetrics } from './graphics'
 import { clearPickupLoadout, extendLoadoutForSuperBoss, getPowerScore, resetStageLoadout } from './loadout'
@@ -2315,10 +2316,14 @@ export function GradiusRaid({
     const sparks = gpuForegroundDrawn ? [] : sparksRef.current
     const sparkStart = Math.max(0, sparks.length - gfxProfile.maxSparks)
     let lastSparkColor = ''
+    const fragmentTexture = getRaidCombatFrame(COMBAT_TILE.fragment)
     for (let i = sparkStart; i < sparks.length; i += 1) {
       const spark = sparks[i]
       if (!raidObjectInView(drawBounds, spark.x, spark.y, 3)) continue
       ctx.globalAlpha = Math.max(0, spark.life / spark.maxLife)
+      if (spark.fragment && fragmentTexture &&
+        drawRaidCombatTexture(ctx, fragmentTexture, toX(spark.x), toY(spark.y),
+          spark.size * 1.7, spark.size * 1.3, spark.id + (1 - ctx.globalAlpha) * 4, false)) continue
       if (spark.color !== lastSparkColor) { ctx.fillStyle = spark.color; lastSparkColor = spark.color }
       ctx.beginPath()
       ctx.arc(toX(spark.x), toY(spark.y), Math.max(1, spark.size * 0.42), 0, Math.PI * 2)
@@ -2439,9 +2444,10 @@ export function GradiusRaid({
           : cosmicRegionIndex(backgroundStageTheme)
     ].rim
     const sameScreenIdentityAura = sameScreenCoopRef.current
-    if (ownShipRef && !hideOwnShipForBarrage) drawRaidPlayer(ctx, ownShipRef, phaseRef.current, toX, toY, cssWidth, time, PLAYER_COLOR, getCachedEquippedCosmetics(ownShipRef.ship.key), getRaidPlayerVisualShipKey(ownShipRef, progressRef.current), sameScreenIdentityAura ? PLAYER_COLOR : null, journeyRim)
-    if (allyShipRef && !hideAllyShipForBarrage) drawRaidPlayer(ctx, allyShipRef, phaseRef.current, toX, toY, cssWidth, time, ALLY_PLAYER_COLOR, getCachedEquippedCosmetics(allyShipRef.ship.key), getRaidPlayerVisualShipKey(allyShipRef, progressRef.current), sameScreenIdentityAura ? ALLY_PLAYER_COLOR : null, journeyRim)
-    if (devilAssistShipRef && !hideDevilAssistForBarrage) drawRaidPlayer(ctx, devilAssistShipRef, phaseRef.current, toX, toY, cssWidth, time, '#facc15', getCachedEquippedCosmetics(devilAssistShipRef.ship.key), getRaidPlayerVisualShipKey(devilAssistShipRef, progressRef.current), null)
+    const sunlight = pixiBackground?.getOrbitalSunlight() ?? 0
+    if (ownShipRef && !hideOwnShipForBarrage) drawRaidPlayer(ctx, ownShipRef, phaseRef.current, toX, toY, cssWidth, time, PLAYER_COLOR, getCachedEquippedCosmetics(ownShipRef.ship.key), getRaidPlayerVisualShipKey(ownShipRef, progressRef.current), sameScreenIdentityAura ? PLAYER_COLOR : null, journeyRim, pixiBackground?.getEclipseAt(toX(ownShipRef.x), toY(ownShipRef.y)), sunlight, reducedMotion)
+    if (allyShipRef && !hideAllyShipForBarrage) drawRaidPlayer(ctx, allyShipRef, phaseRef.current, toX, toY, cssWidth, time, ALLY_PLAYER_COLOR, getCachedEquippedCosmetics(allyShipRef.ship.key), getRaidPlayerVisualShipKey(allyShipRef, progressRef.current), sameScreenIdentityAura ? ALLY_PLAYER_COLOR : null, journeyRim, pixiBackground?.getEclipseAt(toX(allyShipRef.x), toY(allyShipRef.y)), sunlight, reducedMotion)
+    if (devilAssistShipRef && !hideDevilAssistForBarrage) drawRaidPlayer(ctx, devilAssistShipRef, phaseRef.current, toX, toY, cssWidth, time, '#facc15', getCachedEquippedCosmetics(devilAssistShipRef.ship.key), getRaidPlayerVisualShipKey(devilAssistShipRef, progressRef.current), null, journeyRim, pixiBackground?.getEclipseAt(toX(devilAssistShipRef.x), toY(devilAssistShipRef.y)), sunlight, reducedMotion)
 
     if (gfxProfile.drawDecorativeOverlays) {
       if (isWateryWorldTheme(backgroundStageTheme)) {
@@ -2505,21 +2511,23 @@ export function GradiusRaid({
     costs.canvasMs = measured ? performance.now() - canvasStart : 0
   }, [])
 
-  const spawnSparks = useCallback((x: number, y: number, color: string, count: number, size = 5) => {
+  const spawnSparks = useCallback((x: number, y: number, color: string, count: number, size = 5, direction?: number) => {
     const profile = getRaidGraphicsProfile(graphicsQualityRef.current, false, isCoOpActive())
     const budget = Math.max(0, profile.maxSparks - sparksRef.current.length)
     const spawnCount = Math.min(Math.ceil(count * profile.sparkScale), budget)
     for (let i = 0; i < spawnCount; i += 1) {
-      const angle = Math.random() * Math.PI * 2
+      const fragment = direction !== undefined
+      const angle = fragment ? direction + (Math.random() - .5) * 1.5 : Math.random() * Math.PI * 2
       const speed = 10 + Math.random() * 32
       sparksRef.current.push(acquireSpark(
         x,
         y,
         Math.cos(angle) * speed,
         Math.sin(angle) * speed,
-        0.3 + Math.random() * 0.6,
+        fragment ? .14 + Math.random() * .2 : .3 + Math.random() * .6,
         color,
         size * (0.55 + Math.random() * 0.8),
+        fragment,
       ))
     }
     if (sparksRef.current.length > profile.maxSparks) {
@@ -6347,7 +6355,8 @@ export function GradiusRaid({
             playBossCriticalStinger(enemy)
             enemy.hitFlash = Math.max(enemy.hitFlash ?? 0, enemy.isBoss ? 0.24 : enemy.isMiniBoss ? 0.18 : 0.12)
           }
-          spawnSparks(shot.x, shot.y, bossShielded ? '#fbbf24' : enemy.isBoss ? '#fff7ad' : enemy.isMiniBoss ? '#e9d5ff' : '#fca5a5', enemy.isBoss ? 10 : enemy.isMiniBoss ? 7 : 4, enemy.isBoss || enemy.isMiniBoss ? 6 : 4)
+          spawnSparks(shot.x, shot.y, bossShielded ? '#fbbf24' : enemy.isBoss ? '#fff7ad' : enemy.isMiniBoss ? '#e9d5ff' : '#fca5a5', enemy.isBoss ? 10 : enemy.isMiniBoss ? 7 : 4, enemy.isBoss || enemy.isMiniBoss ? 6 : 4,
+            bossShielded ? undefined : getHullImpactDirection(shot.x - enemy.x, shot.y - enemy.y, shot.vx, shot.vy))
           if (!bossShielded && (enemy.isBoss || enemy.isMiniBoss)) {
             addRipple(shot.x, shot.y, enemy.isBoss ? '#fca5a5' : '#c084fc', enemy.isBoss ? 7 : 5)
           }

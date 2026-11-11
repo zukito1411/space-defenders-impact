@@ -210,6 +210,7 @@ export type Spark = Vec & {
   maxLife: number
   color: string
   size: number
+  fragment?: boolean
 }
 
 export type Ripple = Vec & {

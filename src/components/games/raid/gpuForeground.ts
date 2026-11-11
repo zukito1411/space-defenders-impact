@@ -575,7 +575,7 @@ export class RaidGpuForeground {
         if (!raidObjectInView(frame.bounds, spark.x, spark.y, 3)) continue
         const life = Math.max(0, spark.life / Math.max(0.001, spark.maxLife))
         const streak = getRaidCombatFrame(COMBAT_TILE.spark)
-        const fragment = spark.id % 5 === 0 ? getRaidCombatFrame(COMBAT_TILE.fragment) : undefined
+        const fragment = (spark.fragment || spark.id % 5 === 0) ? getRaidCombatFrame(COMBAT_TILE.fragment) : undefined
         if (fragment) {
           this.paintParticle(fragment, spark.x * sx, spark.y * sy, Math.max(3, spark.size * 1.7),
             0xffffff, life, Math.max(3, spark.size * 1.3), spark.id + (1 - life) * 4)

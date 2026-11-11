@@ -3,7 +3,7 @@ import { getEliteCoreLanderNozzleY, getRaidShipBaseVisualKey, getRaidShipFrameKe
 import { updateFlightPose, type FlightPose } from './combatFeel'
 import { COMBAT_TILE, drawRaidCombatTexture, getRaidCombatFrame } from './combatArt'
 import type { ShipCosmeticEquipState } from '../../../progression'
-import { drawCanvasSprite, drawSpriteGlow, getShipCanvasSprite } from './assets'
+import { drawCanvasSprite, drawSpriteGlow, getCanvasSpriteSource, getShipCanvasSprite } from './assets'
 import type { CanvasSpriteEntry } from './assets'
 import { hexToRgba } from './bossRender'
 import { ALLY_PLAYER_COLOR, FORCE_FIELD_ARMOR, GOD_GUNDAM_BURNING_BODY_SCALE, GOD_GUNDAM_BURNING_BODY_Y_OFFSET, GOD_GUNDAM_BURNING_HALO_SCALE, GOD_GUNDAM_BURNING_HALO_Y_OFFSET, MESIAH_DRONE_HOME_OFFSET, MESIAH_DRONE_MAX_FIRE_RANGE, MESIAH_DRONE_MIN_FIRE_RANGE, MESIAH_DRONE_MOBILE_HOME_OFFSET, PLAYER_COLOR, SPACE_ET_PASSIVE_FORCE_FIELD_CHARGES, SPIEGEL_AFTERIMAGE_CAP, getShipSpriteSize } from './constants'
@@ -1045,6 +1045,40 @@ export function getRaidPlayerFlightBank(color: string, x: number) {
   return pose && performance.now() - pose.time <= 150 && Math.abs(x - pose.x) <= 12 ? pose.bank : 0
 }
 
+const solarHullRims = new WeakMap<CanvasSpriteEntry, [HTMLCanvasElement | undefined, HTMLCanvasElement | undefined]>()
+
+function drawSolarHullRim(ctx: CanvasRenderingContext2D, sprite: CanvasSpriteEntry, x: number, y: number, size: number, side: number, alpha: number) {
+  if (!sprite.loaded || typeof document === 'undefined') return
+  const slot = side < 0 ? 0 : 1
+  let rims = solarHullRims.get(sprite)
+  if (!rims) {
+    rims = [undefined, undefined]
+    solarHullRims.set(sprite, rims)
+  }
+  let rim = rims[slot]
+  if (!rim) {
+    rim = document.createElement('canvas')
+    const edge = 96
+    rim.width = rim.height = edge
+    const bake = rim.getContext('2d')
+    if (!bake) return
+    bake.drawImage(getCanvasSpriteSource(sprite), 0, 0, edge, edge)
+    bake.globalCompositeOperation = 'source-in'
+    const ramp = bake.createLinearGradient(slot === 0 ? 0 : edge, 12, slot === 0 ? edge : 0, 62)
+    ramp.addColorStop(0, 'rgba(255,226,181,.7)')
+    ramp.addColorStop(.39, 'rgba(255,197,133,.25)')
+    ramp.addColorStop(.54, 'rgba(255,197,133,0)')
+    bake.fillStyle = ramp
+    bake.fillRect(0, 0, edge, edge)
+    rims[slot] = rim
+  }
+  ctx.save()
+  ctx.globalCompositeOperation = 'lighter'
+  ctx.globalAlpha *= alpha
+  ctx.drawImage(rim, x - size / 2, y - size / 2, size, size)
+  ctx.restore()
+}
+
 export function drawRaidPlayer(
   ctx: CanvasRenderingContext2D,
   player: Player,
@@ -1058,6 +1092,9 @@ export function drawRaidPlayer(
   visualShipKey = player.ship.key,
   identityAuraColor: string | null = null,
   environmentRim: string | null = null,
+  eclipse = 0,
+  sunlight = 0,
+  reducedMotion = false,
 ) {
   const x = toX(player.x)
   const y = toY(player.y)
@@ -1122,6 +1159,20 @@ export function drawRaidPlayer(
       drawPlayerEngine(ctx, x, engineY, engineSize, time, engineBoost)
     }
   }
+  const sunSide = Math.sign(sunlight)
+  const maneuverJet = pose.maneuverJet ?? 0
+  if (nozzles && !isDown && phase === 'playing' && !reducedMotion && Math.abs(maneuverJet) > .065) {
+    const side = Math.sign(maneuverJet)
+    const power = Math.abs(maneuverJet)
+    const ventX = player.ship.key === 'rocket' || player.ship.key === 'laser' ? .18 : .24
+    const jetSize = renderSize * (.24 + power * .12)
+    ctx.save()
+    ctx.translate(x - side * renderSize * ventX, y + renderSize * .16)
+    ctx.rotate(side * Math.PI / 2)
+    ctx.globalAlpha *= Math.min(1, power * 1.5)
+    drawPlayerEngine(ctx, 0, -jetSize * .34, jetSize, time, .25 + power * .65, renderSize * .034)
+    ctx.restore()
+  }
   if (!isDown && identityAuraColor) {
     ctx.save()
     ctx.globalCompositeOperation = 'lighter'
@@ -1167,9 +1218,11 @@ export function drawRaidPlayer(
     else drawPlasmaForceField(ctx, x, y, renderSize, time, forceCharge)
   }
 
-  const normalSpriteFilter = hullNozzleY !== undefined ? 'none' : cosmetics.frame
+  const normalFilter = hullNozzleY !== undefined ? 'none' : cosmetics.frame
     ? getShipFrameSpriteFilter(cosmeticShipKey)
     : 'brightness(1.12) contrast(1.14) saturate(1.26)'
+  const eclipseFilter = eclipse > .65 ? 'brightness(.76)' : eclipse > .29 ? 'brightness(.88)' : eclipse > .10 ? 'brightness(.95)' : ''
+  const normalSpriteFilter = eclipseFilter ? (normalFilter === 'none' ? eclipseFilter : `${normalFilter} ${eclipseFilter}`) : normalFilter
   const burningSpriteFilter = eliteFrame ? 'none' : cosmetics.frame
     ? 'brightness(1.34) contrast(1.36) saturate(1.68)'
     : 'brightness(1.2) contrast(1.18) saturate(1.36)'
@@ -1183,6 +1236,10 @@ export function drawRaidPlayer(
     : player.forceField > 0
     ? player.ship.key === 'spaceEt' ? 'rgba(125,249,255,0.46)' : 'rgba(34,211,238,0.34)'
     : player.shield > 0 ? 'rgba(252,211,77,0.16)' : player.invuln > 0 ? 'rgba(226,232,240,0.1)' : null
+  if (sunSide && eclipse < .86 && !isDown) {
+    drawSpriteGlow(ctx, x + sunSide * renderSize * .18, y - renderSize * .13, renderSize * .71,
+      'rgba(255,226,178,.27)', .62 * Math.abs(sunlight) * (1 - eclipse))
+  }
   if (spriteGlow) drawSpriteGlow(ctx, x, y, renderSize, spriteGlow, 0.68)
   else if (!isDown) drawSpriteGlow(ctx, x, y, renderSize, environmentRim ?? hexToRgba(color, 0.09), 0.55)
   if (player.ship.key === 'coreLander' && !coreLanderCombatModel && coreLanderBurningBlend > 0.01) {
@@ -1290,6 +1347,9 @@ export function drawRaidPlayer(
       scale,
       masteryPaintColor,
     )
+  }
+  if (sunSide && nozzles && !isDown && eclipse < .86) {
+    drawSolarHullRim(ctx, sprite, x, y, renderSize, sunSide, .56 * Math.abs(sunlight) * (1 - eclipse))
   }
   if (drawGodGundamEngineOverSprite) {
     ctx.save()
