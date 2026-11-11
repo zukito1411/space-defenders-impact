@@ -44,3 +44,33 @@ assert.equal(missileLaunchScale('laser'),1,'fast weapons should retain their vel
 assert.equal(homingCruiseSpeed(0,0),52)
 assert.equal(homingCruiseSpeed(100,100),66)
 console.log('Missile/depth: distinct speed policy, bounded homing, perspective scale/brightness, finite projection and wrap fading passed')
+
+const readRaid = name => readFileSync(new URL('../src/components/games/raid/' + name,import.meta.url),'utf8')
+const targetingSource = 'const HEIGHT=100,WIDTH=100,HOMING_RETARGET_SECONDS=.18,HOMING_RETARGET_STAGGER_SECONDS=.012;\n' +
+ readRaid('missilePresentation.ts') + readRaid('targeting.ts').replace(/^import .*\n/gm,'')
+const targetCode = ts.transpileModule(targetingSource,{compilerOptions:{module:ts.ModuleKind.ESNext}}).outputText
+const targeting = await import('data:text/javascript;base64,'+Buffer.from(targetCode).toString('base64'))
+const shielded = {id:1,x:50,y:26,hp:500,isBoss:true,shieldTime:1}
+const target = {id:2,x:40,y:47,hp:50}
+const alternative = {id:3,x:90,y:28,hp:50}
+const shot = {id:5,x:50,y:78,vx:0,vy:-60,kind:'homing',turn:5}
+const targets = new Map()
+targeting.steerRaidHoming(shot,.02,[shielded,target,alternative],targeting.fillRaidHomingTargets(targets,[shielded,target,alternative]))
+assert.equal(shot.homingTargetId,2,'missile should bypass protected boss')
+shielded.shieldTime=0
+targeting.steerRaidHoming(shot,.3,[shielded,target,alternative],targeting.fillRaidHomingTargets(targets,[shielded,target,alternative]))
+assert.equal(shot.homingTargetId,2,'existing valid lock should survive a more attractive target')
+target.hp=0
+targeting.steerRaidHoming(shot,.02,[shielded,target],targeting.fillRaidHomingTargets(targets,[shielded,target]))
+assert.equal(shot.homingTargetId,1,'destroyed target should trigger immediate retarget')
+const waiting = {...shot,homingTargetId:undefined,retargetTime:.15}
+targeting.steerRaidHoming(waiting,.02,[shielded],targeting.fillRaidHomingTargets(targets,[shielded]))
+assert.equal(waiting.homingTargetId,undefined,'a failed lock should wait for its staggered retry')
+targeting.steerRaidHoming(waiting,.16,[shielded],targeting.fillRaidHomingTargets(targets,[shielded]))
+assert.equal(waiting.homingTargetId,1)
+assert.equal(targeting.hasRaidSpecialTarget([],[],[]),false)
+assert.equal(targeting.hasRaidSpecialTarget([{...shielded,y:-18}],[],[]),false)
+assert.equal(targeting.hasRaidSpecialTarget([],[{hp:1,y:30}],[]),true)
+assert.equal(targeting.hasRaidSpecialTarget([],[],[{kind:'squidBubble',hp:1,y:30}]),true)
+assert.equal(targeting.hasRaidSpecialTarget([],[],[{kind:'squidBubble',hp:0,y:30}]),false)
+console.log('Raid targeting: damageable targets, held locks, immediate invalidation, staggered retries and special target availability passed')

@@ -75,3 +75,54 @@ config.master = 0
 playRaidCue('ready')
 assert.equal(events.length, 0)
 console.log('Combat audio: timed stereo cues, mono fallback and mixer mute passed')
+
+const readRaid = name => readFileSync(new URL('../src/components/games/raid/' + name, import.meta.url),'utf8')
+const pickupRules = readRaid('raidPickups.ts').replace(/^import .*\n/gm,'')
+const pickupRuntime = readRaid('GradiusRaidRuntime.tsx')
+const pickupLoopStart = pickupRuntime.indexOf('    const activePowerUps =')
+const pickupLoop = pickupRuntime.slice(pickupLoopStart, pickupRuntime.indexOf('    if (player.score >', pickupLoopStart))
+const pickupTestSource = pickupRules + `
+const FORCE_FIELD_ARMOR=5, SPACE_ET_PASSIVE_FORCE_FIELD_CHARGES=3, WEAPON_STACK_CAPS={laser:3};
+const HEIGHT=100,PLAYER_RADIUS=3.2;
+export const player={x:50,y:65,hp:4,maxHp:4,shield:0,forceField:0,ship:{key:'fast'},weapons:{laser:3},score:0};
+export const remotePlayer={...player,x:53,hp:2,weapons:{laser:0}};
+export const pickupsCollectedRef={current:0}, powerUpsRef={current:[]}, pilotContactRef={current:[null,null]}, effects=[];
+const meleeOnly=false,allyMeleeOnly=false,scoreMult=1;
+const levelUpPlayer=()=>{},powerColor=()=>'',playPickupVoiceLine=()=>{},playGameSound=()=>{};
+const makePilotContact=(kind,pilot)=>({kind,pilot});
+const spawnSparks=(x,y)=>effects.push([x,y]),addRipple=(x,y)=>effects.push([x,y]);
+export function collect() {` + pickupLoop + '\n}'
+const pickupCode = ts.transpileModule(pickupTestSource,{compilerOptions:{module:ts.ModuleKind.ESNext}}).outputText
+const pickup = await import('data:text/javascript;base64,'+Buffer.from(pickupCode).toString('base64'))
+const repair = {x:50,y:65,radius:3,type:'repair'}
+assert.equal(pickup.pickRaidPickupPilot(repair,pickup.player,pickup.remotePlayer,18,false,false),pickup.remotePlayer)
+assert.equal(pickup.pickRaidPickupPilot(repair,pickup.player,pickup.remotePlayer,2,false,false),null,'full-hull pilot cannot take repair')
+assert.equal(pickup.pickRaidPickupPilot({...repair,type:'laser'},pickup.player,pickup.remotePlayer,18,false,false),pickup.remotePlayer)
+assert.equal(pickup.pickRaidPickupPilot({...repair,type:'laser'},pickup.player,pickup.remotePlayer,18,false,true),null)
+pickup.powerUpsRef.current.push(repair,{...repair,x:80})
+pickup.collect()
+assert.equal(pickup.remotePlayer.hp,3)
+assert.equal(pickup.player.hp,4)
+assert.equal(pickup.pickupsCollectedRef.current,1)
+assert.equal(pickup.powerUpsRef.current.length,1)
+assert.deepEqual(pickup.effects,[[50,65],[50,65]],'both pickup effects must use the real pickup coordinates')
+assert.equal(pickup.pilotContactRef.current[1].pilot,pickup.remotePlayer)
+console.log('Raid loot: eligible co-op receiver, range/cap gating, and on-screen collection effects passed')
+
+const contactStubs = `
+const RAID_CONTACT_TILE={salvage:'salvage',deflect:'deflect',hull:'hull'};
+const drawRaidContactArt=(ctx,...args)=>ctx.push(args);
+`
+const contactCode = ts.transpileModule(contactStubs + readRaid('pilotContactFx.ts').replace(/^import .*\n/gm,''),
+  {compilerOptions:{module:ts.ModuleKind.ESNext}}).outputText
+const contactFx = await import('data:text/javascript;base64,'+Buffer.from(contactCode).toString('base64'))
+const contacts = []
+const shieldHit = {kind:'shield',at:100,angle:0}
+assert.equal(contactFx.drawPilotContact(contacts,shieldHit,60,80,64,125,false),true)
+assert.equal(contacts[0][0],'deflect')
+assert.ok(contacts[0][1]>60)
+assert.equal(contactFx.drawPilotContact(contacts,shieldHit,60,80,64,380,false),false)
+const salvage = {kind:'salvage',at:100,angle:0}
+contactFx.drawPilotContact(contacts,salvage,60,80,64,240,true)
+assert.equal(contacts[1][0],'salvage')
+assert.equal(contacts[1][6],0,'reduced motion disables salvage rotation')

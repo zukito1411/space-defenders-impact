@@ -108,6 +108,7 @@ export type Shot = Vec & {
   pierce?: number
   turn?: number
   homingTargetId?: number
+  pilotSlot?: 0 | 1
   retargetTime?: number
   life?: number
   maxLife?: number
@@ -340,6 +341,8 @@ export type Snapshot = {
   stageClear: number
   unlockedStage: number
   nukeCooldown: number
+  specialTargetAvailable: boolean
+  specialInFlight: boolean
   nukeFlash: number
   asteroidWarning: number
   randomEvent: RaidRandomEvent | null

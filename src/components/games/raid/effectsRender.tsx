@@ -1,7 +1,6 @@
-import { COMBAT_TILE, drawRaidCombatTexture, getRaidCombatFrame, getRaidExplosionFrame, drawRaidVfx, drawRaidVfxLane, RAID_VFX_TILE } from './combatArt'
+import { COMBAT_TILE, drawRaidCombatTexture, drawRaidContactArt, RAID_CONTACT_TILE, getRaidCombatFrame, getRaidExplosionFrame, drawRaidVfx, drawRaidVfxLane, RAID_VFX_TILE } from './combatArt'
 import { impactAlpha, impactFrameProgress } from './combatFeel'
 import { getCanvasSpriteDimensions, RAID_DERELICT_WRECK_FILTER, RAID_SPIEGEL_SHADOW_CLONE_FILTER, RAID_SPIEGEL_SHADOW_CLONE_IMPACT_STOPS, drawCanvasImageContain, drawCanvasSpriteContain, getDerelictWreckCanvasSprite, getDerelictWreckVariantIndex, getGodGundamBarrageCanvasSprite, getRaidOtherCanvasSprite, getShipCanvasSprite } from './assets'
-import type { CachedCanvasDrawSource } from './assets'
 import { PICKUP_VOICE_SAMPLE_URLS } from './audio'
 import { forEachDevilBossBeamLane, forEachFinalBossBeamLane, getDevilBossBeamRadius, getDevilBossChargeDuration, getFinalBossBeamRadius } from './bossAttacks'
 import { FINAL_BOSS_BEAM_CHARGE_SECONDS, GOD_GUNDAM_BARRAGE_FRAME_SECONDS, HEIGHT, NUKE_FLASH_SECONDS, SPIEGEL_SHADOW_CLONE_VISUAL_ALPHA_MULTIPLIER, WIDTH } from './constants'
@@ -10,13 +9,11 @@ import { COMET_ASSET_HEAD_ANGLE, DEG } from './constants'
 import { drawPowerPickupIcon, traceRegularPolygon } from './playerRender'
 import { getCoreLanderBarrageEnergyColor, getCoreLanderBarrageFilter, getCoreLanderBarrageImpactStops, getCoreLanderBarragePoseScale, getCoreLanderBarrageSequence, getCoreLanderBarrageShadowColor, getGodGundamGameplayRenderSize, powerColor, powerGlyph, shouldMirrorCoreLanderBarragePose } from './state'
 import type { AsteroidHazard, DerelictWreck, Enemy, GodGundamBarrage, GodGundamPassiveStrike, IonStrike, MeteorHazard, NukeStrike, PowerKind, PowerUp, RaidRandomEvent } from './types'
-import { clamp, drawRadialEllipse, getCanvasCacheScale, traceRoundedRect, trimOldestMapEntry } from './utils'
+import { clamp, drawRadialEllipse, traceRoundedRect } from './utils'
 
 export const homingMissileSpriteCache = new Map<number, HTMLCanvasElement>()
 
 export const coreBlastSpriteCache = new Map<string, HTMLCanvasElement>()
-
-export const powerPickupMagnetGlowSpriteCache = new Map<string, CachedCanvasDrawSource>()
 
 export const godBarrageDrawTargetsScratch: Enemy[] = []
 
@@ -733,48 +730,11 @@ export function warmPowerPickupSpriteCache() {
   const types = Object.keys(PICKUP_VOICE_SAMPLE_URLS) as PowerKind[]
   for (const size of [42, 50]) {
     for (const type of types) {
-      getPowerPickupMagnetGlowSprite(type, Math.ceil(size * 2.45))
       for (let frame = 0; frame < POWER_PICKUP_SPRITE_FRAMES; frame += 1) {
         getPowerPickupSprite(type, size, frame, 0)
       }
     }
   }
-}
-
-export function getPowerPickupMagnetGlowSprite(type: PowerKind, drawSize: number): CachedCanvasDrawSource | null {
-  if (typeof document === 'undefined') return null
-  const normalizedSize = Math.max(1, Math.round(drawSize))
-  const spriteScale = getCanvasCacheScale()
-  const scaledBucket = Math.round(spriteScale * 10) / 10
-  const cacheKey = `pickup-magnet|${type}|${normalizedSize}|${scaledBucket}`
-  const cached = powerPickupMagnetGlowSpriteCache.get(cacheKey)
-  if (cached) return cached
-
-  const radius = normalizedSize * 0.72
-  const width = Math.ceil(radius * 2)
-  const height = width
-  const originX = width / 2
-  const originY = height / 2
-  const canvas = document.createElement('canvas')
-  canvas.width = Math.max(1, Math.ceil(width * spriteScale))
-  canvas.height = Math.max(1, Math.ceil(height * spriteScale))
-  const glowCtx = canvas.getContext('2d')
-  if (!glowCtx) return null
-  glowCtx.scale(spriteScale, spriteScale)
-  const color = powerColor(type)
-  const glow = glowCtx.createRadialGradient(originX, originY, normalizedSize * 0.1, originX, originY, radius)
-  glow.addColorStop(0, 'rgba(255,255,255,0.72)')
-  glow.addColorStop(0.34, color)
-  glow.addColorStop(1, 'rgba(0,0,0,0)')
-  glowCtx.fillStyle = glow
-  glowCtx.beginPath()
-  glowCtx.arc(originX, originY, radius, 0, Math.PI * 2)
-  glowCtx.fill()
-
-  const entry = { canvas, width, height, originX, originY }
-  trimOldestMapEntry(powerPickupMagnetGlowSpriteCache, 40)
-  powerPickupMagnetGlowSpriteCache.set(cacheKey, entry)
-  return entry
 }
 
 export function drawPowerUpCanvas(
@@ -784,6 +744,7 @@ export function drawPowerUpCanvas(
   toY: (value: number) => number,
   viewportWidth: number,
   time: number,
+  reducedMotion = false,
 ) {
   const x = toX(powerUp.x)
   const y = toY(powerUp.y) + Math.sin(time / 620 + powerUp.id) * 3
@@ -794,29 +755,10 @@ export function drawPowerUpCanvas(
   const sprite = getPowerPickupSprite(powerUp.type, size, phaseBucket, spinBucket)
   const drawSize = Math.ceil(size * 2.45)
   const magnetPulse = clamp(powerUp.magnet ?? 0, 0, 1)
-  if (magnetPulse > 0.01) {
-    const glowSprite = getPowerPickupMagnetGlowSprite(powerUp.type, drawSize)
-    if (glowSprite) {
-      ctx.save()
-      ctx.globalCompositeOperation = 'lighter'
-      ctx.globalAlpha = (0.18 + Math.sin(time / 130 + powerUp.id) * 0.045) * magnetPulse
-      ctx.drawImage(glowSprite.canvas, x - glowSprite.originX, y - glowSprite.originY, glowSprite.width, glowSprite.height)
-      ctx.restore()
-    } else {
-      ctx.save()
-      ctx.globalCompositeOperation = 'lighter'
-      ctx.globalAlpha = (0.18 + Math.sin(time / 130 + powerUp.id) * 0.045) * magnetPulse
-      const color = powerColor(powerUp.type)
-      const glow = ctx.createRadialGradient(x, y, drawSize * 0.1, x, y, drawSize * 0.72)
-      glow.addColorStop(0, 'rgba(255,255,255,0.72)')
-      glow.addColorStop(0.34, color)
-      glow.addColorStop(1, 'rgba(0,0,0,0)')
-      ctx.fillStyle = glow
-      ctx.beginPath()
-      ctx.arc(x, y, drawSize * 0.72, 0, Math.PI * 2)
-      ctx.fill()
-      ctx.restore()
-    }
+  if (magnetPulse > 0.04) {
+    const fieldSize = drawSize * (0.96 - magnetPulse * .24)
+    drawRaidContactArt(ctx, RAID_CONTACT_TILE.salvage, x, y, fieldSize, fieldSize,
+      magnetPulse * .68, reducedMotion ? 0 : time / 760 + powerUp.id, true)
   }
   ctx.drawImage(sprite, x - drawSize / 2, y - drawSize / 2, drawSize, drawSize)
 }

@@ -8,7 +8,8 @@ export const RAID_EXPLOSION_ATLAS_URL = getPublicAssetUrl('assets/raid-fx/explos
 export const RAID_BOSS_ATLAS_URL = getPublicAssetUrl('assets/raid-fx/boss-atlas-v1.png')
 export const RAID_MISSILE_ATLAS_URL = getPublicAssetUrl('assets/raid-fx/player-missiles-v1.webp')
 export const RAID_VFX_ATLAS_URL = getPublicAssetUrl('assets/raid-fx/raid-effects-v1.webp')
-export const RAID_COMBAT_ART_URLS = [RAID_COMBAT_ATLAS_URL, RAID_EXPLOSION_ATLAS_URL, RAID_BOSS_ATLAS_URL, RAID_MISSILE_ATLAS_URL, RAID_VFX_ATLAS_URL]
+export const RAID_CONTACT_ATLAS_URL = getPublicAssetUrl('assets/raid-fx/reactor-contact-v1.webp')
+export const RAID_COMBAT_ART_URLS = [RAID_COMBAT_ATLAS_URL, RAID_EXPLOSION_ATLAS_URL, RAID_BOSS_ATLAS_URL, RAID_MISSILE_ATLAS_URL, RAID_VFX_ATLAS_URL, RAID_CONTACT_ATLAS_URL]
 
 export const COMBAT_TILE = {
   plasma: 0, hotBolt: 1, ionNeedle: 2, alienOrb: 3,
@@ -22,6 +23,8 @@ export const RAID_VFX_TILE = {
   debris: 4, precision: 5, hullDamage: 6, hazard: 7,
   repair: 8, aim: 9, dangerLane: 10, travel: 11, lock: 12, charredPlate: 13,
 } as const
+
+export const RAID_CONTACT_TILE = { reactor: 0, deflect: 1, hull: 2, salvage: 3 } as const
 
 export type CombatProjectileMaterial = {
   texture: Texture
@@ -55,6 +58,7 @@ const ENEMY_MATERIALS: Partial<Record<Shot['kind'], MaterialSpec>> = {
 
 let combatFrames: Texture[] = []
 let vfxFrames: Texture[] = []
+let contactFrames: Texture[] = []
 let explosionFrames: Texture[] = []
 let bossFrames: Texture[] = []
 let missileLoaded = false
@@ -77,21 +81,21 @@ export function isWarmRaidEffectColor(color: string) {
   return warm
 }
 
-function splitAtlas(texture: Texture, trimBossProjectiles = false, trimExplosion = false): Texture[] {
+function splitAtlas(texture: Texture, trimBossProjectiles = false, trimExplosion = false, grid = 4): Texture[] {
   // Generated sheets may be NPOT. WebGL 1 cannot mipmap those sources.
   const powerOfTwo = (value: number) => value > 0 && (value & (value - 1)) === 0
   texture.source.autoGenerateMipmaps = powerOfTwo(texture.source.pixelWidth) && powerOfTwo(texture.source.pixelHeight)
   texture.source.scaleMode = 'linear'
-  const width = texture.width / 4
-  const height = texture.height / 4
-  return Array.from({ length: 16 }, (_, index) => {
+  const width = texture.width / grid
+  const height = texture.height / grid
+  return Array.from({ length: grid * grid }, (_, index) => {
     // Normalized boss cells have 32px transparent gutters. Remove only
     // empty padding and retain 8px for filtering; clouds keep their extent.
     const inset = trimExplosion || (trimBossProjectiles && index <= 9 && index !== 5) ? width * (24 / 256) : 2
     return new Texture({
     source: texture.source,
     // A small inset plus the artwork's gutters prevent neighboring tile bleed.
-    frame: new Rectangle((index % 4) * width + inset, Math.floor(index / 4) * height + inset, width - inset * 2, height - inset * 2),
+    frame: new Rectangle((index % grid) * width + inset, Math.floor(index / grid) * height + inset, width - inset * 2, height - inset * 2),
     })
   })
 }
@@ -135,6 +139,10 @@ export function preloadRaidCombatArt(): Promise<void> {
         vfxFrames = splitAtlas(texture)
         rootTextures.push(texture)
       }).catch((error: unknown) => { console.warn('Raid effects artwork unavailable:', error) })),
+      (contactFrames.length ? Promise.resolve() : Assets.load<Texture>(RAID_CONTACT_ATLAS_URL).then((texture) => {
+        contactFrames = splitAtlas(texture, false, false, 2)
+        rootTextures.push(texture)
+      }).catch((error: unknown) => { console.warn('Raid contact artwork unavailable:', error) })),
       (missileLoaded ? Promise.resolve() : Assets.load<Texture>(RAID_MISSILE_ATLAS_URL).then((texture) => {
         texture.source.scaleMode = 'linear'
         texture.source.autoGenerateMipmaps = true
@@ -148,7 +156,7 @@ export function preloadRaidCombatArt(): Promise<void> {
       }).catch((error: unknown) => {console.warn('Missile art unavailable:',error)})),
     ]).then(() => {
       // Retry missing art on the next preparation instead of caching failure.
-      if (!combatFrames.length || !explosionFrames.length || !bossFrames.length || !vfxFrames.length || !missileLoaded) warmPromise = null
+      if (!combatFrames.length || !explosionFrames.length || !bossFrames.length || !vfxFrames.length || !contactFrames.length || !missileLoaded) warmPromise = null
     })
   }
   return warmPromise
@@ -247,4 +255,10 @@ export function drawRaidVfxLane(ctx: CanvasRenderingContext2D, tile: number, x1:
   if (wide) ctx.globalAlpha *= .27
   ctx.fillRect(-fallbackWidth / 2, -length / 2, fallbackWidth, length)
   ctx.restore()
+}
+
+export function drawRaidContactArt(ctx: CanvasRenderingContext2D, tile: number, x: number, y: number,
+  width: number, height: number, opacity: number, rotation = 0, additive = false) {
+  const texture = contactFrames[tile]
+  return !!texture && opacity > 0 && drawRaidCombatTexture(ctx, texture, x, y, width, height, rotation, additive, opacity)
 }
