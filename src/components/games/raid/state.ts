@@ -1,4 +1,5 @@
-import { getCoreLanderModel, getMesiahShipColor, loadProgress } from '../../../progression'
+import { getRaidShipBaseVisualKey, getRaidShipFrameKey, isRaidEliteFrameKey } from './shipArtwork'
+import { getCoreLanderModel, getEquippedShipCosmetics, getMesiahShipColor, loadProgress } from '../../../progression'
 import { RAID_CORE_LANDER_BARRAGE_POSE_SCALES, RAID_CORE_LANDER_BARRAGE_SEQUENCES, RAID_GOD_GUNDAM_BARRAGE_FILTER, RAID_GOD_GUNDAM_BARRAGE_IMPACT_STOPS, RAID_GOD_GUNDAM_BARRAGE_SEQUENCE, RAID_GOD_GUNDAM_BURNING_BARRAGE_FILTER, RAID_GOD_GUNDAM_BURNING_BARRAGE_IMPACT_STOPS, RAID_SPIEGEL_BARRAGE_FILTER, RAID_SPIEGEL_BARRAGE_IMPACT_STOPS } from './assets'
 import type { GodGundamBarragePose } from './assets'
 import { EMPTY_WEAPONS, EMPTY_WEAPON_TIMERS, MAX_RAID_STAGE, RAID_CHECKPOINT_STORAGE_KEY, RAID_UNLOCK_STORAGE_KEY, SHIP_OPTIONS, SPACE_ET_PASSIVE_FORCE_FIELD_CHARGES, STORAGE_KEY } from './constants'
@@ -82,23 +83,26 @@ export function normalizeMesiahScoutDrones(player: Player) {
 }
 
 export function sanitizePlayerVisualShipKey(shipKey: string, visualShipKey?: string | null) {
+  const visualKey = visualShipKey ?? ''
+  const baseKey = getRaidShipBaseVisualKey(visualKey)
   if (shipKey === 'mesiah') {
-    return visualShipKey === 'mesiahWhite' || visualShipKey === 'mesiahBlack' || visualShipKey === 'mesiah'
-      ? visualShipKey
+    return baseKey === 'mesiahWhite' || baseKey === 'mesiahBlack' || baseKey === 'mesiah'
+      ? visualKey
       : 'mesiahBlack'
   }
   if (shipKey === 'coreLander') {
-    return visualShipKey === 'godGundam' || visualShipKey === 'godGundamBurning' || visualShipKey === 'spiegel' || visualShipKey === 'coreLanderBurning' || visualShipKey === 'coreLander'
-      ? visualShipKey
+    return baseKey === 'godGundam' || baseKey === 'godGundamBurning' || baseKey === 'spiegel' || baseKey === 'coreLanderBurning' || baseKey === 'coreLander'
+      ? visualKey
       : 'coreLander'
   }
-  return visualShipKey === shipKey ? visualShipKey : shipKey
+  return baseKey === shipKey ? visualKey : shipKey
 }
 
-export function getDefaultPlayerVisualShipKey(shipKey: string, progress: ReturnType<typeof loadProgress>) {
-  if (shipKey === 'mesiah') return getMesiahShipColor(progress) === 'white' ? 'mesiahWhite' : 'mesiahBlack'
-  if (shipKey === 'coreLander') return getCoreLanderModel(progress)
-  return shipKey
+export function getDefaultPlayerVisualShipKey(shipKey: string, progress: ReturnType<typeof loadProgress>, framePreview?: boolean) {
+  const baseKey = shipKey === 'mesiah'
+    ? getMesiahShipColor(progress) === 'white' ? 'mesiahWhite' : 'mesiahBlack'
+    : shipKey === 'coreLander' ? getCoreLanderModel(progress) : shipKey
+  return getRaidShipFrameKey(baseKey, framePreview ?? getEquippedShipCosmetics(progress, shipKey).frame)
 }
 
 export function getInitialPlayer(ship = SHIP_OPTIONS[0], visualShipKey?: string): Player {
@@ -210,10 +214,6 @@ export function getOptionSupportStacks(player: Player) {
   return 1
 }
 
-export function getMesiahVisualShipKeyFromProgress(progress: ReturnType<typeof loadProgress>) {
-  return getMesiahShipColor(progress) === 'white' ? 'mesiahWhite' : 'mesiahBlack'
-}
-
 export function getRaidPlayerVisualShipKey(player: Player, progress: ReturnType<typeof loadProgress>) {
   const visualShipKey = sanitizePlayerVisualShipKey(
     player.ship.key,
@@ -221,8 +221,10 @@ export function getRaidPlayerVisualShipKey(player: Player, progress: ReturnType<
   )
   const coreModel = getCoreLanderCombatModelFromVisualShipKey(visualShipKey)
   if (player.ship.key === 'coreLander' && coreModel) return coreModel
-  if (player.ship.key === 'coreLander' && (player.burningBlend ?? 0) >= 0.98) return 'coreLanderBurning'
-  return player.ship.key === 'mesiah' ? visualShipKey : player.ship.key
+  if (player.ship.key === 'coreLander' && (player.burningBlend ?? 0) >= 0.98) {
+    return getRaidShipFrameKey('coreLanderBurning', isRaidEliteFrameKey(visualShipKey))
+  }
+  return visualShipKey
 }
 
 export function getCoreLanderCombatModelFromVisualShipKey(visualShipKey?: string | null): CoreLanderCombatModel | null {

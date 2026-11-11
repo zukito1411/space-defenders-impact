@@ -1,3 +1,4 @@
+import { getEliteCoreLanderNozzleY, getRaidShipBaseVisualKey, getRaidShipFrameKey, getRaidShipNozzleY, isRaidEliteFrameKey } from './shipArtwork'
 import { updateFlightPose, type FlightPose } from './combatFeel'
 import { COMBAT_TILE, drawRaidCombatTexture, getRaidCombatFrame } from './combatArt'
 import type { ShipCosmeticEquipState } from '../../../progression'
@@ -242,11 +243,12 @@ export function drawSupportEngineTrail(ctx: CanvasRenderingContext2D, x: number,
   ctx.translate(x, y)
   ctx.rotate(rotation)
   ctx.globalAlpha *= alpha * (0.97 + Math.sin(time / 140) * 0.03)
+  const nozzleOffset = ((getRaidShipNozzleY(shipKey) ?? .3652) - .3652) * size
   if (flame) {
     const scale = size / 100
-    ctx.drawImage(flame, -64 * scale, -24 * scale, 128 * scale, 152 * scale)
+    ctx.drawImage(flame, -64 * scale, -24 * scale + nozzleOffset, 128 * scale, 152 * scale)
   } else {
-    drawPlayerEngine(ctx, 0, size * 0.1, size * 0.78, time, 0.55)
+    drawPlayerEngine(ctx, 0, size * 0.1 + nozzleOffset, size * 0.78, time, 0.55)
   }
   ctx.restore()
 }
@@ -263,7 +265,7 @@ export function drawRaidOptions(
 ) {
   const isArk = player.ship.key === 'dreadnought'
   const isMesiah = player.ship.key === 'mesiah' && player.hp > 0
-  const isWhiteMesiah = isMesiah && mesiahVisualShipKey === 'mesiahWhite'
+  const isWhiteMesiah = isMesiah && getRaidShipBaseVisualKey(mesiahVisualShipKey) === 'mesiahWhite'
   const isMesiahSortie = isMesiah
   const supportStacks = getOptionSupportStacks(player)
   if (supportStacks <= 0 && !isArk && !isMesiah) return
@@ -1055,7 +1057,9 @@ export function drawRaidPlayer(
   const coreLanderCombatModel: CoreLanderCombatModel | null = player.ship.key === 'coreLander' && (visualShipKey === 'godGundam' || visualShipKey === 'spiegel') ? visualShipKey : null
   const renderSize = coreLanderCombatModel ? size * 1.08 : size
   const cosmeticShipKey = coreLanderCombatModel ?? player.ship.key
-  const masteryPaintColor = cosmetics.frame ? getMasteryPaintColor(cosmeticShipKey, color) : color
+  const eliteFrame = isRaidEliteFrameKey(visualShipKey)
+  const hullNozzleY = getRaidShipNozzleY(visualShipKey)
+  const masteryPaintColor = cosmetics.frame && hullNozzleY === undefined ? getMasteryPaintColor(cosmeticShipKey, color) : color
   const coreLanderBurningBlend = player.ship.key === 'coreLander'
     ? clamp(player.burningBlend ?? (coreLanderBurning ? 1 : 0), 0, 1)
     : 0
@@ -1065,7 +1069,10 @@ export function drawRaidPlayer(
       ? renderSize * 0.28
       : renderSize * (0.74 + (0.62 - 0.74) * coreLanderBurningBlend)
     : renderSize
-  const engineY = player.ship.key === 'coreLander'
+  const nozzleY = player.ship.key === 'coreLander' && !coreLanderCombatModel && eliteFrame
+    ? getEliteCoreLanderNozzleY(coreLanderBurningBlend)
+    : hullNozzleY
+  const engineY = nozzleY !== undefined ? y + renderSize * nozzleY - engineSize * .34 : player.ship.key === 'coreLander'
     ? coreLanderCombatModel
       ? y - renderSize * 0.285
       : y + renderSize * (-0.085 + (-0.02 - -0.085) * coreLanderBurningBlend)
@@ -1119,10 +1126,10 @@ export function drawRaidPlayer(
     else drawPlasmaForceField(ctx, x, y, renderSize, time, forceCharge)
   }
 
-  const normalSpriteFilter = cosmetics.frame
+  const normalSpriteFilter = hullNozzleY !== undefined ? 'none' : cosmetics.frame
     ? getShipFrameSpriteFilter(cosmeticShipKey)
     : 'brightness(1.12) contrast(1.14) saturate(1.26)'
-  const burningSpriteFilter = cosmetics.frame
+  const burningSpriteFilter = eliteFrame ? 'none' : cosmetics.frame
     ? 'brightness(1.34) contrast(1.36) saturate(1.68)'
     : 'brightness(1.2) contrast(1.18) saturate(1.36)'
   const sprite = getShipCanvasSprite(visualShipKey)
@@ -1138,8 +1145,8 @@ export function drawRaidPlayer(
   if (spriteGlow) drawSpriteGlow(ctx, x, y, renderSize, spriteGlow, 0.68)
   else if (!isDown) drawSpriteGlow(ctx, x, y, renderSize, environmentRim ?? hexToRgba(color, 0.09), 0.55)
   if (player.ship.key === 'coreLander' && !coreLanderCombatModel && coreLanderBurningBlend > 0.01) {
-    const baseSprite = getShipCanvasSprite('coreLander')
-    const burningSprite = getShipCanvasSprite('coreLanderBurning')
+    const baseSprite = getShipCanvasSprite(getRaidShipFrameKey('coreLander', eliteFrame))
+    const burningSprite = getShipCanvasSprite(getRaidShipFrameKey('coreLanderBurning', eliteFrame))
     if (coreLanderBurningBlend < 0.99) {
       drawCanvasSprite(
         ctx,

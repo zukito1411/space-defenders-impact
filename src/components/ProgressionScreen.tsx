@@ -1,3 +1,5 @@
+import { getDefaultPlayerVisualShipKey } from './games/raid/state'
+import { getRaidShipBaseVisualKey, getRaidShipNozzleY } from './games/raid/shipArtwork'
 import { LEGACY_FIGHTER_COUNT, RAID_FIGHTER_DEBUT_STAGES } from './games/raid/stageEncounters'
 import { GameButton } from './ui/GameButton'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
@@ -9,6 +11,7 @@ import {
   hasProgressionUnlockOverride,
   isCoreLanderGodGundamUnlocked,
   isCoreLanderUnlocked,
+  isGradiusRaidEndlessUnlocked,
   isShipCosmeticUnlocked,
   setCoreLanderModel,
   setMesiahShipColor,
@@ -33,7 +36,7 @@ import { getLanguageText, getRaidText, getReleaseText, type LanguageCode } from 
 import { BossBriefingCanvas } from './games/GradiusRaid'
 import type { BossKind } from './games/raid/types'
 import { CAMPAIGN_BOSS_ART, GENERIC_BOSS_KINDS, getGenericBossArt } from './games/raid/bossCatalog'
-import { getRaidAlienSpriteUrl, getRaidEliteSpriteUrl, getRaidShipSpriteUrl, RAID_ALIEN_SPRITE_COUNT, RAID_ELITE_SPRITE_COUNT } from './games/RaidShipSprite'
+import { getRaidAlienSpriteUrl, getRaidEliteSpriteUrl, getRaidShipSpriteUrl, RAID_ALIEN_SPRITE_COUNT, RAID_ELITE_SPRITE_COUNT, RAID_SHIP_SPRITE_PATHS } from './games/RaidShipSprite'
 import { getPublicAssetUrl } from './games/sound'
 import './ProgressionScreen.css'
 
@@ -398,15 +401,11 @@ export function ProgressionScreen({
                   const mesiahColor = getMesiahShipColor(progress)
                   const coreLanderModel = getCoreLanderModel(progress)
                   const coreLanderGodUnlocked = isCoreLanderGodGundamUnlocked(progress)
-                  const lockedShip = shipKey === 'coreLander' && !isCoreLanderUnlocked(progress)
-                  const previewSpriteKey = shipKey === 'mesiah'
-                    ? getMesiahPreviewSpriteKey(mesiahColor)
-                    : shipKey === 'coreLander'
-                      ? coreLanderModel
-                      : shipKey
+                  const lockedShip = shipKey === 'coreLander' ? !isCoreLanderUnlocked(progress) : shipKey === 'mesiah' && !isGradiusRaidEndlessUnlocked(progress)
                   const cosmetics = getMasteryCosmetics(mastery, text)
                   const equippedCosmetics = getEquippedShipCosmetics(progress, shipKey)
                   const previewCosmetics = lockedShip ? { trail: false, aura: false, frame: false } : previewCosmeticShip === shipKey ? ALL_COSMETICS_PREVIEW : equippedCosmetics
+                  const previewSpriteKey = getDefaultPlayerVisualShipKey(shipKey, progress, previewCosmetics.frame)
                   return (
                     <div className="progress-ship-mastery" key={shipKey}>
                       <button
@@ -938,19 +937,19 @@ type UnlockBadgeTier = 'standard' | 'advanced' | 'elite' | 'legendary' | 'mythic
 type UnlockBadgeDef = { tone: UnlockBadgeTone; mark: UnlockBadgeMark; label?: string; asset?: string; assetKind?: UnlockBadgeAssetKind; tier?: UnlockBadgeTier }
 
 const BADGE_ASSETS = {
-  blackComet: 'assets/ships/black-comet.png',
-  redWraith: 'assets/ships/red-wraith.png',
-  crimsonSaw: 'assets/ships/crimson-saw.png',
-  nightLance: 'assets/ships/night-lance.png',
-  obsidianArk: 'assets/ships/obsidian-ark.png',
-  xWing: 'assets/ships/x-wing.png',
-  spaceJet: 'assets/ships/space-jet.png',
-  mesiah: 'assets/ships/mesiah-black.png',
-  mesiahRaptor: 'assets/ships/mesiah-raptor-black.png',
-  coreLander: 'assets/ships/core-lander.png',
-  coreLanderBurning: 'assets/ships/core-lander-burning.png',
-  godGundam: 'assets/ships/god-gundam.png',
-  spiegel: 'assets/ships/spiegel.png',
+  blackComet: RAID_SHIP_SPRITE_PATHS.rocket,
+  redWraith: RAID_SHIP_SPRITE_PATHS.fast,
+  crimsonSaw: RAID_SHIP_SPRITE_PATHS.gatling,
+  nightLance: RAID_SHIP_SPRITE_PATHS.laser,
+  obsidianArk: RAID_SHIP_SPRITE_PATHS.dreadnought,
+  xWing: RAID_SHIP_SPRITE_PATHS.xwing,
+  spaceJet: RAID_SHIP_SPRITE_PATHS.spaceEt,
+  mesiah: RAID_SHIP_SPRITE_PATHS.mesiah,
+  mesiahRaptor: RAID_SHIP_SPRITE_PATHS.mesiahRaptorBlack,
+  coreLander: RAID_SHIP_SPRITE_PATHS.coreLander,
+  coreLanderBurning: RAID_SHIP_SPRITE_PATHS.coreLanderBurning,
+  godGundam: RAID_SHIP_SPRITE_PATHS.godGundam,
+  spiegel: RAID_SHIP_SPRITE_PATHS.spiegel,
   alien: 'assets/aliens/alien_v0.png',
   elite: 'assets/aliens/elite_3.png',
   squid: 'assets/aliens/squid_boss.png',
@@ -1318,7 +1317,7 @@ function ShipCosmeticCanvasPreview({ shipKey, spriteKey, cosmetics, locked = fal
       const usesCombatModel = visualKey === 'godGundam' || visualKey === 'spiegel'
       const y = usesCombatModel ? 46 : shipKey === 'coreLander' ? 43 : 40
       const previewSize = usesCombatModel ? 96 : shipKey === 'coreLander' ? 86 : SHIP_PREVIEW_SIZE
-      const style = getShipPreviewVisualStyle(visualKey)
+      const style = getShipPreviewVisualStyle(getRaidShipBaseVisualKey(visualKey))
       const drawTrailOverSprite = usesCombatModel
 
       if (!locked && cosmetics.trail && !drawTrailOverSprite) drawPreviewMasteryTrail(ctx, x, y, previewSize, time, visualKey, style)
@@ -1357,10 +1356,6 @@ function ShipCosmeticCanvasPreview({ shipKey, spriteKey, cosmetics, locked = fal
   )
 }
 
-function getMesiahPreviewSpriteKey(color: MesiahShipColor) {
-  return color === 'white' ? 'mesiahWhite' : 'mesiahBlack'
-}
-
 function getShipPreviewVisualStyle(shipKey: string) {
   return SHIP_PREVIEW_VISUAL_STYLES[shipKey] ?? SHIP_PREVIEW_VISUAL_STYLES.rocket
 }
@@ -1374,24 +1369,27 @@ function getPreviewShipFrameFilter(shipKey: string) {
 function drawPreviewShipSprite(ctx: CanvasRenderingContext2D, image: HTMLImageElement, x: number, y: number, size: number, framed: boolean, locked = false, shipKey = '') {
   if (!image.complete) return
   ctx.save()
-  ctx.filter = locked ? 'brightness(0) contrast(1.18) drop-shadow(0 0 14px rgba(0,0,0,0.88))' : framed ? getPreviewShipFrameFilter(shipKey) : 'brightness(1.12) contrast(1.14) saturate(1.26)'
+  ctx.filter = locked ? 'brightness(0) contrast(1.18) drop-shadow(0 0 14px rgba(0,0,0,0.88))' : getRaidShipNozzleY(shipKey) !== undefined ? 'none' : framed ? getPreviewShipFrameFilter(shipKey) : 'brightness(1.12) contrast(1.14) saturate(1.26)'
   ctx.drawImage(image, x - size / 2, y - size / 2, size, size)
   ctx.restore()
 }
 
 function drawPreviewMasteryTrail(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, time: number, shipKey: string, style: ShipPreviewVisualStyle) {
   const pulse = 0.96 + Math.sin(time / 180) * 0.05
-  const tailScale = shipKey === 'spaceEt' ? 1.18 : shipKey === 'dreadnought' ? 0.92 : 1
+  const baseKey = getRaidShipBaseVisualKey(shipKey)
+  const tailScale = baseKey === 'spaceEt' ? 1.18 : baseKey === 'dreadnought' ? 0.92 : 1
   const usesCombatModel = shipKey === 'godGundam' || shipKey === 'spiegel'
-  const engineSize = usesCombatModel ? size * 0.28 : shipKey === 'coreLander' ? size * 0.74 : size
-  const engineY = usesCombatModel ? y - size * 0.285 : shipKey === 'coreLander' ? y - size * 0.085 : y
+  const engineSize = usesCombatModel ? size * 0.28 : baseKey === 'coreLander' ? size * 0.74 : size
+  const nozzleY = getRaidShipNozzleY(shipKey)
+  const engineY = nozzleY !== undefined ? y + nozzleY * size - .34 * engineSize
+    : usesCombatModel ? y - size * 0.285 : baseKey === 'coreLander' ? y - size * 0.085 : y
   if (usesCombatModel) {
     const ventOffset = engineSize * 0.08
     drawSinglePreviewMasteryTrail(ctx, x - ventOffset, engineY, engineSize, pulse, tailScale, shipKey, style)
     drawSinglePreviewMasteryTrail(ctx, x + ventOffset, engineY, engineSize, pulse, tailScale, shipKey, style)
     return
   }
-  drawSinglePreviewMasteryTrail(ctx, x, engineY, engineSize, pulse, tailScale, shipKey, style)
+  drawSinglePreviewMasteryTrail(ctx, x, engineY, engineSize, pulse, tailScale, baseKey, style)
 }
 
 function drawSinglePreviewMasteryTrail(ctx: CanvasRenderingContext2D, x: number, engineY: number, engineSize: number, pulse: number, tailScale: number, shipKey: string, style: ShipPreviewVisualStyle) {

@@ -1,3 +1,4 @@
+import { RAID_ELITE_FRAME_KEYS } from './shipArtwork'
 import { CAMPAIGN_BOSS_ART } from './bossCatalog'
 import { WRECK_ART_URLS, preloadWreckArt } from './wreckArt'
 import { SURFACE_ART_URLS, preloadSurfaceArt } from './surfaceArt'
@@ -20,7 +21,7 @@ export const RAID_IMAGE_CACHE_NAME = 'space-defender-raid-images-v1'
 
 export const RAID_AUDIO_CACHE_NAME = 'space-defender-audio-v1'
 
-export const RAID_PERSISTENT_CACHE_VERSION = 'gradius-raid-assets-v9'
+export const RAID_PERSISTENT_CACHE_VERSION = 'gradius-raid-assets-v10'
 
 export const RAID_PERSISTENT_CACHE_STORAGE_KEY = 'gradiusRaidPersistentAssetCache'
 
@@ -51,6 +52,7 @@ export function warmRaidCanvasAssets() {
     for (const pose of Object.keys(RAID_CORE_LANDER_BARRAGE_ASSET_PATHS[model]) as GodGundamBarragePose[]) entries.push(getGodGundamBarrageCanvasSprite(model, pose))
   }
   for (const ship of SHIP_OPTIONS) entries.push(getShipCanvasSprite(ship.key))
+  for (const key of RAID_ELITE_FRAME_KEYS) entries.push(getShipCanvasSprite(key))
   entries.push(getShipCanvasSprite('mesiahBlack'))
   entries.push(getShipCanvasSprite('mesiahWhite'))
   entries.push(getShipCanvasSprite('mesiahRaptorBlack'))
@@ -79,6 +81,7 @@ export function getRaidPersistentImageUrls() {
     for (const pose of Object.keys(RAID_CORE_LANDER_BARRAGE_ASSET_PATHS[model]) as GodGundamBarragePose[]) urls.add(getPublicAssetUrl(RAID_CORE_LANDER_BARRAGE_ASSET_PATHS[model][pose]))
   }
   for (const ship of SHIP_OPTIONS) urls.add(getRaidShipSpriteUrl(ship.key))
+  for (const key of RAID_ELITE_FRAME_KEYS) urls.add(getRaidShipSpriteUrl(key))
   urls.add(getRaidShipSpriteUrl('mesiahBlack'))
   urls.add(getRaidShipSpriteUrl('mesiahWhite'))
   urls.add(getRaidShipSpriteUrl('mesiahRaptorBlack'))

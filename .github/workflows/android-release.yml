@@ -227,3 +227,66 @@ jobs:
             echo "Removing old APK release and tag: $tag"
             gh release delete "$tag" --yes --cleanup-tag
           done
+
+  publish-itch-android:
+    name: Publish signed APK to itch.io
+    needs: signed-android-release
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    env:
+      ITCH_ANDROID_CHANNEL: ${{ vars.ITCH_ANDROID_CHANNEL || 'android' }}
+    steps:
+      - name: Download the verified APK from this run
+        id: apk
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # A manually rerun older workflow must not replace a newer Android release.
+          newest="$(gh release list --repo "$GITHUB_REPOSITORY" --limit 100 --json tagName,isDraft \
+            --jq '[.[] | select(.isDraft == false) | .tagName | select(test("^android-v[0-9]+$")) | ltrimstr("android-v") | tonumber] | max // 0')"
+          if (( newest > GITHUB_RUN_NUMBER )); then
+            echo "Android v${newest} is already available. Skipping older itch.io upload."
+            exit 0
+          fi
+          apk="SpaceImpactDefender-v${GITHUB_RUN_NUMBER}-release.apk"
+          download_dir="$RUNNER_TEMP/itch-download"
+          upload_dir="$RUNNER_TEMP/itch-android"
+          mkdir -p "$download_dir" "$upload_dir"
+          gh release download "android-v${GITHUB_RUN_NUMBER}" --repo "$GITHUB_REPOSITORY" --pattern "$apk" --dir "$download_dir"
+          test -s "$download_dir/$apk"
+          mv "$download_dir/$apk" "$upload_dir/SpaceImpactDefender-release.apk"
+          echo "upload_dir=$upload_dir" >> "$GITHUB_OUTPUT"
+
+      - name: Install itch.io Butler
+        if: steps.apk.outputs.upload_dir != ''
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive="$RUNNER_TEMP/butler.zip"
+          install_dir="$RUNNER_TEMP/itch-butler"
+          curl --fail --show-error --silent --location --retry 3 \
+            https://broth.itch.zone/butler/linux-amd64/LATEST/archive/default -o "$archive"
+          unzip -q "$archive" -d "$install_dir"
+          chmod +x "$install_dir/butler"
+          "$install_dir/butler" -V
+          echo "$install_dir" >> "$GITHUB_PATH"
+
+      - name: Push APK to the Android channel
+        if: steps.apk.outputs.upload_dir != ''
+        env:
+          BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
+          APK_DIRECTORY: ${{ steps.apk.outputs.upload_dir }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "$BUTLER_API_KEY" ]]; then
+            echo "::error::The repository Actions secret BUTLER_API_KEY is required to publish to itch.io."
+            exit 1
+          fi
+          target="zukiaoki/spaceimpactdefender:$ITCH_ANDROID_CHANNEL"
+          butler push "$APK_DIRECTORY" "$target" --userversion "1.0.${GITHUB_RUN_NUMBER}"
+          echo "Pushed Android 1.0.${GITHUB_RUN_NUMBER} to $target." >> "$GITHUB_STEP_SUMMARY"

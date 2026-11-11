@@ -30,7 +30,7 @@ export function RunResultsOverlay({ result, update, language, onClose }: RunResu
     <GameDialog className={`result-overlay result-overlay--${result.status}`} aria-labelledby="result-title" onDismiss={onClose}>
       <div className="result-overlay__panel">
         <div className="result-overlay__hero">
-          <img className="result-overlay__ship" src={getRaidShipSpriteUrl(result.shipKey ?? 'dreadnought')} alt="" aria-hidden="true" draggable={false} />
+          <img className="result-overlay__ship" src={getRaidShipSpriteUrl(result.visualShipKey ?? result.shipKey ?? 'dreadnought')} alt="" aria-hidden="true" draggable={false} />
           <span>{modeText.title} {modeText.label}</span>
           <h2 id="result-title">{statusLabel}</h2>
           <p>{text.combatReport}</p>

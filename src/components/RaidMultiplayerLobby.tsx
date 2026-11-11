@@ -1,9 +1,10 @@
+import { getDefaultPlayerVisualShipKey } from './games/raid/state'
 import { GameButton } from './ui/GameButton'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { RaidShipSprite } from './games/RaidShipSprite'
 import { getLanguageText, getRaidText, type LanguageCode } from '../i18n'
 import { isNativeLanRelayAvailable, startLanRelay } from '../native/lanRelay'
-import { getCoreLanderModel, getMesiahShipColor, isCoreLanderUnlocked, isGradiusRaidEndlessUnlocked, loadProgress } from '../progression'
+import { isCoreLanderUnlocked, isGradiusRaidEndlessUnlocked, loadProgress } from '../progression'
 
 const DEFAULT_RAID_RELAY_URL = 'https://space-raid-relay.onrender.com'
 
@@ -148,20 +149,12 @@ const getMultiplayerShipOptions = (progress: ReturnType<typeof loadProgress>) =>
   })
 )
 
-const getLobbyVisualShipKey = (shipKey: string, progress: ReturnType<typeof loadProgress>) => {
-  if (shipKey === 'mesiah') return getMesiahShipColor(progress) === 'white' ? 'mesiahWhite' : 'mesiahBlack'
-  if (shipKey === 'coreLander') return getCoreLanderModel(progress)
-  return shipKey
-}
-
 export function RaidMultiplayerLobby({ playerName, language, connectionMode, onBack, onStart }: RaidMultiplayerLobbyProps) {
   const text = getLanguageText(language).lobby
   const raidText = getRaidText(language)
   const getLocalizedShipName = (shipKey: string) => raidText.ships[shipKey as keyof typeof raidText.ships]?.name ?? getShipName(shipKey)
   const progress = useMemo(() => loadProgress(), [])
   const availableShipOptions = useMemo(() => getMultiplayerShipOptions(progress), [progress])
-  const mesiahVisualShipKey = getMesiahShipColor(progress) === 'white' ? 'mesiahWhite' : 'mesiahBlack'
-  const coreLanderVisualShipKey = getCoreLanderModel(progress)
   const socketRef = useRef<WebSocket | null>(null)
   const handoffRef = useRef(false)
   const roomRef = useRef<RoomSnapshot | null>(null)
@@ -169,7 +162,7 @@ export function RaidMultiplayerLobby({ playerName, language, connectionMode, onB
   const [selectedShipKey, setSelectedShipKey] = useState(SHIP_OPTIONS[0].key)
   const getSelectedShipPayload = (shipKey = selectedShipKey) => ({
     shipKey,
-    visualShipKey: getLobbyVisualShipKey(shipKey, progress),
+    visualShipKey: getDefaultPlayerVisualShipKey(shipKey, progress),
   })
   const onlineRelayUrl = useMemo(getDefaultRelayUrl, [])
   const [joinCode, setJoinCode] = useState('')
@@ -469,7 +462,7 @@ export function RaidMultiplayerLobby({ playerName, language, connectionMode, onB
 
         <div className="raid-lobby__ships" aria-label={text.chooseShip}>
           {availableShipOptions.map((ship) => {
-            const shipSpriteKey = ship.key === 'mesiah' ? mesiahVisualShipKey : ship.key === 'coreLander' ? coreLanderVisualShipKey : ship.key
+            const shipSpriteKey = getDefaultPlayerVisualShipKey(ship.key, progress)
             return (
               <button
                 key={ship.key}

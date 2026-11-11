@@ -24,6 +24,17 @@ The draft vault contains **the private signing key and passwords**, protected by
 
 If the vault is missing or made public after APKs have shipped, stop releasing, investigate, and recover/secure the key. Do not silently rotate signing credentials. The Actions workflow now prevents simultaneous signing-vault initialization from concurrent pushes.
 
+## itch.io Android delivery
+
+A separate job downloads the same verified APK from the release for the current
+run and publishes it to the [itch.io game page](https://zukiaoki.itch.io/spaceimpactdefender).
+Configure the repository Actions secret `BUTLER_API_KEY` with a key for the game
+owner. The job uses the `android` channel by default. If the game already has a
+Butler-managed Android channel under another name, set the repository Actions
+variable `ITCH_ANDROID_CHANNEL` to that channel. The job uploads one file with a
+stable name and stamps it with the Android release version. A manually uploaded
+legacy APK can be removed from the project page after verifying the new channel.
+
 ## Performance diagnostics
 
 Air Raid presents at the display's native requestAnimationFrame cadence, without an application FPS cap, automatic 30 FPS fallback, or automatic resolution reduction. Generated combat atlases and warm sprite reserves move common projectile/effect work into shared GPU batches. Quality follows the player's explicit graphics setting. Actual FPS still depends on device and display capability.
