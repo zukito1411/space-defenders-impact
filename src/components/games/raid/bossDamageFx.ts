@@ -58,7 +58,14 @@ export function drawBossImpact(ctx: CanvasRenderingContext2D, enemy: Enemy, x: n
   const atY = y + dy * projection
   const diameter = Math.max(16, size * (shield ? .32 : heavy || core ? .29 : .21))
     * (reducedMotion ? 1 : 1 + progress * .45)
-  drawBossFx(ctx, shield ? BOSS_FX.shield : core ? BOSS_FX.precision : BOSS_FX.impact, atX, atY,
+  if (shield) {
+    // The shock spreads along the shield surface from the point of contact.
+    const tangent = Math.atan2(dy, dx) + Math.PI / 2
+    drawBossFx(ctx, BOSS_FX.shield, atX, atY, diameter * (reducedMotion ? 1 : 1 + progress * .8), diameter * .67,
+      .95 * (1 - progress) ** 1.15, tangent, true)
+    return
+  }
+  drawBossFx(ctx, core ? BOSS_FX.precision : BOSS_FX.impact, atX, atY,
     diameter, diameter, .93 * (1 - progress) ** 1.3, impact.shotId * .37, !heavy)
 }
 

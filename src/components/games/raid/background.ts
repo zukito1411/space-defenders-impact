@@ -1,3 +1,5 @@
+import { orbitalShadowCoverage, sampleCapitalFlyby, sampleOrbitalShadow, type OrbitalShadow } from './flightEffects'
+import { COMBAT_TILE, getRaidCombatFrame } from './combatArt'
 import { getWreckTexture, preloadWreckArt } from './wreckArt'
 import { sceneryWreckDesign, wreckRunSeed } from './wreckVariety'
 import { createSurfaceCameraFrame, sampleSurfaceCamera, getSurfaceIslandY, positiveSurfaceModulo } from './surfaceMotion'
@@ -878,6 +880,11 @@ export class PixiRaidBackground {
   private readonly wateryCloudSprites = createWorldSurfaceSprites(WATERY_WORLD_CLOUD_LAYERS.length)
   private readonly volcanicIslandSprites = createWorldSurfaceSprites(VOLCANIC_WORLD_ISLAND_LAYERS.length)
   private readonly volcanicCloudSprites = createWorldSurfaceSprites(VOLCANIC_WORLD_CLOUD_LAYERS.length)
+  private readonly capitalFlyby = new Sprite(Texture.WHITE)
+  private readonly dustFlybys = Array.from({ length: 7 }, () => new Sprite(Texture.WHITE))
+  private readonly eclipseSprite = new Sprite(Texture.WHITE)
+  private eclipseTexture: Texture | null = null
+  private readonly orbitalShadow: OrbitalShadow = { x: 0, y: 0, width: 1, length: 1, rotation: 0, strength: 0, sunSide: 0 }
   private readonly cometFlybySprite = new Sprite(Texture.WHITE)
   private cosmosRegion = -1
   private cosmosPrevious = -1
@@ -995,6 +1002,12 @@ export class PixiRaidBackground {
       this.solidScenery.addChild(this.cometFlybySprite)
       this.asteroidSprites.forEach((sprite) => this.solidScenery.addChild(sprite))
       this.debrisSprites.forEach((sprite, index) => { sprite.zIndex = 56 + index * 0.01; this.solidScenery.addChild(sprite) })
+      this.eclipseTexture = this.createEclipseTexture()
+      for (const sprite of [this.eclipseSprite, this.capitalFlyby, ...this.dustFlybys]) {
+        sprite.anchor.set(.5)
+        sprite.visible = false
+        this.scene.addChild(sprite)
+      }
       this.scene.addChild(this.explosionGraphics)
 
       const canvas = app.canvas as HTMLCanvasElement
@@ -1039,6 +1052,8 @@ export class PixiRaidBackground {
     this.gradientCache.clear()
     this.gpuForeground.destroy()
     this.app?.destroy({ removeView: true }, { children: true })
+    this.eclipseTexture?.destroy(true)
+    this.eclipseTexture = null
     this.depthStarTexture?.destroy(true)
     this.depthStarTexture = null
     this.app = null
@@ -1183,6 +1198,8 @@ export class PixiRaidBackground {
         }
       }
       this.updateJourneyWorld(width, height, groundTheme)
+      this.updateOrbitalEffects(width, height, frame.stageNumber ?? 1, frame.stageAge ?? 0, frame.stageRush,
+        bossIntensity, isLow, isMedium, !space)
       // Present with the foreground once per rAF, not twice. Geometry,
       // scenery and textures are updated here on their existing cadence.
       return true
@@ -2147,6 +2164,76 @@ export class PixiRaidBackground {
       setPixiSpriteContain(sprite, texture, width * planet.x, y, size, size, 1, planet.rotation)
       sprite.x -= this.travel.x * width * PLANET_PARALLAX[index]
       sprite.y -= this.travel.y * height * (PLANET_PARALLAX[index] * 0.5)
+    }
+  }
+
+  getEclipseAt(x: number, y: number) {
+    return orbitalShadowCoverage(this.orbitalShadow, x, y)
+  }
+
+  getOrbitalSunlight() {
+    return this.orbitalShadow.sunSide * Math.min(1, this.orbitalShadow.strength * 4)
+  }
+
+  private createEclipseTexture() {
+    const canvas = document.createElement('canvas')
+    canvas.width = canvas.height = 96
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return null
+    const fade = ctx.createRadialGradient(48, 48, 7, 48, 48, 48)
+    fade.addColorStop(0, '#020716')
+    fade.addColorStop(.55, 'rgba(2,7,22,.53)')
+    fade.addColorStop(1, 'rgba(2,7,22,0)')
+    ctx.fillStyle = fade
+    ctx.fillRect(0, 0, 96, 96)
+    return Texture.from(canvas)
+  }
+
+  private updateOrbitalEffects(width: number, height: number, stage: number, age: number, rush: number, boss: number,
+    low: boolean, medium: boolean, surface: boolean) {
+    const planet = this.planetSprites[0]
+    const shadow = this.orbitalShadow
+    shadow.strength = 0
+    if (planet.visible && !surface && (this.journey.phase === 'approach' || this.journey.phase === 'descent')) {
+      sampleOrbitalShadow(shadow, planet.x, planet.y, Math.min(planet.width, planet.height), width, height, this.journey.approach)
+      shadow.strength *= 1 - this.journey.worldAlpha
+    }
+    this.eclipseSprite.visible = !!this.eclipseTexture && shadow.strength > .01
+    if (this.eclipseSprite.visible && this.eclipseTexture) {
+      this.eclipseSprite.texture = this.eclipseTexture
+      this.eclipseSprite.position.set(shadow.x, shadow.y)
+      this.eclipseSprite.width = shadow.length
+      this.eclipseSprite.height = shadow.width
+      this.eclipseSprite.rotation = shadow.rotation
+      this.eclipseSprite.alpha = shadow.strength * .42
+    }
+
+    const pass = sampleCapitalFlyby(age, stage)
+    const cruiser = FINAL_BATTLE_CRUISERS[stage % 2]
+    const hull = this.finalBattleTextures.get(getFinalBattleCruiserTextureKey(cruiser))
+    this.capitalFlyby.visible = Boolean(hull && pass >= 0 && !surface && !low && !this.reducedMotion && boss < .35)
+    if (this.capitalFlyby.visible && hull) {
+      const side = stage % 2 === 0 ? -1 : 1
+      const edge = Math.min(width, height) * (.22 + pass * .28)
+      setPixiSpriteContain(this.capitalFlyby, hull, width * (.5 + side * (.54 - pass * .11)),
+        height * (-.26 + pass * 1.5), edge, edge, Math.min(1, pass * 8, (1 - pass) * 8) * .92, side * .28 + Math.PI)
+      this.capitalFlyby.tint = stage <= 5 ? 0xb7d4f0 : 0xc5bbc9
+    }
+
+    const fragment = getRaidCombatFrame(COMBAT_TILE.fragment)
+    const dustClock = (age + stage * 1.61) % 16
+    const count = surface || low || this.reducedMotion || boss > .65 || dustClock > 4.6 || !fragment ? 0 : medium ? 3 : 7
+    for (let i = 0; i < this.dustFlybys.length; i++) {
+      const sprite = this.dustFlybys[i]
+      sprite.visible = i < count
+      if (!sprite.visible || !fragment) continue
+      const side = i % 2 ? -1 : 1
+      const drift = (dustClock * (.31 + i * .025) + i * .39) % 1
+      const edge = Math.min(width, height) * (.009 + drift * .018)
+      setPixiSpriteContain(sprite, fragment, width * (.5 + side * (.30 + (i % 4) * .035 + drift * .07)),
+        height * (drift * 1.2 - .1), edge * (.6 + rush * .4), edge * (1 + rush),
+        Math.min(1, drift * 4, (1 - drift) * 4, dustClock * 3, (4.6 - dustClock) * 3) * .34, side * (.32 + i))
+      sprite.tint = stage >= 9 ? 0xd8a990 : 0xa6d3e9
     }
   }
 

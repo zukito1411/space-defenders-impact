@@ -45,7 +45,7 @@ for(let i=0;i<4;i++) {
 }
 // Use real scene methods, stubbing Pixi objects only: no browser/device FPS claim.
 let source=read('src/components/games/raid/background.ts').replace(/^import .*\n/gm,'')
-source=read('src/components/games/raid/wreckVariety.ts')+`
+source=read('src/components/games/raid/wreckVariety.ts')+read('src/components/games/raid/flightEffects.ts')+`
 const unit=v=>Math.max(0,Math.min(1,v));
 const sceneryTint=${material.sceneryTint.toString()};
 const createRaidJourneyView=${journey.createRaidJourneyView.toString()};
@@ -61,6 +61,7 @@ const PLANET_DEPTH=[30,20,10],PLANET_PARALLAX=[.018,.009,.004];
 const COSMIC_REGIONS=${JSON.stringify(regions.COSMIC_REGIONS)};
 const cosmicRegionIndex=${cosmicRegionIndex.toString()},edgeFlyby=${edgeFlyby.toString()};
 const frame={width:512,height:512};
+const COMBAT_TILE={fragment:0}, getRaidCombatFrame=()=>frame;
 const wreckFrames=Array.from({length:8},(_,id)=>({width:464,height:464,id}));
 const getWreckTexture=i=>wreckFrames[i];
 const getCosmosBackdrop=i=>i>=0&&i<4?frame:undefined,getCosmosLandmark=getCosmosBackdrop,getCosmosBloom=getCosmosBackdrop,getJourneyPlanet=getCosmosBackdrop,getJourneySurface=getCosmosBackdrop,getJourneyBloom=getCosmosBackdrop,getSurfaceTerrain=()=>globalThis.__surfaceTestTexture??frame;
@@ -214,11 +215,14 @@ assert.equal(travelFrame(2,2,0),true);const distant=scene.planetSprites[0].width
 assert.equal(travelFrame(4,4,30),true);assert.ok(scene.planetSprites[0].width>distant)
 assert.equal(travelFrame(4,4,33,1e-8),true)
 assert.ok(scene.worldScene.visible && scene.worldScene.alpha>0 && scene.worldScene.alpha<1)
+assert.ok(Math.abs(scene.getOrbitalSunlight())>0,'the approaching planet did not light the hull')
 const approachWidth=scene.planetSprites[0].width
 assert.equal(travelFrame(5,9101,0,0,2.4),true)
 assert.ok(Math.abs(scene.planetSprites[0].width-approachWidth)<.001,'orbital/surface handoff jumped in render dimensions')
 assert.equal(travelFrame(5,9101,3),true)
 assert.equal(scene.skyScene.visible,false);assert.equal(scene.solidScenery.visible,false);assert.equal(scene.worldScene.alpha,1)
+assert.equal(scene.getOrbitalSunlight(),0,'orbital lighting persisted on the surface')
+assert.ok(scene.dustFlybys.every(sprite=>!sprite.visible),'space dust appeared on the surface')
 assert.equal(travelFrame(5,9101,40,1e-8),true)
 const departureX=scene.planetSprites[1].x,departureSize=scene.planetSprites[1].width
 assert.equal(travelFrame(6,6,0,0,1.18),true)

@@ -301,7 +301,7 @@ export function recycleSparkList(sparks: Spark[]) {
   sparks.length = 0
 }
 
-export function acquireSpark(x: number, y: number, vx: number, vy: number, life: number, color: string, size: number): Spark {
+export function acquireSpark(x: number, y: number, vx: number, vy: number, life: number, color: string, size: number, fragment = false): Spark {
   const spark = sparkPool.pop()
   if (spark) {
     spark.id = sparkId++
@@ -310,12 +310,13 @@ export function acquireSpark(x: number, y: number, vx: number, vy: number, life:
     spark.vx = vx
     spark.vy = vy
     spark.life = life
-    spark.maxLife = 0.9
+    spark.maxLife = fragment ? life : 0.9
+    spark.fragment = fragment || undefined
     spark.color = color
     spark.size = size
     return spark
   }
-  return { id: sparkId++, x, y, vx, vy, life, maxLife: 0.9, color, size }
+  return { id: sparkId++, x, y, vx, vy, life, maxLife: fragment ? life : 0.9, color, size, fragment: fragment || undefined }
 }
 
 export function recycleRipple(ripple: Ripple) {
