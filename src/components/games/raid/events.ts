@@ -1,5 +1,5 @@
 import { ASTEROID_CLUSTER_MAX_SECONDS, ASTEROID_CLUSTER_MIN_SECONDS, RANDOM_EVENT_MAX_SECONDS, RANDOM_EVENT_MIN_SECONDS } from './constants'
-import type { AsteroidHazard, RaidRandomEventKind } from './types'
+import type { AsteroidHazard, RaidDifficulty, RaidRandomEventKind } from './types'
 
 let asteroidId = 1
 
@@ -18,6 +18,24 @@ export function getRandomEventDuration(kind: RaidRandomEventKind) {
   if (kind === 'wreck') return 9
   if (kind === 'ambush') return 5.8
   return 6.8
+}
+
+const AMBUSH_WAVES = {
+  easy: [2, 2, 2],
+  normal: [3, 3, 3],
+  hard: [3, 4, 3],
+  expert: [4, 4, 3],
+} as const
+export const RAID_AMBUSH_WAVE_SPACING = 1.65
+
+export function getRaidAmbushWaveSize(difficulty: RaidDifficulty, wave: number, liveEnemies: number) {
+  return Math.min(AMBUSH_WAVES[difficulty][wave] ?? 0, Math.max(0, 32 - liveEnemies))
+}
+
+export function getRaidAmbushLane(seed: number, wave: number, slot: number) {
+  const fromLeft = (Math.floor(seed) + wave) % 2 === 0
+  const flank = 12 + slot * 8 + (seed % 1) * 3
+  return fromLeft ? flank : 100 - flank
 }
 
 export function getRandomEventLabel(kind: RaidRandomEventKind) {

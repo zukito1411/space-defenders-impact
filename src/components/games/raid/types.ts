@@ -281,6 +281,7 @@ export type AsteroidHazard = Vec & {
 }
 
 export type RaidRandomEvent = {
+  ambushWave?: number
   kind: RaidRandomEventKind
   age: number
   duration: number

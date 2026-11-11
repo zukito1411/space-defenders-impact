@@ -7,7 +7,9 @@ export const RAID_COMBAT_ATLAS_URL = getPublicAssetUrl('assets/raid-fx/combat-at
 export const RAID_EXPLOSION_ATLAS_URL = getPublicAssetUrl('assets/raid-fx/explosion-atlas-v2.png')
 export const RAID_BOSS_ATLAS_URL = getPublicAssetUrl('assets/raid-fx/boss-atlas-v1.png')
 export const RAID_MISSILE_ATLAS_URL = getPublicAssetUrl('assets/raid-fx/player-missiles-v1.webp')
-export const RAID_COMBAT_ART_URLS = [RAID_COMBAT_ATLAS_URL, RAID_EXPLOSION_ATLAS_URL, RAID_BOSS_ATLAS_URL, RAID_MISSILE_ATLAS_URL]
+export const RAID_BOSS_BEAM_URL = getPublicAssetUrl('assets/raid-fx/boss-plasma-beam-v1.webp')
+export const RAID_BOSS_FX_ATLAS_URL = getPublicAssetUrl('assets/raid-fx/boss-combat-effects-v1.webp')
+export const RAID_COMBAT_ART_URLS = [RAID_COMBAT_ATLAS_URL, RAID_EXPLOSION_ATLAS_URL, RAID_BOSS_ATLAS_URL, RAID_MISSILE_ATLAS_URL, RAID_BOSS_FX_ATLAS_URL, RAID_BOSS_BEAM_URL]
 
 export const COMBAT_TILE = {
   plasma: 0, hotBolt: 1, ionNeedle: 2, alienOrb: 3,
@@ -15,6 +17,8 @@ export const COMBAT_TILE = {
   missile: 8, charge: 9, ink: 10, smoke: 11,
   exhaust: 12, fragment: 13, venom: 14, muzzle: 15,
 } as const
+
+export const BOSS_FX = { impact: 0, shield: 1, precision: 2, muzzle: 3, pulse: 4, damage: 5, char: 6, aim: 7, lane: 8 } as const
 
 export type CombatProjectileMaterial = {
   texture: Texture
@@ -47,6 +51,8 @@ const ENEMY_MATERIALS: Partial<Record<Shot['kind'], MaterialSpec>> = {
 }
 
 let combatFrames: Texture[] = []
+let bossFxFrames: Texture[] = []
+let bossBeam: Texture | undefined
 let explosionFrames: Texture[] = []
 let bossFrames: Texture[] = []
 let missileLoaded = false
@@ -69,21 +75,21 @@ export function isWarmRaidEffectColor(color: string) {
   return warm
 }
 
-function splitAtlas(texture: Texture, trimBossProjectiles = false, trimExplosion = false): Texture[] {
+function splitAtlas(texture: Texture, trimBossProjectiles = false, trimExplosion = false, grid = 4): Texture[] {
   // Generated sheets may be NPOT. WebGL 1 cannot mipmap those sources.
   const powerOfTwo = (value: number) => value > 0 && (value & (value - 1)) === 0
   texture.source.autoGenerateMipmaps = powerOfTwo(texture.source.pixelWidth) && powerOfTwo(texture.source.pixelHeight)
   texture.source.scaleMode = 'linear'
-  const width = texture.width / 4
-  const height = texture.height / 4
-  return Array.from({ length: 16 }, (_, index) => {
+  const width = texture.width / grid
+  const height = texture.height / grid
+  return Array.from({ length: grid * grid }, (_, index) => {
     // Normalized boss cells have 32px transparent gutters. Remove only
     // empty padding and retain 8px for filtering; clouds keep their extent.
     const inset = trimExplosion || (trimBossProjectiles && index <= 9 && index !== 5) ? width * (24 / 256) : 2
     return new Texture({
     source: texture.source,
     // A small inset plus the artwork's gutters prevent neighboring tile bleed.
-    frame: new Rectangle((index % 4) * width + inset, Math.floor(index / 4) * height + inset, width - inset * 2, height - inset * 2),
+    frame: new Rectangle((index % grid) * width + inset, Math.floor(index / grid) * height + inset, width - inset * 2, height - inset * 2),
     })
   })
 }
@@ -123,6 +129,15 @@ export function preloadRaidCombatArt(): Promise<void> {
           bossMaterials[kind as Shot['kind']] = { texture: bossFrames[tile], width, height, directional, solid }
         }
       }).catch((error: unknown) => { console.warn('Raid boss artwork failed to load:', RAID_BOSS_ATLAS_URL, error) })),
+      (bossFxFrames.length ? Promise.resolve() : Assets.load<Texture>(RAID_BOSS_FX_ATLAS_URL).then((texture) => {
+        bossFxFrames = splitAtlas(texture, false, false, 3)
+      }).catch((error: unknown) => { console.warn('Boss effect artwork unavailable:', error) })),
+      (bossBeam ? Promise.resolve() : Assets.load<Texture>(RAID_BOSS_BEAM_URL).then((texture) => {
+        texture.source.scaleMode = 'linear'
+        texture.source.autoGenerateMipmaps = false
+        bossBeam = texture
+        rootTextures.push(texture)
+      }).catch((error: unknown) => { console.warn('Boss beam artwork unavailable:', error) })),
       (missileLoaded ? Promise.resolve() : Assets.load<Texture>(RAID_MISSILE_ATLAS_URL).then((texture) => {
         texture.source.scaleMode = 'linear'
         texture.source.autoGenerateMipmaps = true
@@ -136,7 +151,7 @@ export function preloadRaidCombatArt(): Promise<void> {
       }).catch((error: unknown) => {console.warn('Missile art unavailable:',error)})),
     ]).then(() => {
       // Retry missing art on the next preparation instead of caching failure.
-      if (!combatFrames.length || !explosionFrames.length || !bossFrames.length || !missileLoaded) warmPromise = null
+      if (!combatFrames.length || !explosionFrames.length || !bossFrames.length || !bossFxFrames.length || !bossBeam || !missileLoaded) warmPromise = null
     })
   }
   return warmPromise
@@ -154,6 +169,14 @@ export function isRaidBossArtSolid(kind: string) {
 }
 /** Both foreground renderers consume the same texture and geometry. */
 export function applyRaidBossArtwork(spec: GpuBossProjectileSpec): Texture | undefined {
+  if (spec.kind === 'beam') {
+    if (!bossBeam) return
+    const length = spec.width
+    spec.width = spec.height
+    spec.height = length * 1.18
+    spec.rotation -= Math.PI / 2
+    return bossBeam
+  }
   const tile = BOSS_ART_TILES[spec.kind]
   const texture = tile === undefined ? undefined : bossFrames[tile]
   if (!texture) return undefined
@@ -180,7 +203,7 @@ export function getRaidCombatRootTextures(): readonly Texture[] { return rootTex
 /** Use the decoded atlas on the Canvas fallback as well as the Pixi path. */
 export function drawRaidCombatTexture(
   ctx: CanvasRenderingContext2D, texture: Texture, x: number, y: number,
-  width: number, height: number, rotation: number, additive: boolean,
+  width: number, height: number, rotation: number, additive: boolean, opacity = 1,
 ) {
   const source = texture.source.resource
   if (!source) return false
@@ -188,10 +211,36 @@ export function drawRaidCombatTexture(
   const resolution = texture.source.resolution
   ctx.save()
   ctx.globalCompositeOperation = additive ? 'lighter' : 'source-over'
+  if (opacity !== 1) ctx.globalAlpha *= opacity
   ctx.translate(x, y)
-  ctx.rotate(rotation)
+  if (rotation) ctx.rotate(rotation)
   ctx.drawImage(source as CanvasImageSource, frame.x * resolution, frame.y * resolution,
     frame.width * resolution, frame.height * resolution, -width / 2, -height / 2, width, height)
   ctx.restore()
   return true
+}
+
+export function drawBossFx(ctx: CanvasRenderingContext2D, tile: number, x: number, y: number,
+  width: number, height: number, opacity: number, rotation = 0, additive = false) {
+  const texture = bossFxFrames[tile]
+  return !!texture && opacity > 0 && drawRaidCombatTexture(ctx, texture, x, y, width, height, rotation, additive, opacity)
+}
+
+/** Keep attack geometry exact, even if the artwork fails to load. */
+export function drawBossFxLane(ctx: CanvasRenderingContext2D, tile: number, x1: number, y1: number,
+  x2: number, y2: number, width: number, opacity: number) {
+  const dx = x2 - x1, dy = y2 - y1
+  const length = Math.hypot(dx, dy)
+  if (length <= 0 || width <= 0) return
+  const x = (x1 + x2) * .5, y = (y1 + y2) * .5
+  const rotation = Math.atan2(-dx, dy)
+  if (drawBossFx(ctx, tile, x, y, width, length, opacity, rotation)) return
+  ctx.save()
+  ctx.translate(x, y)
+  ctx.rotate(rotation)
+  ctx.globalAlpha *= opacity * .5
+  ctx.fillStyle = tile === BOSS_FX.aim ? '#fbbf24' : '#fb7185'
+  const fallbackWidth = tile === BOSS_FX.aim ? Math.min(width, 2) : width
+  ctx.fillRect(-fallbackWidth / 2, -length / 2, fallbackWidth, length)
+  ctx.restore()
 }

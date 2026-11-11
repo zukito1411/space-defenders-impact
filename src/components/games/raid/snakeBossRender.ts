@@ -1,3 +1,4 @@
+import { BOSS_FX, drawBossFx, drawBossFxLane } from './combatArt'
 import { drawCanvasSpriteContain, getCachedCanvasPattern, getCanvasSpriteDimensions, getCobraBossCanvasSprite } from './assets'
 import { BOSS_COLORS } from './constants'
 import type { Enemy, Vec } from './types'
@@ -166,14 +167,10 @@ export function drawSnakeBiteLungeModel(ctx: CanvasRenderingContext2D, x: number
   }
 
   ctx.save()
-  ctx.globalCompositeOperation = 'lighter'
-  ctx.fillStyle = `rgba(225,29,72,${0.05 + warm * 0.08})`
-  ctx.strokeStyle = `rgba(251,146,60,${0.3 + pulse * 0.22})`
-  ctx.lineWidth = Math.max(2, size * 0.01)
-  ctx.beginPath()
-  ctx.ellipse(targetX, targetY, reach * 0.12, reach * 0.075, 0, 0, Math.PI * 2)
-  ctx.fill()
-  ctx.stroke()
+  const marker = reach * .25
+  if (!drawBossFx(ctx, BOSS_FX.precision, targetX, targetY, marker, marker * .7, .56 + pulse * .28, 0, true)) {
+    drawBossFxLane(ctx, BOSS_FX.aim, targetX - marker * .5, targetY, targetX + marker * .5, targetY, 3, .8)
+  }
 
   ctx.globalCompositeOperation = 'source-over'
   const cobraTexture = getCobraBossBodyTextureCanvas()
@@ -216,31 +213,9 @@ export function drawSnakeVenomTelegraph(ctx: CanvasRenderingContext2D, x: number
   ctx.lineCap = 'round'
   ctx.lineJoin = 'round'
   if (pattern === 'horizontal') {
-    const bandHeight = Math.max(18, size * 0.12)
-    const wave = Math.sin(time / 130) * size * 0.018
-    const bandX = viewportWidth * 0.08
-    const bandWidth = viewportWidth * 0.84
-    ctx.strokeStyle = `rgba(244,63,94,${0.24 + warm * 0.36})`
-    ctx.fillStyle = `rgba(225,29,72,${0.04 + warm * 0.08})`
-    ctx.lineWidth = Math.max(3, size * 0.012)
-    ctx.beginPath()
-    ctx.roundRect?.(bandX, targetY - bandHeight * 0.5, bandWidth, bandHeight, bandHeight * 0.42)
-    if (!ctx.roundRect) {
-      ctx.rect(bandX, targetY - bandHeight * 0.5, bandWidth, bandHeight)
-    }
-    ctx.fill()
-    ctx.stroke()
-    for (let coil = 0; coil < 3; coil += 1) {
-      ctx.beginPath()
-      const offsetY = targetY + (coil - 1) * bandHeight * 0.22 + wave
-      ctx.moveTo(bandX + bandWidth * 0.03, offsetY)
-      for (let segment = 0; segment <= 10; segment += 1) {
-        const px = bandX + bandWidth * (0.03 + (segment / 10) * 0.94)
-        const py = offsetY + Math.sin(segment * 1.1 + time / 120 + coil) * bandHeight * 0.18
-        ctx.lineTo(px, py)
-      }
-      ctx.stroke()
-    }
+    const bandHeight = Math.max(18, size * .12)
+    drawBossFxLane(ctx, BOSS_FX.lane, viewportWidth * .08, targetY, viewportWidth * .92, targetY,
+      bandHeight, .35 + warm * .5)
     ctx.restore()
     return
   }
@@ -251,20 +226,13 @@ export function drawSnakeVenomTelegraph(ctx: CanvasRenderingContext2D, x: number
     return
   }
 
-  ctx.strokeStyle = `rgba(244,63,94,${0.18 + warm * 0.42})`
-  ctx.lineWidth = Math.max(3, size * 0.014)
   const laneOffsets = pattern === 'scatter' ? [-26, -10, 10, 26] : pattern === 'trident' ? [-18, 0, 18] : pattern === 'pincer' ? [-24, 24] : [0]
   laneOffsets.forEach((offset, index) => {
     const tx = laneX + offset * (size / Math.max(280, size))
-    ctx.beginPath()
-    ctx.moveTo(x + (index - (laneOffsets.length - 1) / 2) * size * 0.07, y - size * 0.08)
-    ctx.bezierCurveTo(x + offset * 0.8, y + size * 0.1, tx, y + size * 0.32, tx, y + size * (0.48 + warm * 0.18))
-    ctx.stroke()
-    drawRadialEllipse(ctx, tx, y + size * (0.52 + warm * 0.2), size * (0.026 + pulse * 0.01), size * 0.018, [
-      [0, 'rgba(255,255,255,0.72)'],
-      [0.42, 'rgba(248,113,113,0.56)'],
-      [1, 'rgba(248,113,113,0)'],
-    ])
+    const ty = y + size * (.52 + warm * .2)
+    drawBossFxLane(ctx, BOSS_FX.aim, x + (index - (laneOffsets.length - 1) / 2) * size * .07,
+      y - size * .08, tx, ty, Math.max(4, size * .018), .38 + warm * .39)
+    drawBossFx(ctx, BOSS_FX.precision, tx, ty, size * .08, size * .06, .62, 0, true)
   })
   ctx.restore()
 }

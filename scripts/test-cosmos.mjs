@@ -125,10 +125,16 @@ scene.travel.rush=1;scene.updateSpeedLines(1000,500,false,false,1)
 assert.equal(line.y,cruiseY,'changing rush strength teleported the line phase')
 assert.ok(line.alpha>beforeAlpha,'rush lines must be stronger than cruise')
 assert.equal(line.rotation,0)
-scene.travel.drift=.8;scene.updateSpeedLines(390,844,false,false,1)
-assert.ok(line.rotation>0 && line.rotation<.3,'side thrust should bank existing speed lines')
-scene.travel.drift=-.8;scene.updateSpeedLines(390,844,false,false,1)
-assert.ok(line.rotation<0,'turning back should reverse the bank')
+scene.updateSpeedLines(390,844,false,false,1)
+const fixedX = line.x, streakWidth = line.width, streakTexture = line.texture
+for (const drift of [.8,-.8]) {
+ scene.travel.drift=drift
+ scene.updateSpeedLines(390,844,false,false,1)
+ assert.equal(line.rotation,0,'banking should keep the streak vertical')
+ assert.equal(line.x,fixedX,'banking should keep the streak on its lane')
+ assert.equal(line.width,streakWidth,'banking should preserve the streak width')
+ assert.equal(line.texture,streakTexture,'banking should preserve the PR 21 streak art')
+}
 scene.cosmosEntered=0
 scene.updateBackgroundObjects(390,844,9,1,false,false)
 const flyby = scene.asteroidSprites.find(s=>s.visible&&s.zIndex===80)

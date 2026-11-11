@@ -10,101 +10,101 @@
       "stage": 1,
       "legacyVolleys": 16,
       "newVolleys": [
-        29,
-        54,
-        58
+        35,
+        68,
+        99
       ],
       "peakShots": [
-        8,
-        16,
-        16
+        10,
+        20,
+        26
       ],
       "minimumWarnings": [
-        1.02,
-        0.9792,
-        0.9384
+        0.88,
+        0.8137,
+        0.7474
       ],
       "hpScaleRank1": 1.08,
       "hpScaleRank20": 3.091,
-      "stationaryHits": 26,
-      "strafeHits": 12
+      "stationaryHits": 33,
+      "strafeHits": 14
     },
     {
       "stage": 2,
       "legacyVolleys": 16,
       "newVolleys": [
-        29,
-        54,
-        58
+        35,
+        68,
+        99
       ],
       "peakShots": [
-        16,
+        15,
         31,
-        30
+        41
       ],
       "minimumWarnings": [
-        1.04,
-        0.9984,
-        0.9568
+        0.9,
+        0.8324,
+        0.7648
       ],
       "hpScaleRank1": 1.08,
       "hpScaleRank20": 3.091,
-      "stationaryHits": 9,
-      "strafeHits": 7
+      "stationaryHits": 11,
+      "strafeHits": 8
     },
     {
       "stage": 3,
       "legacyVolleys": 17,
       "newVolleys": [
-        30,
-        55,
-        60
+        36,
+        70,
+        102
       ],
       "peakShots": [
         8,
-        14,
-        14
+        15,
+        19
       ],
       "minimumWarnings": [
-        1,
-        0.96,
-        0.92
+        0.86,
+        0.795,
+        0.73
       ],
       "hpScaleRank1": 1.1,
       "hpScaleRank20": 3.1482,
-      "stationaryHits": 9,
-      "strafeHits": 8
+      "stationaryHits": 11,
+      "strafeHits": 12
     },
     {
       "stage": 4,
       "legacyVolleys": 20,
       "newVolleys": [
-        30,
-        56,
-        60
+        37,
+        70,
+        102
       ],
       "peakShots": [
-        8,
-        14,
-        14
+        10,
+        18,
+        23
       ],
       "minimumWarnings": [
-        1,
-        0.96,
-        0.92
+        0.86,
+        0.795,
+        0.73
       ],
       "hpScaleRank1": 1.1,
       "hpScaleRank20": 3.1482,
-      "stationaryHits": 27,
-      "strafeHits": 9
+      "stationaryHits": 34,
+      "strafeHits": 15
     },
     {
       "stage": 6,
       "legacyVolleys": 21,
       "newVolleys": [
-        27,
-        45,
-        48
+        33,
+        55,
+        78
       ],
       "peakShots": [
         12,
@@ -112,177 +112,177 @@
         28
       ],
       "minimumWarnings": [
-        1.1,
-        1.056,
-        1.012
+        0.96,
+        0.8885,
+        0.817
       ],
       "hpScaleRank1": 1.12,
       "hpScaleRank20": 3.2054,
-      "stationaryHits": 26,
+      "stationaryHits": 33,
       "strafeHits": 15
     },
     {
       "stage": 7,
       "legacyVolleys": 20,
       "newVolleys": [
-        31,
-        57,
-        62
+        39,
+        73,
+        105
       ],
       "peakShots": [
-        11,
-        23,
-        24
+        12,
+        28,
+        31
       ],
       "minimumWarnings": [
-        0.98,
-        0.9408,
-        0.9016
+        0.84,
+        0.7763,
+        0.7126
       ],
       "hpScaleRank1": 1.12,
       "hpScaleRank20": 3.2054,
-      "stationaryHits": 28,
-      "strafeHits": 16
+      "stationaryHits": 36,
+      "strafeHits": 25
     },
     {
       "stage": 8,
       "legacyVolleys": 23,
       "newVolleys": [
-        52,
-        72,
-        78
+        64,
+        93,
+        102
       ],
       "peakShots": [
         30,
-        45,
-        46
+        38,
+        45
       ],
       "minimumWarnings": [
-        1.02,
-        0.9792,
-        0.9384
+        0.88,
+        0.8137,
+        0.7474
       ],
       "hpScaleRank1": 1.14,
       "hpScaleRank20": 3.2627,
-      "stationaryHits": 8,
-      "strafeHits": 14
+      "stationaryHits": 10,
+      "strafeHits": 16
     },
     {
       "stage": 9,
       "legacyVolleys": 22,
       "newVolleys": [
-        54,
-        75,
-        80
+        66,
+        96,
+        107
       ],
       "peakShots": [
         13,
-        16,
-        15
+        17,
+        19
       ],
       "minimumWarnings": [
-        0.98,
-        0.9408,
-        0.9016
+        0.84,
+        0.7763,
+        0.7126
       ],
       "hpScaleRank1": 1.14,
       "hpScaleRank20": 3.2627,
-      "stationaryHits": 18,
-      "strafeHits": 10
+      "stationaryHits": 29,
+      "strafeHits": 13
     },
     {
       "stage": 11,
       "legacyVolleys": 28,
       "newVolleys": [
-        62,
-        73,
-        78
+        75,
+        93,
+        104
       ],
       "peakShots": [
-        9,
+        10,
         12,
-        12
+        14
       ],
       "minimumWarnings": [
-        1.02,
-        0.9792,
-        0.9384
+        0.88,
+        0.8137,
+        0.7474
       ],
       "hpScaleRank1": 1.16,
       "hpScaleRank20": 3.3199,
-      "stationaryHits": 24,
-      "strafeHits": 5
+      "stationaryHits": 27,
+      "strafeHits": 9
     },
     {
       "stage": 12,
       "legacyVolleys": 29,
       "newVolleys": [
-        39,
-        52,
-        56
+        47,
+        64,
+        71
       ],
       "peakShots": [
-        14,
-        23,
-        23
+        18,
+        21,
+        28
       ],
       "minimumWarnings": [
-        1.12,
-        1.0752,
-        1.0304
+        0.98,
+        0.9072,
+        0.8344
       ],
       "hpScaleRank1": 1.16,
       "hpScaleRank20": 3.3199,
-      "stationaryHits": 19,
-      "strafeHits": 17
+      "stationaryHits": 24,
+      "strafeHits": 16
     },
     {
       "stage": 13,
       "legacyVolleys": 30,
       "newVolleys": [
-        52,
-        73,
-        78
+        64,
+        93,
+        104
       ],
       "peakShots": [
-        27,
-        33,
+        24,
+        32,
         34
       ],
       "minimumWarnings": [
-        1.02,
-        0.9792,
-        0.9384
+        0.88,
+        0.8137,
+        0.7474
       ],
       "hpScaleRank1": 1.18,
       "hpScaleRank20": 3.3772,
-      "stationaryHits": 24,
-      "strafeHits": 15
+      "stationaryHits": 31,
+      "strafeHits": 21
     },
     {
       "stage": 14,
       "legacyVolleys": 31,
       "newVolleys": [
-        51,
-        72,
-        76
+        62,
+        90,
+        102
       ],
       "peakShots": [
-        33,
-        47,
-        48
+        28,
+        43,
+        45
       ],
       "minimumWarnings": [
-        1.04,
-        0.9984,
-        0.9568
+        0.9,
+        0.8324,
+        0.7648
       ],
       "hpScaleRank1": 1.18,
       "hpScaleRank20": 3.3772,
-      "stationaryHits": 13,
-      "strafeHits": 17
+      "stationaryHits": 14,
+      "strafeHits": 19
     }
   ],
-  "observedPeakShots": 48,
-  "tenMinutePeak": 45
+  "observedPeakShots": 45,
+  "tenMinutePeak": 44
 }

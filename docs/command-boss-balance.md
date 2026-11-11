@@ -25,34 +25,35 @@ profile for Super.
 
 | Stage | Ship | Sequence and movement |
 | --- | --- | --- |
-| 1 | Crimson Bastion | Fan / aimed needles; broadside repositioning |
-| 2 | Amethyst Orrery | Iris / needles / iris; orbital repositioning |
-| 3 | Verdant Reaper | Pincer / needles / pincer; alternating flanks |
-| 4 | Tidal Razor | Three-blade sweep / needles / fan; opposite-side sweeps |
-| 6 | Cinder Gate | Gapped curtain / locked beam / curtain; fortress shifts |
-| 7 | Ashen Ark | Fan / curtain / needles / fan; broader side changes |
-| 8 | Prism Sovereign | Reverse iris / curtain / iris; orbital repositioning |
-| 9 | Scythe Regent | Pincer / blade sweep / needles / pincer; flank chains |
-| 11 | Triarch Hydra | Left/right/void-head salvos / pincer / heads / needles; hunts last bait |
-| 12 | Null Cathedral | Twin beams / curtain / single beam / curtain; fortress shifts |
-| 13 | Eclipse Dreadnought | Fan plus side orbs / curtain / fan / needles; heavy broadsides |
-| 14 | Eventide Nexus | Iris / reverse iris / curtain / fork; alternating sector pressure |
+| 1 | 16 | 35 / 68 / 99 | 26 | 1.08 / 3.091 |
+| 2 | 16 | 35 / 68 / 99 | 41 | 1.08 / 3.091 |
+| 3 | 17 | 36 / 70 / 102 | 19 | 1.10 / 3.148 |
+| 4 | 20 | 37 / 70 / 102 | 23 | 1.10 / 3.148 |
+| 6 | 21 | 33 / 55 / 78 | 28 | 1.12 / 3.205 |
+| 7 | 20 | 39 / 73 / 105 | 31 | 1.12 / 3.205 |
+| 8 | 23 | 64 / 93 / 102 | 45 | 1.14 / 3.263 |
+| 9 | 22 | 66 / 96 / 107 | 19 | 1.14 / 3.263 |
+| 11 | 28 | 75 / 93 / 104 | 14 | 1.16 / 3.320 |
+| 12 | 29 | 47 / 64 / 71 | 28 | 1.16 / 3.320 |
+| 13 | 30 | 64 / 93 / 104 | 34 | 1.18 / 3.377 |
+| 14 | 31 | 62 / 90 / 102 | 45 | 1.18 / 3.377 |
 
 Phases latch at the start of an attack: full strength, <=65% HP, and <=30% HP.
 Later phases add follow-up bursts where appropriate, raise speed and shorten
-recovery. Every sequence still has recovery. Hulls commit their origin and aim
-while warning/firing, then reposition at bounded speed (<=31 logical units/sec
-horizontally, <=8 vertically). They stay in the upper field. This creates deliberate
-attack and punish windows rather than relentless tracking.
+recovery. Every sequence still has recovery. The opening attack
+identifies the hull, and later attacks vary their order within each repertoire.
+Hulls commit their origin and aim while warning and firing. They reposition in
+recovery using the next bait pilot's position and varying offsets, bounded at
+44 logical units/sec horizontally and 11 vertically.
 
-Warnings are at least 0.78 seconds for projectile attacks and 1.05 seconds for
+Warnings are at least 0.64 seconds for projectile attacks and 0.94 seconds for
 beams, even on Expert/low HP. Easy lengthens warnings and slows shots; Hard/Expert
 modestly shorten recovery and increase speed. Existing difficulty damage, HP and
 one-hull rules remain. A phase change cannot retarget or shorten a warning already
 in progress. Co-op alternates the bait pilot between attacks.
 
-Curtains preserve a 26–30-unit-wide gap between projectile centers, with a smaller
-cyan corridor accounting for player/projectile collision radii. Twin beam centers
+Curtains preserve a 26–30-unit-wide gap between projectile centers. The gap
+is visible between the amber projectile warnings. Twin beam centers
 stay 28 units apart. Beam warning strips include the actual beam collision range
 plus player radius. These are per-volley guarantees; overlapping old shots still
 require player judgment. Non-beam follow-ups make small, predictable angle shifts.
@@ -85,34 +86,33 @@ wall-clock phase zero. Counts are volleys, not individual bullets or kill times.
 
 | Stage | Legacy volleys | New volleys: full / 55% / 20% HP | Peak live shots | HP factor: rank 1 / 20 |
 | --- | --- | --- | --- | --- |
-| 1 | 16 | 29 / 54 / 58 | 16 | 1.08 / 3.091 |
-| 2 | 16 | 29 / 54 / 58 | 31 | 1.08 / 3.091 |
-| 3 | 17 | 30 / 55 / 60 | 14 | 1.10 / 3.148 |
-| 4 | 20 | 30 / 56 / 60 | 14 | 1.10 / 3.148 |
-| 6 | 21 | 27 / 45 / 48 | 28 | 1.12 / 3.205 |
-| 7 | 20 | 31 / 57 / 62 | 24 | 1.12 / 3.205 |
-| 8 | 23 | 52 / 72 / 78 | 46 | 1.14 / 3.263 |
-| 9 | 22 | 54 / 75 / 80 | 16 | 1.14 / 3.263 |
-| 11 | 28 | 62 / 73 / 78 | 12 | 1.16 / 3.320 |
-| 12 | 29 | 39 / 52 / 56 | 23 | 1.16 / 3.320 |
-| 13 | 30 | 52 / 73 / 78 | 34 | 1.18 / 3.377 |
-| 14 | 31 | 51 / 72 / 76 | 48 | 1.18 / 3.377 |
+| 1 | 16 | 35 / 68 / 99 | 26 | 1.08 / 3.091 |
+| 2 | 16 | 35 / 68 / 99 | 41 | 1.08 / 3.091 |
+| 3 | 17 | 36 / 70 / 102 | 19 | 1.10 / 3.148 |
+| 4 | 20 | 37 / 70 / 102 | 23 | 1.10 / 3.148 |
+| 6 | 21 | 33 / 55 / 78 | 28 | 1.12 / 3.205 |
+| 7 | 20 | 39 / 73 / 105 | 31 | 1.12 / 3.205 |
+| 8 | 23 | 64 / 93 / 102 | 45 | 1.14 / 3.263 |
+| 9 | 22 | 66 / 96 / 107 | 19 | 1.14 / 3.263 |
+| 11 | 28 | 75 / 93 / 104 | 14 | 1.16 / 3.320 |
+| 12 | 29 | 47 / 64 / 71 | 28 | 1.16 / 3.320 |
+| 13 | 30 | 64 / 93 / 104 | 34 | 1.18 / 3.377 |
+| 14 | 31 | 62 / 90 / 102 | 45 | 1.18 / 3.377 |
 
 The complete diagnostics are in `command-boss-simulation.json`, generated with:
 
 `node scripts/test-command-bosses.mjs --report docs/command-boss-simulation.json`
 
 Across the scripted difficulty/HP/refresh-rate cases and a ten-minute late-boss run,
-the observed peak was 48 live shots. The generic scheduler refuses an entire
+the observed peak was 45 live shots. The generic scheduler refuses an entire
 volley if it would exceed 120 enemy shots, leaving room below the co-op packet's
 140-shot cap. It resumes only with a new warning. This rule is independent of
 visual quality; lower graphics settings do not remove hazards or warnings.
 
 Every burst has at most 12 projectiles. Recipes reuse two small scratch arrays
-(simulation and rendering); projectiles use the already-cached materials. Warnings
-need at most twelve simple trajectory strokes in one Canvas path, or two beam
-strips. Charge rings, muzzle flashes, and phase shockwaves follow the encounter
-clock and use short-lived Canvas strokes with the same scratch recipe. The
+(simulation and rendering); projectiles use the already-cached materials. Warnings use up to twelve narrow atlas projections or two textured beam
+corridors. Charge effects, muzzle flashes, and phase shockwaves follow the
+encounter clock. Muzzle flashes are drawn once per distinct firing origin. The
 reduced-motion preference limits expansion. The hull name and the 65% and 30%
 phase markers appear on its health bar. A stable emit callback avoids a new
 callback per simulation tick.
