@@ -1,4 +1,4 @@
-import { getEliteCoreLanderNozzleY, getRaidShipBaseVisualKey, getRaidShipFrameKey, getRaidShipNozzleY, isRaidEliteFrameKey } from './shipArtwork'
+import { getEliteCoreLanderNozzleY, getRaidShipBaseVisualKey, getRaidShipFrameKey, getRaidShipNozzles, getRaidShipNozzleY, isRaidEliteFrameKey } from './shipArtwork'
 import { updateFlightPose, type FlightPose } from './combatFeel'
 import { COMBAT_TILE, drawRaidCombatTexture, getRaidCombatFrame } from './combatArt'
 import type { ShipCosmeticEquipState } from '../../../progression'
@@ -238,17 +238,23 @@ function getSupportEngineFlameCanvas() {
 
 export function drawSupportEngineTrail(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, time: number, rotation = 0, alpha = 0.82, shipKey = '') {
   if (shipKey === 'coreLander') return
-  const flame = getSupportEngineFlameCanvas()
   ctx.save()
   ctx.translate(x, y)
   ctx.rotate(rotation)
   ctx.globalAlpha *= alpha * (0.97 + Math.sin(time / 140) * 0.03)
-  const nozzleOffset = ((getRaidShipNozzleY(shipKey) ?? .3652) - .3652) * size
-  if (flame) {
-    const scale = size / 100
-    ctx.drawImage(flame, -64 * scale, -24 * scale + nozzleOffset, 128 * scale, 152 * scale)
+  const nozzles = getRaidShipNozzles(shipKey)
+  if (nozzles) {
+    for (const [offsetX, offsetY, aperture] of nozzles) {
+      drawPlayerEngine(ctx, size * offsetX, size * (offsetY - .34 * .78), size * .78, time, .55, size * aperture)
+    }
   } else {
-    drawPlayerEngine(ctx, 0, size * 0.1 + nozzleOffset, size * 0.78, time, 0.55)
+    const flame = getSupportEngineFlameCanvas()
+    if (flame) {
+      const scale = size / 100
+      ctx.drawImage(flame, -64 * scale, -24 * scale, 128 * scale, 152 * scale)
+    } else {
+      drawPlayerEngine(ctx, 0, size * .1, size * .78, time, .55)
+    }
   }
   ctx.restore()
 }
@@ -354,23 +360,25 @@ export function drawRaidOptions(
   }
 }
 
-export function drawPlayerEngine(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, time: number, engineBoost = 0) {
+export function drawPlayerEngine(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, time: number, engineBoost = 0, nozzleWidth?: number) {
   const exhaust = getRaidCombatFrame(COMBAT_TILE.exhaust)
   if (exhaust) {
     const boost = clamp(engineBoost, 0, 1.35)
     const flicker = 1 + Math.sin(time / 41) * 0.025
     // Baked detail replaces two live gradients and shadow blurs per exhaust.
     const length = size * (1.3 + boost * 0.5) * flicker
-    // RIGHT-facing source root is at u≈0.8. Keep that root fixed at
-    // the nozzle while boost stretches the wake away from the hull.
-    if (drawRaidCombatTexture(ctx, exhaust, x, y + size * 0.34 + length * 0.3,
-      length, size * (0.36 + boost * 0.06), -Math.PI / 2, true)) return
+    // At u=.75 the exhaust spans roughly 12% of the tile. Seat that
+    // section in the outlet and let boost extend only the plume length.
+    const anchor = nozzleWidth === undefined ? .30 : .25
+    const width = nozzleWidth === undefined ? size * (.36 + boost * .06) : nozzleWidth / .12
+    if (drawRaidCombatTexture(ctx, exhaust, x, y + size * .34 + length * anchor,
+      length, width, -Math.PI / 2, true)) return
   }
 
   const flicker = Math.sin(time / 105) * 0.04 + Math.sin(time / 53) * 0.018
   const flameHeight = size * (0.48 + flicker) * (1 + clamp(engineBoost, 0, 1.35) * 0.34)
-  const flameWidth = size * (0.11 + Math.sin(time / 88) * 0.006)
-  const top = y + size * 0.32
+  const flameWidth = nozzleWidth === undefined ? size * (0.11 + Math.sin(time / 88) * 0.006) : nozzleWidth / 0.96
+  const top = y + size * (nozzleWidth === undefined ? .32 : .34)
   const tip = top + flameHeight
   const gradient = ctx.createLinearGradient(x, top, x, tip)
   gradient.addColorStop(0, 'rgba(255,255,255,0.96)')
@@ -1047,7 +1055,7 @@ export function drawRaidPlayer(
   ctx.translate(-x, -y)
   try {
   const baseSize = viewportWidth < 860 ? 62 : viewportWidth > 1100 ? 86 : 76
-  const size = player.ship.key === 'mesiah' ? baseSize * 1.62 : player.ship.key === 'coreLander' ? baseSize * 1.38 : baseSize
+  const size = player.ship.key === 'mesiah' ? baseSize * 1.78 : player.ship.key === 'coreLander' ? baseSize * 1.38 : baseSize * 1.16
   const isDown = phase === 'gameover' || player.hp <= 0
   const rotation = isDown ? 28 * DEG : 0
   const scale = isDown ? 0.88 : 1
@@ -1059,6 +1067,7 @@ export function drawRaidPlayer(
   const cosmeticShipKey = coreLanderCombatModel ?? player.ship.key
   const eliteFrame = isRaidEliteFrameKey(visualShipKey)
   const hullNozzleY = getRaidShipNozzleY(visualShipKey)
+  const nozzles = getRaidShipNozzles(visualShipKey)
   const masteryPaintColor = cosmetics.frame && hullNozzleY === undefined ? getMasteryPaintColor(cosmeticShipKey, color) : color
   const coreLanderBurningBlend = player.ship.key === 'coreLander'
     ? clamp(player.burningBlend ?? (coreLanderBurning ? 1 : 0), 0, 1)
@@ -1079,8 +1088,22 @@ export function drawRaidPlayer(
     : y
   const drawGodGundamEngineOverSprite = !isDown && Boolean(coreLanderCombatModel)
 
-  if (!drawGodGundamEngineOverSprite && !isDown && cosmetics.trail) drawMasteryEngineTrail(ctx, x, engineY, engineSize, time, color, cosmeticShipKey, engineBoost)
-  else if (!drawGodGundamEngineOverSprite && !isDown) drawPlayerEngine(ctx, x, engineY, engineSize, time, engineBoost)
+  if (!drawGodGundamEngineOverSprite && !isDown) {
+    if (nozzles) {
+      const wakeSize = engineSize * (nozzles.length === 1 ? .94 : .67)
+      for (const [offsetX, offsetY, aperture] of nozzles) {
+        const wakeX = x + renderSize * offsetX
+        const wakeY = y + renderSize * offsetY - wakeSize * .34
+        const width = renderSize * aperture
+        if (cosmetics.trail) drawSingleMasteryEngineTrail(ctx, wakeX, wakeY, wakeSize, time, color, cosmeticShipKey, engineBoost, width)
+        else drawPlayerEngine(ctx, wakeX, wakeY, wakeSize, time, engineBoost, width)
+      }
+    } else if (cosmetics.trail) {
+      drawMasteryEngineTrail(ctx, x, engineY, engineSize, time, color, cosmeticShipKey, engineBoost)
+    } else {
+      drawPlayerEngine(ctx, x, engineY, engineSize, time, engineBoost)
+    }
+  }
   if (!isDown && identityAuraColor) {
     ctx.save()
     ctx.globalCompositeOperation = 'lighter'
@@ -1091,7 +1114,7 @@ export function drawRaidPlayer(
     ])
     ctx.restore()
   }
-  if (!isDown && cosmetics.aura) drawMasteryAura(ctx, x, y, renderSize, time, cosmeticShipKey, masteryPaintColor)
+  if (!isDown && cosmetics.aura) drawMasteryAura(ctx, x, y, renderSize, time, cosmeticShipKey, masteryPaintColor, nozzles ? visualShipKey : cosmeticShipKey)
   if (!isDown && coreLanderBurningBlend > 0.04) {
     if (coreLanderCombatModel === 'spiegel') {
       if ((player.godMeleeCloak ?? 0) <= 0) {
@@ -1415,13 +1438,39 @@ export function drawMasteryEngineTrail(ctx: CanvasRenderingContext2D, x: number,
   drawSingleMasteryEngineTrail(ctx, x, y, size, time, color, shipKey, engineBoost)
 }
 
-export function drawSingleMasteryEngineTrail(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, time: number, color: string, shipKey: string, engineBoost = 0) {
+const masteryWakeSprites = new WeakMap<MasteryVisualStyle, HTMLCanvasElement>()
+
+export function drawSingleMasteryEngineTrail(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, time: number, color: string, shipKey: string, engineBoost = 0, nozzleWidth?: number) {
   const style = getMasteryVisualStyle(shipKey, color)
   const pulse = 0.96 + Math.sin(time / 180) * 0.05
   const tailScale = shipKey === 'spaceEt' ? 1.18 : shipKey === 'dreadnought' ? 0.92 : shipKey === 'mesiah' ? 1.05 : 1
   const top = y + size * 0.34
   const length = size * 0.72 * tailScale * pulse * (1 + clamp(engineBoost, 0, 1.35) * 0.36)
-  const width = size * (shipKey === 'dreadnought' ? 0.15 : 0.13)
+  const widthRatio = shipKey === 'dreadnought' ? .15 : .13
+  const width = nozzleWidth === undefined ? size * widthRatio : nozzleWidth / 1.16
+  if (nozzleWidth !== undefined && typeof document !== 'undefined') {
+    let wake = masteryWakeSprites.get(style)
+    if (!wake) {
+      const canvas = document.createElement('canvas')
+      canvas.width = 48
+      canvas.height = 115
+      const wakeCtx = canvas.getContext('2d')
+      if (wakeCtx) {
+        drawSingleMasteryEngineTrail(wakeCtx, 24, -24, 100, 0, color, shipKey)
+        masteryWakeSprites.set(style, canvas)
+        wake = canvas
+      }
+    }
+    if (wake) {
+      const scaleX = width / (100 * widthRatio)
+      const scaleY = length / (72 * tailScale * .96)
+      ctx.save()
+      ctx.globalCompositeOperation = 'lighter'
+      ctx.drawImage(wake, x - 24 * scaleX, top - 10 * scaleY, 48 * scaleX, 115 * scaleY)
+      ctx.restore()
+      return
+    }
+  }
   const tip = top + length
 
   ctx.save()
@@ -1457,10 +1506,10 @@ export function drawSingleMasteryEngineTrail(ctx: CanvasRenderingContext2D, x: n
   ctx.restore()
 }
 
-export function drawMasteryAura(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, time: number, shipKey: string, color: string) {
+export function drawMasteryAura(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, time: number, shipKey: string, color: string, visualShipKey = shipKey) {
   const style = getMasteryVisualStyle(shipKey, color)
   const pulse = 0.95 + Math.sin(time / 260) * 0.12
-  const sprite = getShipCanvasSprite(shipKey)
+  const sprite = getShipCanvasSprite(visualShipKey)
   ctx.save()
   ctx.globalCompositeOperation = 'lighter'
   drawCanvasSprite(ctx, sprite, x, y, size * 1.18, `blur(${Math.max(5.5, size * 0.07)}px) brightness(1.55) saturate(1.75)`, 0.24 * pulse, 0, 1, style.paint)

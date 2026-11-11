@@ -1,4 +1,4 @@
-import { LEGACY_FIGHTER_COUNT } from './stageEncounters'
+import { getRaidFighter, LEGACY_FIGHTER_COUNT } from './stageEncounters'
 import { getGenericBossArt } from './bossCatalog'
 import { getWreckCanvasSprite } from './wreckArt'
 import { getRaidAlienSpriteUrl, getRaidEliteSpriteUrl, getRaidShipSpriteUrl, RAID_ALIEN_SPRITE_COUNT, RAID_ELITE_SPRITE_COUNT } from '../RaidShipSprite'
@@ -1423,7 +1423,10 @@ export function drawSpriteGlow(ctx: CanvasRenderingContext2D, x: number, y: numb
 export function getEnemyCanvasSize(enemy: Enemy, viewportWidth: number) {
   const isMobileView = viewportWidth <= 640
   if (enemy.isMiniBoss) return isMobileView ? Math.min(viewportWidth * 0.18, 150) : Math.min(viewportWidth * 0.15, 132)
-  if (!enemy.isBoss) return isMobileView ? Math.min(viewportWidth * 0.125, 92) : Math.min(viewportWidth * 0.105, 82)
+  if (!enemy.isBoss) {
+    const normalSize = isMobileView ? Math.min(viewportWidth * 0.125, 92) : Math.min(viewportWidth * 0.105, 82)
+    return getRaidFighter(enemy.variant) ? normalSize * 1.18 : normalSize
+  }
   if (enemy.bossKind === 'devil') return Math.min(viewportWidth * (isMobileView ? 0.94 : 0.68), isMobileView ? 520 : 720)
   if (enemy.bossKind === 'final') return Math.min(viewportWidth * 0.64, 620)
   if (enemy.bossKind === 'squid') return isMobileView ? Math.min(viewportWidth * 0.46, 380) : Math.min(viewportWidth * 0.34, 340)
