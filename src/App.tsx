@@ -1,3 +1,4 @@
+import { getRaidShipNozzles } from './components/games/raid/shipArtwork'
 import { getDefaultPlayerVisualShipKey } from './components/games/raid/state'
 import { useDoorState } from './components/ui/SpaceDoor'
 import './App.css'
@@ -1348,6 +1349,9 @@ function App() {
     const selectedMastery = progress.shipMastery[selectedShip.key] ?? { xp: 0, level: 1, runs: 0, bestScore: 0, totalScore: 0, victories: 0 }
     const selectedCosmetics = getEquippedShipCosmetics(progress, selectedShip.key)
     const selectedSpriteKey = getDefaultPlayerVisualShipKey(selectedShip.key, progress)
+    const previewNozzles = getRaidShipNozzles(selectedSpriteKey)
+    const previewSize = selectedShip.key === 'mesiah' ? 136 : selectedShip.key === 'coreLander' ? 122 : 106
+    const trailClass = selectedCosmetics.trail ? 'raid-hangar__trail raid-hangar__trail--active' : 'raid-hangar__trail'
     const selectedAttackClass = getHangarAttackClass(selectedShip.key)
     const attackCopy = text.raidHangar.attacks[selectedShip.key as keyof typeof text.raidHangar.attacks] ?? text.raidHangar.attacks.rocket
     const specialCopy = text.raidHangar.specials[selectedShip.key as keyof typeof text.raidHangar.specials] ?? text.raidHangar.specials.rocket
@@ -1382,8 +1386,19 @@ function App() {
                 <div className={isSelectedUnlocked ? 'raid-hangar__display' : 'raid-hangar__display raid-hangar__display--locked'}>
                   <div className={selectedCosmetics.aura ? 'raid-hangar__aura raid-hangar__aura--active' : 'raid-hangar__aura'} />
                   <div className={selectedCosmetics.frame ? 'raid-hangar__frame raid-hangar__frame--active' : 'raid-hangar__frame'} />
-                  <div className={selectedCosmetics.trail ? 'raid-hangar__trail raid-hangar__trail--active' : 'raid-hangar__trail'} />
-                  <RaidShipSprite shipKey={selectedSpriteKey} size={selectedShip.key === 'mesiah' ? 136 : selectedShip.key === 'coreLander' ? 122 : 106} />
+                  {previewNozzles ? previewNozzles.map(([x, y, width]) => (
+                    <div
+                      className={`${trailClass} raid-hangar__trail--nozzle`}
+                      key={x}
+                      style={{
+                        left: `calc(50% + ${x * previewSize}px)`,
+                        top: `calc(50% + ${y * previewSize}px)`,
+                        width: width * previewSize,
+                        height: previewSize * (selectedCosmetics.trail ? .46 : .34),
+                      }}
+                    />
+                  )) : <div className={trailClass} />}
+                  <RaidShipSprite shipKey={selectedSpriteKey} size={previewSize} />
                 </div>
                 <div className={`raid-hangar__attack raid-hangar__attack--${selectedAttackClass}`} aria-hidden="true">
                   <i />

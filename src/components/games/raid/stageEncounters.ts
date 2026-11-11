@@ -69,7 +69,7 @@ export function getRaidWingSlot(stage: number, serial: number, slot: number) {
   const half = Math.ceil(count / 2)
   const flank = slot < half ? -1 : 1
   const flankRank = slot % half
-  let x = 50 + rank * 11.4
+  let x = 50 + rank * (layout === 'line' ? 13 : 11.4)
   let y = -6
   if (layout === 'chevron') y -= Math.abs(rank) * 4.2
   else if (layout === 'echelon') y -= slot * 3.8

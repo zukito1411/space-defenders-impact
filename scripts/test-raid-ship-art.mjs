@@ -29,6 +29,14 @@ for (const shipKey of shipKeys) {
   const base = art.getDefaultPlayerVisualShipKey(shipKey, progress)
   const elite = art.getDefaultPlayerVisualShipKey(shipKey, progress, true)
   assert.notEqual(base, elite)
+  if (shipKey !== 'coreLander') {
+    for (const key of [base, elite]) {
+      assert.match(art.getRaidShipSpriteUrl(key), /-remaster-v1\.webp$/)
+      for (const [x, y, aperture] of art.getRaidShipNozzles(key)) {
+        assert.ok(Math.abs(x) < .25 && y > .33 && y < .47 && aperture > 0 && aperture < .12)
+      }
+    }
+  }
   assert.equal(art.getRaidShipBaseVisualKey(elite), base)
   assert.equal(art.sanitizePlayerVisualShipKey(shipKey, elite), elite)
   assert.equal(art.cleanVisualShipKey(elite, shipKey), elite)
@@ -51,11 +59,11 @@ assert.equal(art.getDefaultPlayerVisualShipKey('mesiah', { color: 'white' }, tru
 assert.equal(art.getRaidShipBaseVisualKey('mesiahWhiteElite'), 'mesiahWhite')
 assert.equal(art.cleanVisualShipKey('mesiahWhiteElite', 'mesiah'), 'mesiahWhiteElite')
 assert.equal(art.cleanVisualShipKey('coreLanderBurningElite', 'coreLander'), 'coreLanderBurningElite')
-for (const key of [...art.RAID_ELITE_FRAME_KEYS, 'rocket', 'fast', 'gatling', 'dreadnought']) {
+for (const key of [...art.RAID_ELITE_FRAME_KEYS, ...shipKeys.filter(key => key !== 'coreLander'), 'mesiahWhite']) {
   const url = art.getRaidShipSpriteUrl(key)
   const file = readFileSync(new URL('../public/' + url, import.meta.url))
   assert.equal(file.toString('ascii', 8, 12), 'WEBP')
-  assert.ok(file.length < 32_000)
+  assert.ok(file.length < 38_000)
   assert.equal(file.toString('ascii', 12, 16), 'VP8X')
   assert.ok(file[20] & 0x10, url + ' requires an alpha channel')
   assert.ok(art.getRaidShipNozzleY(key) > .25 && art.getRaidShipNozzleY(key) < .48)

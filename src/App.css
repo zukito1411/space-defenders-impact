@@ -2790,6 +2790,11 @@ body {
   opacity: 0.72;
 }
 
+.raid-hangar__trail--nozzle {
+  transform: translateX(-50%);
+  filter: blur(2px);
+}
+
 .raid-hangar__attack {
   position: absolute;
   left: 50%;

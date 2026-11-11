@@ -1,5 +1,5 @@
 import { getDefaultPlayerVisualShipKey } from './games/raid/state'
-import { getRaidShipBaseVisualKey, getRaidShipNozzleY } from './games/raid/shipArtwork'
+import { getRaidShipBaseVisualKey, getRaidShipNozzles, getRaidShipNozzleY } from './games/raid/shipArtwork'
 import { LEGACY_FIGHTER_COUNT, RAID_FIGHTER_DEBUT_STAGES } from './games/raid/stageEncounters'
 import { GameButton } from './ui/GameButton'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
@@ -1380,6 +1380,15 @@ function drawPreviewMasteryTrail(ctx: CanvasRenderingContext2D, x: number, y: nu
   const tailScale = baseKey === 'spaceEt' ? 1.18 : baseKey === 'dreadnought' ? 0.92 : 1
   const usesCombatModel = shipKey === 'godGundam' || shipKey === 'spiegel'
   const engineSize = usesCombatModel ? size * 0.28 : baseKey === 'coreLander' ? size * 0.74 : size
+  const nozzles = getRaidShipNozzles(shipKey)
+  if (nozzles) {
+    const wakeSize = engineSize * (nozzles.length === 1 ? .94 : .67)
+    for (const [offsetX, offsetY, aperture] of nozzles) {
+      drawSinglePreviewMasteryTrail(ctx, x + size * offsetX, y + size * offsetY - .34 * wakeSize, wakeSize,
+        pulse, tailScale, baseKey, style, size * aperture)
+    }
+    return
+  }
   const nozzleY = getRaidShipNozzleY(shipKey)
   const engineY = nozzleY !== undefined ? y + nozzleY * size - .34 * engineSize
     : usesCombatModel ? y - size * 0.285 : baseKey === 'coreLander' ? y - size * 0.085 : y
@@ -1392,10 +1401,10 @@ function drawPreviewMasteryTrail(ctx: CanvasRenderingContext2D, x: number, y: nu
   drawSinglePreviewMasteryTrail(ctx, x, engineY, engineSize, pulse, tailScale, baseKey, style)
 }
 
-function drawSinglePreviewMasteryTrail(ctx: CanvasRenderingContext2D, x: number, engineY: number, engineSize: number, pulse: number, tailScale: number, shipKey: string, style: ShipPreviewVisualStyle) {
+function drawSinglePreviewMasteryTrail(ctx: CanvasRenderingContext2D, x: number, engineY: number, engineSize: number, pulse: number, tailScale: number, shipKey: string, style: ShipPreviewVisualStyle, nozzleWidth?: number) {
   const top = engineY + engineSize * 0.34
   const length = engineSize * 0.72 * tailScale * pulse
-  const width = engineSize * (shipKey === 'dreadnought' ? 0.15 : 0.13)
+  const width = nozzleWidth === undefined ? engineSize * (shipKey === 'dreadnought' ? 0.15 : 0.13) : nozzleWidth / 1.16
   const tip = top + length
 
   ctx.save()
