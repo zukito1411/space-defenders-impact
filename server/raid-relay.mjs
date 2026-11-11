@@ -1085,15 +1085,15 @@ function cleanShipKey(value) {
 
 function cleanVisualShipKey(value, shipKey) {
   const visualShipKey = String(value || '').trim()
-  const allowedVisualShipKeys = new Set(['rocket', 'fast', 'gatling', 'laser', 'dreadnought', 'xwing', 'spaceEt', 'mesiah', 'mesiahBlack', 'mesiahWhite', 'coreLander', 'coreLanderBurning', 'godGundam', 'godGundamBurning', 'spiegel'])
-  if (!allowedVisualShipKeys.has(visualShipKey)) return shipKey
   if (shipKey === 'mesiah') {
-    return ['mesiah', 'mesiahBlack', 'mesiahWhite'].includes(visualShipKey) ? visualShipKey : 'mesiah'
+    return ['mesiah', 'mesiahBlack', 'mesiahWhite', 'mesiahBlackElite', 'mesiahWhiteElite'].includes(visualShipKey)
+      ? visualShipKey : 'mesiah'
   }
   if (shipKey === 'coreLander') {
-    return ['coreLander', 'coreLanderBurning', 'godGundam', 'godGundamBurning', 'spiegel'].includes(visualShipKey) ? visualShipKey : 'coreLander'
+    return ['coreLander', 'coreLanderBurning', 'coreLanderElite', 'coreLanderBurningElite', 'godGundam', 'godGundamBurning', 'spiegel'].includes(visualShipKey)
+      ? visualShipKey : 'coreLander'
   }
-  return visualShipKey === shipKey ? visualShipKey : shipKey
+  return visualShipKey === `${shipKey}Elite` ? visualShipKey : shipKey
 }
 
 function cleanOptionalShipKey(value) {

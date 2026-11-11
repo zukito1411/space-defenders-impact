@@ -1,3 +1,4 @@
+import { getDefaultPlayerVisualShipKey } from './components/games/raid/state'
 import { useDoorState } from './components/ui/SpaceDoor'
 import './App.css'
 import { GameButton, GameMenuAction } from './components/ui/GameButton'
@@ -22,7 +23,7 @@ import {
   type LanguageCode,
 } from './i18n'
 import { getStoredPlayerName, getStoredRecoveryCode, hasStoredPlayerName, isCreatorPlayerName, registerPlayerName, restorePlayerName, saveStoredPlayerName, uploadPlayerProgress, type PlayerNameRegistrationResult } from './leaderboards'
-import { CORE_LANDER_GOD_GUNDAM_UNLOCK_SCORE, CORE_LANDER_UNLOCK_GRADIUS_ENDLESS_SCORE, getCoreLanderModel, getEquippedShipCosmetics, getMesiahShipColor, getStoredTowerDefenseEndlessUnlock, isCoreLanderUnlocked, isGradiusRaidEndlessUnlocked, isShipCosmeticUnlocked, loadProgress, normalizeProgress, mergeProgressForSync, markProgressSyncPending, getPendingProgressSyncToken, clearPendingProgressSyncToken, recordRunResult, resetProgressForNewAccount, saveProgress, SHIP_COSMETIC_SINGLE_RUN_SCORE, SHIP_COSMETIC_TOTAL_SCORE, type ProgressState, type ProgressUpdate, type RunResult } from './progression'
+import { CORE_LANDER_GOD_GUNDAM_UNLOCK_SCORE, CORE_LANDER_UNLOCK_GRADIUS_ENDLESS_SCORE, getEquippedShipCosmetics, getStoredTowerDefenseEndlessUnlock, isCoreLanderUnlocked, isGradiusRaidEndlessUnlocked, isShipCosmeticUnlocked, loadProgress, normalizeProgress, mergeProgressForSync, markProgressSyncPending, getPendingProgressSyncToken, clearPendingProgressSyncToken, recordRunResult, resetProgressForNewAccount, saveProgress, SHIP_COSMETIC_SINGLE_RUN_SCORE, SHIP_COSMETIC_TOTAL_SCORE, type ProgressState, type ProgressUpdate, type RunResult } from './progression'
 import { useEffect, useMemo, useState, useRef, type CSSProperties } from 'react'
 
 // Placeholder coins (not displayed - kept for prop compatibility)
@@ -217,13 +218,6 @@ function App() {
       return true
     })
   ), [progress])
-  const getSameScreenShipSpriteKey = (shipKey: string) => (
-    shipKey === 'mesiah'
-      ? getMesiahShipColor(progress) === 'white' ? 'mesiahWhite' : 'mesiahBlack'
-      : shipKey === 'coreLander'
-        ? getCoreLanderModel(progress)
-        : shipKey
-  )
   const currentScene = useMemo(
     () => ({
       ...text.cutscene.scenes[cutsceneIndex],
@@ -1353,7 +1347,7 @@ function App() {
     const selectedShipCopy = raidText.ships[selectedShip.key as keyof typeof raidText.ships] ?? selectedShip
     const selectedMastery = progress.shipMastery[selectedShip.key] ?? { xp: 0, level: 1, runs: 0, bestScore: 0, totalScore: 0, victories: 0 }
     const selectedCosmetics = getEquippedShipCosmetics(progress, selectedShip.key)
-    const selectedSpriteKey = getSameScreenShipSpriteKey(selectedShip.key)
+    const selectedSpriteKey = getDefaultPlayerVisualShipKey(selectedShip.key, progress)
     const selectedAttackClass = getHangarAttackClass(selectedShip.key)
     const attackCopy = text.raidHangar.attacks[selectedShip.key as keyof typeof text.raidHangar.attacks] ?? text.raidHangar.attacks.rocket
     const specialCopy = text.raidHangar.specials[selectedShip.key as keyof typeof text.raidHangar.specials] ?? text.raidHangar.specials.rocket
@@ -1461,11 +1455,7 @@ function App() {
             <div className="raid-hangar__roster" aria-label={text.raidHangar.roster}>
               {RAID_HANGAR_SHIP_OPTIONS.map((ship) => {
                 const shipCopy = raidText.ships[ship.key as keyof typeof raidText.ships] ?? ship
-                const spriteKey = ship.key === 'mesiah'
-                  ? getMesiahShipColor(progress) === 'white' ? 'mesiahWhite' : 'mesiahBlack'
-                  : ship.key === 'coreLander'
-                    ? getCoreLanderModel(progress)
-                    : ship.key
+                const spriteKey = getDefaultPlayerVisualShipKey(ship.key, progress)
                 const unlocked = ship.key === 'mesiah'
                   ? canPlayGradiusEndless
                   : ship.key === 'coreLander'
@@ -1597,7 +1587,7 @@ function App() {
             <div className="same-screen-ships__grid">
               {sameScreenShipOptions.map((ship) => {
                 const shipCopy = raidText.ships[ship.key as keyof typeof raidText.ships] ?? ship
-                const spriteKey = getSameScreenShipSpriteKey(ship.key)
+                const spriteKey = getDefaultPlayerVisualShipKey(ship.key, progress)
                 return (
                   <button
                     key={ship.key}

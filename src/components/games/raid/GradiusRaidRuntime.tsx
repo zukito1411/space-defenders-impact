@@ -1,3 +1,4 @@
+import { getRaidShipBaseVisualKey } from './shipArtwork'
 import { fireRaidFighter, getRaidFighter, getRaidFighterPathX, getRaidReserveVariant, getRaidStageEncounter, getRaidWingSize, getRaidWingSlot, LEGACY_FIGHTER_COUNT, RAID_STAGE_ENEMY_LIMIT } from './stageEncounters'
 import { BOSS_BREAKUP_DELAYS, drawBossImpact, getBossBreakupPoint, recordBossImpact } from './bossDamageFx'
 import { prefersRaidReducedMotion } from './commandBossRender'
@@ -14,7 +15,7 @@ import { useDoorCallback, useDoorState, useSpaceDoor } from '../../ui/SpaceDoor'
 import { getRaidText } from '../../../i18n'
 import type { LanguageCode } from '../../../i18n'
 import { isCreatorPlayerName, submitLeaderboardScore } from '../../../leaderboards'
-import { getCoreLanderModel, getEquippedShipCosmetics, hasProgressionUnlockOverride, isCoreLanderUnlocked, loadProgress } from '../../../progression'
+import { getEquippedShipCosmetics, hasProgressionUnlockOverride, isCoreLanderUnlocked, loadProgress } from '../../../progression'
 import type { RunResult, RunStatus, ShipCosmeticEquipState } from '../../../progression'
 import { RAID_ELITE_SPRITE_COUNT, getRaidAlienSpriteUrl, getRaidEliteSpriteUrl, RaidShipSprite } from '../RaidShipSprite'
 import { getGameAudioMixSettings, getGameSoundBgmDuckProfile, getGameSoundEnabled, getGraphicsQuality, getPublicAssetUrl, playGameSound, playRaidCue, registerGameSoundDucker, setGameAudioMixSettings, setGraphicsQuality, stopBGM } from '../sound'
@@ -46,7 +47,7 @@ import { acquireHomingTarget, animateStageClearPlayer, applyRiftPullToPlayer, ap
 import { clampNetworkVelocity, cloneAsteroid, cloneDerelictWreck, cloneEnemy, cloneIonStrike, cloneMeteor, cloneRaidRandomEvent, cloneVec, compactPlayer, compactVec, getBufferedAsteroidVisuals, getBufferedEnemyVisuals, getBufferedPlayerVisual, getConnectionLabel, getGuestShotTtlMs, getOwnCorrectionBlend, getPlayerPickupAudioKind, getRemoteInterpolationDelayMs, hasClearedRaidInProgress, isNetworkVisible, keepNetworkVisibleInPlace, reconcilePlayerVisual, updateDerelictWreckMotion } from './network'
 import { drawRaidOptions, drawRaidPlayer, getCoreBlastSprite } from './playerRender'
 import { getRaidAssetPreloadInitialState, preloadGradiusRaidAssets, warmRaidGeneratedEffectSprites } from './preload'
-import { clonePlayer, getCheckpointStage, getDefaultPlayerVisualShipKey, getGodGundamGameplayRenderSize, getHighScore, getInitialPlayer, getMesiahVisualShipKeyFromProgress, getOptionSupportStacks, getPlayerCoreLanderCombatModel, getRaidPlayerVisualShipKey, getShipByKey, getUnlockedStage, isCoreLanderAoeShot, isGodGundamBarragePilot, normalizeMesiahDrones, normalizeMesiahScoutDrones, powerColor, sanitizePlayerVisualShipKey, saveCheckpointStage, saveHighScore, saveUnlockedStage } from './state'
+import { clonePlayer, getCheckpointStage, getDefaultPlayerVisualShipKey, getGodGundamGameplayRenderSize, getHighScore, getInitialPlayer, getOptionSupportStacks, getPlayerCoreLanderCombatModel, getRaidPlayerVisualShipKey, getShipByKey, getUnlockedStage, isCoreLanderAoeShot, isGodGundamBarragePilot, normalizeMesiahDrones, normalizeMesiahScoutDrones, powerColor, sanitizePlayerVisualShipKey, saveCheckpointStage, saveHighScore, saveUnlockedStage } from './state'
 import type { AsteroidHazard, BossDefeatExplosionEvent, BossKind, BossMessage, CameraShakeState, CoreLanderCombatModel, DerelictWreck, Enemy, EnemySpawnProfile, GamePhase, GodGundamBarrage, GodGundamPassiveStrike, IonStrike, MeteorHazard, MiniBossKind, MirageBossKind, MultiplayerAsteroidSnapshot, MultiplayerConnectionQuality, MultiplayerEnemySnapshot, MultiplayerHostState, MultiplayerInput, MultiplayerPlayerSnapshot, NukeStrike, Player, PowerKind, PowerUp, RaidAssetPreloadState, RaidBgmMode, RaidDifficulty, RaidMode, RaidMultiplayerSession, RaidRandomEvent, RaidRandomEventKind, RelayGameMessage, Ripple, ShipOption, Shot, Snapshot, Spark, Vec, WeaponKey } from './types'
 import { acquireRipple, acquireSpark, buildEnemyCollisionBuckets, clamp, collectShotCollisionCandidates, compactInPlace, createEnemyCollisionBuckets, distSq, drawRadialEllipse, getCachedProjectileOrbSprite, getCachedProjectileTrailSprite, getEliteEnemyChance, getMaxActiveEliteEnemies, pickEliteEnemyKind, readRaidPalette, recycleRipple, recycleRippleList, recycleSpark, recycleSparkList, takeLastFilteredMapped, updateRipplesInPlace, updateSparksInPlace } from './utils'
 import type { EnemyCollisionBuckets } from './utils'
@@ -2839,10 +2840,7 @@ export function GradiusRaid({
     const guestRoomPlayer = session?.players.find((roomPlayer) => !roomPlayer.host)
     const hostShip = getShipByKey(hostRoomPlayer?.shipKey, selectedShipRef.current)
     const guestShip = getShipByKey(sameScreen ? sameScreenGuestShipKeyRef.current : guestRoomPlayer?.shipKey, SHIP_OPTIONS[1])
-    const hostVisualShipKey = sanitizePlayerVisualShipKey(
-      hostShip.key,
-      hostRoomPlayer?.visualShipKey ?? getDefaultPlayerVisualShipKey(hostShip.key, progressRef.current),
-    )
+    const hostVisualShipKey = getDefaultPlayerVisualShipKey(hostShip.key, progressRef.current)
     const guestVisualShipKey = sanitizePlayerVisualShipKey(
       guestShip.key,
       sameScreen
@@ -3117,7 +3115,7 @@ export function GradiusRaid({
     const coreLanderBurning = isCoreLanderBurning(player)
     const coreLanderCombatModel = getPlayerCoreLanderCombatModel(player, progressRef.current)
     const coreLanderFireInterval = getCoreLanderFireInterval(player)
-    const isWhiteMesiah = shipKey === 'mesiah' && getRaidPlayerVisualShipKey(player, progressRef.current) === 'mesiahWhite'
+    const isWhiteMesiah = shipKey === 'mesiah' && getRaidShipBaseVisualKey(getRaidPlayerVisualShipKey(player, progressRef.current)) === 'mesiahWhite'
     const canFireMain = player.fireCooldown <= 0
     const canFireMesiahDrones = shipKey === 'mesiah' && player.hp > 0 && player.mesiahDroneFireCooldown <= 0
     if (!canFireMain && !canFireMesiahDrones) return
@@ -4024,6 +4022,7 @@ export function GradiusRaid({
       teamScore: sameScreenPilots ? sameScreenPilots.reduce((total, pilot) => total + Math.max(0, pilot.score), 0) : undefined,
       stage: stageRef.current,
       shipKey: selectedShipRef.current.key,
+      visualShipKey: getRaidPlayerVisualShipKey(session && !session.isHost && remotePlayer ? remotePlayer : player, progressRef.current),
       pilots: sameScreenPilots,
       durationMs: performance.now() - runStartTimeRef.current,
       enemiesDestroyed: enemiesDestroyedRef.current,
@@ -7179,8 +7178,6 @@ export function GradiusRaid({
   const completedCampaign = hasProgressionUnlockOverride() || snapshot.unlockedStage >= MAX_RAID_STAGE || hasClearedRaidInProgress(progressRef.current)
   const mesiahUnlocked = completedCampaign
   const coreLanderUnlocked = isCoreLanderUnlocked(progressRef.current)
-  const mesiahVisualShipKey = getMesiahVisualShipKeyFromProgress(progressRef.current)
-  const coreLanderVisualShipKey = getCoreLanderModel(progressRef.current)
   const playerVisualShipKey = getRaidPlayerVisualShipKey(player, progressRef.current)
   const allyVisualShipKey = snapshot.allyPlayer ? getRaidPlayerVisualShipKey(snapshot.allyPlayer, progressRef.current) : ''
   const checkpointStage = getCheckpointStage()
@@ -7843,7 +7840,7 @@ export function GradiusRaid({
                 (() => {
                   const shipCopy = raidText.ships[ship.key as keyof typeof raidText.ships] ?? ship
                   const locked = (ship.key === 'mesiah' && !mesiahUnlocked) || (ship.key === 'coreLander' && !coreLanderUnlocked)
-                  const shipSpriteKey = ship.key === 'mesiah' ? mesiahVisualShipKey : ship.key === 'coreLander' ? coreLanderVisualShipKey : ship.key
+                  const shipSpriteKey = getDefaultPlayerVisualShipKey(ship.key, progressRef.current, locked ? false : undefined)
                   const lockedCopy = ship.key === 'coreLander' ? raidText.menu.coreLanderUnlock : raidText.menu.clearRaidToUnlock
                   return (
                     <button

@@ -1,12 +1,13 @@
+import { RAID_ELITE_FRAME_PATHS } from './raid/shipArtwork'
 import { getPublicAssetUrl } from './sound'
 import { LEGACY_FIGHTER_COUNT, RAID_FIGHTER_ASSETS } from './raid/stageEncounters'
 
 export const RAID_SHIP_SPRITE_PATHS: Record<string, string> = {
-  rocket: 'assets/ships/black-comet.png',
-  fast: 'assets/ships/red-wraith.png',
-  gatling: 'assets/ships/crimson-saw.png',
+  rocket: 'assets/ships/black-comet-v2.webp',
+  fast: 'assets/ships/red-wraith-v2.webp',
+  gatling: 'assets/ships/crimson-saw-v2.webp',
   laser: 'assets/ships/night-lance.png',
-  dreadnought: 'assets/ships/obsidian-ark.png',
+  dreadnought: 'assets/ships/obsidian-ark-v2.webp',
   xwing: 'assets/ships/x-wing.png',
   spaceEt: 'assets/ships/space-jet.png',
   mesiah: 'assets/ships/mesiah-black.png',
@@ -19,6 +20,7 @@ export const RAID_SHIP_SPRITE_PATHS: Record<string, string> = {
   godGundam: 'assets/ships/god-gundam.png',
   godGundamBurning: 'assets/ships/god-gundam-burning.png',
   spiegel: 'assets/ships/spiegel.png',
+  ...RAID_ELITE_FRAME_PATHS,
 }
 
 const RAID_ALIEN_SPRITE_PATHS = [

@@ -22,6 +22,7 @@ export type RunResult = {
   stage: number
   wave?: number
   shipKey?: string | null
+  visualShipKey?: string
   pilots?: RunResultPilot[]
   durationMs?: number
   enemiesDestroyed?: number

@@ -39,7 +39,6 @@ public class LanRelayServer {
     private static final int MAX_PAYLOAD_BYTES = 256 * 1024;
     private static final String WS_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
     private static final Set<String> ALLOWED_SHIPS = new HashSet<>(Arrays.asList("rocket", "fast", "gatling", "laser", "dreadnought", "xwing", "spaceEt", "mesiah", "coreLander"));
-    private static final Set<String> ALLOWED_VISUAL_SHIPS = new HashSet<>(Arrays.asList("rocket", "fast", "gatling", "laser", "dreadnought", "xwing", "spaceEt", "mesiah", "mesiahBlack", "mesiahWhite", "coreLander", "coreLanderBurning", "godGundam", "godGundamBurning", "spiegel"));
 
     private final Object roomLock = new Object();
     private final SecureRandom random = new SecureRandom();
@@ -633,18 +632,20 @@ public class LanRelayServer {
 
     private String cleanVisualShipKey(String value, String shipKey) {
         String visualShipKey = value == null ? "" : value.trim();
-        if (!ALLOWED_VISUAL_SHIPS.contains(visualShipKey)) return shipKey;
         if ("mesiah".equals(shipKey)) {
-            return ("mesiah".equals(visualShipKey) || "mesiahBlack".equals(visualShipKey) || "mesiahWhite".equals(visualShipKey))
+            return ("mesiah".equals(visualShipKey) || "mesiahBlack".equals(visualShipKey) || "mesiahWhite".equals(visualShipKey)
+                || "mesiahBlackElite".equals(visualShipKey) || "mesiahWhiteElite".equals(visualShipKey))
                 ? visualShipKey
                 : "mesiah";
         }
         if ("coreLander".equals(shipKey)) {
-            return ("coreLander".equals(visualShipKey) || "coreLanderBurning".equals(visualShipKey) || "godGundam".equals(visualShipKey) || "godGundamBurning".equals(visualShipKey) || "spiegel".equals(visualShipKey))
+            return ("coreLander".equals(visualShipKey) || "coreLanderBurning".equals(visualShipKey)
+                || "coreLanderElite".equals(visualShipKey) || "coreLanderBurningElite".equals(visualShipKey)
+                || "godGundam".equals(visualShipKey) || "godGundamBurning".equals(visualShipKey) || "spiegel".equals(visualShipKey))
                 ? visualShipKey
                 : "coreLander";
         }
-        return visualShipKey.equals(shipKey) ? visualShipKey : shipKey;
+        return visualShipKey.equals(shipKey + "Elite") ? visualShipKey : shipKey;
     }
 
     private String randomId() {
