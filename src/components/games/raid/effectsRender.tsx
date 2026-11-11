@@ -1,6 +1,6 @@
-import { COMBAT_TILE, drawRaidCombatTexture, getRaidCombatFrame, getRaidExplosionFrame, drawRaidVfx, drawRaidVfxLane, RAID_VFX_TILE } from './combatArt'
+import { COMBAT_TILE, drawRaidCombatTexture, getRaidCombatFrame, getRaidExplosionFrame } from './combatArt'
 import { impactAlpha, impactFrameProgress } from './combatFeel'
-import { getCanvasSpriteDimensions, RAID_DERELICT_WRECK_FILTER, RAID_SPIEGEL_SHADOW_CLONE_FILTER, RAID_SPIEGEL_SHADOW_CLONE_IMPACT_STOPS, drawCanvasImageContain, drawCanvasSpriteContain, getDerelictWreckCanvasSprite, getDerelictWreckVariantIndex, getGodGundamBarrageCanvasSprite, getRaidOtherCanvasSprite, getShipCanvasSprite } from './assets'
+import { getCanvasSpriteDimensions, RAID_DERELICT_WRECK_FILTER, RAID_DEVIL_RETICLE_GLOW_STOPS, RAID_SPIEGEL_SHADOW_CLONE_FILTER, RAID_SPIEGEL_SHADOW_CLONE_IMPACT_STOPS, drawCanvasImageContain, drawCanvasSpriteContain, getDerelictWreckCanvasSprite, getDerelictWreckVariantIndex, getGodGundamBarrageCanvasSprite, getRaidOtherCanvasSprite, getShipCanvasSprite } from './assets'
 import type { CachedCanvasDrawSource } from './assets'
 import { PICKUP_VOICE_SAMPLE_URLS } from './audio'
 import { forEachDevilBossBeamLane, forEachFinalBossBeamLane, getDevilBossBeamRadius, getDevilBossChargeDuration, getFinalBossBeamRadius } from './bossAttacks'
@@ -95,8 +95,19 @@ export function getNukePathDerivative(strike: NukeStrike, progress: number) {
 
 /** One bounded reticle for the pilot's actual missile target, not one per missile. */
 export function drawHomingTargetLock(ctx: CanvasRenderingContext2D, x: number, y: number, radius: number, time: number) {
-  const size = radius * 2.15
-  drawRaidVfx(ctx, RAID_VFX_TILE.lock, x, y, size, size, .84 + Math.sin(time / 150) * .10)
+  ctx.save()
+  ctx.translate(x,y)
+  ctx.globalAlpha = 0.6 + Math.sin(time / 130) * 0.14
+  ctx.strokeStyle = '#67e8f9'
+  ctx.lineWidth = 1.5
+  ctx.beginPath()
+  for (const sx of [-1,1]) for (const sy of [-1,1]) {
+    ctx.moveTo(sx * radius * 0.55, sy * radius)
+    ctx.lineTo(sx * radius, sy * radius)
+    ctx.lineTo(sx * radius, sy * radius * 0.55)
+  }
+  ctx.stroke()
+  ctx.restore()
 }
 
 export function drawNukeMissile(
@@ -110,14 +121,30 @@ export function drawNukeMissile(
   const derivative = getNukePathDerivative(strike, progress)
   const x = toX(point.x), y = toY(point.y)
   const heading = Math.atan2(toY(point.y + derivative.y * 0.01) - y, toX(point.x + derivative.x * 0.01) - x)
-  const length = clamp(viewportWidth * 0.09, 64, 110)
-  const trail = length * .71
-  drawRaidVfx(ctx, RAID_VFX_TILE.ionWake, x - Math.cos(heading) * trail, y - Math.sin(heading) * trail,
-    length * .27, length * .74, .66, heading + Math.PI / 2, true)
-  const lockSize = 39 + Math.sin(time / 160) * 2
-  drawRaidVfx(ctx, RAID_VFX_TILE.lock, toX(strike.targetX), toY(strike.targetY),
-    lockSize, lockSize, .86 - raw * .4)
   ctx.save()
+  ctx.globalCompositeOperation = 'lighter'
+  ctx.strokeStyle = 'rgba(251,191,36,0.42)'
+  ctx.lineWidth = 2.2
+  ctx.lineCap = 'round'
+  ctx.beginPath()
+  for (let i = 4; i >= 0; i--) {
+    const trail = getNukePathPoint(strike, Math.max(0, progress - i * 0.025))
+    if (i === 4) ctx.moveTo(toX(trail.x), toY(trail.y))
+    else ctx.lineTo(toX(trail.x), toY(trail.y))
+  }
+  ctx.stroke()
+  // The destination remains visible until impact: no additional DOM overlay.
+  ctx.globalAlpha = (1 - raw) * 0.8
+  ctx.strokeStyle = '#fbbf24'
+  ctx.lineWidth = 1.4
+  ctx.setLineDash([5, 5])
+  ctx.lineDashOffset = -time / 48
+  ctx.beginPath()
+  ctx.arc(toX(strike.targetX), toY(strike.targetY), 18 + Math.sin(time / 120) * 2, 0, Math.PI * 2)
+  ctx.stroke()
+  ctx.setLineDash([])
+  ctx.globalAlpha = 1
+  const length = clamp(viewportWidth * 0.09, 64, 110)
   const missile = getRaidOtherCanvasSprite('nukeMissile')
   if (missile.loaded && missile.image.complete) {
     const { source } = getCanvasSpriteDimensions(missile)
@@ -139,7 +166,8 @@ export function drawNukeBlast(ctx: CanvasRenderingContext2D, width: number, heig
   const x = originX ?? width * 0.5, y = originY ?? height * 0.46
   const expansion = 1 - Math.pow(1 - progress, 3)
   ctx.save()
-  // One brief flash and two atlas quads carry the detonation.
+  // Short flash, one textured fireball and one ring replace live gradients,
+  // three rings and ten individually stroked rays every frame.
   if (progress < 0.18) {
     ctx.fillStyle = `rgba(255,246,220,${0.18 * Math.pow(1 - progress / 0.18, 2)})`
     ctx.fillRect(0, 0, width, height)
@@ -150,10 +178,12 @@ export function drawNukeBlast(ctx: CanvasRenderingContext2D, width: number, heig
     ctx.globalAlpha = impactAlpha(progress)
     drawRaidCombatTexture(ctx, fireball, x, y, diameter, diameter, 0, false)
   }
-  const diameter = Math.max(width, height) * (0.12 + expansion * 1.04)
-  ctx.globalAlpha = 1
-  drawRaidVfx(ctx, RAID_VFX_TILE.shockwave, x, y, diameter, diameter,
-    strength * strength * .68, 0, true)
+  ctx.globalAlpha = strength * strength * 0.7
+  ctx.strokeStyle = '#ffe8b5'
+  ctx.lineWidth = Math.max(2, width * 0.003)
+  ctx.beginPath()
+  ctx.arc(x, y, Math.max(width, height) * (0.06 + expansion * 0.52), 0, Math.PI * 2)
+  ctx.stroke()
   ctx.restore()
 }
 
@@ -529,14 +559,24 @@ export function drawIonStrike(ctx: CanvasRenderingContext2D, strike: IonStrike, 
   const laneWidth = Math.max(20, (strike.width / WIDTH) * width)
   const charging = strike.warmup > 0
   const pulse = 0.55 + Math.sin(time / 80 + strike.id) * 0.24
-  if (charging) {
-    drawRaidVfxLane(ctx, RAID_VFX_TILE.dangerLane, x, 0, x, height, laneWidth * 2, .27 + pulse * .27)
-  } else {
-    const widthPx = laneWidth * 2
-    if (!drawRaidVfx(ctx, RAID_VFX_TILE.ionWake, x, height * .5, widthPx, height, .61 + pulse * .25, 0, true)) {
-      drawRaidVfxLane(ctx, RAID_VFX_TILE.ionWake, x, 0, x, height, widthPx, .8)
-    }
-  }
+  ctx.save()
+  ctx.globalCompositeOperation = charging ? 'source-over' : 'lighter'
+  ctx.globalAlpha = charging ? 0.18 + pulse * 0.12 : 0.34 + pulse * 0.26
+  const gradient = ctx.createLinearGradient(x - laneWidth, 0, x + laneWidth, 0)
+  gradient.addColorStop(0, 'rgba(103,232,249,0)')
+  gradient.addColorStop(0.45, charging ? 'rgba(103,232,249,0.36)' : 'rgba(255,255,255,0.78)')
+  gradient.addColorStop(0.55, charging ? 'rgba(103,232,249,0.36)' : 'rgba(103,232,249,0.88)')
+  gradient.addColorStop(1, 'rgba(103,232,249,0)')
+  ctx.fillStyle = gradient
+  ctx.fillRect(x - laneWidth, 0, laneWidth * 2, height)
+  ctx.strokeStyle = charging ? 'rgba(103,232,249,0.62)' : 'rgba(255,255,255,0.86)'
+  ctx.lineWidth = charging ? 1.5 : 3
+  ctx.beginPath()
+  ctx.moveTo(x - laneWidth * 0.5, 0)
+  ctx.lineTo(x + laneWidth * 0.18 + Math.sin(time / 70) * 14, height * 0.38)
+  ctx.lineTo(x - laneWidth * 0.1, height)
+  ctx.stroke()
+  ctx.restore()
 }
 
 export function drawDerelictWreck(
@@ -839,12 +879,40 @@ export function drawFinalChargeLines(
   if (!hasFinalCharge) return
 
   const toViewportY = (value: number) => (value / HEIGHT) * viewportHeight
-  const length = Math.hypot(viewportWidth, viewportHeight) * 1.45
   const drawWarningBeam = (x: number, y: number, angle: number, width: number, alpha: number, pulse: number) => {
-    const dx = Math.cos(angle) * length * .5
-    const dy = Math.sin(angle) * length * .5
-    drawRaidVfxLane(ctx, RAID_VFX_TILE.dangerLane, x - dx, y - dy, x + dx, y + dy, width, alpha * pulse)
+    const length = Math.sqrt((viewportWidth) * (viewportWidth) + (viewportHeight) * (viewportHeight)) * 1.45
+    ctx.save()
+    ctx.translate(x, y)
+    ctx.rotate(angle)
+
+    ctx.globalAlpha = alpha * 0.22
+    ctx.fillStyle = 'rgba(34,211,238,1)'
+    ctx.fillRect(-length / 2, -width * 0.7, length, width * 1.4)
+
+    ctx.globalAlpha = alpha * 0.42
+    ctx.fillStyle = 'rgba(96,165,250,1)'
+    ctx.fillRect(-length / 2, -width / 2, length, width)
+
+    ctx.globalAlpha = alpha * 0.72 * pulse
+    ctx.fillStyle = 'rgba(255,255,255,1)'
+    ctx.fillRect(-length / 2, -2, length, 4)
+
+    ctx.globalAlpha = alpha * 0.86
+    ctx.strokeStyle = time % 220 < 110 ? '#7dd3fc' : '#eff6ff'
+    ctx.lineWidth = 2.5
+    ctx.setLineDash([8, 10])
+    ctx.beginPath()
+    ctx.moveTo(-length / 2, -width * 0.5)
+    ctx.lineTo(length / 2, -width * 0.5)
+    ctx.moveTo(-length / 2, width * 0.5)
+    ctx.lineTo(length / 2, width * 0.5)
+    ctx.stroke()
+    ctx.setLineDash([])
+    ctx.restore()
   }
+
+  ctx.save()
+  ctx.globalCompositeOperation = 'lighter'
 
   for (const enemy of enemies) {
     if (enemy.bossKind !== 'final' || enemy.chargeTimer <= 0) continue
@@ -876,6 +944,7 @@ export function drawFinalChargeLines(
     })
   }
 
+  ctx.restore()
 }
 
 export function drawDevilChargeWarnings(
@@ -896,20 +965,83 @@ export function drawDevilChargeWarnings(
   }
   if (!hasDevilCharge) return
 
-  const length = Math.hypot(viewportWidth, viewportHeight) * 1.45
   const drawWarningBeam = (x: number, y: number, angle: number, width: number, alpha: number, pulse: number) => {
-    const dx = Math.cos(angle) * length * .5
-    const dy = Math.sin(angle) * length * .5
-    drawRaidVfxLane(ctx, RAID_VFX_TILE.dangerLane, x - dx, y - dy, x + dx, y + dy, width, alpha * pulse)
+    const length = Math.sqrt((viewportWidth) * (viewportWidth) + (viewportHeight) * (viewportHeight)) * 1.45
+    ctx.save()
+    ctx.translate(x, y)
+    ctx.rotate(angle)
+    ctx.globalCompositeOperation = 'lighter'
+
+    ctx.globalAlpha = alpha * 0.22
+    ctx.fillStyle = 'rgba(127,29,29,1)'
+    ctx.fillRect(-length / 2, -width * 0.82, length, width * 1.64)
+
+    ctx.globalAlpha = alpha * 0.42
+    ctx.fillStyle = 'rgba(239,68,68,1)'
+    ctx.fillRect(-length / 2, -width * 0.48, length, width * 0.96)
+
+    ctx.globalAlpha = alpha * 0.72 * pulse
+    ctx.fillStyle = 'rgba(254,202,202,1)'
+    ctx.fillRect(-length / 2, -2, length, 4)
+
+    ctx.globalAlpha = alpha * 0.82
+    ctx.strokeStyle = time % 180 < 90 ? '#fca5a5' : '#fed7aa'
+    ctx.lineWidth = 2.5
+    ctx.setLineDash([9, 8])
+    ctx.beginPath()
+    ctx.moveTo(-length / 2, -width * 0.5)
+    ctx.lineTo(length / 2, -width * 0.5)
+    ctx.moveTo(-length / 2, width * 0.5)
+    ctx.lineTo(length / 2, width * 0.5)
+    ctx.stroke()
+    ctx.restore()
   }
 
   const drawInfectionReticle = (x: number, y: number, radius: number, alpha: number, pulse: number) => {
-    drawRaidVfx(ctx, RAID_VFX_TILE.precision, x, y, radius * 2 * pulse, radius * 1.5 * pulse, alpha, 0, true)
+    ctx.save()
+    ctx.globalCompositeOperation = 'lighter'
+    ctx.globalAlpha = alpha * 0.36
+    drawRadialEllipse(ctx, x, y, radius * 1.18, radius * 0.88, RAID_DEVIL_RETICLE_GLOW_STOPS)
+    ctx.globalAlpha = alpha
+    ctx.strokeStyle = '#fca5a5'
+    ctx.lineWidth = Math.max(2, viewportWidth * 0.0015)
+    ctx.setLineDash([8, 7])
+    ctx.beginPath()
+    ctx.ellipse(x, y, radius * pulse, radius * 0.72 * pulse, 0, 0, Math.PI * 2)
+    ctx.stroke()
+    ctx.setLineDash([])
+    ctx.beginPath()
+    ctx.moveTo(x - radius * 1.15, y)
+    ctx.lineTo(x + radius * 1.15, y)
+    ctx.moveTo(x, y - radius * 0.9)
+    ctx.lineTo(x, y + radius * 0.9)
+    ctx.stroke()
+    ctx.restore()
   }
 
   const drawSnakeLungeWarning = (startX: number, startY: number, targetX: number, targetY: number, width: number, alpha: number, pulse: number) => {
-    drawRaidVfxLane(ctx, RAID_VFX_TILE.dangerLane, startX, startY, targetX, targetY, width * 1.35, alpha)
+    ctx.save()
+    ctx.globalCompositeOperation = 'lighter'
+    ctx.lineCap = 'round'
+    ctx.lineJoin = 'round'
+    ctx.globalAlpha = alpha * 0.26
+    ctx.strokeStyle = 'rgba(132,204,22,1)'
+    ctx.lineWidth = width * 1.75
+    ctx.beginPath()
+    ctx.moveTo(startX, startY)
+    ctx.lineTo(targetX, targetY)
+    ctx.stroke()
+    ctx.globalAlpha = alpha * 0.72
+    ctx.strokeStyle = 'rgba(254,240,138,1)'
+    ctx.lineWidth = Math.max(4, width * 0.38)
+    ctx.setLineDash([14, 10])
+    ctx.beginPath()
+    ctx.moveTo(startX, startY)
+    ctx.lineTo(targetX, targetY)
+    ctx.stroke()
+    ctx.setLineDash([])
     drawInfectionReticle(targetX, targetY, width * (1.1 + pulse * 0.2), alpha * 0.86, pulse)
+    ctx.restore()
   }
 
   for (const enemy of enemies) {

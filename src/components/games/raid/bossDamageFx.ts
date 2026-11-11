@@ -1,4 +1,3 @@
-import { drawRaidVfx, RAID_VFX_TILE } from './combatArt'
 import { COMMAND_PHASE_HP } from './commandBoss'
 import type { BossImpactKind, Enemy, Shot } from './types'
 
@@ -56,11 +55,31 @@ export function drawBossImpact(ctx: CanvasRenderingContext2D, enemy: Enemy, x: n
   const projection = Math.min(1, size * (shield ? .52 : .39) / Math.max(1, Math.hypot(dx, dy)))
   const atX = x + dx * projection
   const atY = y + dy * projection
-  const diameter = Math.max(14, size * (shield ? .35 : heavy || core ? .30 : .19))
-    * (reducedMotion ? 1 : 1 + progress * .55)
-  const tile = shield ? RAID_VFX_TILE.shield : core ? RAID_VFX_TILE.precision : RAID_VFX_TILE.debris
-  drawRaidVfx(ctx, tile, atX, atY, diameter, diameter * (shield ? .83 : .95),
-    .92 * (1 - progress), impact.shotId * .37, !heavy && !shield)
+  const radius = Math.max(5, size * (shield ? .15 : heavy || core ? .11 : .065))
+  const spread = radius * (reducedMotion ? 1 : 1 + progress)
+  ctx.save()
+  ctx.globalAlpha *= .82 * (1 - progress)
+  ctx.strokeStyle = shield ? '#7dd3fc' : heavy ? '#fdba74' : core ? '#f9a8d4' : '#fff3cc'
+  ctx.lineWidth = shield ? 2 : 1.6
+  ctx.beginPath()
+  if (shield) {
+    ctx.ellipse(atX, atY, spread, spread * .67, -.36, 0, Math.PI * 2)
+  } else if (core) {
+    ctx.moveTo(atX - spread, atY)
+    ctx.lineTo(atX + spread, atY)
+    ctx.moveTo(atX, atY - spread)
+    ctx.lineTo(atX, atY + spread)
+  } else {
+    for (let i = 0; i < (heavy ? 6 : 3); i++) {
+      const angle = i * 2.4 + impact.shotId % 7
+      const sparkX = Math.cos(angle) * spread
+      const sparkY = Math.sin(angle) * spread
+      ctx.moveTo(atX + sparkX * .4, atY + sparkY * .4)
+      ctx.lineTo(atX + sparkX, atY + sparkY)
+    }
+  }
+  ctx.stroke()
+  ctx.restore()
 }
 
 export function drawHullDamage(ctx: CanvasRenderingContext2D, enemy: Enemy, x: number, y: number,
@@ -78,11 +97,17 @@ export function drawHullDamage(ctx: CanvasRenderingContext2D, enemy: Enemy, x: n
   ctx.translate(x, y)
   ctx.rotate(rotation)
   ctx.scale(size * scale, size * scale)
+  ctx.lineWidth = .009
   if (defeated) {
+    ctx.globalAlpha *= .78 * opacity
+    ctx.fillStyle = '#100f17'
+    ctx.beginPath()
     for (let i = hydra ? 0 : 2; i < points.length; i++) {
       const [px, py] = points[i]
-      drawRaidVfx(ctx, RAID_VFX_TILE.charredPlate, px, py, .12, .1, opacity * .7)
+      ctx.moveTo(px + .032, py)
+      ctx.ellipse(px, py, .032, .022, 0, 0, Math.PI * 2)
     }
+    ctx.fill()
     ctx.restore()
     return
   }
@@ -90,14 +115,40 @@ export function drawHullDamage(ctx: CanvasRenderingContext2D, enemy: Enemy, x: n
     const [px, py] = points[i]
     const cycle = (clock * (hydra ? 1.25 : 1.8) + (hydra ? i / 3 : enemy.id * .139 + i * .29)) % 1
     const burn = reducedMotion ? .35 : Math.max(.08, 1 - cycle * 2)
-    drawRaidVfx(ctx, RAID_VFX_TILE.hullDamage, px, py, critical ? .17 : .13, .13,
-      .44 + burn * .44, i * 1.05 - .38)
+    ctx.globalAlpha = .25 + burn * .48
+    ctx.strokeStyle = critical ? '#ffd2a0' : '#fb9c56'
+    ctx.beginPath()
+    ctx.moveTo(px - .025, py - .017)
+    ctx.lineTo(px - .008, py + .003)
+    ctx.lineTo(px + .011, py - .006)
+    ctx.lineTo(px + .028, py + .021)
+    ctx.stroke()
+    if (!reducedMotion && burn > .22) {
+      ctx.globalAlpha = burn * .7
+      ctx.fillStyle = '#ffe7bb'
+      ctx.fillRect(px + .018 + cycle * .025, py + .025 + cycle * .07, .012, .019)
+    }
   }
-  if (critical) drawRaidVfx(ctx, RAID_VFX_TILE.precision, 0, .09, .075, .075, .62, 0, true)
+  if (critical) {
+    ctx.globalAlpha = .58
+    ctx.strokeStyle = '#f9a8d4'
+    ctx.beginPath()
+    ctx.moveTo(-.017, .082)
+    ctx.lineTo(0, .101)
+    ctx.lineTo(.017, .082)
+    ctx.stroke()
+  }
   if (!hydra && !reducedMotion) {
     const [px, py] = points[2]
     const pulse = (clock * 3.2 + enemy.id * .17) % 1
-    if (pulse < .58) drawRaidVfx(ctx, RAID_VFX_TILE.muzzle, px, py + .032, .075, .11, .67 * (1 - pulse), Math.PI / 2, true)
+    if (pulse < .58) {
+      ctx.globalAlpha = .56 * (1 - pulse)
+      ctx.strokeStyle = '#ffd3a5'
+      ctx.beginPath()
+      ctx.moveTo(px, py)
+      ctx.lineTo(px + .012, py + .055 + pulse * .06)
+      ctx.stroke()
+    }
   }
   ctx.restore()
 }

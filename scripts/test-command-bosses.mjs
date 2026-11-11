@@ -142,45 +142,43 @@ if(output>=0)writeFileSync(process.argv[output+1],JSON.stringify({scenario:'60s 
  }),observedPeakShots:observedPeak,tenMinutePeak:longRun.peak},null,2)+'\n')
 console.log(`Command bosses: 12 profiles, 3 HP phases, 4 difficulties, 30/60/144Hz cadence, locked warnings, nuke recovery, co-op targets and 10-minute bounds passed (observed peak ${observedPeak} shots)`)
 console.log('Scripted hit diagnostics:',JSON.stringify(diagnostics))
-// Exercise the production draw routing and collision geometry at both viewport shapes.
-const vfxStubs = `
-const RAID_VFX_TILE = Object.fromEntries(
- ['dangerLane','aim','ionWake','shockwave','muzzle','shield','debris','precision','hullDamage','charredPlate'].map(name=>[name,name]));
-const drawRaidVfx = (ctx,...args) => { ctx.sprites.push(args); return true };
-const drawRaidVfxLane = (ctx,...args) => { ctx.lanes.push(args) };
-`
-const warnings=await load(source+vfxStubs+'\nconst PLAYER_RADIUS=3.2;\n'+strip(read('src/components/games/raid/commandBossRender.ts')))
+// Exercise real Canvas warnings in portrait/landscape; every beam covers the actual collision lane.
+const warnings=await load(source+'\nconst PLAYER_RADIUS=3.2;\n'+strip(read('src/components/games/raid/commandBossRender.ts')))
 for(const [w,h] of [[390,844],[1280,720]])for(const p of m.COMMAND_BOSS_PROFILES)for(const pattern of p.sequence) {
  const e={...boss(p.stage),bossAttackState:'warning',bossAttackPattern:pattern,bossAttackTimer:.5,bossWarningSeconds:1,bossAimX:50,bossAimY:82,bossGapX:36,bossCombatPhase:1,bossShotSpeed:36}
- const ctx={lanes:[]}
+ const fills=[],moves=[],lines=[];let strokes=0
+ const ctx={save(){},restore(){},setLineDash(){},beginPath(){},moveTo(...args){moves.push(args)},lineTo(...args){lines.push(args)},fillRect(...args){fills.push(args)},stroke(){strokes++},set filter(v){assert.fail('telegraph live filter')},set shadowBlur(v){assert.fail('telegraph live blur')}}
  warnings.drawCommandBossTelegraph(ctx,e,v=>v*w/100,v=>v*h/100,w)
- assert.ok(ctx.lanes.length<=13)
- assert.ok(ctx.lanes.flatMap(lane=>lane.slice(1)).every(Number.isFinite))
+ assert.equal(strokes,1);assert.ok(moves.length<=12&&lines.length<=12)
+ assert.ok([...moves,...lines,...fills].flat().every(Number.isFinite))
  if(m.isCommandBeam(pattern)) {
   const n=m.writeCommandVolley(e,draft)
-  assert.equal(ctx.lanes.length,n)
+  assert.equal(fills.length,n)
   for(let i=0;i<n;i++) {
-   const [tile,x,y,endX,endY,width]=ctx.lanes[i]
    const half=draft[i].radius*.82+3.2*.72
-   assert.equal(tile,'dangerLane')
-   assert.ok(Math.abs(x-draft[i].x*w/100)<1e-8)
-   assert.ok(Math.abs(width-half*2*w/100)<1e-8)
-   assert.equal(x,endX);assert.equal(y,0);assert.equal(endY,h)
+   assert.ok(Math.abs(fills[i][0]-(draft[i].x-half)*w/100)<1e-8)
+   assert.ok(Math.abs(fills[i][2]-half*2*w/100)<1e-8)
+   assert.equal(fills[i][1],0);assert.equal(fills[i][3],h)
   }
  }
- if(pattern==='hydra')assert.equal(ctx.lanes.length,3,'Hydra must preview all firing heads')
+ if(pattern==='hydra')assert.equal(moves.length,3,'Hydra warning failed to preview every staggered head')
 }
+// Use the production renderer to check that phase and muzzle effects follow simulation events.
 const effectBoss = boss(11, .5)
 m.advanceCommandBoss(effectBoss, .01, [{x:50,y:80}], 'normal', 120, () => {})
 assert.equal(effectBoss.bossPhaseStartedAge, effectBoss.bossEncounterAge)
-const sprites = [], fills = [], labels = []
+const arcs = [], ellipses = [], fills = [], labels = []
 const effectsContext = {
- sprites, save(){}, restore(){}, translate(){}, rotate(){}, scale(){},
+ save(){}, restore(){}, beginPath(){}, moveTo(){}, stroke(){}, fill(){},
+ arc(...args){ arcs.push(args) },
+ ellipse(...args){ ellipses.push(args) },
  fillRect(...args){ fills.push(args) },
  fillText(...args){ labels.push(args) },
 }
 warnings.drawCommandBossEnergy(effectsContext, effectBoss, x=>x*3.9, y=>y*8.44, 130)
-assert.deepEqual(sprites.map(([tile])=>tile),['shockwave','shockwave'],'phase pulse and charge use the plasma art')
+assert.equal(ellipses.length,1,'phase change should trigger a pulse')
+assert.equal(arcs.length,2,'charge ring should show the outline and progress')
+assert.equal(arcs[1][3],arcs[1][4],'the charge arc starts empty')
 warnings.drawCommandBossHealthBar(effectsContext, effectBoss, 195, 168.8, 130)
 assert.deepEqual(fills.slice(-2).map(([left])=>left),[136.5+117*.3-1,136.5+117*.65-1])
 assert.equal(labels[0][0],m.getGenericBossArt(effectBoss.bossKind,11).name)
@@ -191,33 +189,37 @@ for (let step = 0; step < 100 && !released.length; step++) {
 }
 assert.equal(released.length,1)
 assert.equal(effectBoss.bossLastVolleyAge, effectBoss.bossEncounterAge)
-sprites.length=0
+arcs.length=0
 warnings.drawCommandBossEnergy(effectsContext, effectBoss, x=>x*3.9, y=>y*8.44, 130)
-assert.deepEqual(sprites.map(([tile,x,y])=>[tile,x,y]), released.map(shot=>['muzzle',shot.x*3.9,shot.y*8.44]))
-sprites.length=0
+assert.deepEqual(arcs.map(arc=>arc.slice(0,2)), released.map(shot=>[shot.x*3.9,shot.y*8.44]), 'flash must use actual staggered firing points')
+arcs.length=0
+ellipses.length=0
 warnings.drawCommandBossEnergy(effectsContext, {...effectBoss,bossEncounterAge:effectBoss.bossEncounterAge+1}, x=>x,y=>y,130)
-assert.equal(sprites.length,0,'release and phase textures must expire')
-const fan = {...boss(1),bossEncounterAge:2,bossLastVolleyAge:2,bossAttackPattern:'fan',bossAttackState:'burst',bossBurstIndex:1}
-warnings.drawCommandBossEnergy(effectsContext, fan, x=>x,y=>y,130)
-assert.equal(sprites.length,1,'a five-shot fan sharing a muzzle should draw only one flash')
+assert.equal(arcs.length,0,'release effect must expire')
+assert.equal(ellipses.length,0,'phase pulse must expire')
 
-const damage = await load(source + vfxStubs + strip(read('src/components/games/raid/bossDamageFx.ts')))
+const damage = await load(source + '\n' + strip(read('src/components/games/raid/bossDamageFx.ts')))
+let strokes = 0, vents = 0, dots = 0, marks = []
+const hullContext = {
+ globalAlpha: 1, save(){}, restore(){}, beginPath(){}, translate(){}, rotate(){}, scale(){},
+ stroke(){ strokes++ }, ellipse(...args){ vents++; marks.push(args) }, fill(){}, fillRect(){ dots++ },
+ moveTo(){}, lineTo(){},
+}
 for (const profile of m.COMMAND_BOSS_PROFILES) {
  const ship = boss(profile.stage, 1)
- sprites.length=0
- damage.drawHullDamage(effectsContext, ship, 0, 0, 130, 0, 1, true)
- assert.equal(sprites.length, 0)
+ strokes = vents = dots = 0
+ damage.drawHullDamage(hullContext, ship, 0, 0, 130, 0, 1, true)
+ assert.equal(strokes, 0)
  ship.hp = ship.maxHp * .65
- damage.drawHullDamage(effectsContext, ship, 0, 0, 130, 0, 1, true)
- assert.deepEqual(sprites.map(([tile])=>tile),['hullDamage'])
- sprites.length=0
+ damage.drawHullDamage(hullContext, ship, 0, 0, 130, 0, 1, true)
+ assert.equal(strokes, 1)
+ assert.equal(dots, 0)
  ship.hp = ship.maxHp * .3
- damage.drawHullDamage(effectsContext, ship, 0, 0, 130, 0, 1, true)
- assert.deepEqual(sprites.map(([tile])=>tile),['hullDamage','hullDamage','hullDamage','precision'])
- sprites.length=0
+ damage.drawHullDamage(hullContext, ship, 0, 0, 130, 0, 1, true)
+ assert.equal(strokes, 5, 'critical hull should show its three damage sites and exposed core')
  ship.hp = 0
- damage.drawHullDamage(effectsContext, ship, 0, 0, 130, 0, 1, true)
- assert.deepEqual(sprites.map(([tile])=>tile), Array(profile.stage === 11 ? 3 : 1).fill('charredPlate'))
+ damage.drawHullDamage(hullContext, ship, 0, 0, 130, 0, 1, true)
+ assert.equal(vents, profile.stage === 11 ? 3 : 1, 'show dead thruster ports on defeat')
 }
 assert.ok(damage.BOSS_BREAKUP_DELAYS.length <= 5 && damage.BOSS_BREAKUP_DELAYS.at(-1) < 3.15)
 assert.notDeepEqual(damage.getBossBreakupPoint(boss(11), 0), damage.getBossBreakupPoint(boss(11), 1))
@@ -226,18 +228,16 @@ const impactBoss = boss(11, .25)
 const contact = { id: 3, x: 51, y: 31, kind: 'pulse' }
 assert.equal(damage.recordBossImpact(impactBoss, contact, true), 'shield')
 assert.equal(damage.recordBossImpact(impactBoss, { ...contact, id: 4 }, true), undefined)
-sprites.length=0
-damage.drawBossImpact(effectsContext, impactBoss, 195, 168.8, 3.9, 8.44, 130, false)
-assert.equal(sprites.length, 1)
-const [shieldTile, shieldX, shieldY] = sprites[0]
-assert.equal(shieldTile, 'shield')
-assert.ok(shieldX > 195 && shieldY > 168.8)
-assert.ok(Math.hypot(shieldX - 195, shieldY - 168.8) <= 130 * .52 + 1e-8)
+marks = []
+damage.drawBossImpact(hullContext, impactBoss, 195, 168.8, 3.9, 8.44, 130, false)
+assert.equal(marks.length, 1)
+assert.ok(marks[0][0] > 195 && marks[0][1] > 168.8)
+assert.ok(Math.hypot(marks[0][0] - 195, marks[0][1] - 168.8) <= 130 * .52 + 1e-8)
 impactBoss.bossImpactTime = .09
 assert.equal(damage.recordBossImpact(impactBoss, contact, false), 'core')
 impactBoss.bossImpactTime = 0
 assert.equal(damage.recordBossImpact(impactBoss, { ...contact, kind: 'rocket' }, false), 'heavy')
-console.log('Boss VFX: projected beam widths, per-muzzle artwork, hull damage and contact placement passed')
+console.log('Boss damage: all hull damage stages, dead vents, shield placement, contact throttling and core/rocket cues passed')
 
 // Real network interpolation preserves committed targets and never blends different attack warnings.
 const net=read('src/components/games/raid/network.ts')
@@ -278,7 +278,7 @@ nukeHarness.enemiesRef.current.push(charged);nukeHarness.enemyShotsRef.current.p
 nukeHarness.detonateNuke()
 assert.equal(nukeHarness.enemyShotsRef.current.length,0)
 assert.equal(charged.bossLastVolleyAge,undefined);assert.equal(charged.hp,9000);assert.equal(charged.bossAttackState,'recovery');assert.equal(charged.bossAttackTimer,.9)
-console.log('Command warnings/integration: matching beam hit lanes, bounded atlas draws, three-head preview, atomic co-op warnings and real nuke interruption passed')
+console.log('Command warnings/integration: matching beam hit lanes, bounded Canvas strokes, three-head preview, atomic co-op warnings and real nuke interruption passed')
 // Execute the production host enemy loop, not only the standalone scheduler.
 const updateStart=runtime.indexOf('  const updateGame = useCallback(')
 const hostLoop=runtime.slice(runtime.indexOf('    const enemies = enemiesRef.current',updateStart),runtime.indexOf('    enemies.length = liveEnemyCount',updateStart)+'    enemies.length = liveEnemyCount'.length)

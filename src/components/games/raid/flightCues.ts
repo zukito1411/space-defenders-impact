@@ -1,4 +1,3 @@
-import { drawRaidVfx, RAID_VFX_TILE } from './combatArt'
 import { HEIGHT, PLAYER_RADIUS, WIDTH } from './constants'
 import type { AsteroidHazard, MeteorHazard, Player, PowerUp, Shot, Vec } from './types'
 
@@ -25,7 +24,21 @@ export function drawRecoveryCue(ctx: CanvasRenderingContext2D, power: PowerUp, p
   x: number, y: number, viewportWidth: number) {
   if (!needsRepair(pilot) || power.type !== 'repair' || Math.abs(power.x - pilot.x) > 33) return
   const size = Math.max(15, power.radius * viewportWidth / WIDTH * 1.27)
-  drawRaidVfx(ctx, RAID_VFX_TILE.repair, x, y, size * 2.15, size * 2.15, .97)
+  ctx.save()
+  ctx.strokeStyle = '#a7f3d0'
+  ctx.lineWidth = 1.8
+  ctx.beginPath()
+  for (let sign = -1; sign <= 1; sign += 2) {
+    const corner = x + sign * size
+    ctx.moveTo(corner + sign * -5, y - size)
+    ctx.lineTo(corner, y - size)
+    ctx.lineTo(corner, y - size + 5)
+    ctx.moveTo(corner, y + size - 5)
+    ctx.lineTo(corner, y + size)
+    ctx.lineTo(corner - sign * 5, y + size)
+  }
+  ctx.stroke()
+  ctx.restore()
 }
 
 export function findIncomingHazard(asteroids: readonly AsteroidHazard[], meteors: readonly MeteorHazard[], pilot: Vec) {
@@ -53,12 +66,16 @@ export function drawIncomingHazard(ctx: CanvasRenderingContext2D, hazard: Astero
   const predictedX = (hazard.x + hazard.vx * timeToEdge) * width / WIDTH
   const x = Math.min(width - 16, Math.max(16, predictedX))
   const y = Math.min(32, height / HEIGHT * 5)
-  if (!drawRaidVfx(ctx, RAID_VFX_TILE.hazard, x, y + 5, 30, 21, .95)) {
-    ctx.save()
-    ctx.fillStyle = '#fbbf24'
-    ctx.font = 'bold 16px system-ui'
-    ctx.textAlign = 'center'
-    ctx.fillText('!', x, y + 10)
-    ctx.restore()
-  }
+  ctx.save()
+  ctx.fillStyle = '#162030'
+  ctx.strokeStyle = '#fbbf24'
+  ctx.lineWidth = 1.6
+  ctx.beginPath()
+  ctx.moveTo(x - 10, y)
+  ctx.lineTo(x + 10, y)
+  ctx.lineTo(x, y + 12)
+  ctx.closePath()
+  ctx.fill()
+  ctx.stroke()
+  ctx.restore()
 }
