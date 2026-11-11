@@ -162,6 +162,8 @@ export type Enemy = Vec & {
   originX: number
   amplitude: number
   trainSlot: number
+  formationMotion?: number
+  formationAge?: number
   pathSpeed: number
   chargeCooldown: number
   chargeTimer: number
@@ -184,12 +186,11 @@ export type Enemy = Vec & {
   chargePattern: 'single' | 'pincer' | 'trident' | 'scatter' | 'diagonal' | 'horizontal' | 'cross' | 'rotate'
 }
 
-export type FormationStyle = {
-  color: string
-  pattern: number
-  originX: number
-  amplitude: number
-  pathSpeed: number
+export type EnemySpawnProfile = {
+  variant: number
+  motion?: number
+  speed?: number
+  phase?: number
 }
 
 export type PowerUp = Vec & {

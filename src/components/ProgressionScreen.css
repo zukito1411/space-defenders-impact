@@ -1282,6 +1282,14 @@
   text-transform: uppercase;
 }
 
+.enemy-almanac__entry > p {
+  margin: 0 8px 8px;
+  color: #aebed0;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  text-align: center;
+}
+
 .enemy-almanac__entry--locked {
   border-color: rgba(15, 23, 42, 0.9);
   background:

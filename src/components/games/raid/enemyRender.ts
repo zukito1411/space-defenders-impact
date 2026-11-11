@@ -1,4 +1,5 @@
-import { BOSS_FX, drawBossFx } from './combatArt'
+import { BOSS_FX, COMBAT_TILE, drawBossFx, drawRaidCombatTexture, getRaidCombatFrame } from './combatArt'
+import { getRaidFighter, getRaidFighterCharge } from './stageEncounters'
 import { drawHullDamage } from './bossDamageFx'
 import { drawCommandBossEnergy, drawCommandBossHealthBar, drawCommandBossTelegraph, prefersRaidReducedMotion } from './commandBossRender'
 import { drawGenericBossShip } from './genericBossRender'
@@ -234,6 +235,19 @@ export function drawRaidEnemy(
     ctx.restore()
     if (enemy.shieldTime > 0 || enemy.y < 8) drawBossShield(ctx, x, y, size * 0.78, time, enemy.color)
     drawCachedBossBar(ctx, enemy, x, y, size * 0.82)
+    return
+  }
+
+  if (getRaidFighter(enemy.variant)) {
+    const sprite = getNormalAlienCanvasSprite(enemy.variant)
+    drawCanvasSpriteContain(ctx, sprite.loaded ? sprite : getNormalAlienCanvasSprite(0), x, y, size, 'none', 1, 0, 1, enemy.color, false)
+    const hit = Math.min(1, (enemy.hitFlash ?? 0) / .16)
+    const charge = getRaidFighterCharge(enemy)
+    const texture = hit ? getRaidCombatFrame(COMBAT_TILE.ionImpact) : charge ? getRaidCombatFrame(COMBAT_TILE.charge) : undefined
+    if (texture) {
+      const edge = size * (hit ? .74 : .46)
+      drawRaidCombatTexture(ctx, texture, x, y + size * (hit ? .02 : .34), edge, edge, 0, true, hit || charge)
+    }
     return
   }
 

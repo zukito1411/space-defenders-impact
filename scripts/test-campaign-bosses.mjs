@@ -109,9 +109,10 @@ assert.deepEqual(enemyRender.paths.slice(-4).map(p=>p[0]),['squid','snake','fina
 const localization=await load(read('src/i18n.ts'))
 const progression=read('src/components/ProgressionScreen.tsx')
 const part=(start,end)=>progression.slice(progression.indexOf(start),progression.indexOf(end))
-const almanac=await load(catalogSource+`
+const fighterSource=read('src/components/games/raid/stageEncounters.ts').replace(/^import .*\n/gm,'')
+const almanac=await load(catalogSource+fighterSource+`
 const React={createElement:(type,props,...children)=>({type,props:props??{},children})};
-const RAID_ALIEN_SPRITE_COUNT=8,RAID_ELITE_SPRITE_COUNT=5;
+const RAID_ALIEN_SPRITE_COUNT=LEGACY_FIGHTER_COUNT+RAID_FIGHTER_ASSETS.length,RAID_ELITE_SPRITE_COUNT=5;
 const hasProgressionUnlockOverride=()=>false;
 const getRaidAlienSpriteUrl=i=>'normal:'+i,getRaidEliteSpriteUrl=i=>'elite:'+i,getPublicAssetUrl=p=>p;
 function BossBriefingCanvas(){}
@@ -139,6 +140,12 @@ for(const language of ['en','zh','ja','ko']) {
  for(const best of [0,4,9,15]) {
   const node=almanac.EnemyAlmanac({text,progress:{bestStageByMode:{gradius_solo:best,gradius_multiplayer:0},codex:{}},stageBossEntries:list})
   assert.equal(walk(node,n=>n.type==='p'&&n.children.includes(text.enemyAlmanac.phaseAdvice)).length,1)
+  const normal = walk(node, n => n.type === 'article' && n.props.className.startsWith('enemy-almanac__entry') && n.children[0]?.props.src?.startsWith('normal:'))
+  assert.equal(normal.length, 14)
+  for (const [index, entry] of normal.slice(8).entries()) {
+   assert.equal(entry.children[1].children[0], text.enemyAlmanac.normalNames[index + 8])
+   assert.equal(Boolean(entry.children[3]), best >= index + 1)
+  }
   const cards=walk(node,n=>n.type==='article'&&n.props.className.startsWith('enemy-almanac__boss-card'))
   assert.equal(cards.length,16)
   assert.equal(new Set(cards.map(n=>n.props.key)).size,16,'repeated attack kinds share React keys')

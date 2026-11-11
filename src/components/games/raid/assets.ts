@@ -1,3 +1,4 @@
+import { LEGACY_FIGHTER_COUNT } from './stageEncounters'
 import { getGenericBossArt } from './bossCatalog'
 import { getWreckCanvasSprite } from './wreckArt'
 import { getRaidAlienSpriteUrl, getRaidEliteSpriteUrl, getRaidShipSpriteUrl, RAID_ALIEN_SPRITE_COUNT, RAID_ELITE_SPRITE_COUNT } from '../RaidShipSprite'
@@ -1122,7 +1123,7 @@ export function warmRaidCanvasFilterVariants() {
     for (const filter of RAID_DEVIL_BOSS_STATIC_FILTERS) enqueue(sprite, filter)
   })
 
-  for (let variant = 0; variant < RAID_ALIEN_SPRITE_COUNT; variant += 1) {
+  for (let variant = 0; variant < LEGACY_FIGHTER_COUNT; variant += 1) {
     const sprite = getNormalAlienCanvasSprite(variant)
     for (const filter of RAID_NORMAL_BOSS_POOL_STATIC_FILTERS) enqueue(sprite, filter)
   }

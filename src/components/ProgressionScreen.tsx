@@ -1,3 +1,4 @@
+import { LEGACY_FIGHTER_COUNT, RAID_FIGHTER_DEBUT_STAGES } from './games/raid/stageEncounters'
 import { GameButton } from './ui/GameButton'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import {
@@ -625,7 +626,8 @@ function EnemyAlmanac({
         </header>
         <div className="enemy-almanac__grid">
           {NORMAL_ALIEN_VARIANTS.map((variant) => {
-            const unlockStage = NORMAL_ALIEN_UNLOCK_STAGES[variant] ?? 1
+            const fighterIndex = variant - LEGACY_FIGHTER_COUNT
+            const unlockStage = NORMAL_ALIEN_UNLOCK_STAGES[variant] ?? RAID_FIGHTER_DEBUT_STAGES[fighterIndex] ?? 1
             const encountered = raidBestStage >= unlockStage
             return (
               <article className={encountered ? 'enemy-almanac__entry' : 'enemy-almanac__entry enemy-almanac__entry--locked'} key={variant}>
@@ -634,10 +636,11 @@ function EnemyAlmanac({
                   alt=""
                   aria-hidden="true"
                   draggable={false}
-                  style={{ filter: encountered ? `${NORMAL_ALIEN_FILTERS[variant]} drop-shadow(0 0 16px rgba(34, 211, 238, 0.18))` : undefined }}
+                  style={{ filter: encountered ? `${NORMAL_ALIEN_FILTERS[variant] ?? ''} drop-shadow(0 0 16px rgba(34, 211, 238, 0.18))` : undefined }}
                 />
                 <strong>{text.enemyAlmanac.normalNames[variant] ?? `${text.enemyAlmanac.variantLabel} ${variant + 1}`}</strong>
                 <small>{encountered ? `${text.stage} ${unlockStage}` : text.enemyAlmanac.unencountered}</small>
+                {encountered && fighterIndex >= 0 && <p>{text.enemyAlmanac.fighterTactics[fighterIndex]}</p>}
               </article>
             )
           })}

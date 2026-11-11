@@ -1,4 +1,5 @@
 import { getPublicAssetUrl } from './sound'
+import { LEGACY_FIGHTER_COUNT, RAID_FIGHTER_ASSETS } from './raid/stageEncounters'
 
 export const RAID_SHIP_SPRITE_PATHS: Record<string, string> = {
   rocket: 'assets/ships/black-comet.png',
@@ -20,9 +21,11 @@ export const RAID_SHIP_SPRITE_PATHS: Record<string, string> = {
   spiegel: 'assets/ships/spiegel.png',
 }
 
-export const RAID_ALIEN_SPRITE_COUNT = 8
-
-const RAID_ALIEN_SPRITE_PATHS = Array.from({ length: RAID_ALIEN_SPRITE_COUNT }, (_, index) => `assets/aliens/alien_v${index}.png`)
+const RAID_ALIEN_SPRITE_PATHS = [
+  ...Array.from({ length: LEGACY_FIGHTER_COUNT }, (_, index) => `assets/aliens/alien_v${index}.png`),
+  ...RAID_FIGHTER_ASSETS,
+]
+export const RAID_ALIEN_SPRITE_COUNT = RAID_ALIEN_SPRITE_PATHS.length
 const RAID_ELITE_ASSET_PATHS = [
   'assets/aliens/elite_0.png',
   'assets/aliens/elite_1.png',
