@@ -22,6 +22,8 @@ const required = [
   'assets/raid-fx/combat-atlas-v2.png',
   'assets/raid-fx/explosion-atlas-v2.png',
   'assets/raid-fx/boss-atlas-v1.png',
+  'assets/raid-fx/boss-combat-effects-v1.webp',
+  'assets/raid-fx/boss-plasma-beam-v1.webp',
 ]
 
 for (const asset of required) {

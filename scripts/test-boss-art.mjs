@@ -15,7 +15,7 @@ source = source.replace("import { getPublicAssetUrl } from '../sound'", 'const g
 const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText
 const art = await import('data:text/javascript;base64,' + Buffer.from(code).toString('base64'))
 await art.preloadRaidCombatArt()
-assert.equal(art.getRaidCombatRootTextures().length, 4)
+assert.equal(art.getRaidCombatRootTextures().length, 5)
 for (const kind of ['squidBubble','squidInk','squidSpine','snakeFang','venomSpit','poisonCloud']) {
   const spec = {kind,width:30,height:60,rotation:Math.PI/2,alpha:0.7,x:120,y:80}
   const texture = art.applyRaidBossArtwork(spec)
@@ -40,8 +40,10 @@ for (const kind of ['squidBubble','squidInk','squidSpine','snakeFang','venomSpit
   assert.equal(calls[0][8],spec.height)
 }
 const beam={kind:'beam',width:200,height:20,rotation:0}
-assert.equal(art.applyRaidBossArtwork(beam),undefined,'preserve beam telegraph and geometry')
-assert.equal(beam.width,200)
+assert.ok(art.applyRaidBossArtwork(beam),'live beams should use one shared texture')
+assert.equal(beam.width,20,'beam artwork should preserve the lane width')
+assert.ok(beam.height>=200,'beam artwork must cover its length')
+assert.equal(beam.rotation,-Math.PI/2)
 const generic=art.getRaidProjectileMaterial('enemy',true)
 const boss=art.getRaidProjectileMaterial('boss',true)
 assert.notEqual(generic.texture,boss.texture,'carrier bolts must differ from generic enemy orbs')
@@ -53,3 +55,10 @@ const homing=art.getRaidProjectileMaterial('homing')
 assert.notEqual(rocket.texture.frame.y,homing.texture.frame.y,'rocket and homing must use distinct artwork')
 assert.ok(rocket.width>=74 && homing.width>=66,'missile silhouettes must be readable')
 assert.ok(rocket.solid && homing.solid,'missiles should preserve their mechanical detail with normal blending')
+
+const bossFxDraws=[]
+const fxContext={globalAlpha:1,save(){},restore(){},translate(){},rotate(){},drawImage(...args){bossFxDraws.push(args)}}
+for (const tile of Object.values(art.BOSS_FX)) assert.equal(art.drawBossFx(fxContext,tile,40,60,30,38,.8),true)
+assert.equal(bossFxDraws.length,9)
+assert.equal(new Set(bossFxDraws.map(draw=>draw[0])).size,1,'boss effects must share one decoded atlas')
+assert.equal(new Set(bossFxDraws.map(draw=>draw[1]+4096*draw[2])).size,9,'each boss effect must use a distinct frame')

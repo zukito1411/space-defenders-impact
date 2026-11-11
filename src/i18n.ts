@@ -2172,7 +2172,7 @@ export const RELEASE_TEXT = {
         gate: ["Alternates gapped projectile curtains with warned beam columns.", "Beam lanes lock during the warning; the later fortress adds paired beams with a gap."],
         super: ["Combines a heavy fan with side-orb fork volleys.", "Cycles curtains and aimed bursts with a faster low-HP cadence."],
       },
-      phaseAdvice: "These command ships escalate at 65% and 30% HP with burst pressure, speed and shorter recovery. Amber aim locks before firing; cyan marks a curtain corridor. A nuke clears shots and briefly interrupts the sequence.",
+      phaseAdvice: "These command ships escalate at 65% and 30% HP with burst pressure, speed and shorter recovery. Amber aim locks before firing; use the open gap in a curtain volley. A nuke clears shots and briefly interrupts the sequence.",
       stageTactics: {
         1: "Baits your position with a locked fan, then fires a narrow needle salvo. Sidestep after the amber aim appears.",
         2: "Alternates rotating iris volleys with aimed needles. The radial salvo leaves an open sector.",
@@ -2466,7 +2466,7 @@ export const RELEASE_TEXT = {
         gate: ["交替释放留有缺口的弹幕帘与带预警的光束。", "光束通道在预警时锁定；后期堡垒加入中间留空的双光束。"],
         super: ["重型扇形弹与侧翼球弹构成分叉齐射。", "弹幕帘和瞄准连发交替，低生命值时节奏加快。"],
       },
-      phaseAdvice: "这些指挥舰体的生命值降至 65% 与 30% 时，连发压力、弹速与攻击节奏逐步升级。琥珀色瞄准线在开火前锁定，青色标示弹幕空隙。核弹会清除子弹并短暂打断攻击序列。",
+      phaseAdvice: "这些指挥舰体的生命值降至 65% 与 30% 时，连发压力、弹速与攻击节奏逐步升级。琥珀色瞄准线在开火前锁定，遇到弹幕时，从空隙穿过。核弹会清除子弹并短暂打断攻击序列。",
       stageTactics: {
         1: "先用锁定扇形弹诱导走位，再发射窄幅针弹齐射。看到琥珀色瞄准线后侧移。",
         2: "旋转球弹与瞄准针弹交替，放射弹幕保留一个缺口。",
@@ -2760,7 +2760,7 @@ export const RELEASE_TEXT = {
         gate: ["通路を残す弾幕と予告付きのビームを交互に使います。", "ビーム位置は予告中に固定され、後期要塞は間に隙間のある2本を使います。"],
         super: ["重い扇状弾と側面の球弾を分岐斉射します。", "弾幕と狙い連射を交互に使い、低HPでは間隔が短くなります。"],
       },
-      phaseAdvice: "これらの指揮艦はHP 65%と30%で連射圧力・弾速・攻撃間隔が段階的に強化されます。琥珀色の照準は発射前に固定され、青色は弾幕の通路です。核攻撃は弾を消し、攻撃列を短く中断します。",
+      phaseAdvice: "これらの指揮艦はHP 65%と30%で連射圧力・弾速・攻撃間隔が段階的に強化されます。琥珀色の照準は発射前に固定され、弾幕の隙間を通り抜けてください。核攻撃は弾を消し、攻撃列を短く中断します。",
       stageTactics: {
         1: "固定された扇状照準で誘い、細い針弾斉射へ続けます。琥珀色の照準が出てから横へ避けましょう。",
         2: "回転する放射弾と狙い針弾を交互に使います。放射弾には開いた扇形の隙間があります。",
@@ -3054,7 +3054,7 @@ export const RELEASE_TEXT = {
         gate: ["통로가 있는 탄막과 경고가 있는 빔 기둥을 번갈아 씁니다.", "경고 중 빔 위치가 고정되며 후반 요새는 사이가 빈 쌍빔을 추가합니다."],
         super: ["무거운 부채꼴 탄과 측면 구체탄으로 갈래 일제사격을 합니다.", "탄막과 조준 연사를 순환하며 체력이 낮으면 간격이 짧아집니다."],
       },
-      phaseAdvice: "이 지휘함들은 체력 65%와 30%에서 연사 압박, 탄속, 회복 간격이 단계적으로 강화됩니다. 호박색 조준은 발사 전에 고정되며 청록색은 탄막 통로입니다. 핵공격은 탄을 지우고 공격 순서를 잠시 중단합니다.",
+      phaseAdvice: "이 지휘함들은 체력 65%와 30%에서 연사 압박, 탄속, 회복 간격이 단계적으로 강화됩니다. 호박색 조준은 발사 전에 고정되며 탄막의 빈틈으로 피하세요. 핵공격은 탄을 지우고 공격 순서를 잠시 중단합니다.",
       stageTactics: {
         1: "고정 부채꼴 조준으로 유도한 뒤 좁은 침탄 일제사격을 합니다. 호박색 조준이 나타나면 옆으로 피하세요.",
         2: "회전 방사탄과 조준 침탄을 번갈아 씁니다. 방사 일제사격에는 열린 부채꼴 구역이 있습니다.",

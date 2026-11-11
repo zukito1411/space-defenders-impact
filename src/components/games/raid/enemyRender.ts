@@ -1,3 +1,4 @@
+import { BOSS_FX, drawBossFx } from './combatArt'
 import { drawHullDamage } from './bossDamageFx'
 import { drawCommandBossEnergy, drawCommandBossHealthBar, drawCommandBossTelegraph, prefersRaidReducedMotion } from './commandBossRender'
 import { drawGenericBossShip } from './genericBossRender'
@@ -126,6 +127,12 @@ export function getBossDefeatFade(enemy: Enemy) {
   return clamp((enemy.defeatTimer ?? enemy.devilDefeatedTimer ?? STAGE_CLEAR_SECONDS) / STAGE_CLEAR_SECONDS, 0, 1)
 }
 
+function drawBossResidualHit(ctx: CanvasRenderingContext2D, enemy: Enemy, size: number) {
+  if (enemy.bossImpactTime || !enemy.hitFlash) return
+  const alpha = Math.min(.66, enemy.hitFlash * 2.8)
+  drawBossFx(ctx, BOSS_FX.impact, 0, 0, size * .22, size * .21, alpha, 0, true)
+}
+
 export function drawRaidEnemy(
   ctx: CanvasRenderingContext2D,
   enemy: Enemy,
@@ -152,7 +159,7 @@ export function drawRaidEnemy(
       ctx.save()
       ctx.translate(x, y)
       drawDevilGundamBoss(ctx, enemy, size, time, skipGpuStageBossBody)
-      drawEnemyHitFlash(ctx, size, enemy.hitFlash, '#ef4444')
+      drawBossResidualHit(ctx, enemy, size)
       ctx.restore()
       if (enemy.hp > 0) {
         if (enemy.shieldTime > 0 || enemy.y < 18) drawBossShield(ctx, x, y + size * 0.18, size * 0.86, time, enemy.color)
@@ -182,7 +189,7 @@ export function drawRaidEnemy(
           drawFinalBossSpriteBody(ctx, size, time, finalRage)
         }
       }
-      drawEnemyHitFlash(ctx, size, enemy.hitFlash, enemy.bossKind === 'final' ? '#fbbf24' : enemy.bossKind === 'squid' ? '#f472b6' : '#f43f5e')
+      drawBossResidualHit(ctx, enemy, size)
       ctx.restore()
       if (enemy.hp > 0) {
         if (displayBossKind === 'squid' && enemy.chargeTimer > 0 && enemy.chargePattern !== 'rotate') {
@@ -206,7 +213,7 @@ export function drawRaidEnemy(
     ctx.save()
     ctx.translate(x, y)
     ctx.globalAlpha *= defeatFade
-    drawEnemyHitFlash(ctx, size, enemy.hitFlash, enemy.color)
+    drawBossResidualHit(ctx, enemy, size)
     ctx.restore()
     if (enemy.hp > 0) {
       if (enemy.shieldTime > 0 || enemy.y < 15) drawBossShield(ctx, x, y, size, time, enemy.color)
@@ -223,7 +230,7 @@ export function drawRaidEnemy(
     drawCanvasSpriteContain(ctx, sprite, x, y, size, 'brightness(1.18) contrast(1.2) saturate(1.45)', 1, rotation, floatScale, enemy.color)
     ctx.save()
     ctx.translate(x, y)
-    drawEnemyHitFlash(ctx, size, enemy.hitFlash, enemy.color)
+    drawBossResidualHit(ctx, enemy, size)
     ctx.restore()
     if (enemy.shieldTime > 0 || enemy.y < 8) drawBossShield(ctx, x, y, size * 0.78, time, enemy.color)
     drawCachedBossBar(ctx, enemy, x, y, size * 0.82)

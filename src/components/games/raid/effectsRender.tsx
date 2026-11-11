@@ -1,6 +1,6 @@
-import { COMBAT_TILE, drawRaidCombatTexture, getRaidCombatFrame, getRaidExplosionFrame } from './combatArt'
+import { BOSS_FX, drawBossFx, drawBossFxLane, COMBAT_TILE, drawRaidCombatTexture, getRaidCombatFrame, getRaidExplosionFrame } from './combatArt'
 import { impactAlpha, impactFrameProgress } from './combatFeel'
-import { getCanvasSpriteDimensions, RAID_DERELICT_WRECK_FILTER, RAID_DEVIL_RETICLE_GLOW_STOPS, RAID_SPIEGEL_SHADOW_CLONE_FILTER, RAID_SPIEGEL_SHADOW_CLONE_IMPACT_STOPS, drawCanvasImageContain, drawCanvasSpriteContain, getDerelictWreckCanvasSprite, getDerelictWreckVariantIndex, getGodGundamBarrageCanvasSprite, getRaidOtherCanvasSprite, getShipCanvasSprite } from './assets'
+import { getCanvasSpriteDimensions, RAID_DERELICT_WRECK_FILTER, RAID_SPIEGEL_SHADOW_CLONE_FILTER, RAID_SPIEGEL_SHADOW_CLONE_IMPACT_STOPS, drawCanvasImageContain, drawCanvasSpriteContain, getDerelictWreckCanvasSprite, getDerelictWreckVariantIndex, getGodGundamBarrageCanvasSprite, getRaidOtherCanvasSprite, getShipCanvasSprite } from './assets'
 import type { CachedCanvasDrawSource } from './assets'
 import { PICKUP_VOICE_SAMPLE_URLS } from './audio'
 import { forEachDevilBossBeamLane, forEachFinalBossBeamLane, getDevilBossBeamRadius, getDevilBossChargeDuration, getFinalBossBeamRadius } from './bossAttacks'
@@ -879,40 +879,12 @@ export function drawFinalChargeLines(
   if (!hasFinalCharge) return
 
   const toViewportY = (value: number) => (value / HEIGHT) * viewportHeight
+  const length = Math.hypot(viewportWidth, viewportHeight) * 1.48
   const drawWarningBeam = (x: number, y: number, angle: number, width: number, alpha: number, pulse: number) => {
-    const length = Math.sqrt((viewportWidth) * (viewportWidth) + (viewportHeight) * (viewportHeight)) * 1.45
-    ctx.save()
-    ctx.translate(x, y)
-    ctx.rotate(angle)
-
-    ctx.globalAlpha = alpha * 0.22
-    ctx.fillStyle = 'rgba(34,211,238,1)'
-    ctx.fillRect(-length / 2, -width * 0.7, length, width * 1.4)
-
-    ctx.globalAlpha = alpha * 0.42
-    ctx.fillStyle = 'rgba(96,165,250,1)'
-    ctx.fillRect(-length / 2, -width / 2, length, width)
-
-    ctx.globalAlpha = alpha * 0.72 * pulse
-    ctx.fillStyle = 'rgba(255,255,255,1)'
-    ctx.fillRect(-length / 2, -2, length, 4)
-
-    ctx.globalAlpha = alpha * 0.86
-    ctx.strokeStyle = time % 220 < 110 ? '#7dd3fc' : '#eff6ff'
-    ctx.lineWidth = 2.5
-    ctx.setLineDash([8, 10])
-    ctx.beginPath()
-    ctx.moveTo(-length / 2, -width * 0.5)
-    ctx.lineTo(length / 2, -width * 0.5)
-    ctx.moveTo(-length / 2, width * 0.5)
-    ctx.lineTo(length / 2, width * 0.5)
-    ctx.stroke()
-    ctx.setLineDash([])
-    ctx.restore()
+    const dx = Math.cos(angle) * length * .5
+    const dy = Math.sin(angle) * length * .5
+    drawBossFxLane(ctx, BOSS_FX.lane, x - dx, y - dy, x + dx, y + dy, width, alpha * pulse)
   }
-
-  ctx.save()
-  ctx.globalCompositeOperation = 'lighter'
 
   for (const enemy of enemies) {
     if (enemy.bossKind !== 'final' || enemy.chargeTimer <= 0) continue
@@ -944,7 +916,6 @@ export function drawFinalChargeLines(
     })
   }
 
-  ctx.restore()
 }
 
 export function drawDevilChargeWarnings(
@@ -965,83 +936,22 @@ export function drawDevilChargeWarnings(
   }
   if (!hasDevilCharge) return
 
+  const length = Math.hypot(viewportWidth, viewportHeight) * 1.48
   const drawWarningBeam = (x: number, y: number, angle: number, width: number, alpha: number, pulse: number) => {
-    const length = Math.sqrt((viewportWidth) * (viewportWidth) + (viewportHeight) * (viewportHeight)) * 1.45
-    ctx.save()
-    ctx.translate(x, y)
-    ctx.rotate(angle)
-    ctx.globalCompositeOperation = 'lighter'
-
-    ctx.globalAlpha = alpha * 0.22
-    ctx.fillStyle = 'rgba(127,29,29,1)'
-    ctx.fillRect(-length / 2, -width * 0.82, length, width * 1.64)
-
-    ctx.globalAlpha = alpha * 0.42
-    ctx.fillStyle = 'rgba(239,68,68,1)'
-    ctx.fillRect(-length / 2, -width * 0.48, length, width * 0.96)
-
-    ctx.globalAlpha = alpha * 0.72 * pulse
-    ctx.fillStyle = 'rgba(254,202,202,1)'
-    ctx.fillRect(-length / 2, -2, length, 4)
-
-    ctx.globalAlpha = alpha * 0.82
-    ctx.strokeStyle = time % 180 < 90 ? '#fca5a5' : '#fed7aa'
-    ctx.lineWidth = 2.5
-    ctx.setLineDash([9, 8])
-    ctx.beginPath()
-    ctx.moveTo(-length / 2, -width * 0.5)
-    ctx.lineTo(length / 2, -width * 0.5)
-    ctx.moveTo(-length / 2, width * 0.5)
-    ctx.lineTo(length / 2, width * 0.5)
-    ctx.stroke()
-    ctx.restore()
+    const dx = Math.cos(angle) * length * .5
+    const dy = Math.sin(angle) * length * .5
+    drawBossFxLane(ctx, BOSS_FX.lane, x - dx, y - dy, x + dx, y + dy, width, alpha * pulse)
   }
 
   const drawInfectionReticle = (x: number, y: number, radius: number, alpha: number, pulse: number) => {
-    ctx.save()
-    ctx.globalCompositeOperation = 'lighter'
-    ctx.globalAlpha = alpha * 0.36
-    drawRadialEllipse(ctx, x, y, radius * 1.18, radius * 0.88, RAID_DEVIL_RETICLE_GLOW_STOPS)
-    ctx.globalAlpha = alpha
-    ctx.strokeStyle = '#fca5a5'
-    ctx.lineWidth = Math.max(2, viewportWidth * 0.0015)
-    ctx.setLineDash([8, 7])
-    ctx.beginPath()
-    ctx.ellipse(x, y, radius * pulse, radius * 0.72 * pulse, 0, 0, Math.PI * 2)
-    ctx.stroke()
-    ctx.setLineDash([])
-    ctx.beginPath()
-    ctx.moveTo(x - radius * 1.15, y)
-    ctx.lineTo(x + radius * 1.15, y)
-    ctx.moveTo(x, y - radius * 0.9)
-    ctx.lineTo(x, y + radius * 0.9)
-    ctx.stroke()
-    ctx.restore()
+    const span = radius * (1.5 + pulse * .4)
+    if (drawBossFx(ctx, BOSS_FX.precision, x, y, span, span * .8, alpha, 0, true)) return
+    drawBossFxLane(ctx, BOSS_FX.aim, x, y - span * .4, x, y + span * .4, 2, alpha)
   }
 
   const drawSnakeLungeWarning = (startX: number, startY: number, targetX: number, targetY: number, width: number, alpha: number, pulse: number) => {
-    ctx.save()
-    ctx.globalCompositeOperation = 'lighter'
-    ctx.lineCap = 'round'
-    ctx.lineJoin = 'round'
-    ctx.globalAlpha = alpha * 0.26
-    ctx.strokeStyle = 'rgba(132,204,22,1)'
-    ctx.lineWidth = width * 1.75
-    ctx.beginPath()
-    ctx.moveTo(startX, startY)
-    ctx.lineTo(targetX, targetY)
-    ctx.stroke()
-    ctx.globalAlpha = alpha * 0.72
-    ctx.strokeStyle = 'rgba(254,240,138,1)'
-    ctx.lineWidth = Math.max(4, width * 0.38)
-    ctx.setLineDash([14, 10])
-    ctx.beginPath()
-    ctx.moveTo(startX, startY)
-    ctx.lineTo(targetX, targetY)
-    ctx.stroke()
-    ctx.setLineDash([])
-    drawInfectionReticle(targetX, targetY, width * (1.1 + pulse * 0.2), alpha * 0.86, pulse)
-    ctx.restore()
+    drawBossFxLane(ctx, BOSS_FX.lane, startX, startY, targetX, targetY, width * 1.35, alpha)
+    drawInfectionReticle(targetX, targetY, width * (1.1 + pulse * .2), alpha * .86, pulse)
   }
 
   for (const enemy of enemies) {

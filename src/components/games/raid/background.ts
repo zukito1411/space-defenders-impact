@@ -1542,7 +1542,6 @@ export class PixiRaidBackground {
     this.speedLineGraphics.visible = false
     const limit = isLow || this.reducedMotion || !shouldDrawRaidSpeedLines(stageTheme) ? 0 : isMedium ? 2 : 4
     const rush = this.travel.rush
-    const bank = this.travel.drift * Math.min(.27, width / height * .34)
     for (let index = 0; index < this.speedLineSprites.length; index++) {
       const sprite = this.speedLineSprites[index]
       sprite.visible = index < limit
@@ -1552,10 +1551,10 @@ export class PixiRaidBackground {
       const span = height + maxLength * 2
       const y = ((this.travel.near * (2.4 + index * 0.3) + index * span * 0.31) % span + span) % span - maxLength
       const edge = clamp(Math.min((y + length * 0.5) / length, (height - y + length * 0.5) / length), 0, 1)
-      sprite.position.set(width * BACKGROUND_SPEED_LINES[index] - bank * (y - height * .5) * .37, y)
+      sprite.position.set(width * BACKGROUND_SPEED_LINES[index], y)
       sprite.width = (isMedium ? 3 : 4.5) + rush * 1.5
       sprite.height = length
-      sprite.rotation = bank
+      sprite.rotation = 0
       sprite.tint = COSMIC_REGIONS[this.cosmosRegion < 0 ? 0 : this.cosmosRegion].tint
       sprite.alpha = ((isMedium ? 0.18 : 0.22) + rush * 0.3) * edge
     }

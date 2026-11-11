@@ -33,9 +33,9 @@ assert.ok(Math.abs(motion.x) <= 1 && Math.abs(motion.y) <= 1, 'parallax exceeds 
 const steer = new RaidTravelMotion()
 steer.update(0, 0, 1, 50, 65)
 for (let step = 1; step <= 20; step++) steer.update(step * 16, 0, 1, 50 + step * .8, 65)
-assert.ok(steer.drift > .8, 'moving right should bank the streaks away from the travel direction')
+assert.ok(steer.drift > .8, 'moving right should set the lateral scenery drift')
 for (let step = 21; step <= 40; step++) steer.update(step * 16, 0, 1, 66 - (step - 20) * .8, 65)
-assert.ok(steer.drift < -.8, 'reversing direction should reverse the streaks')
+assert.ok(steer.drift < -.8, 'reversing direction should reverse the scenery drift')
 steer.update(900, 0, 1, 50, 65)
 assert.equal(steer.drift, 0, 'resume should clear the visual bank')
 console.log('Travel: 30/60/120/144Hz agreement, rush continuity, resume and parallax bounds passed')
@@ -75,3 +75,53 @@ assert.equal(steering.y, idle.y, 'lateral steering should preserve departure tim
 animateStageClearPlayer(steering, .1, 50, null, new Set(['arrowleft']))
 assert.ok(steering.x < 50)
 console.log('Departure: keyboard and pointer steering preserve forward flight')
+
+const ambushSource = read('events.ts').replace(/^import .*\n/gm, '')
+const ambushCode = ts.transpileModule(ambushSource, { compilerOptions: { module: ts.ModuleKind.ESNext } }).outputText
+const ambush = await import('data:text/javascript;base64,' + Buffer.from(ambushCode).toString('base64'))
+for (const [difficulty, expected] of [['easy',6],['normal',9],['hard',10],['expert',11]]) {
+ let total=0
+ for (let wave=0;wave<3;wave++) {
+  total+=ambush.getRaidAmbushWaveSize(difficulty,wave,total)
+  for (let slot=0;slot<4;slot++) {
+   const x=ambush.getRaidAmbushLane(22.4,wave,slot)
+   assert.ok(wave%2===0 ? x<40 : x>60, 'ambush flanks should alternate with an open center on entry')
+  }
+ }
+ assert.equal(total,expected)
+ assert.equal(ambush.getRaidAmbushWaveSize(difficulty,3,total),0)
+ assert.equal(ambush.getRaidAmbushWaveSize(difficulty,0,31),1)
+ assert.equal(ambush.getRaidAmbushWaveSize(difficulty,1,32),0)
+}
+assert.ok(2*ambush.RAID_AMBUSH_WAVE_SPACING < ambush.getRandomEventDuration('ambush'))
+console.log('Ambush: three waves, alternating flank lanes, difficulty counts and live enemy cap passed')
+
+const runtime = read('GradiusRaidRuntime.tsx')
+const ambushStart = runtime.indexOf("        } else if (activeRandomEvent.kind === 'ambush'")
+const ambushEnd = runtime.indexOf("        } else if (activeRandomEvent.kind === 'solar'", ambushStart)
+const ambushBody = runtime.slice(runtime.indexOf('{', ambushStart + 12) + 1, ambushEnd)
+const integrationSource = ambushSource + `
+export function playAmbush(difficulty, initialEnemies = 0) {
+ const activeRandomEvent={kind:'ambush',duration:5.8,seed:22.4};
+ const spawned=[];
+ const stageRef={current:7}, waveRef={current:7}, raidDifficultyRef={current:difficulty};
+ const enemiesRef={current:Array.from({length:initialEnemies},()=>({hp:100,isMiniBoss:false}))};
+ const randomEventSpawnTimerRef={current:0};
+ const pickEliteEnemyKind=()=> 'lancer', getMaxActiveEliteEnemies=()=>1, isCoOpActive=()=>false;
+ const spawnEnemyAt=(x,y,wave,pattern,slot,style,elite)=>{
+  spawned.push({x,y,elite});
+  enemiesRef.current.push({hp:100,isMiniBoss:Boolean(elite)});
+ };
+ for(let round=0;round<4;round++){
+  if(randomEventSpawnTimerRef.current>=activeRandomEvent.duration) break;
+ ` + ambushBody + `
+ }
+ return spawned;
+}`
+const integratedAmbush = await import('data:text/javascript;base64,' +
+ Buffer.from(ts.transpileModule(integrationSource,{compilerOptions:{module:ts.ModuleKind.ESNext}}).outputText).toString('base64'))
+const normalAmbush=integratedAmbush.playAmbush('normal')
+assert.equal(normalAmbush.length,9)
+assert.equal(normalAmbush.filter(enemy=>enemy.elite).length,1)
+assert.ok(normalAmbush.every(enemy=>enemy.y<0))
+assert.equal(integratedAmbush.playAmbush('expert',30).length,2,'the actual spawn path must respect the live enemy cap')

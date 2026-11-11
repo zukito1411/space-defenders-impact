@@ -1,3 +1,4 @@
+import { BOSS_FX, drawBossFx, drawBossFxLane } from './combatArt'
 import { drawCanvasSpriteContain, getCachedCanvasPattern, getCanvasSpriteDimensions, getSquidBossCanvasSprite } from './assets'
 import { BOSS_COLORS } from './constants'
 import { clamp, drawRadialEllipse } from './utils'
@@ -244,20 +245,10 @@ export function drawSquidWhipStrike(ctx: CanvasRenderingContext2D, x: number, y:
   ctx.globalCompositeOperation = 'lighter'
   ctx.lineCap = 'round'
   ctx.lineJoin = 'round'
-  ctx.strokeStyle = `rgba(251,113,133,${0.38 + warningPulse * 0.28})`
-  ctx.fillStyle = `rgba(251,113,133,${0.08 + warm * 0.1})`
-  ctx.lineWidth = Math.max(2, reachSize * 0.01)
-  ctx.beginPath()
-  ctx.ellipse(targetX, targetY, reachSize * 0.095, reachSize * 0.058, 0, 0, Math.PI * 2)
-  ctx.fill()
-  ctx.stroke()
-  ctx.strokeStyle = `rgba(255,255,255,${0.18 + warm * 0.36})`
-  ctx.beginPath()
-  ctx.moveTo(targetX - reachSize * 0.06, targetY)
-  ctx.lineTo(targetX + reachSize * 0.06, targetY)
-  ctx.moveTo(targetX, targetY - reachSize * 0.045)
-  ctx.lineTo(targetX, targetY + reachSize * 0.045)
-  ctx.stroke()
+  const warningSize = reachSize * .24
+  if (!drawBossFx(ctx, BOSS_FX.precision, targetX, targetY, warningSize, warningSize * .7, .57 + warningPulse * .27, 0, true)) {
+    drawBossFxLane(ctx, BOSS_FX.aim, targetX - warningSize * .5, targetY, targetX + warningSize * .5, targetY, 3, .8)
+  }
 
   const c1x = x + side * reachSize * 0.42
   const c1y = y + reachSize * 0.18
@@ -340,34 +331,9 @@ export function drawSquidWhipStrike(ctx: CanvasRenderingContext2D, x: number, y:
     ])
   }
 
-  const tipAngle = tangentAt(0.98)
-  const clawLength = reachSize * 0.078
-  const clawSpread = reachSize * 0.038
-  const clawBaseX = tipX - Math.cos(tipAngle) * reachSize * 0.018
-  const clawBaseY = tipY - Math.sin(tipAngle) * reachSize * 0.018
-  ctx.save()
-  ctx.translate(clawBaseX, clawBaseY)
-  ctx.rotate(tipAngle)
-  ctx.fillStyle = 'rgba(255,241,242,0.92)'
-  ctx.strokeStyle = 'rgba(88,28,135,0.9)'
-  ctx.lineWidth = Math.max(1.2, reachSize * 0.004)
-  for (const clawSide of [-1, 1]) {
-    ctx.beginPath()
-    ctx.moveTo(0, clawSide * clawSpread * 0.18)
-    ctx.quadraticCurveTo(clawLength * 0.55, clawSide * clawSpread, clawLength, clawSide * clawSpread * 0.18)
-    ctx.quadraticCurveTo(clawLength * 0.5, clawSide * clawSpread * 0.34, clawLength * 0.12, 0)
-    ctx.closePath()
-    ctx.fill()
-    ctx.stroke()
-  }
-  ctx.beginPath()
-  ctx.moveTo(0, -clawSpread * 0.22)
-  ctx.lineTo(clawLength * 1.12, 0)
-  ctx.lineTo(0, clawSpread * 0.22)
-  ctx.closePath()
-  ctx.fill()
-  ctx.stroke()
-  ctx.restore()
+  const tipAngle = tangentAt(.98)
+  drawBossFx(ctx, BOSS_FX.precision, tipX, tipY, reachSize * .16, reachSize * .105,
+    .72 + warm * .25, tipAngle, true)
   ctx.restore()
 }
 
