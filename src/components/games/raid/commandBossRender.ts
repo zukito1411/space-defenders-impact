@@ -1,45 +1,35 @@
+import { drawRaidVfx, drawRaidVfxLane, RAID_VFX_TILE } from './combatArt'
 import { getGenericBossArt } from './bossCatalog'
 import { PLAYER_RADIUS } from './constants'
 import { COMMAND_PHASE_HP, createCommandVolley, isCommandBeam, writeCommandVolley } from './commandBoss'
 import type { Enemy } from './types'
 const preview = createCommandVolley()
-/** At most twelve trajectory strokes, no blur, gradients, texture baking or new particle systems. */
+/** Project textured warnings from the same locked volley recipe used by combat. */
 export function drawCommandBossTelegraph(ctx: CanvasRenderingContext2D, enemy: Enemy,
   toX: (v: number) => number, toY: (v: number) => number, viewportWidth: number) {
   if (enemy.hp <= 0 || enemy.bossAttackState !== 'warning' || (enemy.bossAttackTimer ?? 0) <= 0) return
   const count = writeCommandVolley(enemy, preview, enemy.bossAttackPattern === 'hydra' ? -1 : 0)
   if (!count) return
   const progress = 1 - (enemy.bossAttackTimer ?? 0) / Math.max(.01, enemy.bossWarningSeconds ?? 1)
-  ctx.save()
-  ctx.lineWidth = Math.max(1, Math.min(2, viewportWidth / 600))
-  ctx.strokeStyle = `rgba(251,191,36,${.35 + progress * .4})`
-  ctx.setLineDash([7, 6])
-  ctx.beginPath()
   for (let i = 0; i < count; i++) {
     const shot = preview[i]
     if (isCommandBeam(enemy.bossAttackPattern)) {
-      // This warning covers the beam's entire actual collision lane, including the player radius.
       const half = shot.radius * .82 + PLAYER_RADIUS * .72
-      ctx.fillStyle = `rgba(251,113,133,${.045 + progress * .075})`
-      ctx.fillRect(toX(shot.x - half), toY(0), toX(half * 2) - toX(0), toY(100) - toY(0))
-      ctx.moveTo(toX(shot.x - half), toY(0)); ctx.lineTo(toX(shot.x - half), toY(100))
-      ctx.moveTo(toX(shot.x + half), toY(0)); ctx.lineTo(toX(shot.x + half), toY(100))
+      drawRaidVfxLane(ctx, RAID_VFX_TILE.dangerLane, toX(shot.x), toY(0), toX(shot.x), toY(100),
+        toX(half * 2) - toX(0), .42 + progress * .24)
     } else {
-      // Preview the locked first volley; follow-up bursts retain that aim and origin.
       const span = shot.vy > 2 ? Math.max(.8, (92 - shot.y) / shot.vy) : 1.25
-      ctx.moveTo(toX(shot.x), toY(shot.y))
-      ctx.lineTo(toX(shot.x + shot.vx * span), toY(shot.y + shot.vy * span))
+      drawRaidVfxLane(ctx, RAID_VFX_TILE.aim, toX(shot.x), toY(shot.y),
+        toX(shot.x + shot.vx * span), toY(shot.y + shot.vy * span), Math.max(4, Math.min(7, viewportWidth / 100)),
+        .39 + progress * .38)
     }
   }
-  ctx.stroke()
-  ctx.setLineDash([])
   if (enemy.bossAttackPattern === 'curtain') {
     const gap = enemy.bossGapX ?? 50
     const radius = 15 - (enemy.bossCombatPhase ?? 0) - (PLAYER_RADIUS + 1.5)
-    ctx.fillStyle = 'rgba(56,189,248,0.075)'
-    ctx.fillRect(toX(gap - radius), toY(enemy.bossAttackY ?? enemy.y), toX(radius * 2) - toX(0), toY(100) - toY(enemy.bossAttackY ?? enemy.y))
+    drawRaidVfxLane(ctx, RAID_VFX_TILE.ionWake, toX(gap), toY(enemy.bossAttackY ?? enemy.y),
+      toX(gap), toY(100), toX(radius * 2) - toX(0), .22)
   }
-  ctx.restore()
 }
 
 const reducedMotion = typeof window !== 'undefined' && typeof window.matchMedia === 'function'
@@ -63,63 +53,36 @@ export function drawCommandBossEnergy(ctx: CanvasRenderingContext2D, enemy: Enem
 
   const x = toX(enemy.x)
   const y = toY(enemy.y)
-  const phaseColor = phaseColors[enemy.bossCombatPhase ?? 0] ?? phaseColors[0]
   const motionReduced = prefersRaidReducedMotion()
-  ctx.save()
-  ctx.globalCompositeOperation = 'screen'
 
   if (phasePulse) {
     const progress = phaseAge / .65
-    const radius = size * (motionReduced ? .64 : .53 + .37 * progress)
-    ctx.beginPath()
-    ctx.ellipse(x, y, radius, radius * .76, 0, 0, Math.PI * 2)
-    ctx.strokeStyle = phaseColor
-    ctx.globalAlpha = .16 * (1 - progress)
-    ctx.lineWidth = Math.max(4, size * .04)
-    ctx.stroke()
-    ctx.globalAlpha = .72 * (1 - progress)
-    ctx.lineWidth = Math.max(1.5, size * .009)
-    ctx.stroke()
+    const diameter = size * (motionReduced ? 1.28 : 1.06 + .74 * progress)
+    drawRaidVfx(ctx, RAID_VFX_TILE.shockwave, x, y, diameter, diameter * .8, .75 * (1 - progress), 0, true)
   }
 
   if (charging) {
     const timer = enemy.bossAttackTimer ?? 0
     const progress = Math.max(0, Math.min(1, 1 - timer / Math.max(.01, enemy.bossWarningSeconds ?? 1)))
-    const radius = size * .54
-    const start = -Math.PI / 2
-    ctx.beginPath()
-    ctx.arc(x, y, radius, start, start + Math.PI * 2)
-    ctx.lineWidth = Math.max(1.5, size * .012)
-    ctx.strokeStyle = phaseColor
-    ctx.globalAlpha = .16
-    ctx.stroke()
-    ctx.beginPath()
-    ctx.arc(x, y, radius, start, start + Math.PI * 2 * progress)
-    ctx.globalAlpha = .36 + progress * .42
-    ctx.stroke()
+    const diameter = size * (motionReduced ? 1.1 : 1.24 - progress * .2)
+    drawRaidVfx(ctx, RAID_VFX_TILE.shockwave, x, y, diameter, diameter * .93,
+      .14 + progress * .42, motionReduced ? 0 : -progress * .48, true)
   }
 
   if (firing) {
     const count = writeCommandVolley(enemy, preview, Math.max(0, (enemy.bossBurstIndex ?? 1) - 1))
     const progress = volleyAge / .18
-    const radius = Math.max(3, size * .045) * (motionReduced ? 1 : 1 + progress)
-    ctx.beginPath()
+    const sizePx = Math.max(12, size * .13) * (motionReduced ? 1 : 1 + progress * .6)
     for (let i = 0; i < count; i++) {
-      const shotX = toX(preview[i].x)
-      const shotY = toY(preview[i].y)
-      ctx.moveTo(shotX + radius, shotY)
-      ctx.arc(shotX, shotY, radius, 0, Math.PI * 2)
+      const shot = preview[i]
+      let duplicate = false
+      for (let j = 0; j < i; j++) {
+        if (preview[j].x === shot.x && preview[j].y === shot.y) { duplicate = true; break }
+      }
+      if (!duplicate) drawRaidVfx(ctx, RAID_VFX_TILE.muzzle, toX(shot.x), toY(shot.y),
+        sizePx, sizePx * .76, .86 * (1 - progress), Math.PI / 2, true)
     }
-    ctx.strokeStyle = phaseColor
-    ctx.lineWidth = Math.max(2, size * .015)
-    ctx.globalAlpha = .8 * (1 - progress)
-    ctx.stroke()
-    ctx.fillStyle = '#fff7df'
-    ctx.globalAlpha = .33 * (1 - progress) ** 2
-    ctx.fill()
   }
-
-  ctx.restore()
 }
 
 /** Phase divisions use the same HP thresholds as the encounter scheduler. */

@@ -15,7 +15,7 @@ source = source.replace("import { getPublicAssetUrl } from '../sound'", 'const g
 const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText
 const art = await import('data:text/javascript;base64,' + Buffer.from(code).toString('base64'))
 await art.preloadRaidCombatArt()
-assert.equal(art.getRaidCombatRootTextures().length, 4)
+assert.equal(art.getRaidCombatRootTextures().length, 5)
 for (const kind of ['squidBubble','squidInk','squidSpine','snakeFang','venomSpit','poisonCloud']) {
   const spec = {kind,width:30,height:60,rotation:Math.PI/2,alpha:0.7,x:120,y:80}
   const texture = art.applyRaidBossArtwork(spec)
@@ -40,16 +40,28 @@ for (const kind of ['squidBubble','squidInk','squidSpine','snakeFang','venomSpit
   assert.equal(calls[0][8],spec.height)
 }
 const beam={kind:'beam',width:200,height:20,rotation:0}
-assert.equal(art.applyRaidBossArtwork(beam),undefined,'preserve beam telegraph and geometry')
-assert.equal(beam.width,200)
+assert.equal(art.applyRaidBossArtwork(beam),art.getRaidVfxTexture(art.RAID_VFX_TILE.ionWake))
+assert.equal(beam.width,20,'beam artwork should preserve the lane width')
+assert.ok(beam.height>=200,'beam artwork must cover its length')
+assert.equal(beam.rotation,-Math.PI/2)
 const generic=art.getRaidProjectileMaterial('enemy',true)
 const boss=art.getRaidProjectileMaterial('boss',true)
 assert.notEqual(generic.texture,boss.texture,'carrier bolts must differ from generic enemy orbs')
 assert.equal(boss.directional,true)
-console.log('Boss art: six shared special textures, Canvas geometry, solid fangs, beam fallback and distinct enemy materials passed')
+console.log('Boss art: six shared special textures, Canvas geometry, solid fangs, shared beam artwork and distinct enemy materials passed')
 
 const rocket=art.getRaidProjectileMaterial('rocket')
 const homing=art.getRaidProjectileMaterial('homing')
 assert.notEqual(rocket.texture.frame.y,homing.texture.frame.y,'rocket and homing must use distinct artwork')
 assert.ok(rocket.width>=74 && homing.width>=66,'missile silhouettes must be readable')
 assert.ok(rocket.solid && homing.solid,'missiles should preserve their mechanical detail with normal blending')
+
+const vfx = Object.values(art.RAID_VFX_TILE).map(tile=>art.getRaidVfxTexture(tile))
+assert.equal(vfx.length,14)
+assert.equal(new Set(vfx.map(texture=>texture.source)).size,1,'the full VFX set must share one texture source')
+assert.equal(new Set(vfx.map(texture=>texture.frame.y * 4096 + texture.frame.x)).size,14)
+const draws = []
+const warningContext = {globalAlpha:1, save(){}, restore(){}, translate(...args){draws.push(args)}, rotate(){}, drawImage(...args){draws.push(args)}}
+art.drawRaidVfxLane(warningContext,art.RAID_VFX_TILE.dangerLane,40,0,40,720,58,.5)
+assert.deepEqual(draws[0],[40,360])
+assert.deepEqual(draws[1].slice(7),[58,720])

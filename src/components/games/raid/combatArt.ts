@@ -7,13 +7,20 @@ export const RAID_COMBAT_ATLAS_URL = getPublicAssetUrl('assets/raid-fx/combat-at
 export const RAID_EXPLOSION_ATLAS_URL = getPublicAssetUrl('assets/raid-fx/explosion-atlas-v2.png')
 export const RAID_BOSS_ATLAS_URL = getPublicAssetUrl('assets/raid-fx/boss-atlas-v1.png')
 export const RAID_MISSILE_ATLAS_URL = getPublicAssetUrl('assets/raid-fx/player-missiles-v1.webp')
-export const RAID_COMBAT_ART_URLS = [RAID_COMBAT_ATLAS_URL, RAID_EXPLOSION_ATLAS_URL, RAID_BOSS_ATLAS_URL, RAID_MISSILE_ATLAS_URL]
+export const RAID_VFX_ATLAS_URL = getPublicAssetUrl('assets/raid-fx/raid-effects-v1.webp')
+export const RAID_COMBAT_ART_URLS = [RAID_COMBAT_ATLAS_URL, RAID_EXPLOSION_ATLAS_URL, RAID_BOSS_ATLAS_URL, RAID_MISSILE_ATLAS_URL, RAID_VFX_ATLAS_URL]
 
 export const COMBAT_TILE = {
   plasma: 0, hotBolt: 1, ionNeedle: 2, alienOrb: 3,
   fireImpact: 4, ionImpact: 5, spark: 6, shock: 7,
   missile: 8, charge: 9, ink: 10, smoke: 11,
   exhaust: 12, fragment: 13, venom: 14, muzzle: 15,
+} as const
+
+export const RAID_VFX_TILE = {
+  ionWake: 0, muzzle: 1, shockwave: 2, shield: 3,
+  debris: 4, precision: 5, hullDamage: 6, hazard: 7,
+  repair: 8, aim: 9, dangerLane: 10, travel: 11, lock: 12, charredPlate: 13,
 } as const
 
 export type CombatProjectileMaterial = {
@@ -47,6 +54,7 @@ const ENEMY_MATERIALS: Partial<Record<Shot['kind'], MaterialSpec>> = {
 }
 
 let combatFrames: Texture[] = []
+let vfxFrames: Texture[] = []
 let explosionFrames: Texture[] = []
 let bossFrames: Texture[] = []
 let missileLoaded = false
@@ -123,6 +131,10 @@ export function preloadRaidCombatArt(): Promise<void> {
           bossMaterials[kind as Shot['kind']] = { texture: bossFrames[tile], width, height, directional, solid }
         }
       }).catch((error: unknown) => { console.warn('Raid boss artwork failed to load:', RAID_BOSS_ATLAS_URL, error) })),
+      (vfxFrames.length ? Promise.resolve() : Assets.load<Texture>(RAID_VFX_ATLAS_URL).then((texture) => {
+        vfxFrames = splitAtlas(texture)
+        rootTextures.push(texture)
+      }).catch((error: unknown) => { console.warn('Raid effects artwork unavailable:', error) })),
       (missileLoaded ? Promise.resolve() : Assets.load<Texture>(RAID_MISSILE_ATLAS_URL).then((texture) => {
         texture.source.scaleMode = 'linear'
         texture.source.autoGenerateMipmaps = true
@@ -136,7 +148,7 @@ export function preloadRaidCombatArt(): Promise<void> {
       }).catch((error: unknown) => {console.warn('Missile art unavailable:',error)})),
     ]).then(() => {
       // Retry missing art on the next preparation instead of caching failure.
-      if (!combatFrames.length || !explosionFrames.length || !bossFrames.length || !missileLoaded) warmPromise = null
+      if (!combatFrames.length || !explosionFrames.length || !bossFrames.length || !vfxFrames.length || !missileLoaded) warmPromise = null
     })
   }
   return warmPromise
@@ -154,6 +166,15 @@ export function isRaidBossArtSolid(kind: string) {
 }
 /** Both foreground renderers consume the same texture and geometry. */
 export function applyRaidBossArtwork(spec: GpuBossProjectileSpec): Texture | undefined {
+  if (spec.kind === 'beam') {
+    const texture = getRaidVfxTexture(RAID_VFX_TILE.ionWake)
+    if (!texture) return
+    const length = spec.width
+    spec.width = spec.height
+    spec.height = length * 1.16 // The soft ends extend past the visible beam lane.
+    spec.rotation -= Math.PI / 2
+    return texture
+  }
   const tile = BOSS_ART_TILES[spec.kind]
   const texture = tile === undefined ? undefined : bossFrames[tile]
   if (!texture) return undefined
@@ -169,6 +190,8 @@ export function applyRaidBossArtwork(spec: GpuBossProjectileSpec): Texture | und
   return texture
 }
 
+export function getRaidVfxTexture(tile: number): Texture | undefined { return vfxFrames[tile] }
+
 export function getRaidCombatFrame(tile: number): Texture | undefined { return combatFrames[tile] }
 
 export function getRaidExplosionFrame(progress: number): Texture | undefined {
@@ -180,7 +203,7 @@ export function getRaidCombatRootTextures(): readonly Texture[] { return rootTex
 /** Use the decoded atlas on the Canvas fallback as well as the Pixi path. */
 export function drawRaidCombatTexture(
   ctx: CanvasRenderingContext2D, texture: Texture, x: number, y: number,
-  width: number, height: number, rotation: number, additive: boolean,
+  width: number, height: number, rotation: number, additive: boolean, opacity = 1,
 ) {
   const source = texture.source.resource
   if (!source) return false
@@ -188,10 +211,40 @@ export function drawRaidCombatTexture(
   const resolution = texture.source.resolution
   ctx.save()
   ctx.globalCompositeOperation = additive ? 'lighter' : 'source-over'
+  if (opacity !== 1) ctx.globalAlpha *= opacity
   ctx.translate(x, y)
-  ctx.rotate(rotation)
+  if (rotation) ctx.rotate(rotation)
   ctx.drawImage(source as CanvasImageSource, frame.x * resolution, frame.y * resolution,
     frame.width * resolution, frame.height * resolution, -width / 2, -height / 2, width, height)
   ctx.restore()
   return true
+}
+
+export function drawRaidVfx(ctx: CanvasRenderingContext2D, tile: number, x: number, y: number,
+  width: number, height: number, opacity: number, rotation = 0, additive = false) {
+  const texture = getRaidVfxTexture(tile)
+  return !!texture && opacity > 0 && drawRaidCombatTexture(ctx, texture, x, y, width, height, rotation, additive, opacity)
+}
+
+/** Align a projection with its gameplay lane. Keep a readable cue if the atlas cannot load. */
+export function drawRaidVfxLane(ctx: CanvasRenderingContext2D, tile: number, x1: number, y1: number,
+  x2: number, y2: number, width: number, opacity: number) {
+  const dx = x2 - x1
+  const dy = y2 - y1
+  const length = Math.hypot(dx, dy)
+  if (length <= 0 || width <= 0) return
+  const x = (x1 + x2) * .5
+  const y = (y1 + y2) * .5
+  const rotation = Math.atan2(-dx, dy)
+  if (drawRaidVfx(ctx, tile, x, y, width, length, opacity, rotation)) return
+  ctx.save()
+  ctx.translate(x, y)
+  ctx.rotate(rotation)
+  ctx.globalAlpha *= opacity
+  ctx.fillStyle = tile === RAID_VFX_TILE.aim ? '#fbbf24' : tile === RAID_VFX_TILE.ionWake ? '#67e8f9' : '#fb7185'
+  const wide = tile === RAID_VFX_TILE.dangerLane || tile === RAID_VFX_TILE.ionWake
+  const fallbackWidth = wide ? width : Math.min(width, 2)
+  if (wide) ctx.globalAlpha *= .27
+  ctx.fillRect(-fallbackWidth / 2, -length / 2, fallbackWidth, length)
+  ctx.restore()
 }
