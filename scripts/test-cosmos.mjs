@@ -82,7 +82,7 @@ class Texture {static WHITE=frame}
 class Container {constructor(){this.position={set(){}};this.pivot={set(){}};this.scale={set(){}}} }
 class Graphics {constructor(){this.position={set(){}}} clear(){} }
 class RaidGpuForeground {}
-class RaidTravelMotion {x=0;y=0;}
+class RaidTravelMotion {x=0;y=0;drift=0;}
 `+source
 const background=await load(source)
 const scene=new background.PixiRaidBackground()
@@ -125,6 +125,18 @@ scene.travel.rush=1;scene.updateSpeedLines(1000,500,false,false,1)
 assert.equal(line.y,cruiseY,'changing rush strength teleported the line phase')
 assert.ok(line.alpha>beforeAlpha,'rush lines must be stronger than cruise')
 assert.equal(line.rotation,0)
+scene.travel.drift=.8;scene.updateSpeedLines(390,844,false,false,1)
+assert.ok(line.rotation>0 && line.rotation<.3,'side thrust should bank existing speed lines')
+scene.travel.drift=-.8;scene.updateSpeedLines(390,844,false,false,1)
+assert.ok(line.rotation<0,'turning back should reverse the bank')
+scene.cosmosEntered=0
+scene.updateBackgroundObjects(390,844,9,1,false,false)
+const flyby = scene.asteroidSprites.find(s=>s.visible&&s.zIndex===80)
+assert.ok(flyby?.texture.id>=0 && flyby.texture.id<4,'the near slot should reuse a cached ship wreck')
+assert.equal(flyby.alpha,1,'the wreck must occlude the starfield')
+scene.updateBackgroundObjects(390,844,9,1,false,true)
+assert.equal(scene.asteroidSprites.find(s=>s.visible&&s.zIndex===80)?.texture.id,undefined,'medium keeps the smaller asteroid flyby')
+assert.equal(background.sprites,count,'steering and wreck passes should reuse the sprite pool')
 scene.reducedMotion=true;scene.updateSpeedLines(1000,500,false,false,1)
 assert.ok(scene.speedLineSprites.every(s=>!s.visible))
 scene.reducedMotion=false

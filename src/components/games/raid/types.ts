@@ -118,6 +118,8 @@ export type Shot = Vec & {
   burning?: boolean
 }
 
+export type BossImpactKind = 'shield' | 'armor' | 'heavy' | 'core'
+
 export type Enemy = Vec & {
   id: number
   vx: number
@@ -138,6 +140,8 @@ export type Enemy = Vec & {
   bossEncounterAge?: number
   bossPhaseStartedAge?: number
   bossLastVolleyAge?: number
+  bossImpact?: Readonly<Vec & { kind: BossImpactKind; shotId: number }>
+  bossImpactTime?: number
   bossAttackState?: 'warning' | 'burst' | 'recovery'
   bossAttackPattern?: CommandPattern
   bossAttackSerial?: number

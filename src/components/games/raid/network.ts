@@ -288,6 +288,12 @@ export function interpolateEnemyVisual(previous: Enemy, next: Enemy, t: number) 
   if (previous.bossEncounterAge !== undefined && next.bossEncounterAge !== undefined) {
     visual.bossEncounterAge = previous.bossEncounterAge + (next.bossEncounterAge - previous.bossEncounterAge) * t
   }
+  if (previous.bossImpact?.shotId === next.bossImpact?.shotId && next.bossImpactTime !== undefined) {
+    visual.bossImpactTime = Math.max(0, (previous.bossImpactTime ?? next.bossImpactTime) * (1 - t) + next.bossImpactTime * t)
+  }
+  if (previous.defeatTimer !== undefined && next.defeatTimer !== undefined) {
+    visual.defeatTimer = Math.max(0, previous.defeatTimer * (1 - t) + next.defeatTimer * t)
+  }
   // Interpolate warning progress only within the same committed attack/state.
   // A packet switching attacks must never draw a warning at the previous target.
   if (previous.bossAttackSerial === next.bossAttackSerial && previous.bossAttackState === next.bossAttackState && next.bossAttackTimer !== undefined) {

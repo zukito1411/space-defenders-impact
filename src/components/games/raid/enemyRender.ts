@@ -1,4 +1,5 @@
-import { drawCommandBossEnergy, drawCommandBossHealthBar, drawCommandBossTelegraph } from './commandBossRender'
+import { drawHullDamage } from './bossDamageFx'
+import { drawCommandBossEnergy, drawCommandBossHealthBar, drawCommandBossTelegraph, prefersRaidReducedMotion } from './commandBossRender'
 import { drawGenericBossShip } from './genericBossRender'
 import { drawCanvasSpriteContain, drawSpriteGlow, getCanvasSpriteDimensions, getEliteAlienCanvasSprite, getEnemyCanvasSize, getNormalAlienCanvasSprite, getNormalAlienImageFilter } from './assets'
 import { DEG, STAGE_CLEAR_SECONDS } from './constants'
@@ -196,7 +197,11 @@ export function drawRaidEnemy(
       return
     }
     drawCommandBossTelegraph(ctx, enemy, toX, toY, viewportWidth)
-    drawGenericBossShip(ctx, enemy, x, y, size, rotation, floatScale, defeatFade)
+    const reducedMotion = prefersRaidReducedMotion()
+    const recoil = !reducedMotion && enemy.bossImpact?.kind === 'heavy' ? (enemy.bossImpactTime ?? 0) * size * .12 : 0
+    const drift = enemy.hp <= 0 && !reducedMotion ? (1 - defeatFade) * (enemy.id % 2 ? -.18 : .18) : 0
+    drawGenericBossShip(ctx, enemy, x, y - recoil, size, rotation + drift, floatScale, defeatFade)
+    drawHullDamage(ctx, enemy, x, y - recoil, size, rotation + drift, floatScale, reducedMotion, defeatFade)
     drawCommandBossEnergy(ctx, enemy, toX, toY, size)
     ctx.save()
     ctx.translate(x, y)

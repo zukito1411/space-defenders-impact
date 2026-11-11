@@ -198,6 +198,47 @@ warnings.drawCommandBossEnergy(effectsContext, {...effectBoss,bossEncounterAge:e
 assert.equal(arcs.length,0,'release effect must expire')
 assert.equal(ellipses.length,0,'phase pulse must expire')
 
+const damage = await load(source + '\n' + strip(read('src/components/games/raid/bossDamageFx.ts')))
+let strokes = 0, vents = 0, dots = 0, marks = []
+const hullContext = {
+ globalAlpha: 1, save(){}, restore(){}, beginPath(){}, translate(){}, rotate(){}, scale(){},
+ stroke(){ strokes++ }, ellipse(...args){ vents++; marks.push(args) }, fill(){}, fillRect(){ dots++ },
+ moveTo(){}, lineTo(){},
+}
+for (const profile of m.COMMAND_BOSS_PROFILES) {
+ const ship = boss(profile.stage, 1)
+ strokes = vents = dots = 0
+ damage.drawHullDamage(hullContext, ship, 0, 0, 130, 0, 1, true)
+ assert.equal(strokes, 0)
+ ship.hp = ship.maxHp * .65
+ damage.drawHullDamage(hullContext, ship, 0, 0, 130, 0, 1, true)
+ assert.equal(strokes, 1)
+ assert.equal(dots, 0)
+ ship.hp = ship.maxHp * .3
+ damage.drawHullDamage(hullContext, ship, 0, 0, 130, 0, 1, true)
+ assert.equal(strokes, 5, 'critical hull should show its three damage sites and exposed core')
+ ship.hp = 0
+ damage.drawHullDamage(hullContext, ship, 0, 0, 130, 0, 1, true)
+ assert.equal(vents, profile.stage === 11 ? 3 : 1, 'show dead thruster ports on defeat')
+}
+assert.ok(damage.BOSS_BREAKUP_DELAYS.length <= 5 && damage.BOSS_BREAKUP_DELAYS.at(-1) < 3.15)
+assert.notDeepEqual(damage.getBossBreakupPoint(boss(11), 0), damage.getBossBreakupPoint(boss(11), 1))
+
+const impactBoss = boss(11, .25)
+const contact = { id: 3, x: 51, y: 31, kind: 'pulse' }
+assert.equal(damage.recordBossImpact(impactBoss, contact, true), 'shield')
+assert.equal(damage.recordBossImpact(impactBoss, { ...contact, id: 4 }, true), undefined)
+marks = []
+damage.drawBossImpact(hullContext, impactBoss, 195, 168.8, 3.9, 8.44, 130, false)
+assert.equal(marks.length, 1)
+assert.ok(marks[0][0] > 195 && marks[0][1] > 168.8)
+assert.ok(Math.hypot(marks[0][0] - 195, marks[0][1] - 168.8) <= 130 * .52 + 1e-8)
+impactBoss.bossImpactTime = .09
+assert.equal(damage.recordBossImpact(impactBoss, contact, false), 'core')
+impactBoss.bossImpactTime = 0
+assert.equal(damage.recordBossImpact(impactBoss, { ...contact, kind: 'rocket' }, false), 'heavy')
+console.log('Boss damage: all hull damage stages, dead vents, shield placement, contact throttling and core/rocket cues passed')
+
 // Real network interpolation preserves committed targets and never blends different attack warnings.
 const net=read('src/components/games/raid/network.ts')
 const interpolation=await load('const cloneEnemy=e=>({...e});\n'+net.slice(net.indexOf('export function interpolateEnemyVisual('),net.indexOf('const enemyIdMapCache')))
@@ -206,6 +247,14 @@ const next={...prev,bossAttackTimer:.5,bossAimX:20}
 assert.equal(interpolation.interpolateEnemyVisual(prev,next,.5).bossAttackTimer,.75)
 assert.equal(interpolation.interpolateEnemyVisual(
  {...prev,bossEncounterAge:4}, {...next,bossEncounterAge:4.1}, .5).bossEncounterAge, 4.05)
+
+const oldImpact = { kind: 'shield', shotId: 11, x: 0, y: 2 }
+const oldFrame = { ...prev, bossImpact: oldImpact, bossImpactTime: .2, defeatTimer: 3 }
+const sameImpact = { ...oldFrame, bossImpactTime: .1, defeatTimer: 2.8 }
+assert.ok(Math.abs(interpolation.interpolateEnemyVisual(oldFrame, sameImpact, .5).bossImpactTime - .15) < 1e-8)
+assert.equal(interpolation.interpolateEnemyVisual(oldFrame, sameImpact, .5).defeatTimer, 2.9)
+const newImpact = { ...sameImpact, bossImpact: { ...oldImpact, shotId: 12 }, bossImpactTime: .22 }
+assert.equal(interpolation.interpolateEnemyVisual(oldFrame, newImpact, .5).bossImpactTime, .22)
 
 const changed={...next,bossAttackSerial:2,bossAttackTimer:1.1,bossAimX:80}
 assert.equal(interpolation.interpolateEnemyVisual(prev,changed,.5).bossAttackTimer,1.1)
@@ -243,7 +292,7 @@ const bossAlertRef={current:0},bossMessageRef={current:null};
 const BOSS_RUSH_MOTION_SCALE=1.18,BOSS_RUSH_SPECIAL_RECHARGE_SCALE=1.32,BOSS_RUSH_ATTACK_COOLDOWN_SCALE=.72;
 export let legacyFires=0,totalShots=0;
 const playBossCriticalStinger=()=>{},getNearestLivingPlayerThisTick=()=>player;
-const fireEnemy=()=>{legacyFires++},playGameSound=()=>{},addRipple=()=>{};
+const fireEnemy=()=>{legacyFires++},playGameSound=()=>{},playCommandBossCharge=()=>{},addRipple=()=>{};
 let shotId=0;
 const emitCommandBossShot=s=>{enemyShotsRef.current.push({...s,id:shotId++});totalShots++};
 export function tick(dt,now){const nowSeconds=now/1000;

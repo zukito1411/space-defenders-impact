@@ -1542,6 +1542,7 @@ export class PixiRaidBackground {
     this.speedLineGraphics.visible = false
     const limit = isLow || this.reducedMotion || !shouldDrawRaidSpeedLines(stageTheme) ? 0 : isMedium ? 2 : 4
     const rush = this.travel.rush
+    const bank = this.travel.drift * Math.min(.27, width / height * .34)
     for (let index = 0; index < this.speedLineSprites.length; index++) {
       const sprite = this.speedLineSprites[index]
       sprite.visible = index < limit
@@ -1551,10 +1552,10 @@ export class PixiRaidBackground {
       const span = height + maxLength * 2
       const y = ((this.travel.near * (2.4 + index * 0.3) + index * span * 0.31) % span + span) % span - maxLength
       const edge = clamp(Math.min((y + length * 0.5) / length, (height - y + length * 0.5) / length), 0, 1)
-      sprite.position.set(width * BACKGROUND_SPEED_LINES[index] - this.travel.x * width * 0.006, y)
+      sprite.position.set(width * BACKGROUND_SPEED_LINES[index] - bank * (y - height * .5) * .37, y)
       sprite.width = (isMedium ? 3 : 4.5) + rush * 1.5
       sprite.height = length
-      sprite.rotation = 0
+      sprite.rotation = bank
       sprite.tint = COSMIC_REGIONS[this.cosmosRegion < 0 ? 0 : this.cosmosRegion].tint
       sprite.alpha = ((isMedium ? 0.18 : 0.22) + rush * 0.3) * edge
     }
@@ -2570,9 +2571,14 @@ export class PixiRaidBackground {
         const pass = edgeFlyby(seconds - this.cosmosEntered, edgeSlot)
         sprite.visible = pass >= 0
         if (pass < 0) continue
-        const size = Math.min(width, height) * 0.23
-        setPixiSpriteContain(sprite, asteroidTexture, width * (edgeSlot === 0 ? 0.015 : 0.985),
-          -size + pass * (height + size * 2), size, size, 1, seconds * 0.08)
+        const passingWreck = !this.reducedMotion && !isMedium && edgeSlot === 0
+          ? getWreckTexture(sceneryWreckDesign(this.wreckSeed, 9, Math.floor((seconds - this.cosmosEntered) / 26), 'ship'))
+          : undefined
+        const size = Math.min(width, height) * (passingWreck ? .37 : .23)
+        const x = width * (edgeSlot === 0 ? .015 : .985)
+        const y = -size + pass * (height + size * 2)
+        setPixiSpriteContain(sprite, passingWreck ?? asteroidTexture, x, y, size, size, 1,
+          passingWreck ? -.24 + pass * .4 : seconds * .08)
         continue
       }
       const asteroid = BACKGROUND_ASTEROIDS[index]
@@ -2586,7 +2592,8 @@ export class PixiRaidBackground {
       sprite.tint = sceneryTint(COSMIC_REGIONS[this.cosmosRegion < 0 ? 0 : this.cosmosRegion].tint, 0.5)
       const debris = BACKGROUND_DEBRIS[index]
       const y = ((seconds * debris.speed + debris.delay / 48 + 1) % 1) * height * 1.2 - height * 0.05
-      setPixiSpriteContain(sprite, asteroidTexture, width * debris.x, y, debris.width * 1.35 * scene.debrisBias, debris.height * 1.35 * scene.debrisBias, 1, seconds * debris.spin * DEG / 12)
+      const x = width * (debris.x - this.travel.x * .04 - this.travel.drift * .024)
+      setPixiSpriteContain(sprite, asteroidTexture, x, y, debris.width * 1.35 * scene.debrisBias, debris.height * 1.35 * scene.debrisBias, 1, seconds * debris.spin * DEG / 12)
     }
   }
 

@@ -191,7 +191,12 @@ export function applyStartingStageLevel(player: Player, stage: number) {
   player.rank = clamp(stage, 1, PLAYER_MAX_RANK)
 }
 
-export function animateStageClearPlayer(player: Player, dt: number, targetX: number) {
+export function animateStageClearPlayer(player: Player, dt: number, laneX: number,
+  pointer?: Vec | null, keys?: ReadonlySet<string>) {
+  const left = keys?.has('arrowleft') || keys?.has('a')
+  const right = keys?.has('arrowright') || keys?.has('d')
+  const targetX = pointer ? clamp(pointer.x, laneX - 11, laneX + 11)
+    : laneX + 11 * (Number(Boolean(right)) - Number(Boolean(left)))
   player.x += (targetX - player.x) * Math.min(1, dt * 4.8)
   player.y = Math.max(-26, player.y - dt * 38)
   player.engineBoost = Math.max(player.engineBoost ?? 0, 1.18)
