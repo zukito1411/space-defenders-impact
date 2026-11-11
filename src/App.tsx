@@ -1,4 +1,4 @@
-import { getRaidShipNozzles } from './components/games/raid/shipArtwork'
+import { getRaidExhaustScale, getRaidShipNozzles } from './components/games/raid/shipArtwork'
 import { getDefaultPlayerVisualShipKey } from './components/games/raid/state'
 import { useDoorState } from './components/ui/SpaceDoor'
 import './App.css'
@@ -1350,6 +1350,7 @@ function App() {
     const selectedCosmetics = getEquippedShipCosmetics(progress, selectedShip.key)
     const selectedSpriteKey = getDefaultPlayerVisualShipKey(selectedShip.key, progress)
     const previewNozzles = getRaidShipNozzles(selectedSpriteKey)
+    const previewTrailOverHull = selectedSpriteKey === 'godGundam' || selectedSpriteKey === 'spiegel'
     const previewSize = selectedShip.key === 'mesiah' ? 136 : selectedShip.key === 'coreLander' ? 122 : 106
     const trailClass = selectedCosmetics.trail ? 'raid-hangar__trail raid-hangar__trail--active' : 'raid-hangar__trail'
     const selectedAttackClass = getHangarAttackClass(selectedShip.key)
@@ -1386,6 +1387,7 @@ function App() {
                 <div className={isSelectedUnlocked ? 'raid-hangar__display' : 'raid-hangar__display raid-hangar__display--locked'}>
                   <div className={selectedCosmetics.aura ? 'raid-hangar__aura raid-hangar__aura--active' : 'raid-hangar__aura'} />
                   <div className={selectedCosmetics.frame ? 'raid-hangar__frame raid-hangar__frame--active' : 'raid-hangar__frame'} />
+                  {previewTrailOverHull && <RaidShipSprite shipKey={selectedSpriteKey} size={previewSize} />}
                   {previewNozzles ? previewNozzles.map(([x, y, width]) => (
                     <div
                       className={`${trailClass} raid-hangar__trail--nozzle`}
@@ -1394,11 +1396,11 @@ function App() {
                         left: `calc(50% + ${x * previewSize}px)`,
                         top: `calc(50% + ${y * previewSize}px)`,
                         width: width * previewSize,
-                        height: previewSize * (selectedCosmetics.trail ? .46 : .34),
+                        height: previewSize * getRaidExhaustScale(selectedSpriteKey, previewNozzles.length) * (selectedCosmetics.trail ? .57 : .42),
                       }}
                     />
                   )) : <div className={trailClass} />}
-                  <RaidShipSprite shipKey={selectedSpriteKey} size={previewSize} />
+                  {!previewTrailOverHull && <RaidShipSprite shipKey={selectedSpriteKey} size={previewSize} />}
                 </div>
                 <div className={`raid-hangar__attack raid-hangar__attack--${selectedAttackClass}`} aria-hidden="true">
                   <i />

@@ -66,7 +66,7 @@ for (const key of [...art.RAID_ELITE_FRAME_KEYS, ...shipKeys.filter(key => key !
   assert.ok(file.length < 38_000)
   assert.equal(file.toString('ascii', 12, 16), 'VP8X')
   assert.ok(file[20] & 0x10, url + ' requires an alpha channel')
-  assert.ok(art.getRaidShipNozzleY(key) > .25 && art.getRaidShipNozzleY(key) < .48)
+  assert.ok(art.getRaidShipNozzles(key)?.every(([x, y, aperture]) => Math.abs(x) < .5 && Math.abs(y) < .5 && aperture > 0))
 }
 assert.equal(art.getRaidShipSpriteUrl('godGundam'), 'assets/ships/god-gundam.png')
 assert.equal(art.getRaidShipSpriteUrl('spiegel'), 'assets/ships/spiegel.png')

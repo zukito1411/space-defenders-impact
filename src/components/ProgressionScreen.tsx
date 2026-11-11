@@ -1,5 +1,5 @@
 import { getDefaultPlayerVisualShipKey } from './games/raid/state'
-import { getRaidShipBaseVisualKey, getRaidShipNozzles, getRaidShipNozzleY } from './games/raid/shipArtwork'
+import { getRaidExhaustScale, getRaidShipBaseVisualKey, getRaidShipNozzles, usesRaidRemasteredHullArt } from './games/raid/shipArtwork'
 import { LEGACY_FIGHTER_COUNT, RAID_FIGHTER_DEBUT_STAGES } from './games/raid/stageEncounters'
 import { GameButton } from './ui/GameButton'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
@@ -1369,7 +1369,7 @@ function getPreviewShipFrameFilter(shipKey: string) {
 function drawPreviewShipSprite(ctx: CanvasRenderingContext2D, image: HTMLImageElement, x: number, y: number, size: number, framed: boolean, locked = false, shipKey = '') {
   if (!image.complete) return
   ctx.save()
-  ctx.filter = locked ? 'brightness(0) contrast(1.18) drop-shadow(0 0 14px rgba(0,0,0,0.88))' : getRaidShipNozzleY(shipKey) !== undefined ? 'none' : framed ? getPreviewShipFrameFilter(shipKey) : 'brightness(1.12) contrast(1.14) saturate(1.26)'
+  ctx.filter = locked ? 'brightness(0) contrast(1.18) drop-shadow(0 0 14px rgba(0,0,0,0.88))' : usesRaidRemasteredHullArt(shipKey) ? 'none' : framed ? getPreviewShipFrameFilter(shipKey) : 'brightness(1.12) contrast(1.14) saturate(1.26)'
   ctx.drawImage(image, x - size / 2, y - size / 2, size, size)
   ctx.restore()
 }
@@ -1378,27 +1378,16 @@ function drawPreviewMasteryTrail(ctx: CanvasRenderingContext2D, x: number, y: nu
   const pulse = 0.96 + Math.sin(time / 180) * 0.05
   const baseKey = getRaidShipBaseVisualKey(shipKey)
   const tailScale = baseKey === 'spaceEt' ? 1.18 : baseKey === 'dreadnought' ? 0.92 : 1
-  const usesCombatModel = shipKey === 'godGundam' || shipKey === 'spiegel'
-  const engineSize = usesCombatModel ? size * 0.28 : baseKey === 'coreLander' ? size * 0.74 : size
   const nozzles = getRaidShipNozzles(shipKey)
-  if (nozzles) {
-    const wakeSize = engineSize * (nozzles.length === 1 ? .94 : .67)
-    for (const [offsetX, offsetY, aperture] of nozzles) {
-      drawSinglePreviewMasteryTrail(ctx, x + size * offsetX, y + size * offsetY - .34 * wakeSize, wakeSize,
-        pulse, tailScale, baseKey, style, size * aperture)
-    }
+  if (!nozzles) {
+    drawSinglePreviewMasteryTrail(ctx, x, y, size, pulse, tailScale, baseKey, style)
     return
   }
-  const nozzleY = getRaidShipNozzleY(shipKey)
-  const engineY = nozzleY !== undefined ? y + nozzleY * size - .34 * engineSize
-    : usesCombatModel ? y - size * 0.285 : baseKey === 'coreLander' ? y - size * 0.085 : y
-  if (usesCombatModel) {
-    const ventOffset = engineSize * 0.08
-    drawSinglePreviewMasteryTrail(ctx, x - ventOffset, engineY, engineSize, pulse, tailScale, shipKey, style)
-    drawSinglePreviewMasteryTrail(ctx, x + ventOffset, engineY, engineSize, pulse, tailScale, shipKey, style)
-    return
+  const wakeSize = size * getRaidExhaustScale(shipKey, nozzles.length)
+  for (const [offsetX, offsetY, aperture] of nozzles) {
+    drawSinglePreviewMasteryTrail(ctx, x + size * offsetX, y + size * offsetY - .34 * wakeSize, wakeSize,
+      pulse, tailScale, baseKey, style, size * aperture)
   }
-  drawSinglePreviewMasteryTrail(ctx, x, engineY, engineSize, pulse, tailScale, baseKey, style)
 }
 
 function drawSinglePreviewMasteryTrail(ctx: CanvasRenderingContext2D, x: number, engineY: number, engineSize: number, pulse: number, tailScale: number, shipKey: string, style: ShipPreviewVisualStyle, nozzleWidth?: number) {
