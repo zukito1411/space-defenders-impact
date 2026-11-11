@@ -4,16 +4,23 @@ import ts from 'typescript'
 const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8')
 const strip=s=>s.replace(/^import .*\n/gm,'')
 const load=source=>import('data:text/javascript;base64,'+Buffer.from(ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText).toString('base64'))
-const source=strip(read('src/components/games/raid/bossCatalog.ts'))+strip(read('src/components/games/raid/commandBoss.ts'))
+const source='const PLAYER_MAX_RANK=20;\n'+strip(read('src/components/games/raid/bossCatalog.ts'))+strip(read('src/components/games/raid/commandBoss.ts'))
 const m=await load(source)
 const boss=(stage,hp=1)=>({isBoss:true,bossKind:m.getCampaignBossKind(stage),bossArtStage:stage,id:1,x:50,y:20,hp:10000*hp,maxHp:10000,shieldTime:0,phase:0,radius:12,chargeLane:50,chargeTimer:0,chargeCooldown:0,fireCooldown:0})
 assert.equal(m.COMMAND_BOSS_PROFILES.length,12)
 assert.equal(new Set(m.COMMAND_BOSS_PROFILES.map(p=>JSON.stringify([p.sequence,p.movement,p.speed,p.warning]))).size,12)
 for(const profile of m.COMMAND_BOSS_PROFILES) {
- for(const rank of [1,5,20])for(const difficulty of ['easy','normal','hard','expert']) {
-  const scale=m.getCommandBossHpScale(m.getCampaignBossKind(profile.stage),profile.stage,rank,undefined,difficulty)
-  assert.ok(scale>=1.08&&scale<=1.54)
+ const kind = m.getCampaignBossKind(profile.stage)
+ for (const difficulty of ['easy', 'normal', 'hard', 'expert']) {
+  const hp = rank => m.getCommandBossHpScale(kind, profile.stage, rank, undefined, difficulty)
+  assert.equal(hp(1), profile.hp)
+  assert.ok(hp(10) > hp(1) * 1.35)
+  assert.ok(hp(20) - hp(10) > hp(10) - hp(1), 'higher ranks should add more HP')
+  assert.equal(hp(21), hp(20))
+  assert.equal(hp(NaN), hp(1))
  }
+ const maxRank = m.getCommandBossHpScale(kind, profile.stage, 20)
+ assert.ok(maxRank >= profile.hp * 2.86 && maxRank <= profile.hp * 2.863)
  assert.equal(m.getCommandBossHpScale(m.getCampaignBossKind(profile.stage),profile.stage,10,20),m.getCommandBossHpScale(m.getCampaignBossKind(profile.stage),profile.stage,15))
 }
 for(const kind of ['squid','snake','final','devil'])assert.equal(m.getCommandBossHpScale(kind,15,20),1)
@@ -93,6 +100,7 @@ const capped=boss(13);let emitted=0
 m.advanceCommandBoss(capped,.01,[{x:50,y:80}],'expert',0,()=>emitted++)
 for(let i=0;i<20;i++)m.advanceCommandBoss(capped,.1,[{x:50,y:80}],'expert',0,()=>emitted++)
 assert.equal(emitted,0)
+assert.equal(capped.bossLastVolleyAge, undefined)
 m.interruptCommandBoss(capped)
 for(let i=0;i<8;i++)m.advanceCommandBoss(capped,.1,[{x:50,y:80}],'expert',120,()=>emitted++)
 assert.equal(emitted,0,'nuke caused an immediate retaliation')
@@ -155,12 +163,50 @@ for(const [w,h] of [[390,844],[1280,720]])for(const p of m.COMMAND_BOSS_PROFILES
  }
  if(pattern==='hydra')assert.equal(moves.length,3,'Hydra warning failed to preview every staggered head')
 }
+// Use the production renderer to check that phase and muzzle effects follow simulation events.
+const effectBoss = boss(11, .5)
+m.advanceCommandBoss(effectBoss, .01, [{x:50,y:80}], 'normal', 120, () => {})
+assert.equal(effectBoss.bossPhaseStartedAge, effectBoss.bossEncounterAge)
+const arcs = [], ellipses = [], fills = [], labels = []
+const effectsContext = {
+ save(){}, restore(){}, beginPath(){}, moveTo(){}, stroke(){}, fill(){},
+ arc(...args){ arcs.push(args) },
+ ellipse(...args){ ellipses.push(args) },
+ fillRect(...args){ fills.push(args) },
+ fillText(...args){ labels.push(args) },
+}
+warnings.drawCommandBossEnergy(effectsContext, effectBoss, x=>x*3.9, y=>y*8.44, 130)
+assert.equal(ellipses.length,1,'phase change should trigger a pulse')
+assert.equal(arcs.length,2,'charge ring should show the outline and progress')
+assert.equal(arcs[1][3],arcs[1][4],'the charge arc starts empty')
+warnings.drawCommandBossHealthBar(effectsContext, effectBoss, 195, 168.8, 130)
+assert.deepEqual(fills.slice(-2).map(([left])=>left),[136.5+117*.3-1,136.5+117*.65-1])
+assert.equal(labels[0][0],m.getGenericBossArt(effectBoss.bossKind,11).name)
+
+const released = []
+for (let step = 0; step < 100 && !released.length; step++) {
+ m.advanceCommandBoss(effectBoss, .02, [{x:50,y:80}], 'normal', 120, shot => released.push({...shot}))
+}
+assert.equal(released.length,1)
+assert.equal(effectBoss.bossLastVolleyAge, effectBoss.bossEncounterAge)
+arcs.length=0
+warnings.drawCommandBossEnergy(effectsContext, effectBoss, x=>x*3.9, y=>y*8.44, 130)
+assert.deepEqual(arcs.map(arc=>arc.slice(0,2)), released.map(shot=>[shot.x*3.9,shot.y*8.44]), 'flash must use actual staggered firing points')
+arcs.length=0
+ellipses.length=0
+warnings.drawCommandBossEnergy(effectsContext, {...effectBoss,bossEncounterAge:effectBoss.bossEncounterAge+1}, x=>x,y=>y,130)
+assert.equal(arcs.length,0,'release effect must expire')
+assert.equal(ellipses.length,0,'phase pulse must expire')
+
 // Real network interpolation preserves committed targets and never blends different attack warnings.
 const net=read('src/components/games/raid/network.ts')
 const interpolation=await load('const cloneEnemy=e=>({...e});\n'+net.slice(net.indexOf('export function interpolateEnemyVisual('),net.indexOf('const enemyIdMapCache')))
 const prev={...boss(12),bossAttackState:'warning',bossAttackSerial:1,bossAttackTimer:1,bossAimX:20}
 const next={...prev,bossAttackTimer:.5,bossAimX:20}
 assert.equal(interpolation.interpolateEnemyVisual(prev,next,.5).bossAttackTimer,.75)
+assert.equal(interpolation.interpolateEnemyVisual(
+ {...prev,bossEncounterAge:4}, {...next,bossEncounterAge:4.1}, .5).bossEncounterAge, 4.05)
+
 const changed={...next,bossAttackSerial:2,bossAttackTimer:1.1,bossAimX:80}
 assert.equal(interpolation.interpolateEnemyVisual(prev,changed,.5).bossAttackTimer,1.1)
 assert.equal(interpolation.interpolateEnemyVisual(prev,changed,.5).bossAimX,80)
@@ -178,11 +224,11 @@ const HEIGHT=100,NUKE_FLASH_SECONDS=1;
 const addRipple=()=>{},spawnSparks=()=>{},triggerScreenShake=()=>{},playGameSound=()=>{},syncSnapshot=()=>{};
 const getNukeBossDamage=()=>1000;
 `+nuke+'\nexport {detonateNuke};')
-const charged={...boss(12),bossEncounterAge:8,bossAttackState:'warning',bossAttackTimer:.1,bossAttackPattern:'twinBeam'}
+const charged={...boss(12),bossEncounterAge:8,bossAttackState:'warning',bossAttackTimer:.1,bossAttackPattern:'twinBeam',bossLastVolleyAge:7.95}
 nukeHarness.enemiesRef.current.push(charged);nukeHarness.enemyShotsRef.current.push({})
 nukeHarness.detonateNuke()
 assert.equal(nukeHarness.enemyShotsRef.current.length,0)
-assert.equal(charged.hp,9000);assert.equal(charged.bossAttackState,'recovery');assert.equal(charged.bossAttackTimer,.9)
+assert.equal(charged.bossLastVolleyAge,undefined);assert.equal(charged.hp,9000);assert.equal(charged.bossAttackState,'recovery');assert.equal(charged.bossAttackTimer,.9)
 console.log('Command warnings/integration: matching beam hit lanes, bounded Canvas strokes, three-head preview, atomic co-op warnings and real nuke interruption passed')
 // Execute the production host enemy loop, not only the standalone scheduler.
 const updateStart=runtime.indexOf('  const updateGame = useCallback(')

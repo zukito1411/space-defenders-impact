@@ -1,4 +1,5 @@
 import { getGenericBossArt } from './bossCatalog'
+import { PLAYER_MAX_RANK } from './constants'
 import type { Enemy, RaidDifficulty, Shot, Vec } from './types'
 
 export type CommandPattern = 'fan' | 'snipe' | 'iris' | 'reverseIris' | 'pincer' | 'sweep' | 'curtain' | 'hydra' | 'beam' | 'twinBeam' | 'fork'
@@ -33,6 +34,7 @@ const clamp = (value: number, low: number, high: number) => Math.max(low, Math.m
 export const COMMAND_SHOT_LIMIT = 120 // below the co-op packet's 140-shot limit; same on every graphics quality.
 export const COMMAND_VOLLEY_LIMIT = 12
 export const COMMAND_WARNING = 1, COMMAND_FIRED = 2, COMMAND_PHASE = 4
+export const COMMAND_PHASE_HP = { pressure: .65, critical: .30 } as const
 export const isCommandBeam = (pattern?: CommandPattern) => pattern === 'beam' || pattern === 'twinBeam'
 export function getCommandBossProfile(enemy: Pick<Enemy, 'isBoss' | 'bossKind' | 'bossArtStage'>) {
   if (!enemy.isBoss) return undefined
@@ -44,8 +46,12 @@ export function getCommandBossHpScale(kind: Enemy['bossKind'], stage: number, ra
   const art = getGenericBossArt(kind, stage)
   const profile = art && PROFILES_BY_STAGE.get(art.stage)
   if (!profile) return 1
-  const meanRank = partnerRank === undefined ? rank : (rank + partnerRank) * .5
-  const rankPressure = clamp(meanRank - 1, 0, 19) * .016
+  const pilotRank = clamp(Number.isFinite(rank) ? rank : 1, 1, PLAYER_MAX_RANK)
+  const meanRank = partnerRank !== undefined && Number.isFinite(partnerRank)
+    ? (pilotRank + clamp(partnerRank, 1, PLAYER_MAX_RANK)) / 2
+    : pilotRank
+  const levels = meanRank - 1
+  const rankPressure = .06 * levels + .002 * levels * levels
   return profile.hp * (1 + rankPressure * (difficulty === 'easy' ? .5 : 1))
 }
 
@@ -131,10 +137,13 @@ const releaseScratch = createCommandVolley()
 function beginAttack(enemy: Enemy, profile: CommandBossProfile, targets: readonly Vec[], difficulty: RaidDifficulty) {
   const serial = (enemy.bossAttackSerial ?? -1) + 1
   const target = targets[serial % targets.length]
-  const phase = enemy.hp / Math.max(1, enemy.maxHp) <= .3 ? 2 : enemy.hp / Math.max(1, enemy.maxHp) <= .65 ? 1 : 0
+  const hpRatio = enemy.hp / Math.max(1, enemy.maxHp)
+  const phase = hpRatio <= COMMAND_PHASE_HP.critical ? 2 : hpRatio <= COMMAND_PHASE_HP.pressure ? 1 : 0
   const changed = phase > (enemy.bossCombatPhase ?? 0)
   const pattern = profile.sequence[serial % profile.sequence.length]
   const tune = TACTICS[difficulty]
+  if (changed) enemy.bossPhaseStartedAge = enemy.bossEncounterAge
+  enemy.bossLastVolleyAge = undefined
   enemy.bossCombatPhase = phase
   enemy.bossAttackSerial = serial
   enemy.bossAttackPattern = pattern
@@ -187,6 +196,7 @@ export function advanceCommandBoss(enemy: Enemy, dt: number, targets: readonly V
     return 0
   }
   for (let i = 0; i < count; i++) emit(releaseScratch[i])
+  if (count > 0) enemy.bossLastVolleyAge = enemy.bossEncounterAge
   enemy.bossBurstIndex = (enemy.bossBurstIndex ?? 0) + 1
   if (enemy.bossBurstIndex < (enemy.bossBurstCount ?? 1)) {
     enemy.bossAttackState = 'burst'; enemy.bossAttackTimer = .32 - overshoot
@@ -197,5 +207,6 @@ export function advanceCommandBoss(enemy: Enemy, dt: number, targets: readonly V
 }
 export function interruptCommandBoss(enemy: Enemy) {
   if (!getCommandBossProfile(enemy) || enemy.bossEncounterAge === undefined) return
+  enemy.bossLastVolleyAge = undefined
   enemy.bossAttackState = 'recovery'; enemy.bossAttackTimer = .9; enemy.bossBurstIndex = 0
 }

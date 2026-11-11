@@ -1,4 +1,4 @@
-import { drawCommandBossTelegraph } from './commandBossRender'
+import { drawCommandBossEnergy, drawCommandBossHealthBar, drawCommandBossTelegraph } from './commandBossRender'
 import { drawGenericBossShip } from './genericBossRender'
 import { drawCanvasSpriteContain, drawSpriteGlow, getCanvasSpriteDimensions, getEliteAlienCanvasSprite, getEnemyCanvasSize, getNormalAlienCanvasSprite, getNormalAlienImageFilter } from './assets'
 import { DEG, STAGE_CLEAR_SECONDS } from './constants'
@@ -197,6 +197,7 @@ export function drawRaidEnemy(
     }
     drawCommandBossTelegraph(ctx, enemy, toX, toY, viewportWidth)
     drawGenericBossShip(ctx, enemy, x, y, size, rotation, floatScale, defeatFade)
+    drawCommandBossEnergy(ctx, enemy, toX, toY, size)
     ctx.save()
     ctx.translate(x, y)
     ctx.globalAlpha *= defeatFade
@@ -204,7 +205,7 @@ export function drawRaidEnemy(
     ctx.restore()
     if (enemy.hp > 0) {
       if (enemy.shieldTime > 0 || enemy.y < 15) drawBossShield(ctx, x, y, size, time, enemy.color)
-      drawCachedBossBar(ctx, enemy, x, y, size)
+      drawCommandBossHealthBar(ctx, enemy, x, y, size)
     }
     return
   }

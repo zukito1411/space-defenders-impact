@@ -64,15 +64,17 @@ retaliation.
 
 ## HP tuning
 
-The original boss HP formula and its weapon-stack, co-op and difficulty terms are
-preserved, then multiplied once at spawn by:
+At spawn, the game multiplies the existing boss HP formula by the hull's HP
+factor (1.08–1.18) and a rank factor. Let `levels` be the pilot's rank minus
+one. Co-op uses the mean of the two pilot ranks. Each rank is bounded by the
+game's player rank range before averaging.
 
-`profile HP (1.08–1.18) * (1 + min(19, max(0, mean rank - 1)) * 0.016)`
+`rank factor = 1 + .06 * levels + .002 * levels * levels`
 
-For Easy the additional rank pressure is halved. Solo uses its pilot's rank; co-op
-uses mean rank. This gives 8–18% extra HP at rank 1 and up to ~54% total at rank 20,
-without mid-fight HP rescaling or erasing the damage reward from progression.
-Shots keep normal damage; escalation comes primarily from attack choices/timing.
+Easy halves the added rank pressure. At ranks 1, 10, and 20, the Normal rank
+factors are 1.000, 1.702, and 2.862. With the same loadout, a rank 10 boss has
+about 49% more HP than in the previous build, and a rank 20 boss has about 2.2
+times its previous HP. The maximum HP is fixed for the encounter.
 
 ## Deterministic simulation audit
 
@@ -83,18 +85,18 @@ wall-clock phase zero. Counts are volleys, not individual bullets or kill times.
 
 | Stage | Legacy volleys | New volleys: full / 55% / 20% HP | Peak live shots | HP factor: rank 1 / 20 |
 | --- | --- | --- | --- | --- |
-| 1 | 16 | 29 / 54 / 58 | 16 | 1.08 / 1.408 |
-| 2 | 16 | 29 / 54 / 58 | 31 | 1.08 / 1.408 |
-| 3 | 17 | 30 / 55 / 60 | 14 | 1.10 / 1.434 |
-| 4 | 20 | 30 / 56 / 60 | 14 | 1.10 / 1.434 |
-| 6 | 21 | 27 / 45 / 48 | 28 | 1.12 / 1.460 |
-| 7 | 20 | 31 / 57 / 62 | 24 | 1.12 / 1.460 |
-| 8 | 23 | 52 / 72 / 78 | 46 | 1.14 / 1.487 |
-| 9 | 22 | 54 / 75 / 80 | 16 | 1.14 / 1.487 |
-| 11 | 28 | 62 / 73 / 78 | 12 | 1.16 / 1.513 |
-| 12 | 29 | 39 / 52 / 56 | 23 | 1.16 / 1.513 |
-| 13 | 30 | 52 / 73 / 78 | 34 | 1.18 / 1.539 |
-| 14 | 31 | 51 / 72 / 76 | 48 | 1.18 / 1.539 |
+| 1 | 16 | 29 / 54 / 58 | 16 | 1.08 / 3.091 |
+| 2 | 16 | 29 / 54 / 58 | 31 | 1.08 / 3.091 |
+| 3 | 17 | 30 / 55 / 60 | 14 | 1.10 / 3.148 |
+| 4 | 20 | 30 / 56 / 60 | 14 | 1.10 / 3.148 |
+| 6 | 21 | 27 / 45 / 48 | 28 | 1.12 / 3.205 |
+| 7 | 20 | 31 / 57 / 62 | 24 | 1.12 / 3.205 |
+| 8 | 23 | 52 / 72 / 78 | 46 | 1.14 / 3.263 |
+| 9 | 22 | 54 / 75 / 80 | 16 | 1.14 / 3.263 |
+| 11 | 28 | 62 / 73 / 78 | 12 | 1.16 / 3.320 |
+| 12 | 29 | 39 / 52 / 56 | 23 | 1.16 / 3.320 |
+| 13 | 30 | 52 / 73 / 78 | 34 | 1.18 / 3.377 |
+| 14 | 31 | 51 / 72 / 76 | 48 | 1.18 / 3.377 |
 
 The complete diagnostics are in `command-boss-simulation.json`, generated with:
 
@@ -107,10 +109,13 @@ volley if it would exceed 120 enemy shots, leaving room below the co-op packet's
 visual quality; lower graphics settings do not remove hazards or warnings.
 
 Every burst has at most 12 projectiles. Recipes reuse two small scratch arrays
-(simulation and warnings); projectiles use the already-cached materials. Warnings
+(simulation and rendering); projectiles use the already-cached materials. Warnings
 need at most twelve simple trajectory strokes in one Canvas path, or two beam
-strips. There are no new sprite atlases, blur/gradient passes, worker jobs or dynamic
-body textures. A stable emit callback avoids a new callback per simulation tick.
+strips. Charge rings, muzzle flashes, and phase shockwaves follow the encounter
+clock and use short-lived Canvas strokes with the same scratch recipe. The
+reduced-motion preference limits expansion. The hull name and the 65% and 30%
+phase markers appear on its health bar. A stable emit callback avoids a new
+callback per simulation tick.
 
 ## Verification and limits
 
@@ -118,6 +123,8 @@ Tests execute the scheduler at 30/60/144 Hz, all profiles/phases/difficulties, e
 protection, movement and speed caps, locked targets, HP changes mid-warning,
 atomic budget skips, co-op target alternation, real network warning interpolation,
 real nuke callback, portrait/landscape warning geometry and full pattern coverage.
+Renderer assertions cover the phase pulse, charge ring, muzzle origin and expiry,
+and health bar thresholds.
 The almanac tests exercise actual entry construction/unlock gates and all four
 languages; cards include each hull's tactics, and a shared guide explains phases,
 colors and nuke interrupts. Existing regression scripts and production packaging
