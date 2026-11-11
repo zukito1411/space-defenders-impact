@@ -1,3 +1,4 @@
+import { drawCommandBossTelegraph } from './commandBossRender'
 import { drawGenericBossShip } from './genericBossRender'
 import { drawCanvasSpriteContain, drawSpriteGlow, getCanvasSpriteDimensions, getEliteAlienCanvasSprite, getEnemyCanvasSize, getNormalAlienCanvasSprite, getNormalAlienImageFilter } from './assets'
 import { DEG, STAGE_CLEAR_SECONDS } from './constants'
@@ -194,6 +195,7 @@ export function drawRaidEnemy(
       }
       return
     }
+    drawCommandBossTelegraph(ctx, enemy, toX, toY, viewportWidth)
     drawGenericBossShip(ctx, enemy, x, y, size, rotation, floatScale, defeatFade)
     ctx.save()
     ctx.translate(x, y)

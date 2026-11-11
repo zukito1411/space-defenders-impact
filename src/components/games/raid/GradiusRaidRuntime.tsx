@@ -1,3 +1,4 @@
+import { advanceCommandBoss, getCommandBossProfile, getCommandBossHpScale, interruptCommandBoss, isCommandBeam, COMMAND_SHOT_LIMIT, COMMAND_WARNING, COMMAND_FIRED, COMMAND_PHASE } from './commandBoss'
 import { getCampaignBossKind, getGenericBossArt } from './bossCatalog'
 import { pickGameplayWreckVariant } from './wreckVariety'
 import { getRaidStageEntrySeconds } from './journey'
@@ -2578,6 +2579,7 @@ export function GradiusRaid({
         const damage = getNukeBossDamage(enemy, stageRef.current)
         enemy.shieldTime = 0
         if (enemy.bossKind !== 'final' && enemy.bossKind !== 'devil') enemy.chargeTimer = 0
+        interruptCommandBoss(enemy)
         enemy.hp = Math.max(1, enemy.hp - damage)
         survivors.push(enemy)
         addRipple(enemy.x, enemy.y, '#fbbf24', enemy.bossKind === 'final' ? 26 : 20)
@@ -3052,6 +3054,10 @@ export function GradiusRaid({
     const target = fireCaptureRef.current ?? shotsRef.current
     const scale = missileLaunchScale(shot.kind)
     target.push({ ...shot, vx: shot.vx * scale, vy: shot.vy * scale, id: shotId++ })
+  }, [])
+
+  const emitCommandBossShot = useCallback((shot: Omit<Shot, 'id'>) => {
+    enemyShotsRef.current.push({ ...shot, id: shotId++ })
   }, [])
 
   const firePlayer = useCallback((sourcePlayer = playerRef.current) => {
@@ -3797,7 +3803,8 @@ export function GradiusRaid({
     const bossBaseHp = bossKind === 'devil'
       ? 1300 + wave * 165 + stagePressure * 290 + powerScore * 80
       : 1450 + wave * 180 + stagePressure * 320 + powerScore * 90
-    const hp = Math.round(bossBaseHp * hpMultiplier * multiplayerBossMultiplier * enemyHpMultRef.current)
+    const hp = Math.round(bossBaseHp * hpMultiplier * multiplayerBossMultiplier * enemyHpMultRef.current *
+      getCommandBossHpScale(bossKind, stage, player.rank, remotePlayerRef.current?.rank, raidDifficultyRef.current))
     const radius =
       bossKind === 'devil' ? 12.8 :
         bossKind === 'final' ? 25 :
@@ -4089,6 +4096,7 @@ export function GradiusRaid({
 
   const fireEnemy = useCallback((enemy: Enemy, player: Player, time = performance.now()) => {
     if (enemy.isBoss) {
+      if (getCommandBossProfile(enemy)) return // Command hulls use their authoritative encounter scheduler.
       const kind = enemy.bossKind === 'final' && enemy.mirageKind && (enemy.mirageTimer ?? 0) > 0 ? enemy.mirageKind : enemy.bossKind ?? 'carrier'
       if (kind === 'squid') {
         const sweep = Math.sin(time / 320) * 18
@@ -4122,61 +4130,6 @@ export function GradiusRaid({
         ;[-18, 18].forEach((offset) => {
           enemyShotsRef.current.push({ id: shotId++, x: enemy.x + offset, y: enemy.y + 10, vx: -offset * 0.55, vy: 32, damage: 1, kind: 'venomSpit', radius: 1.65 })
         })
-      }
-      if (kind === 'carrier') {
-        const fan = [-28, -14, 0, 14, 28]
-        fan.forEach((vx) => enemyShotsRef.current.push({ id: shotId++, x: enemy.x, y: enemy.y + 7, vx, vy: 31, damage: 1, kind: 'boss', radius: 1.7 }))
-      }
-      if (kind === 'orb') {
-        for (let i = 0; i < 8; i += 1) {
-          const angle = (i / 8) * Math.PI * 2 + time / 900
-          enemyShotsRef.current.push({ id: shotId++, x: enemy.x, y: enemy.y, vx: Math.cos(angle) * 25, vy: Math.sin(angle) * 25 + 19, damage: 1, kind: 'orbShot', radius: 1.45 })
-        }
-        for (let i = 0; i < 10; i += 1) {
-          if (i === 2 || i === 7) continue
-          const angle = -Math.PI * 0.92 + (i / 9) * Math.PI * 0.84
-          enemyShotsRef.current.push({ id: shotId++, x: enemy.x, y: enemy.y + 5, vx: Math.cos(angle) * 34, vy: Math.sin(angle) * 14 + 36, damage: 1, kind: 'scatterBoss', radius: 1.35 })
-        }
-      }
-      if (kind === 'serpent') {
-        const lane = Math.sin(time / 280) * 18
-          ;[-1, 0, 1].forEach((offset) => {
-            enemyShotsRef.current.push({ id: shotId++, x: enemy.x + lane + offset * 8, y: enemy.y + 8, vx: offset * 10, vy: 38, damage: 1, kind: 'blade', radius: 1.9 })
-          })
-      }
-      if (kind === 'mantis') {
-        const sweep = Math.sin(time / 260) * 24
-          ;[-1, 1].forEach((side) => {
-            enemyShotsRef.current.push({ id: shotId++, x: enemy.x + side * 13, y: enemy.y + 5, vx: side * 24 + sweep * 0.24, vy: 40, damage: 1, kind: 'needle', radius: 1.55 })
-            enemyShotsRef.current.push({ id: shotId++, x: enemy.x + side * 6, y: enemy.y + 10, vx: side * -10, vy: 35, damage: 1, kind: 'blade', radius: 1.9 })
-          })
-      }
-      if (kind === 'hydra') {
-        ;[-16, 0, 16].forEach((head, index) => {
-          const aimX = player.x - (enemy.x + head)
-          const aimY = player.y - enemy.y
-          const mag = Math.sqrt((aimX) * (aimX) + (aimY) * (aimY)) || 1
-          enemyShotsRef.current.push({ id: shotId++, x: enemy.x + head, y: enemy.y + 8, vx: (aimX / mag) * (28 + index * 3), vy: (aimY / mag) * 30, damage: 1, kind: index === 1 ? 'voidShot' : 'orbShot', radius: index === 1 ? 2 : 1.55 })
-        })
-      }
-      if (kind === 'gate') {
-        const phase = time / 380
-          ;[-24, -8, 8, 24].forEach((lane, index) => {
-            const drift = Math.sin(phase + index) * 4
-            enemyShotsRef.current.push({ id: shotId++, x: enemy.x + lane + drift, y: enemy.y + 12, vx: drift * 0.8, vy: 30 + index * 2, damage: 1, kind: index % 2 === 0 ? 'superShot' : 'needle', radius: 1.85 })
-          })
-        const lane = Math.round((enemy.x + Math.sin(time / 520) * 16) / 10) * 10
-        for (let i = 0; i < 6; i += 1) {
-          enemyShotsRef.current.push({ id: shotId++, x: clamp(lane, 12, 88), y: enemy.y + 8 - i * 8, vx: 0, vy: 58, damage: 1, kind: 'beam', radius: 2.35 })
-        }
-      }
-      if (kind === 'super') {
-        const fan = [-34, -17, 0, 17, 34]
-        fan.forEach((vx) => enemyShotsRef.current.push({ id: shotId++, x: enemy.x, y: enemy.y + 10, vx, vy: 34, damage: 1, kind: 'superShot', radius: 2 }))
-        for (let i = 0; i < 6; i += 1) {
-          const angle = (i / 6) * Math.PI * 2 - time / 800
-          enemyShotsRef.current.push({ id: shotId++, x: enemy.x, y: enemy.y + 2, vx: Math.cos(angle) * 22, vy: Math.sin(angle) * 22 + 20, damage: 1, kind: 'orbShot', radius: 1.7 })
-        }
       }
       if (kind === 'devil') {
         enemy.devilNormalAttackTimer = 0.52
@@ -4215,12 +4168,6 @@ export function GradiusRaid({
       if (kind === 'final') {
         playGameSound('laser')
         return
-      }
-      const aimX = player.x - enemy.x
-      const aimY = player.y - enemy.y
-      const mag = Math.sqrt((aimX) * (aimX) + (aimY) * (aimY)) || 1
-      if (kind !== 'orb' && kind !== 'gate' && kind !== 'snake' && kind !== 'squid') {
-        enemyShotsRef.current.push({ id: shotId++, x: enemy.x, y: enemy.y + 2, vx: (aimX / mag) * 38, vy: (aimY / mag) * 38, damage: 1, kind: kind === 'serpent' || kind === 'mantis' ? 'blade' : kind === 'super' ? 'superShot' : kind === 'hydra' ? 'voidShot' : 'boss', radius: 2 })
       }
       playGameSound('rocket')
       return
@@ -4955,6 +4902,7 @@ export function GradiusRaid({
         continue
       }
       const t = nowSeconds + enemy.phase
+      const commandProfile = getCommandBossProfile(enemy)
       const bossKind = enemy.bossKind ?? 'carrier'
       const bossRushAggressive = enemy.isBoss && raidModeRef.current === 'bossRush'
       const bossMotionT = bossRushAggressive ? nowSeconds * BOSS_RUSH_MOTION_SCALE + enemy.phase : t
@@ -5508,20 +5456,27 @@ export function GradiusRaid({
           }
         }
       }
+      if (commandProfile) {
+        const event = advanceCommandBoss(enemy, dt, livingPlayersThisTick, raidDifficultyRef.current,
+          Math.max(0, COMMAND_SHOT_LIMIT - enemyShotsRef.current.length), emitCommandBossShot)
+        if (event & COMMAND_PHASE) addRipple(enemy.x, enemy.y, '#fbbf24', 13)
+        if (((event & COMMAND_WARNING) && isCommandBeam(enemy.bossAttackPattern)) || (event & COMMAND_PHASE)) playGameSound('countdown')
+        if (event & COMMAND_FIRED) playGameSound(isCommandBeam(enemy.bossAttackPattern) ? 'laser' : 'rocket')
+      }
       const nextFire = fireCooldown - dt * (enemy.isBoss ? bossFireDrain : 1)
-      const bossInPause = enemy.isBoss && bossKind !== 'devil' && (bossRushAggressive ? nowSeconds % 5 > 4.25 : nowSeconds % 6 > 3)
+      const bossInPause = !commandProfile && enemy.isBoss && bossKind !== 'devil' && (bossRushAggressive ? nowSeconds % 5 > 4.25 : nowSeconds % 6 > 3)
       const biteRetracting = attackBossKind === 'snake' && chargePattern === 'cross' && beamVolleyRecovery > 0
-      if (nextFire <= 0 && enemy.y > 0 && chargeTimer <= 0 && !biteRetracting && !bossInPause && (bossKind !== 'final' || mirageActive)) {
+      if (!commandProfile && nextFire <= 0 && enemy.y > 0 && chargeTimer <= 0 && !biteRetracting && !bossInPause && (bossKind !== 'final' || mirageActive)) {
         fireEnemy(enemy, getNearestLivingPlayerThisTick(enemy), now)
         if (bossKind === 'devil') devilNormalAttackTimer = Math.max(devilNormalAttackTimer, enemy.devilNormalAttackTimer ?? 0)
       }
 
-      enemy.x = enemy.isBoss
+      enemy.x = commandProfile && enemy.bossEncounterAge !== undefined ? enemy.x : enemy.isBoss
         ? clamp(bossX, bossKind === 'devil' ? 50 : bossKind === 'final' ? 14 : bossKind === 'snake' ? 15 : bossKind === 'super' ? 20 : 16, bossKind === 'devil' ? 50 : bossKind === 'final' ? 86 : bossKind === 'snake' ? 85 : bossKind === 'super' ? 80 : 84)
         : enemy.isMiniBoss
           ? clamp(enemy.x + (miniBossX - enemy.x) * Math.min(1, dt * 3.6) + enemy.vx * dt * 0.24, 10, 90)
           : clamp(enemy.x + (trainX - enemy.x) * Math.min(1, dt * 5.8) + enemy.vx * dt, 4, 96)
-      enemy.y = enemy.isBoss
+      enemy.y = commandProfile && enemy.bossEncounterAge !== undefined ? enemy.y : enemy.isBoss
         ? (enemy.y < bossYTarget ? Math.min(bossYTarget, enemy.y + enemy.vy * dt) : bossYTarget)
         : enemy.isMiniBoss
           ? (enemy.y < miniBossYTarget ? Math.min(miniBossYTarget, enemy.y + enemy.vy * dt) : miniBossYTarget)
@@ -5538,7 +5493,7 @@ export function GradiusRaid({
       const nextBossFireCooldown = bossKind === 'devil'
         ? Math.max(1.05, 1.55 - waveRef.current * 0.018 - stageRef.current * 0.02)
         : Math.max(bossKind === 'final' ? 0.62 : bossKind === 'snake' ? 1.05 : bossKind === 'squid' ? 1.08 : 0.85, 1.82 - waveRef.current * 0.028 - stageRef.current * 0.035)
-      enemy.fireCooldown = fireCooldown !== enemy.fireCooldown ? fireCooldown : nextFire <= 0
+      enemy.fireCooldown = commandProfile ? 0 : fireCooldown !== enemy.fireCooldown ? fireCooldown : nextFire <= 0
         ? (enemy.isBoss
           ? Math.max(0.42, nextBossFireCooldown * bossAttackCooldownScale)
           : enemy.isMiniBoss
@@ -6704,7 +6659,7 @@ export function GradiusRaid({
     if (remotePlayerRef.current && remotePlayerRef.current.score > highScoreRef.current) {
       highScoreRef.current = remotePlayerRef.current.score
     }
-  }, [activateNuke, addRipple, damagePlayer, destroyPlayerByBossCollision, detonateNuke, fireEnemy, firePlayer, getLivingPlayers, getNearestLivingPlayer, reportRaidRunComplete, spawnAsteroidCluster, spawnBoss, spawnEnemyAt, spawnFormation, spawnDevilEncounterAssist, spawnPowerUp, spawnLevelUpPowerUp, spawnSparks, startRaidBgm, startRandomRaidEvent, stopRaidBgm, submitRaidLeaderboardScore, triggerScreenShake])
+  }, [activateNuke, addRipple, emitCommandBossShot, damagePlayer, destroyPlayerByBossCollision, detonateNuke, fireEnemy, firePlayer, getLivingPlayers, getNearestLivingPlayer, reportRaidRunComplete, spawnAsteroidCluster, spawnBoss, spawnEnemyAt, spawnFormation, spawnDevilEncounterAssist, spawnPowerUp, spawnLevelUpPowerUp, spawnSparks, startRaidBgm, startRandomRaidEvent, stopRaidBgm, submitRaidLeaderboardScore, triggerScreenShake])
 
   const getRaidFocusableControls = useCallback(() => {
     const root = rootRef.current

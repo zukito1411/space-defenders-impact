@@ -5,6 +5,7 @@ import ts from 'typescript'
 const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8')
 const load=(source,jsx=false)=>import('data:text/javascript;base64,'+Buffer.from(ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022,jsx:jsx?ts.JsxEmit.React:undefined}}).outputText).toString('base64'))
 const catalogSource=read('src/components/games/raid/bossCatalog.ts').replace(/^import .*\n/gm,'')
+const commandSource=read('src/components/games/raid/commandBoss.ts').replace(/^import .*\n/gm,'')
 const catalog=await load(catalogSource)
 const {CAMPAIGN_BOSS_ART,GENERIC_BOSS_KINDS,getGenericBossArt,getCampaignBossKind}=catalog
 const stages=[1,2,3,4,6,7,8,9,11,12,13,14]
@@ -18,11 +19,11 @@ for(const kind of ['squid','snake','final','devil',null])assert.equal(getGeneric
 // Execute the real spawn callback, preserving original campaign and Boss Rush combat kind selection.
 const runtime=read('src/components/games/raid/GradiusRaidRuntime.tsx')
 const spawn=runtime.slice(runtime.indexOf('  const spawnBoss = useCallback('),runtime.indexOf('  const spawnPowerUp = useCallback('))
-const spawning=await load(catalogSource+`
+const spawning=await load(catalogSource+commandSource+`
 const useCallback=f=>f;
 const waveRef={current:1},stageRef={current:1},playerRef={current:{rank:1,forceField:0}},raidModeRef={current:'campaign'},enemiesRef={current:[]};
 const devilBossNextEligibleStageRef={current:99},remotePlayerRef={current:null},devilPreBuffRankRef={current:0},devilBossEncounteredRef={current:false},devilAssistPlayerRef={current:true};
-const bossAlertRef={current:0},bossMessageRef={current:''},bossEntranceSlamRef={current:0},enemyHpMultRef={current:1};
+const bossAlertRef={current:0},bossMessageRef={current:''},bossEntranceSlamRef={current:0},enemyHpMultRef={current:1},raidDifficultyRef={current:'normal'};
 const playerName='pilot',shouldForceLocalDevilBossTest=()=>false,getPowerScore=()=>0,isCoOpActive=()=>false,isCreatorPlayerName=()=>false;
 const NORMAL_RAID_DEVIL_BONUS_STAGE=16,MAX_RAID_STAGE=15,PLAYER_MAX_RANK=9,FORCE_FIELD_ARMOR=5;
 const BOSS_RUSH_ENTRY_SPEED_SCALE=1.2,BOSS_RUSH_ATTACK_COOLDOWN_SCALE=.72,BOSS_RUSH_MOTION_SCALE=1.18,MULTIPLAYER_BOSS_HP_MULTIPLIER=2;
@@ -88,7 +89,7 @@ const getEnemyCanvasSize=()=>250,getStageBossIntroProgress=()=>1;
 const drawGenericBossShip=(ctx,enemy)=>paths.push(['generic',enemy.bossKind,enemy.bossArtStage]);
 const drawCachedStageBossBody=(ctx,kind)=>paths.push([kind]);
 const drawFinalBossSpriteBody=()=>paths.push(['final']),drawDevilGundamBoss=()=>paths.push(['devil']);
-const drawEnemyHitFlash=()=>{},drawBossShield=()=>{},drawCachedBossBar=()=>{};
+const drawEnemyHitFlash=()=>{},drawBossShield=()=>{},drawCachedBossBar=()=>{},drawCommandBossTelegraph=()=>{};
 const drawSquidWhipStrike=()=>{},drawSnakeVenomTelegraph=()=>{};
 const getNormalAlienCanvasSprite=()=>{throw Error('boss borrowed a normal model')};
 const getEliteAlienCanvasSprite=()=>{throw Error('boss borrowed an elite model')};
@@ -123,15 +124,16 @@ const walk=(node,predicate)=>{
 }
 for(const language of ['en','zh','ja','ko']) {
  const text=localization.getReleaseText(language)
- const list=almanac.getStageBossEntries(localization.getRaidText(language).briefingPanels,text.enemyAlmanac.devilBoss,text.enemyAlmanac.bossBehaviors,text.stage)
+ const list=almanac.getStageBossEntries(localization.getRaidText(language).briefingPanels,text.enemyAlmanac.devilBoss,text.enemyAlmanac,text.stage)
  assert.equal(list.length,16)
  assert.deepEqual(list.filter(b=>b.kind!=='devil').map(b=>b.stageNumber??({squid:5,snake:10,final:15}[b.kind])),Array.from({length:15},(_,i)=>i+1))
  for(const a of CAMPAIGN_BOSS_ART) {
   const card=list.find(b=>b.stageNumber===a.stage)
-  assert.equal(card.kind,a.kind);assert.equal(card.name,a.name);assert.equal(card.behavior.length,2)
+  assert.equal(card.kind,a.kind);assert.equal(card.name,a.name);assert.equal(card.behavior.length,3);assert.ok(card.behavior.includes(text.enemyAlmanac.stageTactics[a.stage]))
  }
  for(const best of [0,4,9,15]) {
   const node=almanac.EnemyAlmanac({text,progress:{bestStageByMode:{gradius_solo:best,gradius_multiplayer:0},codex:{}},stageBossEntries:list})
+  assert.equal(walk(node,n=>n.type==='p'&&n.children.includes(text.enemyAlmanac.phaseAdvice)).length,1)
   const cards=walk(node,n=>n.type==='article'&&n.props.className.startsWith('enemy-almanac__boss-card'))
   assert.equal(cards.length,16)
   assert.equal(new Set(cards.map(n=>n.props.key)).size,16,'repeated attack kinds share React keys')

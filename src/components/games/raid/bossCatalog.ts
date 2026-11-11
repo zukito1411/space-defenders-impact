@@ -4,7 +4,7 @@ export type GenericBossKind = Exclude<BossKind, BriefingBossKind>
 export const GENERIC_BOSS_KINDS: readonly GenericBossKind[] = ['carrier', 'orb', 'mantis', 'serpent', 'hydra', 'gate', 'super']
 const CYCLE: readonly BossKind[] = ['carrier', 'orb', 'mantis', 'serpent', 'hydra', 'gate']
 
-/** Mirrors the campaign's existing attack-kind cycle; appearance never changes combat rules. */
+/** Campaign attack-class cycle, shared by spawning and profile/art selection. */
 export function getCampaignBossKind(stage: number): BossKind {
   if (stage === 15) return 'final'
   if (stage === 10) return 'snake'

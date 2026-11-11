@@ -1,3 +1,4 @@
+import type { CommandPattern } from './commandBoss'
 import type { CoreLanderModel } from '../../../progression'
 import type { GodGundamBarragePose } from './assets'
 
@@ -134,6 +135,22 @@ export type Enemy = Vec & {
   bossKind: BossKind | null
   /** Canonical art identity; optional for compatibility with older co-op packets. */
   bossArtStage?: number
+  bossEncounterAge?: number
+  bossAttackState?: 'warning' | 'burst' | 'recovery'
+  bossAttackPattern?: CommandPattern
+  bossAttackSerial?: number
+  bossAttackTimer?: number
+  bossWarningSeconds?: number
+  bossCombatPhase?: number
+  bossAttackX?: number
+  bossAttackY?: number
+  bossAimX?: number
+  bossAimY?: number
+  bossGapX?: number
+  bossBurstIndex?: number
+  bossBurstCount?: number
+  bossShotSpeed?: number
+  bossRecoverySeconds?: number
   miniBossKind: MiniBossKind | null
   shieldTime: number
   originX: number

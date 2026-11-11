@@ -318,7 +318,7 @@ export function ProgressionScreen({
   const [previewCosmeticShip, setPreviewCosmeticShip] = useState<string | null>(null)
   const [showRecoveryCode, setShowRecoveryCode] = useState(false)
   const [activeUnlockTab, setActiveUnlockTab] = useState<UnlockTab>('raid')
-  const stageBossEntries = getStageBossEntries(raidText.briefingPanels, text.enemyAlmanac.devilBoss, text.enemyAlmanac.bossBehaviors, text.stage)
+  const stageBossEntries = getStageBossEntries(raidText.briefingPanels, text.enemyAlmanac.devilBoss, text.enemyAlmanac, text.stage)
   const raidModeTitle = languageText.leaderboards.modes.gradius_solo.title
   const defenseModeTitle = languageText.leaderboards.modes.ship_defense_normal.title
 
@@ -668,6 +668,7 @@ function EnemyAlmanac({
         <header>
           <span>{text.enemyAlmanac.bossPool}</span>
           <p>{text.enemyAlmanac.bossPoolDesc}</p>
+          <p>{text.enemyAlmanac.phaseAdvice}</p>
         </header>
         <div className="enemy-almanac__sprite-strip" aria-hidden="true">
           {GENERIC_BOSS_KINDS.map((kind) => {
@@ -1257,9 +1258,10 @@ function getUnlockBadgeTier(id: AchievementId | CodexId): UnlockBadgeTier {
 }
 
 function getStageBossEntries(briefingPanels: ReturnType<typeof getRaidText>['briefingPanels'], devilBoss: StageBossEntry,
-  behaviors: ReturnType<typeof getReleaseText>['enemyAlmanac']['bossBehaviors'], stageLabel: string) {
+  intel: ReturnType<typeof getReleaseText>['enemyAlmanac'], stageLabel: string) {
   const entries: StageBossEntry[] = CAMPAIGN_BOSS_ART.map((art) => ({
-    kind: art.kind, name: art.name, stage: `${stageLabel} ${art.stage}`, stageNumber: art.stage, behavior: behaviors[art.kind],
+    kind: art.kind, name: art.name, stage: `${stageLabel} ${art.stage}`, stageNumber: art.stage,
+    behavior: [...intel.bossBehaviors[art.kind], intel.stageTactics[art.stage]],
   }))
   for (const panel of briefingPanels) {
     if (!('bosses' in panel)) continue
