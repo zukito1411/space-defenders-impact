@@ -1,3 +1,4 @@
+import { getRaidPlayerHullSize } from './playerMuzzle'
 import { getEliteCoreLanderNozzleY, getRaidShipBaseVisualKey, getRaidShipFrameKey, getRaidShipNozzles, getRaidShipNozzleY, isRaidEliteFrameKey } from './shipArtwork'
 import { updateFlightPose, type FlightPose } from './combatFeel'
 import { COMBAT_TILE, drawRaidCombatTexture, getRaidCombatFrame } from './combatArt'
@@ -1026,6 +1027,11 @@ export function drawSpiegelBurningMirage(
 
 const flightPoses = new Map<string, FlightPose>()
 
+export function getRaidPlayerFlightBank(color: string, x: number) {
+  const pose = flightPoses.get(color)
+  return pose && performance.now() - pose.time <= 150 && Math.abs(x - pose.x) <= 12 ? pose.bank : 0
+}
+
 export function drawRaidPlayer(
   ctx: CanvasRenderingContext2D,
   player: Player,
@@ -1054,8 +1060,7 @@ export function drawRaidPlayer(
   ctx.rotate(phase === 'playing' && player.hp > 0 && player.ship.key !== 'coreLander' ? bank : 0)
   ctx.translate(-x, -y)
   try {
-  const baseSize = viewportWidth < 860 ? 62 : viewportWidth > 1100 ? 86 : 76
-  const size = player.ship.key === 'mesiah' ? baseSize * 1.78 : player.ship.key === 'coreLander' ? baseSize * 1.38 : baseSize * 1.16
+  const size = getRaidPlayerHullSize(player.ship.key, viewportWidth)
   const isDown = phase === 'gameover' || player.hp <= 0
   const rotation = isDown ? 28 * DEG : 0
   const scale = isDown ? 0.88 : 1

@@ -1,3 +1,4 @@
+import { createRaidMainShotEmitter } from './playerMuzzle'
 import { getRaidShipBaseVisualKey } from './shipArtwork'
 import { fireRaidFighter, getRaidFighter, getRaidFighterPathX, getRaidReserveVariant, getRaidStageEncounter, getRaidWingSize, getRaidWingSlot, LEGACY_FIGHTER_COUNT, RAID_STAGE_ENEMY_LIMIT } from './stageEncounters'
 import { BOSS_BREAKUP_DELAYS, drawBossImpact, getBossBreakupPoint, recordBossImpact } from './bossDamageFx'
@@ -45,7 +46,7 @@ import type { RaidViewportMetrics } from './graphics'
 import { clearPickupLoadout, extendLoadoutForSuperBoss, getPowerScore, resetStageLoadout } from './loadout'
 import { acquireHomingTarget, animateStageClearPlayer, applyRiftPullToPlayer, applyStartingStageLevel, fullyBuffRaidPlayer, getCoreLanderFireInterval, getGodGundamBarrageBossDamage, getGodGundamBarrageDamageMultiplier, getGodGundamMeleeDamagePerSecond, getGodGundamMeleeRange, getGodGundamPassivePose, getGodGundamStageAttackBonus, getNukeBossDamage, getNukeCooldownSeconds, getPlayerBaseAttack, getRiftCenter, getSpiegelShadowCloneDamageMultiplier, hasSpiegelShadowClones, isCoreLanderBurning, levelUpPlayer, movePlayerWithInput, revivePlayerForBossClear, updatePlayerTimers } from './mechanics'
 import { clampNetworkVelocity, cloneAsteroid, cloneDerelictWreck, cloneEnemy, cloneIonStrike, cloneMeteor, cloneRaidRandomEvent, cloneVec, compactPlayer, compactVec, getBufferedAsteroidVisuals, getBufferedEnemyVisuals, getBufferedPlayerVisual, getConnectionLabel, getGuestShotTtlMs, getOwnCorrectionBlend, getPlayerPickupAudioKind, getRemoteInterpolationDelayMs, hasClearedRaidInProgress, isNetworkVisible, keepNetworkVisibleInPlace, reconcilePlayerVisual, updateDerelictWreckMotion } from './network'
-import { drawRaidOptions, drawRaidPlayer, getCoreBlastSprite } from './playerRender'
+import { drawRaidOptions, drawRaidPlayer, getCoreBlastSprite, getRaidPlayerFlightBank } from './playerRender'
 import { getRaidAssetPreloadInitialState, preloadGradiusRaidAssets, warmRaidGeneratedEffectSprites } from './preload'
 import { clonePlayer, getCheckpointStage, getDefaultPlayerVisualShipKey, getGodGundamGameplayRenderSize, getHighScore, getInitialPlayer, getOptionSupportStacks, getPlayerCoreLanderCombatModel, getRaidPlayerVisualShipKey, getShipByKey, getUnlockedStage, isCoreLanderAoeShot, isGodGundamBarragePilot, normalizeMesiahDrones, normalizeMesiahScoutDrones, powerColor, sanitizePlayerVisualShipKey, saveCheckpointStage, saveHighScore, saveUnlockedStage } from './state'
 import type { AsteroidHazard, BossDefeatExplosionEvent, BossKind, BossMessage, CameraShakeState, CoreLanderCombatModel, DerelictWreck, Enemy, EnemySpawnProfile, GamePhase, GodGundamBarrage, GodGundamPassiveStrike, IonStrike, MeteorHazard, MiniBossKind, MirageBossKind, MultiplayerAsteroidSnapshot, MultiplayerConnectionQuality, MultiplayerEnemySnapshot, MultiplayerHostState, MultiplayerInput, MultiplayerPlayerSnapshot, NukeStrike, Player, PowerKind, PowerUp, RaidAssetPreloadState, RaidBgmMode, RaidDifficulty, RaidMode, RaidMultiplayerSession, RaidRandomEvent, RaidRandomEventKind, RelayGameMessage, Ripple, ShipOption, Shot, Snapshot, Spark, Vec, WeaponKey } from './types'
@@ -3122,7 +3123,14 @@ export function GradiusRaid({
 
     const baseDamage = getPlayerBaseAttack(player) + (isGodGundamBarragePilot(player, progressRef.current) ? getGodGundamStageAttackBonus(stageRef.current) : 0)
     const isArk = shipKey === 'dreadnought'
-    const isSmallViewport = viewportMetricsRef.current?.cssWidth ? viewportMetricsRef.current.cssWidth < 640 : false
+    const viewport = viewportMetricsRef.current
+    const isSmallViewport = Boolean(viewport && viewport.cssWidth < 640)
+    const ownPilot = player === (fireCaptureRef.current ? remotePlayerRef.current : playerRef.current)
+    const pilotColor = player === devilAssistPlayerRef.current ? '#facc15' : ownPilot ? PLAYER_COLOR : ALLY_PLAYER_COLOR
+    const emitMainShot = canFireMain && viewport
+      ? createRaidMainShotEmitter(pushShot, player, shipKey, Boolean(coreLanderCombatModel),
+        viewport.cssWidth, viewport.cssHeight, shipKey === 'coreLander' ? 0 : getRaidPlayerFlightBank(pilotColor, player.x))
+      : pushShot
     const defaultScoutOffset = isArk
       ? (isSmallViewport ? 14 : 7.4)
       : (isSmallViewport ? 12 : 5.6)
@@ -3196,9 +3204,9 @@ export function GradiusRaid({
     let mesiahDroneFired = false
     let mesiahRocketsFired = false
     const canFireMesiahRockets = shipKey === 'mesiah' && player.mesiahRocketCooldown <= 0
-    const fireBlackCometPulse = (emitter: { x: number; y: number; scale: number }, aim: Vec, radiusScale = 1) => {
+    const fireBlackCometPulse = (emitter: { x: number; y: number; scale: number }, aim: Vec, emitShot: typeof pushShot, radiusScale = 1) => {
       const mag = Math.sqrt((aim.x) * (aim.x) + (aim.y) * (aim.y)) || 1
-      pushShot({
+      emitShot({
         x: emitter.x,
         y: emitter.y - 3.6,
         vx: (aim.x / mag) * 108,
@@ -3210,6 +3218,7 @@ export function GradiusRaid({
     }
 
     emitters.forEach((emitter) => {
+      const emitShot = emitter.main ? emitMainShot : pushShot
       const damage = Math.max(1, Math.ceil(baseDamage * emitter.scale))
       const attackShipKey = emitter.attackShipKey ?? (isArk && !emitter.main ? 'rocket' : shipKey)
       const activeWeapons = emitter.supportWeaponMode === 'laserHoming'
@@ -3222,7 +3231,7 @@ export function GradiusRaid({
         if (!target || !emitter.canFire) return
         const aim = { x: target.x - emitter.x, y: target.y - emitter.y }
         const mag = Math.sqrt((aim.x) * (aim.x) + (aim.y) * (aim.y)) || 1
-        pushShot({
+        emitShot({
           x: emitter.x,
           y: emitter.y - 3.6,
           vx: (aim.x / mag) * 158,
@@ -3239,76 +3248,76 @@ export function GradiusRaid({
         const target = emitter.target
         if (!target || !emitter.canFire) return
         const rotation = emitter.rotation ?? 0
-        fireBlackCometPulse(emitter, target ? { x: target.x - emitter.x, y: target.y - emitter.y } : { x: Math.sin(rotation), y: -Math.cos(rotation) }, 0.58)
+        fireBlackCometPulse(emitter, target ? { x: target.x - emitter.x, y: target.y - emitter.y } : { x: Math.sin(rotation), y: -Math.cos(rotation) }, emitShot, 0.58)
         mesiahDroneFired = true
       } else if (attackShipKey === 'rocket') {
-        fireBlackCometPulse(emitter, { x: 0, y: -1 })
+        fireBlackCometPulse(emitter, { x: 0, y: -1 }, emitShot)
         if (activeWeapons.spread) {
           const fan = stacks.spread >= 2 ? [-34, -18, 18, 34] : [-24, 24]
-          fan.forEach((vx) => pushShot({ x: emitter.x, y: emitter.y - 2.8, vx, vy: -86, damage, kind: 'spread', radius: 1.35 }))
+          fan.forEach((vx) => emitShot({ x: emitter.x, y: emitter.y - 2.8, vx, vy: -86, damage, kind: 'spread', radius: 1.35 }))
         }
         if (activeWeapons.laser) {
           const side = stacks.laser >= 2 ? 1.6 : 0
-          pushShot({ x: emitter.x - side, y: emitter.y - 5, vx: 0, vy: -132, damage: Math.ceil((baseDamage + 2 + stacks.laser) * emitter.scale), kind: 'laser', radius: 1.85, pierce: 1 + stacks.laser })
+          emitShot({ x: emitter.x - side, y: emitter.y - 5, vx: 0, vy: -132, damage: Math.ceil((baseDamage + 2 + stacks.laser) * emitter.scale), kind: 'laser', radius: 1.85, pierce: 1 + stacks.laser })
           if (stacks.laser >= 3) {
-            pushShot({ x: emitter.x + side, y: emitter.y - 5, vx: 0, vy: -132, damage: Math.ceil((baseDamage + 2) * emitter.scale), kind: 'laser', radius: 1.65, pierce: 2 })
+            emitShot({ x: emitter.x + side, y: emitter.y - 5, vx: 0, vy: -132, damage: Math.ceil((baseDamage + 2) * emitter.scale), kind: 'laser', radius: 1.65, pierce: 2 })
           }
         }
         if (activeWeapons.scatter) {
           const count = Math.min(8, 2 + stacks.scatter * 2)
           for (let i = 0; i < count; i++) {
             const angle = -Math.PI / 2 + (i - (count - 1) / 2) * 0.18
-            pushShot({ x: emitter.x, y: emitter.y - 1.5, vx: Math.cos(angle) * 82, vy: Math.sin(angle) * 82, damage, kind: 'scatter', radius: 1.2 })
+            emitShot({ x: emitter.x, y: emitter.y - 1.5, vx: Math.cos(angle) * 82, vy: Math.sin(angle) * 82, damage, kind: 'scatter', radius: 1.2 })
           }
         }
         if (activeWeapons.rocket) {
           const offsets = stacks.rocket >= 2 ? [-4.2, 4.2] : [0]
           offsets.forEach((offset) => {
-            pushShot({ x: emitter.x + offset, y: emitter.y - 1, vx: offset * 1.7, vy: -72, damage: Math.ceil((baseDamage + 4 + stacks.rocket) * emitter.scale), kind: 'rocket', radius: 2.2 })
+            emitShot({ x: emitter.x + offset, y: emitter.y - 1, vx: offset * 1.7, vy: -72, damage: Math.ceil((baseDamage + 4 + stacks.rocket) * emitter.scale), kind: 'rocket', radius: 2.2 })
           })
         }
         if ((emitter.main || emitter.supportWeaponMode === 'laserHoming') && activeWeapons.homing) {
           const salvoOffsets = emitter.supportWeaponMode === 'laserHoming' ? [-3.4, 3.4] : [-5.4, 5.4, -7.2, 7.2]
           salvoOffsets.forEach((offset, index) => {
             const side = offset < 0 ? -1 : 1
-            pushShot({ x: emitter.x + offset, y: emitter.y + (index < 2 ? -1.8 : 0.8), vx: side * (28 + index * 4), vy: -46 - index * 4, damage: Math.ceil((baseDamage + 4) * emitter.scale), kind: 'homing', radius: 2.1, turn: 5.2 })
+            emitShot({ x: emitter.x + offset, y: emitter.y + (index < 2 ? -1.8 : 0.8), vx: side * (28 + index * 4), vy: -46 - index * 4, damage: Math.ceil((baseDamage + 4) * emitter.scale), kind: 'homing', radius: 2.1, turn: 5.2 })
           })
         }
       }
 
       // -- RED WRAITH: rapid twin needle streams --
       else if (attackShipKey === 'fast') {
-        pushShot({ x: emitter.x - 1.2, y: emitter.y - 3, vx: -3, vy: -110, damage, kind: 'needle' as any, radius: 1.1 })
-        pushShot({ x: emitter.x + 1.2, y: emitter.y - 3, vx: 3, vy: -110, damage, kind: 'needle' as any, radius: 1.1 })
+        emitShot({ x: emitter.x - 1.2, y: emitter.y - 3, vx: -3, vy: -110, damage, kind: 'needle' as any, radius: 1.1 })
+        emitShot({ x: emitter.x + 1.2, y: emitter.y - 3, vx: 3, vy: -110, damage, kind: 'needle' as any, radius: 1.1 })
         if (activeWeapons.spread) {
           const fan = stacks.spread >= 2 ? [-34, -18, 18, 34] : [-24, 24]
-          fan.forEach((vx) => pushShot({ x: emitter.x, y: emitter.y - 2.8, vx, vy: -86, damage, kind: 'spread', radius: 1.35 }))
+          fan.forEach((vx) => emitShot({ x: emitter.x, y: emitter.y - 2.8, vx, vy: -86, damage, kind: 'spread', radius: 1.35 }))
         }
         if (activeWeapons.laser) {
           const side = stacks.laser >= 2 ? 1.6 : 0
-          pushShot({ x: emitter.x - side, y: emitter.y - 5, vx: 0, vy: -132, damage: Math.ceil((baseDamage + 2 + stacks.laser) * emitter.scale), kind: 'laser', radius: 1.85, pierce: 1 + stacks.laser })
+          emitShot({ x: emitter.x - side, y: emitter.y - 5, vx: 0, vy: -132, damage: Math.ceil((baseDamage + 2 + stacks.laser) * emitter.scale), kind: 'laser', radius: 1.85, pierce: 1 + stacks.laser })
           if (stacks.laser >= 3) {
-            pushShot({ x: emitter.x + side, y: emitter.y - 5, vx: 0, vy: -132, damage: Math.ceil((baseDamage + 2) * emitter.scale), kind: 'laser', radius: 1.65, pierce: 2 })
+            emitShot({ x: emitter.x + side, y: emitter.y - 5, vx: 0, vy: -132, damage: Math.ceil((baseDamage + 2) * emitter.scale), kind: 'laser', radius: 1.65, pierce: 2 })
           }
         }
         if (activeWeapons.scatter) {
           const count = Math.min(8, 2 + stacks.scatter * 2)
           for (let i = 0; i < count; i++) {
             const angle = -Math.PI / 2 + (i - (count - 1) / 2) * 0.18
-            pushShot({ x: emitter.x, y: emitter.y - 1.5, vx: Math.cos(angle) * 82, vy: Math.sin(angle) * 82, damage, kind: 'scatter', radius: 1.2 })
+            emitShot({ x: emitter.x, y: emitter.y - 1.5, vx: Math.cos(angle) * 82, vy: Math.sin(angle) * 82, damage, kind: 'scatter', radius: 1.2 })
           }
         }
         if (activeWeapons.rocket) {
           const offsets = stacks.rocket >= 2 ? [-4.2, 4.2] : [0]
           offsets.forEach((offset) => {
-            pushShot({ x: emitter.x + offset, y: emitter.y - 1, vx: offset * 1.7, vy: -72, damage: Math.ceil((baseDamage + 4 + stacks.rocket) * emitter.scale), kind: 'rocket', radius: 2.2 })
+            emitShot({ x: emitter.x + offset, y: emitter.y - 1, vx: offset * 1.7, vy: -72, damage: Math.ceil((baseDamage + 4 + stacks.rocket) * emitter.scale), kind: 'rocket', radius: 2.2 })
           })
         }
         if ((emitter.main || emitter.supportWeaponMode === 'laserHoming') && activeWeapons.homing) {
           const salvoOffsets = emitter.supportWeaponMode === 'laserHoming' ? [-3.4, 3.4] : [-5.4, 5.4, -7.2, 7.2]
           salvoOffsets.forEach((offset, index) => {
             const side = offset < 0 ? -1 : 1
-            pushShot({ x: emitter.x + offset, y: emitter.y + (index < 2 ? -1.8 : 0.8), vx: side * (28 + index * 4), vy: -46 - index * 4, damage: Math.ceil((baseDamage + 4) * emitter.scale), kind: 'homing', radius: 2.1, turn: 5.2 })
+            emitShot({ x: emitter.x + offset, y: emitter.y + (index < 2 ? -1.8 : 0.8), vx: side * (28 + index * 4), vy: -46 - index * 4, damage: Math.ceil((baseDamage + 4) * emitter.scale), kind: 'homing', radius: 2.1, turn: 5.2 })
           })
         }
       }
@@ -3316,40 +3325,40 @@ export function GradiusRaid({
       // -- MESIAH: Red Wraith stream plus default rocket pair --
       else if (attackShipKey === 'mesiah') {
         const boostedDamage = Math.ceil((baseDamage + 2) * emitter.scale)
-        pushShot({ x: emitter.x - 1.45, y: emitter.y - 3.4, vx: -3, vy: -116, damage: boostedDamage, kind: 'needle' as any, radius: 1.12 })
-        pushShot({ x: emitter.x + 1.45, y: emitter.y - 3.4, vx: 3, vy: -116, damage: boostedDamage, kind: 'needle' as any, radius: 1.12 })
+        emitShot({ x: emitter.x - 1.45, y: emitter.y - 3.4, vx: -3, vy: -116, damage: boostedDamage, kind: 'needle' as any, radius: 1.12 })
+        emitShot({ x: emitter.x + 1.45, y: emitter.y - 3.4, vx: 3, vy: -116, damage: boostedDamage, kind: 'needle' as any, radius: 1.12 })
         if (canFireMesiahRockets) {
           ;[-4.6, 4.6].forEach((offset) => {
-            pushShot({ x: emitter.x + offset, y: emitter.y - 1.2, vx: offset * 1.35, vy: -76, damage: Math.ceil((baseDamage + 7) * emitter.scale), kind: 'rocket', radius: 2.35 })
+            emitShot({ x: emitter.x + offset, y: emitter.y - 1.2, vx: offset * 1.35, vy: -76, damage: Math.ceil((baseDamage + 7) * emitter.scale), kind: 'rocket', radius: 2.35 })
           })
           mesiahRocketsFired = true
         }
         if (activeWeapons.spread) {
           const fan = stacks.spread >= 2 ? [-34, -18, 18, 34] : [-24, 24]
-          fan.forEach((vx) => pushShot({ x: emitter.x, y: emitter.y - 2.8, vx, vy: -86, damage: boostedDamage, kind: 'spread', radius: 1.35 }))
+          fan.forEach((vx) => emitShot({ x: emitter.x, y: emitter.y - 2.8, vx, vy: -86, damage: boostedDamage, kind: 'spread', radius: 1.35 }))
         }
         if (activeWeapons.laser) {
           const side = stacks.laser >= 2 ? 1.6 : 0
-          pushShot({ x: emitter.x - side, y: emitter.y - 5, vx: 0, vy: -132, damage: Math.ceil((baseDamage + 4 + stacks.laser) * emitter.scale), kind: 'laser', radius: 1.85, pierce: 1 + stacks.laser })
+          emitShot({ x: emitter.x - side, y: emitter.y - 5, vx: 0, vy: -132, damage: Math.ceil((baseDamage + 4 + stacks.laser) * emitter.scale), kind: 'laser', radius: 1.85, pierce: 1 + stacks.laser })
         }
         if (activeWeapons.scatter) {
           const count = Math.min(8, 2 + stacks.scatter * 2)
           for (let i = 0; i < count; i++) {
             const angle = -Math.PI / 2 + (i - (count - 1) / 2) * 0.18
-            pushShot({ x: emitter.x, y: emitter.y - 1.5, vx: Math.cos(angle) * 82, vy: Math.sin(angle) * 82, damage: boostedDamage, kind: 'scatter', radius: 1.2 })
+            emitShot({ x: emitter.x, y: emitter.y - 1.5, vx: Math.cos(angle) * 82, vy: Math.sin(angle) * 82, damage: boostedDamage, kind: 'scatter', radius: 1.2 })
           }
         }
         if (activeWeapons.rocket) {
           const offsets = stacks.rocket >= 2 ? [-6.2, -3.2, 3.2, 6.2] : [-5.2, 5.2]
           offsets.forEach((offset) => {
-            pushShot({ x: emitter.x + offset, y: emitter.y - 1, vx: offset * 1.5, vy: -74, damage: Math.ceil((baseDamage + 8 + stacks.rocket) * emitter.scale), kind: 'rocket', radius: 2.35 })
+            emitShot({ x: emitter.x + offset, y: emitter.y - 1, vx: offset * 1.5, vy: -74, damage: Math.ceil((baseDamage + 8 + stacks.rocket) * emitter.scale), kind: 'rocket', radius: 2.35 })
           })
         }
         if ((emitter.main || emitter.supportWeaponMode === 'laserHoming') && activeWeapons.homing) {
           const salvoOffsets = emitter.supportWeaponMode === 'laserHoming' ? [-3.4, 3.4] : [-5.4, 5.4, -7.2, 7.2]
           salvoOffsets.forEach((offset, index) => {
             const side = offset < 0 ? -1 : 1
-            pushShot({ x: emitter.x + offset, y: emitter.y + (index < 2 ? -1.8 : 0.8), vx: side * (28 + index * 4), vy: -46 - index * 4, damage: Math.ceil((baseDamage + 5) * emitter.scale), kind: 'homing', radius: 2.1, turn: 5.6 })
+            emitShot({ x: emitter.x + offset, y: emitter.y + (index < 2 ? -1.8 : 0.8), vx: side * (28 + index * 4), vy: -46 - index * 4, damage: Math.ceil((baseDamage + 5) * emitter.scale), kind: 'homing', radius: 2.1, turn: 5.6 })
           })
         }
       }
@@ -3361,7 +3370,7 @@ export function GradiusRaid({
             { offset: 0, vx: 0, vy: -96 },
             { offset: 2.8, vx: 18, vy: -91 },
           ].forEach((kunai) => {
-            pushShot({
+            emitShot({
               x: emitter.x + kunai.offset * emitter.scale,
               y: emitter.y - 4.8,
               vx: kunai.vx,
@@ -3373,7 +3382,7 @@ export function GradiusRaid({
             })
           })
         } else {
-          pushShot({
+          emitShot({
             x: emitter.x,
             y: emitter.y - 4.8,
             vx: 0,
@@ -3386,33 +3395,33 @@ export function GradiusRaid({
         }
         if (activeWeapons.spread) {
           const fan = stacks.spread >= 2 ? [-30, -16, 16, 30] : [-22, 22]
-          fan.forEach((vx) => pushShot({ x: emitter.x, y: emitter.y - 3.2, vx, vy: -88, damage, kind: 'spread', radius: 1.28 }))
+          fan.forEach((vx) => emitShot({ x: emitter.x, y: emitter.y - 3.2, vx, vy: -88, damage, kind: 'spread', radius: 1.28 }))
         }
         if (activeWeapons.laser) {
           const side = stacks.laser >= 2 ? 1.8 : 0
-          pushShot({ x: emitter.x - side, y: emitter.y - 5.4, vx: 0, vy: -134, damage: Math.ceil((baseDamage + 3 + stacks.laser) * emitter.scale), kind: 'laser', radius: 1.9, pierce: 1 + stacks.laser })
+          emitShot({ x: emitter.x - side, y: emitter.y - 5.4, vx: 0, vy: -134, damage: Math.ceil((baseDamage + 3 + stacks.laser) * emitter.scale), kind: 'laser', radius: 1.9, pierce: 1 + stacks.laser })
           if (stacks.laser >= 3) {
-            pushShot({ x: emitter.x + side, y: emitter.y - 5.4, vx: 0, vy: -134, damage: Math.ceil((baseDamage + 3) * emitter.scale), kind: 'laser', radius: 1.7, pierce: 2 })
+            emitShot({ x: emitter.x + side, y: emitter.y - 5.4, vx: 0, vy: -134, damage: Math.ceil((baseDamage + 3) * emitter.scale), kind: 'laser', radius: 1.7, pierce: 2 })
           }
         }
         if (activeWeapons.scatter) {
           const count = Math.min(8, 2 + stacks.scatter * 2)
           for (let i = 0; i < count; i += 1) {
             const angle = -Math.PI / 2 + (i - (count - 1) / 2) * 0.16
-            pushShot({ x: emitter.x, y: emitter.y - 2.2, vx: Math.cos(angle) * 84, vy: Math.sin(angle) * 84, damage, kind: 'scatter', radius: 1.18 })
+            emitShot({ x: emitter.x, y: emitter.y - 2.2, vx: Math.cos(angle) * 84, vy: Math.sin(angle) * 84, damage, kind: 'scatter', radius: 1.18 })
           }
         }
         if (activeWeapons.rocket) {
           const offsets = stacks.rocket >= 2 ? [-5.6, 5.6] : [0]
           offsets.forEach((offset) => {
-            pushShot({ x: emitter.x + offset, y: emitter.y - 1.6, vx: offset * 1.35, vy: -76, damage: Math.ceil((baseDamage + 5 + stacks.rocket) * emitter.scale), kind: 'rocket', radius: 2.18 })
+            emitShot({ x: emitter.x + offset, y: emitter.y - 1.6, vx: offset * 1.35, vy: -76, damage: Math.ceil((baseDamage + 5 + stacks.rocket) * emitter.scale), kind: 'rocket', radius: 2.18 })
           })
         }
         if ((emitter.main || emitter.supportWeaponMode === 'laserHoming') && activeWeapons.homing) {
           const salvoOffsets = emitter.supportWeaponMode === 'laserHoming' ? [-3.4, 3.4] : [-5.2, 5.2, -7, 7]
           salvoOffsets.forEach((offset, index) => {
             const side = offset < 0 ? -1 : 1
-            pushShot({ x: emitter.x + offset, y: emitter.y + (index < 2 ? -2 : 0.6), vx: side * (26 + index * 4), vy: -48 - index * 4, damage: Math.ceil((baseDamage + 4) * emitter.scale), kind: 'homing', radius: 2.05, turn: 5.4 })
+            emitShot({ x: emitter.x + offset, y: emitter.y + (index < 2 ? -2 : 0.6), vx: side * (26 + index * 4), vy: -48 - index * 4, damage: Math.ceil((baseDamage + 4) * emitter.scale), kind: 'homing', radius: 2.05, turn: 5.4 })
           })
         }
       }
@@ -3425,44 +3434,44 @@ export function GradiusRaid({
         const shotVy = (aim.y / mag) * 112
         const perpX = -(aim.y / mag) * 3.2 * emitter.scale
         const perpY = (aim.x / mag) * 3.2 * emitter.scale
-        pushShot({ x: emitter.x + perpX, y: emitter.y + perpY - 1.8, vx: shotVx - 2 * emitter.scale, vy: shotVy, damage, kind: 'pulse', radius: 1.25 * emitter.scale })
-        pushShot({ x: emitter.x - perpX, y: emitter.y - perpY - 1.8, vx: shotVx + 2 * emitter.scale, vy: shotVy, damage, kind: 'pulse', radius: 1.25 * emitter.scale })
+        emitShot({ x: emitter.x + perpX, y: emitter.y + perpY - 1.8, vx: shotVx - 2 * emitter.scale, vy: shotVy, damage, kind: 'pulse', radius: 1.25 * emitter.scale })
+        emitShot({ x: emitter.x - perpX, y: emitter.y - perpY - 1.8, vx: shotVx + 2 * emitter.scale, vy: shotVy, damage, kind: 'pulse', radius: 1.25 * emitter.scale })
         if (activeWeapons.spread) {
           const fan = stacks.spread >= 2 ? [-34, -18, 18, 34] : [-24, 24]
-          fan.forEach((vx) => pushShot({ x: emitter.x, y: emitter.y - 2.8, vx, vy: -86, damage, kind: 'spread', radius: 1.35 }))
+          fan.forEach((vx) => emitShot({ x: emitter.x, y: emitter.y - 2.8, vx, vy: -86, damage, kind: 'spread', radius: 1.35 }))
         }
         if (activeWeapons.laser) {
           const side = stacks.laser >= 2 ? 1.6 : 0
-          pushShot({ x: emitter.x - side, y: emitter.y - 5, vx: 0, vy: -132, damage: Math.ceil((baseDamage + 2 + stacks.laser) * emitter.scale), kind: 'laser', radius: 1.85, pierce: 1 + stacks.laser })
+          emitShot({ x: emitter.x - side, y: emitter.y - 5, vx: 0, vy: -132, damage: Math.ceil((baseDamage + 2 + stacks.laser) * emitter.scale), kind: 'laser', radius: 1.85, pierce: 1 + stacks.laser })
           if (stacks.laser >= 3) {
-            pushShot({ x: emitter.x + side, y: emitter.y - 5, vx: 0, vy: -132, damage: Math.ceil((baseDamage + 2) * emitter.scale), kind: 'laser', radius: 1.65, pierce: 2 })
+            emitShot({ x: emitter.x + side, y: emitter.y - 5, vx: 0, vy: -132, damage: Math.ceil((baseDamage + 2) * emitter.scale), kind: 'laser', radius: 1.65, pierce: 2 })
           }
         }
         if (activeWeapons.scatter) {
           const count = Math.min(8, 2 + stacks.scatter * 2)
           for (let i = 0; i < count; i++) {
             const angle = -Math.PI / 2 + (i - (count - 1) / 2) * 0.18
-            pushShot({ x: emitter.x, y: emitter.y - 1.5, vx: Math.cos(angle) * 82, vy: Math.sin(angle) * 82, damage, kind: 'scatter', radius: 1.2 })
+            emitShot({ x: emitter.x, y: emitter.y - 1.5, vx: Math.cos(angle) * 82, vy: Math.sin(angle) * 82, damage, kind: 'scatter', radius: 1.2 })
           }
         }
         if (activeWeapons.rocket) {
           const offsets = stacks.rocket >= 2 ? [-4.2, 4.2] : [0]
           offsets.forEach((offset) => {
-            pushShot({ x: emitter.x + offset, y: emitter.y - 1, vx: offset * 1.7, vy: -72, damage: Math.ceil((baseDamage + 4 + stacks.rocket) * emitter.scale), kind: 'rocket', radius: 2.2 })
+            emitShot({ x: emitter.x + offset, y: emitter.y - 1, vx: offset * 1.7, vy: -72, damage: Math.ceil((baseDamage + 4 + stacks.rocket) * emitter.scale), kind: 'rocket', radius: 2.2 })
           })
         }
         if ((emitter.main || emitter.supportWeaponMode === 'laserHoming') && activeWeapons.homing) {
           const salvoOffsets = emitter.supportWeaponMode === 'laserHoming' ? [-3.4, 3.4] : [-5.4, 5.4, -7.2, 7.2]
           salvoOffsets.forEach((offset, index) => {
             const side = offset < 0 ? -1 : 1
-            pushShot({ x: emitter.x + offset, y: emitter.y + (index < 2 ? -1.8 : 0.8), vx: side * (28 + index * 4), vy: -46 - index * 4, damage: Math.ceil((baseDamage + 4) * emitter.scale), kind: 'homing', radius: 2.1, turn: 5.2 })
+            emitShot({ x: emitter.x + offset, y: emitter.y + (index < 2 ? -1.8 : 0.8), vx: side * (28 + index * 4), vy: -46 - index * 4, damage: Math.ceil((baseDamage + 4) * emitter.scale), kind: 'homing', radius: 2.1, turn: 5.2 })
           })
         }
       }
 
       // -- NIGHT LANCE: single thick slow piercing laser ray --
       else if (attackShipKey === 'laser') {
-        pushShot({
+        emitShot({
           x: emitter.x,
           y: emitter.y - 4,
           vx: 0,
@@ -3477,7 +3486,7 @@ export function GradiusRaid({
         const defaultSalvo = [-5.4, 5.4]
         defaultSalvo.forEach((offset, index) => {
           const side = offset < 0 ? -1 : 1
-          pushShot({ x: emitter.x + offset, y: emitter.y + (index < 2 ? -1.8 : 0.8), vx: side * (28 + index * 4), vy: -46 - index * 4, damage: Math.ceil((baseDamage + 3) * emitter.scale), kind: 'homing', radius: 2.1, turn: 5.2 })
+          emitShot({ x: emitter.x + offset, y: emitter.y + (index < 2 ? -1.8 : 0.8), vx: side * (28 + index * 4), vy: -46 - index * 4, damage: Math.ceil((baseDamage + 3) * emitter.scale), kind: 'homing', radius: 2.1, turn: 5.2 })
         })
 
         // pickup bonus � 4 extra salvos, main ship only, fires every shot like the default
@@ -3485,31 +3494,31 @@ export function GradiusRaid({
           const bonusSalvo = [-5.4, 5.4, -7.2, 7.2]
           bonusSalvo.forEach((offset, index) => {
             const side = offset < 0 ? -1 : 1
-            pushShot({ x: emitter.x + offset, y: emitter.y + (index < 2 ? -1.8 : 0.8), vx: side * (28 + index * 4), vy: -46 - index * 4, damage: Math.ceil((baseDamage + 4) * emitter.scale), kind: 'homing', radius: 2.1, turn: 5.2 })
+            emitShot({ x: emitter.x + offset, y: emitter.y + (index < 2 ? -1.8 : 0.8), vx: side * (28 + index * 4), vy: -46 - index * 4, damage: Math.ceil((baseDamage + 4) * emitter.scale), kind: 'homing', radius: 2.1, turn: 5.2 })
           })
         }
         if (activeWeapons.spread) {
           const fan = stacks.spread >= 2 ? [-34, -18, 18, 34] : [-24, 24]
-          fan.forEach((vx) => pushShot({ x: emitter.x, y: emitter.y - 2.8, vx, vy: -86, damage, kind: 'spread', radius: 1.35 }))
+          fan.forEach((vx) => emitShot({ x: emitter.x, y: emitter.y - 2.8, vx, vy: -86, damage, kind: 'spread', radius: 1.35 }))
         }
         if (activeWeapons.laser) {
           const side = stacks.laser >= 2 ? 1.6 : 0
-          pushShot({ x: emitter.x - side, y: emitter.y - 5, vx: 0, vy: -132, damage: Math.ceil((baseDamage + 2 + stacks.laser) * emitter.scale), kind: 'laser', radius: 1.85, pierce: 1 + stacks.laser })
+          emitShot({ x: emitter.x - side, y: emitter.y - 5, vx: 0, vy: -132, damage: Math.ceil((baseDamage + 2 + stacks.laser) * emitter.scale), kind: 'laser', radius: 1.85, pierce: 1 + stacks.laser })
           if (stacks.laser >= 3) {
-            pushShot({ x: emitter.x + side, y: emitter.y - 5, vx: 0, vy: -132, damage: Math.ceil((baseDamage + 2) * emitter.scale), kind: 'laser', radius: 1.65, pierce: 2 })
+            emitShot({ x: emitter.x + side, y: emitter.y - 5, vx: 0, vy: -132, damage: Math.ceil((baseDamage + 2) * emitter.scale), kind: 'laser', radius: 1.65, pierce: 2 })
           }
         }
         if (activeWeapons.scatter) {
           const count = Math.min(8, 2 + stacks.scatter * 2)
           for (let i = 0; i < count; i++) {
             const angle = -Math.PI / 2 + (i - (count - 1) / 2) * 0.18
-            pushShot({ x: emitter.x, y: emitter.y - 1.5, vx: Math.cos(angle) * 82, vy: Math.sin(angle) * 82, damage, kind: 'scatter', radius: 1.2 })
+            emitShot({ x: emitter.x, y: emitter.y - 1.5, vx: Math.cos(angle) * 82, vy: Math.sin(angle) * 82, damage, kind: 'scatter', radius: 1.2 })
           }
         }
         if (activeWeapons.rocket) {
           const offsets = stacks.rocket >= 2 ? [-4.2, 4.2] : [0]
           offsets.forEach((offset) => {
-            pushShot({ x: emitter.x + offset, y: emitter.y - 1, vx: offset * 1.7, vy: -72, damage: Math.ceil((baseDamage + 4 + stacks.rocket) * emitter.scale), kind: 'rocket', radius: 2.2 })
+            emitShot({ x: emitter.x + offset, y: emitter.y - 1, vx: offset * 1.7, vy: -72, damage: Math.ceil((baseDamage + 4 + stacks.rocket) * emitter.scale), kind: 'rocket', radius: 2.2 })
           })
         }
       }
@@ -3517,7 +3526,7 @@ export function GradiusRaid({
       // -- OBSIDIAN ARK: slow heavy rocket core --
       else if (attackShipKey === 'dreadnought') {
         // CORE WEAPON (this was missing)
-        pushShot({
+        emitShot({
           x: emitter.x,
           y: emitter.y - 4,
           vx: 0,
@@ -3530,7 +3539,7 @@ export function GradiusRaid({
         if (activeWeapons.spread) {
           const fan = stacks.spread >= 2 ? [-34, -18, 18, 34] : [-24, 24]
           fan.forEach((vx) =>
-            pushShot({
+            emitShot({
               x: emitter.x,
               y: emitter.y - 2.8,
               vx,
@@ -3544,7 +3553,7 @@ export function GradiusRaid({
 
         if (activeWeapons.laser) {
           const side = stacks.laser >= 2 ? 1.6 : 0
-          pushShot({
+          emitShot({
             x: emitter.x - side,
             y: emitter.y - 5,
             vx: 0,
@@ -3556,7 +3565,7 @@ export function GradiusRaid({
           })
 
           if (stacks.laser >= 3) {
-            pushShot({
+            emitShot({
               x: emitter.x + side,
               y: emitter.y - 5,
               vx: 0,
@@ -3573,7 +3582,7 @@ export function GradiusRaid({
           const offsets = stacks.rocket >= 2 ? [-4.2, 4.2] : [0]
 
           offsets.forEach((offset) => {
-            pushShot({
+            emitShot({
               x: emitter.x + offset,
               y: emitter.y - 1,
               vx: offset * 1.2,
@@ -3591,7 +3600,7 @@ export function GradiusRaid({
           salvoOffsets.forEach((offset, index) => {
             const side = offset < 0 ? -1 : 1
 
-            pushShot({
+            emitShot({
               x: emitter.x + offset,
               y: emitter.y + (index < 2 ? -1.8 : 0.8),
               vx: side * (22 + index * 3),
@@ -3609,39 +3618,39 @@ export function GradiusRaid({
       else if (attackShipKey === 'xwing') {
         const wingOffset = emitter.main ? 4.2 : 2.7
         const innerOffset = emitter.main ? 1.65 : 1.05
-        pushShot({ x: emitter.x - wingOffset, y: emitter.y - 4.4, vx: -1.5, vy: -118, damage: Math.ceil((baseDamage + 2) * emitter.scale), kind: 'laser', radius: 1.35, pierce: 1 + Math.floor(stacks.laser / 2) })
-        pushShot({ x: emitter.x + wingOffset, y: emitter.y - 4.4, vx: 1.5, vy: -118, damage: Math.ceil((baseDamage + 2) * emitter.scale), kind: 'laser', radius: 1.35, pierce: 1 + Math.floor(stacks.laser / 2) })
-        pushShot({ x: emitter.x - innerOffset, y: emitter.y - 5.2, vx: -0.8, vy: -128, damage: Math.ceil((baseDamage + 1) * emitter.scale), kind: 'needle' as any, radius: 0.95 })
-        pushShot({ x: emitter.x + innerOffset, y: emitter.y - 5.2, vx: 0.8, vy: -128, damage: Math.ceil((baseDamage + 1) * emitter.scale), kind: 'needle' as any, radius: 0.95 })
+        emitShot({ x: emitter.x - wingOffset, y: emitter.y - 4.4, vx: -1.5, vy: -118, damage: Math.ceil((baseDamage + 2) * emitter.scale), kind: 'laser', radius: 1.35, pierce: 1 + Math.floor(stacks.laser / 2) }, true)
+        emitShot({ x: emitter.x + wingOffset, y: emitter.y - 4.4, vx: 1.5, vy: -118, damage: Math.ceil((baseDamage + 2) * emitter.scale), kind: 'laser', radius: 1.35, pierce: 1 + Math.floor(stacks.laser / 2) }, true)
+        emitShot({ x: emitter.x - innerOffset, y: emitter.y - 5.2, vx: -0.8, vy: -128, damage: Math.ceil((baseDamage + 1) * emitter.scale), kind: 'needle' as any, radius: 0.95 })
+        emitShot({ x: emitter.x + innerOffset, y: emitter.y - 5.2, vx: 0.8, vy: -128, damage: Math.ceil((baseDamage + 1) * emitter.scale), kind: 'needle' as any, radius: 0.95 })
         if (activeWeapons.spread) {
           const fan = stacks.spread >= 2 ? [-34, -18, 18, 34] : [-24, 24]
-          fan.forEach((vx) => pushShot({ x: emitter.x, y: emitter.y - 2.8, vx, vy: -86, damage, kind: 'spread', radius: 1.35 }))
+          fan.forEach((vx) => emitShot({ x: emitter.x, y: emitter.y - 2.8, vx, vy: -86, damage, kind: 'spread', radius: 1.35 }))
         }
         if (activeWeapons.laser) {
           const side = stacks.laser >= 2 ? 1.6 : 0
-          pushShot({ x: emitter.x - side, y: emitter.y - 5, vx: 0, vy: -132, damage: Math.ceil((baseDamage + 2 + stacks.laser) * emitter.scale), kind: 'laser', radius: 1.85, pierce: 1 + stacks.laser })
+          emitShot({ x: emitter.x - side, y: emitter.y - 5, vx: 0, vy: -132, damage: Math.ceil((baseDamage + 2 + stacks.laser) * emitter.scale), kind: 'laser', radius: 1.85, pierce: 1 + stacks.laser })
           if (stacks.laser >= 3) {
-            pushShot({ x: emitter.x + side, y: emitter.y - 5, vx: 0, vy: -132, damage: Math.ceil((baseDamage + 2) * emitter.scale), kind: 'laser', radius: 1.65, pierce: 2 })
+            emitShot({ x: emitter.x + side, y: emitter.y - 5, vx: 0, vy: -132, damage: Math.ceil((baseDamage + 2) * emitter.scale), kind: 'laser', radius: 1.65, pierce: 2 })
           }
         }
         if (activeWeapons.scatter) {
           const count = Math.min(8, 2 + stacks.scatter * 2)
           for (let i = 0; i < count; i++) {
             const angle = -Math.PI / 2 + (i - (count - 1) / 2) * 0.18
-            pushShot({ x: emitter.x, y: emitter.y - 1.5, vx: Math.cos(angle) * 82, vy: Math.sin(angle) * 82, damage, kind: 'scatter', radius: 1.2 })
+            emitShot({ x: emitter.x, y: emitter.y - 1.5, vx: Math.cos(angle) * 82, vy: Math.sin(angle) * 82, damage, kind: 'scatter', radius: 1.2 })
           }
         }
         if (activeWeapons.rocket) {
           const offsets = stacks.rocket >= 2 ? [-4.2, 4.2] : [0]
           offsets.forEach((offset) => {
-            pushShot({ x: emitter.x + offset, y: emitter.y - 1, vx: offset * 1.7, vy: -72, damage: Math.ceil((baseDamage + 4 + stacks.rocket) * emitter.scale), kind: 'rocket', radius: 2.2 })
+            emitShot({ x: emitter.x + offset, y: emitter.y - 1, vx: offset * 1.7, vy: -72, damage: Math.ceil((baseDamage + 4 + stacks.rocket) * emitter.scale), kind: 'rocket', radius: 2.2 })
           })
         }
         if ((emitter.main || emitter.supportWeaponMode === 'laserHoming') && activeWeapons.homing) {
           const salvoOffsets = emitter.supportWeaponMode === 'laserHoming' ? [-3.4, 3.4] : [-5.4, 5.4, -7.2, 7.2]
           salvoOffsets.forEach((offset, index) => {
             const side = offset < 0 ? -1 : 1
-            pushShot({ x: emitter.x + offset, y: emitter.y + (index < 2 ? -1.8 : 0.8), vx: side * (28 + index * 4), vy: -46 - index * 4, damage: Math.ceil((baseDamage + 4) * emitter.scale), kind: 'homing', radius: 2.1, turn: 5.2 })
+            emitShot({ x: emitter.x + offset, y: emitter.y + (index < 2 ? -1.8 : 0.8), vx: side * (28 + index * 4), vy: -46 - index * 4, damage: Math.ceil((baseDamage + 4) * emitter.scale), kind: 'homing', radius: 2.1, turn: 5.2 })
           })
         }
       }
@@ -3649,8 +3658,8 @@ export function GradiusRaid({
       // -- SPACE JET: single thin fast green laser line --
       else if (attackShipKey === 'spaceEt') {
         const phaseDrift = (shotId % 3) - 1
-        pushShot({
-          x: emitter.x + phaseDrift * 0.55,
+        emitShot({
+          x: emitter.x,
           y: emitter.y - 3.6,
           vx: phaseDrift * 3.2,
           vy: -188,  // fastest shot in the game
@@ -3660,39 +3669,39 @@ export function GradiusRaid({
         })
         if (activeWeapons.spread) {
           const fan = stacks.spread >= 2 ? [-34, -18, 18, 34] : [-24, 24]
-          fan.forEach((vx) => pushShot({ x: emitter.x, y: emitter.y - 2.8, vx, vy: -86, damage, kind: 'spread', radius: 1.35 }))
+          fan.forEach((vx) => emitShot({ x: emitter.x, y: emitter.y - 2.8, vx, vy: -86, damage, kind: 'spread', radius: 1.35 }))
         }
         if (activeWeapons.laser) {
           const side = stacks.laser >= 2 ? 1.6 : 0
-          pushShot({ x: emitter.x - side, y: emitter.y - 5, vx: 0, vy: -132, damage: Math.ceil((baseDamage + 2 + stacks.laser) * emitter.scale), kind: 'laser', radius: 1.85, pierce: 1 + stacks.laser })
+          emitShot({ x: emitter.x - side, y: emitter.y - 5, vx: 0, vy: -132, damage: Math.ceil((baseDamage + 2 + stacks.laser) * emitter.scale), kind: 'laser', radius: 1.85, pierce: 1 + stacks.laser })
           if (stacks.laser >= 3) {
-            pushShot({ x: emitter.x + side, y: emitter.y - 5, vx: 0, vy: -132, damage: Math.ceil((baseDamage + 2) * emitter.scale), kind: 'laser', radius: 1.65, pierce: 2 })
+            emitShot({ x: emitter.x + side, y: emitter.y - 5, vx: 0, vy: -132, damage: Math.ceil((baseDamage + 2) * emitter.scale), kind: 'laser', radius: 1.65, pierce: 2 })
           }
         }
         if (activeWeapons.scatter) {
           const count = Math.min(8, 2 + stacks.scatter * 2)
           for (let i = 0; i < count; i++) {
             const angle = -Math.PI / 2 + (i - (count - 1) / 2) * 0.18
-            pushShot({ x: emitter.x, y: emitter.y - 1.5, vx: Math.cos(angle) * 82, vy: Math.sin(angle) * 82, damage, kind: 'scatter', radius: 1.2 })
+            emitShot({ x: emitter.x, y: emitter.y - 1.5, vx: Math.cos(angle) * 82, vy: Math.sin(angle) * 82, damage, kind: 'scatter', radius: 1.2 })
           }
         }
         if (activeWeapons.rocket) {
           const offsets = stacks.rocket >= 2 ? [-4.2, 4.2] : [0]
           offsets.forEach((offset) => {
-            pushShot({ x: emitter.x + offset, y: emitter.y - 1, vx: offset * 1.7, vy: -72, damage: Math.ceil((baseDamage + 4 + stacks.rocket) * emitter.scale), kind: 'rocket', radius: 2.2 })
+            emitShot({ x: emitter.x + offset, y: emitter.y - 1, vx: offset * 1.7, vy: -72, damage: Math.ceil((baseDamage + 4 + stacks.rocket) * emitter.scale), kind: 'rocket', radius: 2.2 })
           })
         }
         if ((emitter.main || emitter.supportWeaponMode === 'laserHoming') && activeWeapons.homing) {
           const salvoOffsets = emitter.supportWeaponMode === 'laserHoming' ? [-3.4, 3.4] : [-5.4, 5.4, -7.2, 7.2]
           salvoOffsets.forEach((offset, index) => {
             const side = offset < 0 ? -1 : 1
-            pushShot({ x: emitter.x + offset, y: emitter.y + (index < 2 ? -1.8 : 0.8), vx: side * (28 + index * 4), vy: -46 - index * 4, damage: Math.ceil((baseDamage + 4) * emitter.scale), kind: 'homing', radius: 2.1, turn: 5.2 })
+            emitShot({ x: emitter.x + offset, y: emitter.y + (index < 2 ? -1.8 : 0.8), vx: side * (28 + index * 4), vy: -46 - index * 4, damage: Math.ceil((baseDamage + 4) * emitter.scale), kind: 'homing', radius: 2.1, turn: 5.2 })
           })
         }
       }
       // -- FALLBACK --
       else {
-        pushShot({ x: emitter.x, y: emitter.y - 3.6, vx: 0, vy: -96, damage, kind: 'pulse', radius: 1.35 })
+        emitShot({ x: emitter.x, y: emitter.y - 3.6, vx: 0, vy: -96, damage, kind: 'pulse', radius: 1.35 })
       }
     })
 
