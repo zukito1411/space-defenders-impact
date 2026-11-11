@@ -285,6 +285,12 @@ export function interpolateEnemyVisual(previous: Enemy, next: Enemy, t: number) 
   visual.chargeTimer = Math.max(0, previous.chargeTimer + (next.chargeTimer - previous.chargeTimer) * t)
   visual.chargeLane = previous.chargeLane + (next.chargeLane - previous.chargeLane) * t
   visual.chargeTargetY = (previous.chargeTargetY ?? previous.y) + ((next.chargeTargetY ?? next.y) - (previous.chargeTargetY ?? previous.y)) * t
+  // Interpolate warning progress only within the same committed attack/state.
+  // A packet switching attacks must never draw a warning at the previous target.
+  if (previous.bossAttackSerial === next.bossAttackSerial && previous.bossAttackState === next.bossAttackState && next.bossAttackTimer !== undefined) {
+    visual.bossAttackTimer = Math.max(0, (previous.bossAttackTimer ?? next.bossAttackTimer) +
+      (next.bossAttackTimer - (previous.bossAttackTimer ?? next.bossAttackTimer)) * t)
+  }
   visual.hitFlash = Math.max(0, (previous.hitFlash ?? 0) + ((next.hitFlash ?? 0) - (previous.hitFlash ?? 0)) * t)
   return visual
 }

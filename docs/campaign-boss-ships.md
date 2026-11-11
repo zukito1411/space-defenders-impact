@@ -27,8 +27,10 @@ class. Endless uses the latest eligible hull for the chosen class; its `super`
 class uses the supreme carrier's combined fan/radial hull. No runtime ID enters
 art selection. Normal enemies and elites retain their own assets.
 
-The campaign attack cycle, HP, collision radii, projectile origins/velocities,
-entry timing, shield logic and movement are unchanged. Stages 5/10/15 keep the
+The attack-class cycle and art identities remain stable. The current per-ship
+attack sequences, HP/rank tuning and movement are described in
+[command-boss-balance.md](command-boss-balance.md). Collision radii and entry
+protection retain their existing rules. Stages 5/10/15 keep the
 animated squid/snake/final models, including final mirages and rotation. Boss Rush
 still uses those three special encounters. The Devil encounter is unchanged.
 
