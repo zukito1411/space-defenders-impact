@@ -220,42 +220,20 @@ export function updateMesiahScoutDrones(player: Player, enemies: Enemy[], dt: nu
   }
 }
 
-// One small pre-rendered engine flame replaces two gradients, shadows and
-// Bézier fills for EACH scout EACH frame. Motion remains through the sprite's
-// position/rotation and a very slight alpha flicker.
-let supportEngineFlameCanvas: HTMLCanvasElement | null = null
-function getSupportEngineFlameCanvas() {
-  if (supportEngineFlameCanvas) return supportEngineFlameCanvas
-  if (typeof document === 'undefined') return null
-  const canvas = document.createElement('canvas')
-  canvas.width = 128
-  canvas.height = 152
-  const flameCtx = canvas.getContext('2d', { alpha: true })
-  if (!flameCtx) return null
-  drawPlayerEngine(flameCtx, 64, 34, 78, 0, 0.55)
-  supportEngineFlameCanvas = canvas
-  return canvas
-}
-
-export function drawSupportEngineTrail(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, time: number, rotation = 0, alpha = 0.82, shipKey = '') {
+export function drawSupportEngineTrail(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, time: number, rotation = 0, alpha = 0.82, shipKey = '', throttle = .28) {
   if (shipKey === 'coreLander') return
   ctx.save()
   ctx.translate(x, y)
   ctx.rotate(rotation)
-  ctx.globalAlpha *= alpha * (0.97 + Math.sin(time / 140) * 0.03)
+  ctx.globalAlpha *= alpha
   const nozzles = getRaidShipNozzles(shipKey)
+  const wakeSize = size * .65
   if (nozzles) {
     for (const [offsetX, offsetY, aperture] of nozzles) {
-      drawPlayerEngine(ctx, size * offsetX, size * (offsetY - .34 * .78), size * .78, time, .55, size * aperture)
+      drawPlayerEngine(ctx, size * offsetX, size * offsetY - wakeSize * .34, wakeSize, time, throttle, size * aperture)
     }
   } else {
-    const flame = getSupportEngineFlameCanvas()
-    if (flame) {
-      const scale = size / 100
-      ctx.drawImage(flame, -64 * scale, -24 * scale, 128 * scale, 152 * scale)
-    } else {
-      drawPlayerEngine(ctx, 0, size * .1, size * .78, time, .55)
-    }
+    drawPlayerEngine(ctx, 0, size * .36 - wakeSize * .34, wakeSize, time, throttle)
   }
   ctx.restore()
 }
@@ -285,7 +263,7 @@ export function drawRaidOptions(
     for (const side of [-1, 1]) {
       const x = toX(clamp(player.x + offset * side, 4, 96))
       const y = toY(player.y + yOffset) + Math.sin(time / 900 + (side > 0 ? 0.18 : 0)) * 2.5
-      drawSupportEngineTrail(ctx, x, y, drawSize, time, 0, 0.9, shipKey)
+      drawSupportEngineTrail(ctx, x, y, drawSize, time, 0, 0.9, shipKey, .14 + (player.engineBoost ?? 0) * .58)
       drawCanvasSprite(ctx, sprite, x, y, drawSize, filter, 1, 0, 1, color)
     }
   }
@@ -325,7 +303,7 @@ export function drawRaidOptions(
       const filter = idle
         ? 'brightness(0.86) contrast(1.08) saturate(0.92)'
         : 'brightness(1.08) contrast(1.18) saturate(1.35)'
-      drawSupportEngineTrail(ctx, x, y, drawSize, time, idle ? 0 : drone.rotation, idle ? 0.7 : 0.92, droneShipKey)
+      drawSupportEngineTrail(ctx, x, y, drawSize * scale, time, idle ? 0 : drone.rotation, idle ? 0.7 : 0.92, droneShipKey, idle ? .06 : .70)
       drawCanvasSprite(ctx, sprite, x, y, drawSize, filter, alpha, idle ? 0 : drone.rotation, scale, color)
     }
   }
@@ -340,7 +318,7 @@ export function drawRaidOptions(
         if (!scout.active || scout.stack >= supportStacks) continue
         const x = toX(scout.x)
         const y = toY(scout.y)
-        drawSupportEngineTrail(ctx, x, y, scoutSize, time, scout.rotation, 0.9, scoutShipKey)
+        drawSupportEngineTrail(ctx, x, y, scoutSize, time, scout.rotation, 0.9, scoutShipKey, scout.canFire ? .48 : .78)
         drawCanvasSprite(ctx, scoutSprite, x, y, scoutSize, 'brightness(1.14) contrast(1.16) saturate(1.34)', 1, scout.rotation, 1, color)
       }
     } else {
@@ -361,24 +339,59 @@ export function drawRaidOptions(
   }
 }
 
-export function drawPlayerEngine(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, time: number, engineBoost = 0, nozzleWidth?: number) {
-  const exhaust = getRaidCombatFrame(COMBAT_TILE.exhaust)
-  if (exhaust) {
-    const boost = clamp(engineBoost, 0, 1.35)
-    const flicker = 1 + Math.sin(time / 41) * 0.025
-    // Baked detail replaces two live gradients and shadow blurs per exhaust.
-    const length = size * (1.3 + boost * 0.5) * flicker
-    // At u=.75 the exhaust spans roughly 12% of the tile. Seat that
-    // section in the outlet and let boost extend only the plume length.
-    const anchor = nozzleWidth === undefined ? .30 : .25
-    const width = nozzleWidth === undefined ? size * (.36 + boost * .06) : nozzleWidth / .12
-    if (drawRaidCombatTexture(ctx, exhaust, x, y + size * .34 + length * anchor,
-      length, width, -Math.PI / 2, true)) return
-  }
+// Cache a small color ramp from the existing exhaust tile. Gameplay draws one bitmap per nozzle.
+const ENGINE_HEAT_FILTERS = [
+  'saturate(.85)', 'hue-rotate(18deg)', 'hue-rotate(38deg)',
+  'hue-rotate(72deg) saturate(.8)', 'hue-rotate(124deg) saturate(.72)',
+  'hue-rotate(165deg) saturate(.78)', 'hue-rotate(192deg) saturate(.9)',
+]
+let engineHeatSprites: HTMLCanvasElement[] | null = null
 
-  const flicker = Math.sin(time / 105) * 0.04 + Math.sin(time / 53) * 0.018
-  const flameHeight = size * (0.48 + flicker) * (1 + clamp(engineBoost, 0, 1.35) * 0.34)
-  const flameWidth = nozzleWidth === undefined ? size * (0.11 + Math.sin(time / 88) * 0.006) : nozzleWidth / 0.96
+export function warmRaidEngineExhaust() {
+  if (engineHeatSprites || typeof document === 'undefined') return
+  const texture = getRaidCombatFrame(COMBAT_TILE.exhaust)
+  if (!texture?.source?.resource) return
+  const size = 96
+  const sprites: HTMLCanvasElement[] = []
+  for (const filter of ENGINE_HEAT_FILTERS) {
+    const canvas = document.createElement('canvas')
+    canvas.width = canvas.height = size
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+    ctx.filter = filter
+    if (!drawRaidCombatTexture(ctx, texture, size / 2, size / 2, size, size, -Math.PI / 2, false)) return
+    sprites.push(canvas)
+  }
+  engineHeatSprites = sprites
+}
+
+function getEngineLengthScale(engineBoost: number, time: number) {
+  const throttle = clamp(engineBoost / 1.35, 0, 1)
+  const flicker = 1 + Math.sin(time / 54) * .058 + Math.sin(time / 93) * .022
+  return (.61 + throttle * .69 + throttle * throttle * .17) * flicker
+}
+
+export function drawPlayerEngine(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, time: number, engineBoost = 0, nozzleWidth?: number) {
+  const length = size * getEngineLengthScale(engineBoost, time)
+  const throttle = clamp(engineBoost / 1.35, 0, 1)
+  const anchor = nozzleWidth === undefined ? .30 : .25
+  const width = nozzleWidth === undefined ? size * .36 : nozzleWidth / .12
+  const centerY = y + size * .34 + length * anchor
+  const alpha = .73 + .21 * throttle + Math.sin(time / 80) * .035
+  if (engineHeatSprites) {
+    const index = Math.round(clamp(throttle + Math.sin(time / 127) * .045, 0, 1) * (engineHeatSprites.length - 1))
+    ctx.save()
+    ctx.globalCompositeOperation = 'lighter'
+    ctx.globalAlpha *= alpha
+    ctx.drawImage(engineHeatSprites[index], x - width / 2, centerY - length / 2, width, length)
+    ctx.restore()
+    return
+  }
+  const exhaust = getRaidCombatFrame(COMBAT_TILE.exhaust)
+  if (exhaust && drawRaidCombatTexture(ctx, exhaust, x, centerY, length, width, -Math.PI / 2, true, alpha)) return
+
+  const flameHeight = length * .52
+  const flameWidth = nozzleWidth === undefined ? size * .11 : nozzleWidth / 0.96
   const top = y + size * (nozzleWidth === undefined ? .32 : .34)
   const tip = top + flameHeight
   const gradient = ctx.createLinearGradient(x, top, x, tip)
@@ -1447,10 +1460,9 @@ const masteryWakeSprites = new WeakMap<MasteryVisualStyle, HTMLCanvasElement>()
 
 export function drawSingleMasteryEngineTrail(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, time: number, color: string, shipKey: string, engineBoost = 0, nozzleWidth?: number) {
   const style = getMasteryVisualStyle(shipKey, color)
-  const pulse = 0.96 + Math.sin(time / 180) * 0.05
   const tailScale = shipKey === 'spaceEt' ? 1.18 : shipKey === 'dreadnought' ? 0.92 : shipKey === 'mesiah' ? 1.05 : 1
   const top = y + size * 0.34
-  const length = size * 0.72 * tailScale * pulse * (1 + clamp(engineBoost, 0, 1.35) * 0.36)
+  const length = size * .72 * tailScale * getEngineLengthScale(engineBoost, time)
   const widthRatio = shipKey === 'dreadnought' ? .15 : .13
   const width = nozzleWidth === undefined ? size * widthRatio : nozzleWidth / 1.16
   if (nozzleWidth !== undefined && typeof document !== 'undefined') {
@@ -1468,7 +1480,7 @@ export function drawSingleMasteryEngineTrail(ctx: CanvasRenderingContext2D, x: n
     }
     if (wake) {
       const scaleX = width / (100 * widthRatio)
-      const scaleY = length / (72 * tailScale * .96)
+      const scaleY = length / (72 * tailScale * getEngineLengthScale(0, 0))
       ctx.save()
       ctx.globalCompositeOperation = 'lighter'
       ctx.drawImage(wake, x - 24 * scaleX, top - 10 * scaleY, 48 * scaleX, 115 * scaleY)
