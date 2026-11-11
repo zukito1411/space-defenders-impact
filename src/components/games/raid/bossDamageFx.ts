@@ -1,4 +1,4 @@
-import { drawRaidContactArt, drawRaidVfx, RAID_CONTACT_TILE, RAID_VFX_TILE } from './combatArt'
+import { drawRaidVfx, RAID_VFX_TILE } from './combatArt'
 import { COMMAND_PHASE_HP } from './commandBoss'
 import type { BossImpactKind, Enemy, Shot } from './types'
 
@@ -26,31 +26,19 @@ const hullDamage = (enemy: Enemy) => HULL_DAMAGE[enemy.bossArtStage ?? 0] ?? def
 const IMPACT_SECONDS = .22
 export const BOSS_BREAKUP_DELAYS = [.20, .53, .85, 1.26, 1.81] as const
 
-export function isCommandCoreExposed(enemy: Enemy) {
-  return enemy.bossArtStage !== undefined && enemy.hp > 0 && enemy.shieldTime <= 0 && enemy.y >= 15
-    && enemy.bossAttackState === 'recovery' && enemy.hp <= enemy.maxHp * COMMAND_PHASE_HP.critical
-}
-
-export function getBossImpactKind(enemy: Enemy, shot: Shot, shielded: boolean): BossImpactKind | undefined {
+export function recordBossImpact(enemy: Enemy, shot: Shot, shielded: boolean): BossImpactKind | undefined {
   if (!enemy.isBoss && !enemy.isMiniBoss) return
-  if (shielded) return 'shield'
-  if (shot.kind === 'rocket' || shot.kind === 'homing' || shot.kind === 'coreBlast' || shot.kind === 'spiegelKunai') return 'heavy'
-  if (isCommandCoreExposed(enemy) && shot.vy < 0 && shot.y >= enemy.y
-    && Math.abs(shot.x - enemy.x) <= enemy.radius * .24) return 'core'
-  return 'armor'
-}
-
-export function getRaidDirectHitDamage(shot: Shot, kind?: BossImpactKind) {
-  if (kind === 'shield') return 0
-  return kind === 'core' ? Math.round(shot.damage * 1.25) : shot.damage
-}
-
-export function recordBossImpact(enemy: Enemy, shot: Shot, kind: BossImpactKind) {
+  const x = shot.x - enemy.x
+  const y = shot.y - enemy.y
+  const heavy = shot.kind === 'rocket' || shot.kind === 'homing' || shot.kind === 'coreBlast'
+  const exposedCore = !heavy && enemy.bossArtStage !== undefined && y >= 0
+    && enemy.hp / Math.max(1, enemy.maxHp) <= COMMAND_PHASE_HP.critical && Math.abs(x) <= enemy.radius * .24
+  const kind = shielded ? 'shield' : heavy ? 'heavy' : exposedCore ? 'core' : 'armor'
   const recent = enemy.bossImpactTime ?? 0
-  if (recent > .10 && (enemy.bossImpact?.kind !== 'armor' || kind === 'armor')) return false
-  enemy.bossImpact = { kind, shotId: shot.id, x: shot.x - enemy.x, y: shot.y - enemy.y }
+  if (recent > .10 && (enemy.bossImpact?.kind !== 'armor' || kind === 'armor')) return
+  enemy.bossImpact = { kind, shotId: shot.id, x, y }
   enemy.bossImpactTime = IMPACT_SECONDS
-  return true
+  return kind
 }
 
 export function drawBossImpact(ctx: CanvasRenderingContext2D, enemy: Enemy, x: number, y: number,
@@ -105,12 +93,7 @@ export function drawHullDamage(ctx: CanvasRenderingContext2D, enemy: Enemy, x: n
     drawRaidVfx(ctx, RAID_VFX_TILE.hullDamage, px, py, critical ? .17 : .13, .13,
       .44 + burn * .44, i * 1.05 - .38)
   }
-  if (isCommandCoreExposed(enemy)) {
-    const pulse = reducedMotion ? 1 : .94 + Math.sin(clock * 10) * .06
-    if (!drawRaidContactArt(ctx, RAID_CONTACT_TILE.reactor, 0, .09, .19 * pulse, .19 * pulse, .98)) {
-      drawRaidVfx(ctx, RAID_VFX_TILE.precision, 0, .09, .11, .11, .82, 0, true)
-    }
-  }
+  if (critical) drawRaidVfx(ctx, RAID_VFX_TILE.precision, 0, .09, .075, .075, .62, 0, true)
   if (!hydra && !reducedMotion) {
     const [px, py] = points[2]
     const pulse = (clock * 3.2 + enemy.id * .17) % 1

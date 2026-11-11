@@ -1,8 +1,4 @@
-import { drawPilotContact, makePilotContact } from './pilotContactFx'
-import type { PilotContact } from './pilotContactFx'
-import { canUseRaidPickup, getRaidForceFieldCap, pickRaidPickupPilot } from './raidPickups'
-import { canHomingLock, fillRaidHomingTargets, hasRaidSpecialTarget, isRaidEnemyShielded, isRaidSpecialBubble, isRaidSpecialTargetOnField, steerRaidHoming } from './targeting'
-import { BOSS_BREAKUP_DELAYS, drawBossImpact, getBossBreakupPoint, getBossImpactKind, getRaidDirectHitDamage, recordBossImpact } from './bossDamageFx'
+import { BOSS_BREAKUP_DELAYS, drawBossImpact, getBossBreakupPoint, recordBossImpact } from './bossDamageFx'
 import { prefersRaidReducedMotion } from './commandBossRender'
 import { drawIncomingHazard, drawRecoveryCue, findIncomingHazard, needsRepair, passesNearPilot } from './flightCues'
 import { advanceCommandBoss, getCommandBossProfile, getCommandBossHpScale, interruptCommandBoss, isCommandBeam, COMMAND_SHOT_LIMIT, COMMAND_WARNING, COMMAND_FIRED, COMMAND_PHASE } from './commandBoss'
@@ -11,7 +7,7 @@ import { pickGameplayWreckVariant } from './wreckVariety'
 import { getRaidStageEntrySeconds } from './journey'
 import { COSMIC_REGIONS, cosmicRegionIndex } from './cosmos'
 import { CosmosPresentation } from './CosmosPresentation'
-import { missileLaunchScale } from './missilePresentation'
+import { missileLaunchScale, homingCruiseSpeed } from './missilePresentation'
 import { impactFrameProgress, explosionDiameter, impactAlpha, rippleLifetime, rippleReplacement } from './combatFeel'
 import { useDoorCallback, useDoorState, useSpaceDoor } from '../../ui/SpaceDoor'
 import { getRaidText } from '../../../i18n'
@@ -33,7 +29,7 @@ import type { RaidPalette } from './background'
 import { forEachDevilBossBeamLane, forEachFinalBossBeamLane, getDevilBossBeamRadius, getDevilBossChargeDuration, getFinalBossBeamLaneCount, getFinalBossBeamRadius } from './bossAttacks'
 import { clearNormalEnemyRasters, drawRaidEnemy, getNormalEnemyFilter, pruneNormalEnemyRasters } from './bossRender'
 import { PickupPreviewCanvas, getBriefingPickupType } from './briefing'
-import { ALLY_PLAYER_COLOR, ASTEROID_CLUSTER_SPAWN_DELAY_SECONDS, ASTEROID_CLUSTER_WARNING_SECONDS, BOSS_COLORS, BOSS_ENTRANCE_SLAM_SECONDS, BOSS_ENTRANCE_SLOWMO_SCALE, BOSS_RESPAWN_SECONDS, BOSS_RUSH_ATTACK_COOLDOWN_SCALE, BOSS_RUSH_ENTRY_SPEED_SCALE, BOSS_RUSH_MOTION_SCALE, BOSS_RUSH_SPECIAL_RECHARGE_SCALE, BOSS_RUSH_STAGES, CORE_LANDER_AOE_RADIUS, DARK_ENEMY_COLORS, DEG, DEVIL_BOSS_MAX_STAGE_GAP, DEVIL_BOSS_MIN_STAGE_GAP, DIFFICULTY_CONFIGS, EMPTY_WEAPON_FLAGS, EMPTY_WEAPON_TIMERS, FINAL_BOSS_BEAM_CHARGE_SECONDS, FINAL_BOSS_BEAM_LIFE_SECONDS, FORCE_FIELD_ARMOR, GAMEPLAY_ALERT_SNAPSHOT_INTERVAL_MS, GAMEPLAY_SNAPSHOT_INTERVAL_MS, GOD_GUNDAM_BARRAGE_DURATION_SECONDS, GOD_GUNDAM_BARRAGE_HIT_INTERVAL_SECONDS, GOD_GUNDAM_DEFEAT_HOLD_SECONDS, GOD_GUNDAM_MELEE_DAMAGE_PER_SECOND, GOD_GUNDAM_MELEE_EXHAUST_COOLDOWN_SECONDS, GOD_GUNDAM_MELEE_EXHAUST_LIMIT_SECONDS, GOD_GUNDAM_MELEE_HEAT_RECOVERY_PER_SECOND, GOD_GUNDAM_MELEE_VISUAL_DURATION_SECONDS, GOD_GUNDAM_MELEE_VISUAL_INTERVAL_SECONDS, HEIGHT, IDLE_SNAPSHOT_INTERVAL_MS, MAX_ASTEROIDS, MAX_ION_STRIKES, MAX_METEORS, MAX_RAID_STAGE, MAX_WRECKS, MESIAH_DRONE_FIRE_INTERVAL_SECONDS, MESIAH_ROCKET_FIRE_INTERVAL_SECONDS, MINI_BOSS_COLORS, MULTIPLAYER_BOSS_HP_MULTIPLIER, MULTIPLAYER_CONNECTION_CHECK_MS, MULTIPLAYER_CORRECTION_DRAIN_RATE, MULTIPLAYER_ENTITY_MARGIN, MULTIPLAYER_GUEST_SNAP_DISTANCE_SQ, MULTIPLAYER_GUEST_STALE_MS, MULTIPLAYER_HEARTBEAT_INTERVAL_MS, MULTIPLAYER_HEARTBEAT_TIMEOUT_MS, MULTIPLAYER_INPUT_INTERVAL_MS, MULTIPLAYER_MAX_ASTEROIDS, MULTIPLAYER_MAX_BUFFERED_BYTES, MULTIPLAYER_MAX_ENEMIES, MULTIPLAYER_MAX_ENEMY_SHOTS, MULTIPLAYER_MAX_GUEST_CORRECTION, MULTIPLAYER_MAX_ION_STRIKES, MULTIPLAYER_MAX_METEORS, MULTIPLAYER_MAX_POWERUPS, MULTIPLAYER_MAX_RIPPLES, MULTIPLAYER_MAX_SHOTS, MULTIPLAYER_MAX_SPARKS, MULTIPLAYER_MAX_WRECKS, MULTIPLAYER_REMOTE_BUFFER_MAX, MULTIPLAYER_REMOTE_CORRECTION_BLEND, MULTIPLAYER_REMOTE_INPUT_BLEND, MULTIPLAYER_REMOTE_INPUT_SNAP_DISTANCE_SQ, MULTIPLAYER_STATE_INTERVAL_MS, MULTIPLAYER_STATE_LOST_MS, MULTIPLAYER_STATE_STALE_MS, NORMAL_POWER_DROP_COOLDOWN, NUKE_FLASH_SECONDS, NUKE_MISSILE_SECONDS, PLAYER_COLOR, PLAYER_MAX_RANK, PLAYER_RADIUS, POWER_PITY_KILLS, RAID_BACKGROUND_THEME_COUNT, RAID_BGM_STAGE_RATES, RAID_BOSS_APPROACH_SILENCE_SECONDS, RAID_BOSS_BGM_TRACK, RAID_BOSS_FINAL_BGM_TRACK, RAID_BOSS_SNAKE_BGM_TRACK, RAID_BOSS_SQUID_BGM_TRACK, RAID_CHECKPOINTS, RAID_DEFAULT_BGM_TRACK, RAID_ENDING_BGM_TRACK, RANDOM_EVENT_WARNING_SECONDS, SHIP_OPTIONS, SIDE_VALUES, SPIEGEL_KUNAI_DAMAGE_MULTIPLIER, SPIEGEL_KUNAI_SPLASH_DAMAGE_MULTIPLIER, SPIEGEL_SHADOW_CLONE_OFFSET, STAGE_CLEAR_SECONDS, STAGE_ENTRY_SECONDS, VICTORY_BLACKOUT_SECONDS, WEAPON_FIRE_INTERVALS, WEAPON_KEYS, WEAPON_STACK_CAPS, WIDTH, getBossRushStage, getNextBossRushStage, getShipSpriteSize, pickEndlessBossKind, shouldForceLocalDerelictWreckTest, shouldForceLocalDevilBossTest } from './constants'
+import { ALLY_PLAYER_COLOR, ASTEROID_CLUSTER_SPAWN_DELAY_SECONDS, ASTEROID_CLUSTER_WARNING_SECONDS, BOSS_COLORS, BOSS_ENTRANCE_SLAM_SECONDS, BOSS_ENTRANCE_SLOWMO_SCALE, BOSS_RESPAWN_SECONDS, BOSS_RUSH_ATTACK_COOLDOWN_SCALE, BOSS_RUSH_ENTRY_SPEED_SCALE, BOSS_RUSH_MOTION_SCALE, BOSS_RUSH_SPECIAL_RECHARGE_SCALE, BOSS_RUSH_STAGES, CORE_LANDER_AOE_RADIUS, DARK_ENEMY_COLORS, DEG, DEVIL_BOSS_MAX_STAGE_GAP, DEVIL_BOSS_MIN_STAGE_GAP, DIFFICULTY_CONFIGS, EMPTY_WEAPON_FLAGS, EMPTY_WEAPON_TIMERS, FINAL_BOSS_BEAM_CHARGE_SECONDS, FINAL_BOSS_BEAM_LIFE_SECONDS, FORCE_FIELD_ARMOR, GAMEPLAY_ALERT_SNAPSHOT_INTERVAL_MS, GAMEPLAY_SNAPSHOT_INTERVAL_MS, GOD_GUNDAM_BARRAGE_DURATION_SECONDS, GOD_GUNDAM_BARRAGE_HIT_INTERVAL_SECONDS, GOD_GUNDAM_DEFEAT_HOLD_SECONDS, GOD_GUNDAM_MELEE_DAMAGE_PER_SECOND, GOD_GUNDAM_MELEE_EXHAUST_COOLDOWN_SECONDS, GOD_GUNDAM_MELEE_EXHAUST_LIMIT_SECONDS, GOD_GUNDAM_MELEE_HEAT_RECOVERY_PER_SECOND, GOD_GUNDAM_MELEE_VISUAL_DURATION_SECONDS, GOD_GUNDAM_MELEE_VISUAL_INTERVAL_SECONDS, HEIGHT, HOMING_RETARGET_SECONDS, HOMING_RETARGET_STAGGER_SECONDS, IDLE_SNAPSHOT_INTERVAL_MS, MAX_ASTEROIDS, MAX_ION_STRIKES, MAX_METEORS, MAX_RAID_STAGE, MAX_WRECKS, MESIAH_DRONE_FIRE_INTERVAL_SECONDS, MESIAH_ROCKET_FIRE_INTERVAL_SECONDS, MINI_BOSS_COLORS, MULTIPLAYER_BOSS_HP_MULTIPLIER, MULTIPLAYER_CONNECTION_CHECK_MS, MULTIPLAYER_CORRECTION_DRAIN_RATE, MULTIPLAYER_ENTITY_MARGIN, MULTIPLAYER_GUEST_SNAP_DISTANCE_SQ, MULTIPLAYER_GUEST_STALE_MS, MULTIPLAYER_HEARTBEAT_INTERVAL_MS, MULTIPLAYER_HEARTBEAT_TIMEOUT_MS, MULTIPLAYER_INPUT_INTERVAL_MS, MULTIPLAYER_MAX_ASTEROIDS, MULTIPLAYER_MAX_BUFFERED_BYTES, MULTIPLAYER_MAX_ENEMIES, MULTIPLAYER_MAX_ENEMY_SHOTS, MULTIPLAYER_MAX_GUEST_CORRECTION, MULTIPLAYER_MAX_ION_STRIKES, MULTIPLAYER_MAX_METEORS, MULTIPLAYER_MAX_POWERUPS, MULTIPLAYER_MAX_RIPPLES, MULTIPLAYER_MAX_SHOTS, MULTIPLAYER_MAX_SPARKS, MULTIPLAYER_MAX_WRECKS, MULTIPLAYER_REMOTE_BUFFER_MAX, MULTIPLAYER_REMOTE_CORRECTION_BLEND, MULTIPLAYER_REMOTE_INPUT_BLEND, MULTIPLAYER_REMOTE_INPUT_SNAP_DISTANCE_SQ, MULTIPLAYER_STATE_INTERVAL_MS, MULTIPLAYER_STATE_LOST_MS, MULTIPLAYER_STATE_STALE_MS, NORMAL_POWER_DROP_COOLDOWN, NUKE_FLASH_SECONDS, NUKE_MISSILE_SECONDS, PLAYER_COLOR, PLAYER_MAX_RANK, PLAYER_RADIUS, POWER_PITY_KILLS, RAID_BACKGROUND_THEME_COUNT, RAID_BGM_STAGE_RATES, RAID_BOSS_APPROACH_SILENCE_SECONDS, RAID_BOSS_BGM_TRACK, RAID_BOSS_FINAL_BGM_TRACK, RAID_BOSS_SNAKE_BGM_TRACK, RAID_BOSS_SQUID_BGM_TRACK, RAID_CHECKPOINTS, RAID_DEFAULT_BGM_TRACK, RAID_ENDING_BGM_TRACK, RANDOM_EVENT_WARNING_SECONDS, SHIP_OPTIONS, SIDE_VALUES, SPACE_ET_PASSIVE_FORCE_FIELD_CHARGES, SPIEGEL_KUNAI_DAMAGE_MULTIPLIER, SPIEGEL_KUNAI_SPLASH_DAMAGE_MULTIPLIER, SPIEGEL_SHADOW_CLONE_OFFSET, STAGE_CLEAR_SECONDS, STAGE_ENTRY_SECONDS, VICTORY_BLACKOUT_SECONDS, WEAPON_FIRE_INTERVALS, WEAPON_KEYS, WEAPON_STACK_CAPS, WIDTH, getBossRushStage, getNextBossRushStage, getShipSpriteSize, pickEndlessBossKind, shouldForceLocalDerelictWreckTest, shouldForceLocalDevilBossTest } from './constants'
 import { drawAsteroidHazard, drawAsteroidWarning, drawDerelictWreck, drawDevilChargeWarnings, drawFinalChargeLines, drawGodGundamBarrage, drawGodGundamPassiveStrikes, drawIonStrike, drawMeteorHazard, drawNukeBlast, drawNukeMissile, drawHomingTargetLock, drawPowerUpCanvas, drawRandomEventOverlay, drawRandomEventWarning, getHomingMissileSprite, godBarrageDamageTargetsScratch } from './effectsRender'
 import { createAsteroidHazard, getAsteroidClusterInterval, getRandomEventDuration, getRandomEventInterval, pickNextRandomRaidEventKind, splitAsteroidHazard } from './events'
 import { RAID_FX_CANVAS_CONTEXT_SETTINGS, getRaidGraphicsProfile, makeRaidViewportMetrics } from './graphics'
@@ -45,9 +41,9 @@ import { applyRaidBossArtwork, isRaidBossArtSolid, drawRaidCombatTexture, getRai
 import { clearRaidSpatialHash, createRaidSpatialHash, insertRaidSpatialHash, queryRaidSpatialHash } from './spatialHash'
 import type { RaidViewportMetrics } from './graphics'
 import { clearPickupLoadout, extendLoadoutForSuperBoss, getFormationEnemyCount, getFormationSpawnSeconds, getPowerScore, getSingleEnemySpawnSeconds, resetStageLoadout } from './loadout'
-import { animateStageClearPlayer, applyRiftPullToPlayer, applyStartingStageLevel, fullyBuffRaidPlayer, getCoreLanderFireInterval, getGodGundamBarrageBossDamage, getGodGundamBarrageDamageMultiplier, getGodGundamMeleeDamagePerSecond, getGodGundamMeleeRange, getGodGundamPassivePose, getGodGundamStageAttackBonus, getNukeBossDamage, getNukeCooldownSeconds, getPlayerBaseAttack, getRiftCenter, getSpiegelShadowCloneDamageMultiplier, hasSpiegelShadowClones, isCoreLanderBurning, levelUpPlayer, movePlayerWithInput, revivePlayerForBossClear, updatePlayerTimers } from './mechanics'
+import { acquireHomingTarget, animateStageClearPlayer, applyRiftPullToPlayer, applyStartingStageLevel, fullyBuffRaidPlayer, getCoreLanderFireInterval, getGodGundamBarrageBossDamage, getGodGundamBarrageDamageMultiplier, getGodGundamMeleeDamagePerSecond, getGodGundamMeleeRange, getGodGundamPassivePose, getGodGundamStageAttackBonus, getNukeBossDamage, getNukeCooldownSeconds, getPlayerBaseAttack, getRiftCenter, getSpiegelShadowCloneDamageMultiplier, hasSpiegelShadowClones, isCoreLanderBurning, levelUpPlayer, movePlayerWithInput, revivePlayerForBossClear, updatePlayerTimers } from './mechanics'
 import { clampNetworkVelocity, cloneAsteroid, cloneDerelictWreck, cloneEnemy, cloneIonStrike, cloneMeteor, cloneRaidRandomEvent, cloneVec, compactPlayer, compactVec, getBufferedAsteroidVisuals, getBufferedEnemyVisuals, getBufferedPlayerVisual, getConnectionLabel, getGuestShotTtlMs, getOwnCorrectionBlend, getPlayerPickupAudioKind, getRemoteInterpolationDelayMs, hasClearedRaidInProgress, isNetworkVisible, keepNetworkVisibleInPlace, reconcilePlayerVisual, updateDerelictWreckMotion } from './network'
-import { drawRaidOptions, drawRaidPlayer, getCoreBlastSprite, getRaidPilotBodySize } from './playerRender'
+import { drawRaidOptions, drawRaidPlayer, getCoreBlastSprite } from './playerRender'
 import { getRaidAssetPreloadInitialState, preloadGradiusRaidAssets, warmRaidGeneratedEffectSprites } from './preload'
 import { clonePlayer, getCheckpointStage, getDefaultPlayerVisualShipKey, getGodGundamGameplayRenderSize, getHighScore, getInitialPlayer, getMesiahVisualShipKeyFromProgress, getOptionSupportStacks, getPlayerCoreLanderCombatModel, getRaidPlayerVisualShipKey, getShipByKey, getUnlockedStage, isCoreLanderAoeShot, isGodGundamBarragePilot, normalizeMesiahDrones, normalizeMesiahScoutDrones, powerColor, sanitizePlayerVisualShipKey, saveCheckpointStage, saveHighScore, saveUnlockedStage } from './state'
 import type { AsteroidHazard, BossDefeatExplosionEvent, BossKind, BossMessage, CameraShakeState, CoreLanderCombatModel, DerelictWreck, Enemy, FormationStyle, GamePhase, GodGundamBarrage, GodGundamPassiveStrike, IonStrike, MeteorHazard, MiniBossKind, MirageBossKind, MultiplayerAsteroidSnapshot, MultiplayerConnectionQuality, MultiplayerEnemySnapshot, MultiplayerHostState, MultiplayerInput, MultiplayerPlayerSnapshot, NukeStrike, Player, PowerKind, PowerUp, RaidAssetPreloadState, RaidBgmMode, RaidDifficulty, RaidMode, RaidMultiplayerSession, RaidRandomEvent, RaidRandomEventKind, RelayGameMessage, Ripple, ShipOption, Shot, Snapshot, Spark, Vec, WeaponKey } from './types'
@@ -296,7 +292,6 @@ export function GradiusRaid({
   const stageEntryRef = useRef(0)
   const pendingNextStageRef = useRef<number | null>(null)
   const nearMissCooldownRef = useRef(0)
-  const pilotContactRef = useRef<[PilotContact | null, PilotContact | null]>([null, null])
   const specialWasCoolingRef = useRef(false)
   const nukeFlashRef = useRef(0)
   const nukeStrikeRef = useRef<NukeStrike | null>(null)
@@ -357,8 +352,6 @@ export function GradiusRaid({
     stageClear: 0,
     unlockedStage: unlockedStageRef.current,
     nukeCooldown: 0,
-    specialTargetAvailable: false,
-    specialInFlight: false,
     nukeFlash: 0,
     asteroidWarning: 0,
     randomEvent: null,
@@ -408,9 +401,6 @@ export function GradiusRaid({
     const stageClearBucket = stageClearRef.current > 0 ? Math.ceil(stageClearRef.current * 30) : 0
     const playerSpecialCooldownBucket = player.specialCooldown > 0 ? Math.ceil(player.specialCooldown) : 0
     const remoteSpecialCooldownBucket = remotePlayer && remotePlayer.specialCooldown > 0 ? Math.ceil(remotePlayer.specialCooldown) : 0
-    const specialTargetAvailable = phaseRef.current === 'playing'
-      && hasRaidSpecialTarget(enemiesRef.current, asteroidsRef.current, enemyShotsRef.current)
-    const specialInFlight = Boolean(nukeStrikeRef.current || godBarrageRef.current)
     const nukeFlashBucket = nukeFlashRef.current > 0 ? Math.ceil(nukeFlashRef.current * 10) : 0
     const asteroidWarningBucket = asteroidWarningRef.current > 0 ? Math.ceil(asteroidWarningRef.current * 4) : 0
     const randomEvent = randomEventRef.current
@@ -428,8 +418,6 @@ export function GradiusRaid({
       stageClearBucket,
       playerSpecialCooldownBucket,
       remoteSpecialCooldownBucket,
-      specialTargetAvailable,
-      specialInFlight,
       nukeFlashBucket,
       asteroidWarningBucket,
       randomEventBucket,
@@ -481,8 +469,6 @@ export function GradiusRaid({
       stageClear: stageClearRef.current,
       unlockedStage: unlockedStageRef.current,
       nukeCooldown: player.specialCooldown,
-      specialTargetAvailable,
-      specialInFlight,
       nukeFlash: nukeFlashRef.current,
       asteroidWarning: asteroidWarningRef.current,
       randomEvent: cloneRaidRandomEvent(randomEventRef.current),
@@ -803,20 +789,6 @@ export function GradiusRaid({
       }
       const hostPickupKind = getPlayerPickupAudioKind(prevHostPlayerForAudio, state.hostPlayer)
       const guestPickupKind = getPlayerPickupAudioKind(prevGuestPlayerForAudio, state.guestPlayer)
-      if (hostPickupKind) pilotContactRef.current[0] = makePilotContact('salvage', state.hostPlayer)
-      if (guestPickupKind && state.guestPlayer) pilotContactRef.current[1] = makePilotContact('salvage', state.guestPlayer)
-      if (prevHostPlayerForAudio && state.hostPlayer.hp > 0) {
-        if (state.hostPlayer.hp < prevHostPlayerForAudio.hp) pilotContactRef.current[0] = makePilotContact('hull', state.hostPlayer)
-        else if (state.hostPlayer.forceField < prevHostPlayerForAudio.forceField || state.hostPlayer.shield < prevHostPlayerForAudio.shield - .7) {
-          pilotContactRef.current[0] = makePilotContact('shield', state.hostPlayer)
-        }
-      }
-      if (prevGuestPlayerForAudio && state.guestPlayer && state.guestPlayer.hp > 0) {
-        if (state.guestPlayer.hp < prevGuestPlayerForAudio.hp) pilotContactRef.current[1] = makePilotContact('hull', state.guestPlayer)
-        else if (state.guestPlayer.forceField < prevGuestPlayerForAudio.forceField || state.guestPlayer.shield < prevGuestPlayerForAudio.shield - .7) {
-          pilotContactRef.current[1] = makePilotContact('shield', state.guestPlayer)
-        }
-      }
       const pickupKind = guestPickupKind ?? hostPickupKind
       if (pickupKind) {
         playPickupVoiceLine(pickupKind)
@@ -861,8 +833,6 @@ export function GradiusRaid({
       stageClear: state.stageClear,
       unlockedStage: state.unlockedStage,
       nukeCooldown: ownPlayer.specialCooldown ?? state.nukeCooldown,
-      specialTargetAvailable: hasRaidSpecialTarget(state.enemies, state.asteroids ?? [], state.enemyShots),
-      specialInFlight: Boolean(state.nukeStrike || state.godBarrage),
       nukeFlash: state.nukeFlash,
       asteroidWarning: state.asteroidWarning ?? 0,
       randomEvent: cloneRaidRandomEvent(state.randomEvent ?? null),
@@ -1101,13 +1071,8 @@ export function GradiusRaid({
     const nowMs = performance.now()
     const expiry = nowMs - getGuestShotTtlMs(multiplayerRttRef.current)
     let localWrite = 0
-    let homingTargets: Map<number, Enemy> | undefined
     for (const shot of guestLocalShotsRef.current) {
       if (shot.spawnedAt > expiry) {
-        if (shot.kind === 'homing') {
-          homingTargets ??= fillRaidHomingTargets(homingTargetsRef.current, enemiesRef.current)
-          steerRaidHoming(shot, dt, enemiesRef.current, homingTargets)
-        }
         shot.x += shot.vx * dt
         shot.y += shot.vy * dt
         guestLocalShotsRef.current[localWrite] = shot
@@ -2393,14 +2358,8 @@ export function GradiusRaid({
     }
 
     let homingLockId: number | undefined
-    let allyHomingLockId: number | undefined
-    const ownSlot = isGuestView ? 1 : 0
-    const localCoop = sameScreenCoopRef.current
     for (const shot of shotsRef.current) {
-      if (shot.kind === 'homing') {
-        if (homingLockId === undefined && (shot.pilotSlot ?? 0) === ownSlot) homingLockId = shot.homingTargetId
-        if (localCoop && allyHomingLockId === undefined && shot.pilotSlot === 1) allyHomingLockId = shot.homingTargetId
-      }
+      if (!isGuestView && homingLockId === undefined && shot.kind === 'homing') homingLockId = shot.homingTargetId
       if (gpuForegroundDrawn && isGpuPlayerShot(shot, gfxProfile.drawAdvancedShotFx)) continue
       if (raidObjectInView(drawBounds, shot.x, shot.y, shot.radius + 12)) drawPlayerShot(shot)
     }
@@ -2455,13 +2414,9 @@ export function GradiusRaid({
 
     // On the guest's screen playerRef = interpolated host, remotePlayerRef = own (guest) ship.
     // Always draw the player's OWN ship in PLAYER_COLOR (red) and the ally in ALLY_PLAYER_COLOR (cyan).
-    if (playing && (homingLockId !== undefined || allyHomingLockId !== undefined)) {
-      const lockSize = clamp(cssWidth * 0.025, 16, 30)
-      for (const enemy of enemiesRef.current) {
-        if ((enemy.id === homingLockId || enemy.id === allyHomingLockId) && canHomingLock(enemy)) {
-          drawHomingTargetLock(ctx, toX(enemy.x), toY(enemy.y), lockSize, time)
-        }
-      }
+    if (phaseRef.current === 'playing' && homingLockId !== undefined) {
+      const locked = enemiesRef.current.find(enemy => enemy.id === homingLockId && enemy.hp > 0)
+      if (locked) drawHomingTargetLock(ctx, toX(locked.x), toY(locked.y), clamp(cssWidth * 0.025, 16, 30), time)
     }
     const allyShipRef = isGuestView ? playerRef.current : remotePlayerRef.current
     const devilAssistShipRef = devilAssistPlayerRef.current
@@ -2482,14 +2437,6 @@ export function GradiusRaid({
     if (allyShipRef && !hideAllyShipForBarrage) drawRaidPlayer(ctx, allyShipRef, phaseRef.current, toX, toY, cssWidth, time, ALLY_PLAYER_COLOR, getCachedEquippedCosmetics(allyShipRef.ship.key), getRaidPlayerVisualShipKey(allyShipRef, progressRef.current), sameScreenIdentityAura ? ALLY_PLAYER_COLOR : null, journeyRim)
     if (devilAssistShipRef && !hideDevilAssistForBarrage) drawRaidPlayer(ctx, devilAssistShipRef, phaseRef.current, toX, toY, cssWidth, time, '#facc15', getCachedEquippedCosmetics(devilAssistShipRef.ship.key), getRaidPlayerVisualShipKey(devilAssistShipRef, progressRef.current), null)
 
-    for (let slot = 0; slot < pilotContactRef.current.length; slot++) {
-      const event = pilotContactRef.current[slot]
-      if (!event) continue
-      const pilot = slot === 0 ? playerRef.current : remotePlayerRef.current
-      if (!pilot || pilot.hp <= 0 || !drawPilotContact(ctx, event, toX(pilot.x), toY(pilot.y),
-        getRaidPilotBodySize(pilot.ship.key, cssWidth), time, reducedMotion)) pilotContactRef.current[slot] = null
-    }
-
     if (gfxProfile.drawDecorativeOverlays) {
       if (isWateryWorldTheme(backgroundStageTheme)) {
         drawWateryWorldForegroundClouds(ctx, cssWidth, cssHeight, time, gfxQuality)
@@ -2500,11 +2447,9 @@ export function GradiusRaid({
 
     for (const powerUp of powerUpsRef.current) {
       if (!raidObjectInView(drawBounds, powerUp.x, powerUp.y, powerUp.radius + 6)) continue
-      drawPowerUpCanvas(ctx, powerUp, toX, toY, cssWidth, time, reducedMotion)
-      if (playing && powerUp.type === 'repair') {
-        const pilot = ownShipRef && needsRepair(ownShipRef) && Math.abs(powerUp.x - ownShipRef.x) <= 33 ? ownShipRef
-          : sameScreenCoopRef.current ? allyShipRef : null
-        if (pilot) drawRecoveryCue(ctx, powerUp, pilot, toX(powerUp.x), toY(powerUp.y), cssWidth)
+      drawPowerUpCanvas(ctx, powerUp, toX, toY, cssWidth, time)
+      if (playing && ownShipRef && powerUp.type === 'repair') {
+        drawRecoveryCue(ctx, powerUp, ownShipRef, toX(powerUp.x), toY(powerUp.y), cssWidth)
       }
     }
 
@@ -2755,22 +2700,23 @@ export function GradiusRaid({
     const session = multiplayerSessionRef.current
     if (session && !session.isHost) {
       const localPlayer = remotePlayerRef.current
-      if (phaseRef.current !== 'playing' || stageClearRef.current > 0 || nukeStrikeRef.current || godBarrageRef.current || !localPlayer || localPlayer.hp <= 0 || (localPlayer.specialCooldown ?? 0) > 0) return
-      if (!hasRaidSpecialTarget(enemiesRef.current, asteroidsRef.current, enemyShotsRef.current)) return
+      if (phaseRef.current !== 'playing' || stageClearRef.current > 0 || !localPlayer || localPlayer.hp <= 0 || (localPlayer.specialCooldown ?? 0) > 0) return
       multiplayerLocalNukeRef.current += 1
       return
     }
 
-    if (phaseRef.current !== 'playing' || stageClearRef.current > 0 || (sourcePlayer.specialCooldown ?? 0) > 0 || nukeStrikeRef.current || godBarrageRef.current) return
+    if (phaseRef.current !== 'playing' || stageClearRef.current > 0 || (sourcePlayer.specialCooldown ?? 0) > 0 || nukeStrikeRef.current) return
     if (sourcePlayer.hp <= 0) return
 
     const visibleEnemies = enemiesRef.current.filter((enemy) => (
-      enemy.hp > 0 && isRaidSpecialTargetOnField(enemy)
+      enemy.hp > 0 && enemy.y > -18 && enemy.y < HEIGHT + 16
     ))
     const visibleAsteroids = asteroidsRef.current.filter((asteroid) => (
-      asteroid.hp > 0 && isRaidSpecialTargetOnField(asteroid)
+      asteroid.hp > 0 && asteroid.y > -18 && asteroid.y < HEIGHT + 16
     ))
-    const visibleBubbles = enemyShotsRef.current.filter(isRaidSpecialBubble)
+    const visibleBubbles = enemyShotsRef.current.filter((shot) => (
+      shot.kind === 'squidBubble' && (shot.hp ?? 1) > 0 && shot.y > -18 && shot.y < HEIGHT + 16
+    ))
     const hasTargets = visibleBubbles.length > 0 || visibleEnemies.length > 0 || visibleAsteroids.length > 0
     if (!hasTargets) return
 
@@ -2808,6 +2754,7 @@ export function GradiusRaid({
     }
     if (isGodGundamBarragePilot(player, progressRef.current)) {
       if (!barrageTarget) return
+      if (godBarrageRef.current) return
       const barrageModel = getPlayerCoreLanderCombatModel(player, progressRef.current) ?? 'godGundam'
       player.specialCooldown = getNukeCooldownSeconds(stageRef.current)
       player.invuln = Math.max(player.invuln, GOD_GUNDAM_BARRAGE_DURATION_SECONDS + 0.75)
@@ -2994,7 +2941,6 @@ export function GradiusRaid({
     godMeleeStrikesRef.current = []
     bossDefeatExplosionEventsRef.current = []
     nearMissCooldownRef.current = 0
-    pilotContactRef.current = [null, null]
     specialWasCoolingRef.current = false
     leaderboardSubmittedRef.current = false
     runStartTimeRef.current = performance.now()
@@ -3145,13 +3091,11 @@ export function GradiusRaid({
     syncSnapshot()
   })
 
-  const queuePlayerShot = useCallback((shot: Omit<Shot, 'id'>, slot: 0 | 1) => {
+  const pushShot = useCallback((shot: Omit<Shot, 'id'>) => {
     // In capture mode (local prediction), redirect to the capture buffer instead of the shared shot list
     const target = fireCaptureRef.current ?? shotsRef.current
     const scale = missileLaunchScale(shot.kind)
-    const projectile: Shot = { ...shot, vx: shot.vx * scale, vy: shot.vy * scale, id: shotId++ }
-    if (projectile.kind === 'homing') projectile.pilotSlot = slot
-    target.push(projectile)
+    target.push({ ...shot, vx: shot.vx * scale, vy: shot.vy * scale, id: shotId++ })
   }, [])
 
   const emitCommandBossShot = useCallback((shot: Omit<Shot, 'id'>) => {
@@ -3172,8 +3116,6 @@ export function GradiusRaid({
     const canFireMain = player.fireCooldown <= 0
     const canFireMesiahDrones = shipKey === 'mesiah' && player.hp > 0 && player.mesiahDroneFireCooldown <= 0
     if (!canFireMain && !canFireMesiahDrones) return
-    const slot = player === remotePlayerRef.current ? 1 : 0
-    const pushShot = (shot: Omit<Shot, 'id'>) => queuePlayerShot(shot, slot)
 
     const baseDamage = getPlayerBaseAttack(player) + (isGodGundamBarragePilot(player, progressRef.current) ? getGodGundamStageAttackBonus(stageRef.current) : 0)
     const isArk = shipKey === 'dreadnought'
@@ -3782,7 +3724,7 @@ export function GradiusRaid({
       ? coreLanderFireInterval
       : Math.max(minFireCooldown, (tunedBaseInterval - Math.min(0.045, totalStacks * 0.006)) / player.ship.fireRate)
     playGameSound(stacks.laser > 0 || shipKey === 'laser' || shipKey === 'xwing' ? 'laser' : 'shoot')
-  }, [queuePlayerShot])
+  }, [pushShot])
   // Keep the stable ref current so predictGuestPlayer can call firePlayer without a forward-reference issue
   firePlayerRef.current = firePlayer
 
@@ -3969,9 +3911,7 @@ export function GradiusRaid({
 
   const spawnPowerUp = useCallback((x: number, y: number, guaranteed = false) => {
     const player = playerRef.current
-    const ally = remotePlayerRef.current
-    const activePilot = player.hp > 0 ? player : ally ?? player
-    const powerScore = getPowerScore(activePilot)
+    const powerScore = getPowerScore(player)
 
     if (!guaranteed) {
       killsSincePowerRef.current += 1
@@ -3981,7 +3921,7 @@ export function GradiusRaid({
         killsSincePowerRef.current >= POWER_PITY_KILLS + 6 ? 0.5 :
           killsSincePowerRef.current >= POWER_PITY_KILLS ? 0.25 :
             0
-      const lowHullBonus = needsRepair(activePilot) || (ally && needsRepair(ally)) ? 0.06 : 0
+      const lowHullBonus = player.hp <= Math.ceil(player.maxHp * 0.35) ? 0.06 : 0
       const chance = clamp(
         0.115 + waveRef.current * 0.004 + lowHullBonus + pityBonus - powerScore * 0.006,
         0.055,
@@ -3992,24 +3932,20 @@ export function GradiusRaid({
     }
 
     const candidates: PowerKind[] = []
-    const meleeOnly = isGodGundamBarragePilot(player, progressRef.current)
-    const allyMeleeOnly = ally ? isGodGundamBarragePilot(ally, progressRef.current) : false
-    const canUse = (type: PowerKind) => canUseRaidPickup(player, type, meleeOnly)
-      || (ally !== null && canUseRaidPickup(ally, type, allyMeleeOnly))
-    if (canUse('repair')) candidates.push('repair')
-    if (canUse('forcefield') && (activePilot.forceField <= 1 || (ally && ally.hp > 0 && ally.forceField <= 1))) candidates.push('forcefield', 'forcefield')
-    if (canUse('shield') && (activePilot.shield < 2.5 || (ally && ally.hp > 0 && ally.shield < 2.5))) candidates.push('shield')
-    if (canUse('option')) candidates.push('option')
-    for (const key of WEAPON_KEYS) {
-      if (!canUse(key)) continue
-      const missing = (canUseRaidPickup(player, key, meleeOnly) && player.weapons[key] === 0)
-        || (ally && canUseRaidPickup(ally, key, allyMeleeOnly) && ally.weapons[key] === 0)
-      candidates.push(key, key)
-      if (missing) candidates.push(key)
+    const godGundamMeleeOnly = isGodGundamBarragePilot(player, progressRef.current)
+    if (player.hp < player.maxHp) candidates.push('repair')
+    if (player.forceField <= 1) candidates.push('forcefield', 'forcefield')
+    if (player.shield < 2.5) candidates.push('shield')
+    if (!godGundamMeleeOnly && (player.ship.key === 'mesiah' ? (player.optionStacks ?? 0) < 2 : player.optionTimer <= 0)) candidates.push('option')
+    if (!godGundamMeleeOnly) {
+      ; WEAPON_KEYS.forEach((key) => {
+        const maxStack = WEAPON_STACK_CAPS[key]
+        const copies = player.weapons[key] === 0 ? 3 : player.weapons[key] >= maxStack ? 1 : 2
+        for (let i = 0; i < copies; i += 1) candidates.push(key)
+      })
     }
 
-    if (!candidates.length) return
-    const type = candidates[Math.floor(Math.random() * candidates.length)]
+    const type = candidates[Math.floor(Math.random() * candidates.length)] ?? (godGundamMeleeOnly ? 'repair' : 'spread')
     killsSincePowerRef.current = 0
     powerDropCooldownRef.current = guaranteed ? NORMAL_POWER_DROP_COOLDOWN * 0.7 : NORMAL_POWER_DROP_COOLDOWN + powerScore * 0.55
     powerUpsRef.current.push({ id: powerId++, type, x, y, vy: 11, radius: 3, spin: Math.random() * 360 })
@@ -4119,12 +4055,10 @@ export function GradiusRaid({
     onClose()
   }, [onClose, reportRaidRunComplete, submitRaidLeaderboardScore])
 
-  const damagePlayer = useCallback((amount: number, targetPlayer = playerRef.current, source?: Vec) => {
+  const damagePlayer = useCallback((amount: number, targetPlayer = playerRef.current) => {
     const player = targetPlayer
     if (player.hp <= 0 || player.invuln > 0) return
     const scaledAmount = Math.max(1, Math.round(amount * enemyDamageMultRef.current))
-    const slot = player === remotePlayerRef.current ? 1 : 0
-    pilotContactRef.current[slot] = makePilotContact(player.forceField > 0 || player.shield > 0 ? 'shield' : 'hull', player, source)
     if (player.forceField > 0) {
       player.forceField = Math.max(0, player.forceField - scaledAmount)
       player.invuln = 0.22
@@ -4614,10 +4548,8 @@ export function GradiusRaid({
     if (player.hp > 0 && !playerInGodBarrage) updatePlayerTimers(player, dt, enemiesRef.current, isSmallViewport)
     if (remotePlayer && remotePlayer.hp > 0 && !remotePlayerInGodBarrage) updatePlayerTimers(remotePlayer, dt, enemiesRef.current, isSmallViewport)
     if (devilAssistPlayer && devilAssistPlayer.hp > 0) updatePlayerTimers(devilAssistPlayer, dt, enemiesRef.current, isSmallViewport)
-    const meleeOnly = isGodGundamBarragePilot(player, progressRef.current)
-    const allyMeleeOnly = remotePlayer ? isGodGundamBarragePilot(remotePlayer, progressRef.current) : false
-    if (meleeOnly) clearPickupLoadout(player)
-    if (remotePlayer && allyMeleeOnly) clearPickupLoadout(remotePlayer)
+    if (isGodGundamBarragePilot(player, progressRef.current)) clearPickupLoadout(player)
+    if (remotePlayer && isGodGundamBarragePilot(remotePlayer, progressRef.current)) clearPickupLoadout(remotePlayer)
     if (devilAssistPlayer && isGodGundamBarragePilot(devilAssistPlayer, progressRef.current)) clearPickupLoadout(devilAssistPlayer)
     if (player.hp > 0 && !playerInGodBarrage) firePlayer(player)
     if (remotePlayer && remotePlayer.hp > 0 && !remotePlayerInGodBarrage) firePlayer(remotePlayer)
@@ -4844,13 +4776,44 @@ export function GradiusRaid({
     const nowSeconds = now / 1000
     const asteroidDriftTime = now / 900
 
-    let homingTargets: Map<number, Enemy> | undefined
+    let hasHomingShot = false
+    for (const shot of shotsRef.current) {
+      if (shot.kind === 'homing') {
+        hasHomingShot = true
+        break
+      }
+    }
+    let homingTargets: Map<number, Enemy> | null = null
+    if (hasHomingShot) {
+      homingTargets = homingTargetsRef.current
+      homingTargets.clear()
+      for (const enemy of enemiesRef.current) {
+        if (enemy.hp > 0 && enemy.y >= -10) homingTargets.set(enemy.id, enemy)
+      }
+    }
+
     const shots = shotsRef.current
     let liveShotCount = 0
     for (const shot of shots) {
       if (shot.kind === 'homing') {
-        homingTargets ??= fillRaidHomingTargets(homingTargetsRef.current, enemiesRef.current)
-        steerRaidHoming(shot, dt, enemiesRef.current, homingTargets)
+        shot.retargetTime = Math.max(0, (shot.retargetTime ?? 0) - dt)
+        let target = shot.homingTargetId && homingTargets ? homingTargets.get(shot.homingTargetId) ?? null : null
+
+        if (!target || shot.retargetTime <= 0) {
+          target = acquireHomingTarget(shot, enemiesRef.current)
+          shot.homingTargetId = target?.id
+          shot.retargetTime = HOMING_RETARGET_SECONDS + (shot.id % 7) * HOMING_RETARGET_STAGGER_SECONDS
+        }
+
+        if (target) {
+          const aimX = target.x - shot.x
+          const aimY = target.y - shot.y
+          const mag = Math.sqrt((aimX) * (aimX) + (aimY) * (aimY)) || 1
+          const speed = homingCruiseSpeed(shot.vx, shot.vy)
+          const turn = Math.min(1, (shot.turn ?? 8) * dt)
+          shot.vx += ((aimX / mag) * speed - shot.vx) * turn
+          shot.vy += ((aimY / mag) * speed - shot.vy) * turn
+        }
       }
       if (shot.kind === 'beam' && shot.angle !== undefined && shot.spin) {
         shot.angle += shot.spin * dt
@@ -5614,20 +5577,20 @@ export function GradiusRaid({
     const powerUps = powerUpsRef.current
     let livePowerUpCount = 0
     for (const powerUp of powerUps) {
-      const levelup = powerUp.type === 'levelup'
-      const magnetRange = levelup ? 31 : 18
-      const targetPlayer = pickRaidPickupPilot(powerUp, player, remotePlayer, levelup ? Infinity : magnetRange, meleeOnly, allyMeleeOnly)
-      powerUp.y += powerUp.vy * dt
-      let magnetStrength = 0
-      if (targetPlayer) {
-        const targetDx = targetPlayer.x - powerUp.x
-        const targetDy = targetPlayer.y - powerUp.y
-        const targetDistanceSq = targetDx * targetDx + targetDy * targetDy
-        magnetStrength = Math.max(0, 1 - Math.sqrt(targetDistanceSq) / magnetRange)
-        if (levelup) {
-          powerUp.x += targetDx * Math.min(1, dt * 3.2)
-          powerUp.y += targetDy * Math.min(1, dt * (0.8 + magnetStrength * 1.1))
-        } else if (magnetStrength > 0) {
+      const targetPlayer = getNearestLivingPlayerThisTick(powerUp)
+      const targetDx = targetPlayer.x - powerUp.x
+      const targetDy = targetPlayer.y - powerUp.y
+      const targetDistanceSq = targetDx * targetDx + targetDy * targetDy
+      const magnetRange = powerUp.type === 'levelup' ? 31 : 18
+      const magnetStrength = targetPlayer.hp > 0 && targetDistanceSq < magnetRange * magnetRange
+        ? 1 - Math.sqrt(targetDistanceSq) / magnetRange
+        : 0
+      if (powerUp.type === 'levelup') {
+        powerUp.x += (targetPlayer.x - powerUp.x) * Math.min(1, dt * 3.2)
+        powerUp.y += powerUp.vy * dt + (targetPlayer.y - powerUp.y) * Math.min(1, dt * (0.8 + magnetStrength * 1.1))
+      } else {
+        powerUp.y += powerUp.vy * dt
+        if (magnetStrength > 0) {
           const pull = Math.min(1, dt * (1.4 + magnetStrength * 5.4))
           powerUp.x += targetDx * pull * 0.82
           powerUp.y += targetDy * pull * 0.42
@@ -5741,7 +5704,7 @@ export function GradiusRaid({
           Math.abs(shot.y - enemy.y) <= hitRange &&
           distSq(shot, enemy) <= hitRange * hitRange
         ) {
-          const shielded = isRaidEnemyShielded(enemy)
+          const shielded = (enemy.isBoss && (enemy.shieldTime > 0 || enemy.y < 15)) || (enemy.isMiniBoss && (enemy.shieldTime > 0 || enemy.y < 8))
           if (shielded) continue
           const damage = enemy.isBoss ? Math.max(1, Math.ceil(splashDamage * 0.45)) : splashDamage
           enemy.hp = enemy.isBoss ? Math.max(1, enemy.hp - damage) : enemy.hp - damage
@@ -6342,11 +6305,11 @@ export function GradiusRaid({
           Math.abs(shot.y - enemy.y) <= hitRange &&
           distSq(shot, enemy) <= hitRange * hitRange
         ) {
-          const bossShielded = isRaidEnemyShielded(enemy)
-          const impact = getBossImpactKind(enemy, shot, bossShielded)
-          if (impact && recordBossImpact(enemy, shot, impact) && impact !== 'armor') playRaidCue(impact, (shot.x - 50) / 50)
+          const bossShielded = (enemy.isBoss && (enemy.shieldTime > 0 || enemy.y < 15)) || (enemy.isMiniBoss && (enemy.shieldTime > 0 || enemy.y < 8))
+          const impact = recordBossImpact(enemy, shot, bossShielded)
+          if (impact && impact !== 'armor') playRaidCue(impact, (shot.x - 50) / 50)
           if (!bossShielded) {
-            enemy.hp -= getRaidDirectHitDamage(shot, impact)
+            enemy.hp -= shot.damage
             playBossCriticalStinger(enemy)
             enemy.hitFlash = Math.max(enemy.hitFlash ?? 0, enemy.isBoss ? 0.24 : enemy.isMiniBoss ? 0.18 : 0.12)
           }
@@ -6571,8 +6534,8 @@ export function GradiusRaid({
             splitSquidBubble({ ...enemyShot })
             enemyShot.life = 0
           }
-          damagePlayer(enemyShot.kind === 'boss' || enemyShot.kind === 'plasma' || enemyShot.kind === 'blade' || enemyShot.kind === 'orbShot' || enemyShot.kind === 'superShot' || enemyShot.kind === 'beam' || enemyShot.kind === 'scatterBoss' || enemyShot.kind === 'poisonCloud' ? 1 : enemyShot.damage, targetPlayer, enemyShot)
           enemyShot.y = HEIGHT + 99
+          damagePlayer(enemyShot.kind === 'boss' || enemyShot.kind === 'plasma' || enemyShot.kind === 'blade' || enemyShot.kind === 'orbShot' || enemyShot.kind === 'superShot' || enemyShot.kind === 'beam' || enemyShot.kind === 'scatterBoss' || enemyShot.kind === 'poisonCloud' ? 1 : enemyShot.damage, targetPlayer)
           break
         }
       }
@@ -6618,7 +6581,7 @@ export function GradiusRaid({
             } else {
               enemy.hp = 0
             }
-            damagePlayer(enemy.isBoss ? 2 : 1, targetPlayer, enemy)
+            damagePlayer(enemy.isBoss ? 2 : 1, targetPlayer)
             spawnSparks(enemy.x, enemy.y, '#fb7185', enemy.isBoss || enemy.isMiniBoss ? 35 : 14, 6)
           }
           break
@@ -6636,7 +6599,7 @@ export function GradiusRaid({
           Math.abs(asteroid.y - targetPlayer.y) <= hitRange &&
           distSq(asteroid, targetPlayer) <= hitRange * hitRange
         ) {
-          damagePlayer(asteroid.tier === 2 ? 2 : 1, targetPlayer, asteroid)
+          damagePlayer(asteroid.tier === 2 ? 2 : 1, targetPlayer)
           breakAsteroid(asteroid, false)
           break
         }
@@ -6653,7 +6616,7 @@ export function GradiusRaid({
           distSq(meteor, targetPlayer) <= hitRange * hitRange
         ) {
           meteor.life = 0
-          damagePlayer(1, targetPlayer, meteor)
+          damagePlayer(1, targetPlayer)
           spawnSparks(meteor.x, meteor.y, '#fbbf24', 18, 6)
           addRipple(meteor.x, meteor.y, '#fb923c', 9)
           break
@@ -6680,7 +6643,7 @@ export function GradiusRaid({
           Math.abs(wreck.x - targetPlayer.x) <= wreck.width * 0.5 + PLAYER_RADIUS &&
           Math.abs(wreck.y - targetPlayer.y) <= wreck.height * 0.58 + PLAYER_RADIUS
         ) {
-          damagePlayer(2, targetPlayer, wreck)
+          damagePlayer(2, targetPlayer)
           wreck.hp = Math.max(0, wreck.hp - 70)
           spawnSparks(wreck.x, wreck.y, '#94a3b8', 18, 6)
           break
@@ -6698,45 +6661,56 @@ export function GradiusRaid({
       spawnedAsteroids.length = 0
     }
 
-    const activePowerUps = powerUpsRef.current
-    let remainingPowerUps = 0
-    for (const powerUp of activePowerUps) {
-      if (powerUp.y >= HEIGHT + 20) continue
+    for (const powerUp of powerUpsRef.current) {
       const pickupAssist = powerUp.type === 'levelup' ? 4.2 : 1.8
       const hitRange = powerUp.radius + PLAYER_RADIUS + pickupAssist
-      const targetPlayer = pickRaidPickupPilot(powerUp, player, remotePlayer, hitRange, meleeOnly, allyMeleeOnly)
-      if (!targetPlayer) {
-        activePowerUps[remainingPowerUps++] = powerUp
-        continue
+      for (const targetPlayer of livingPlayersThisTick) {
+        if (targetPlayer.hp <= 0) continue
+        if (
+          Math.abs(powerUp.x - targetPlayer.x) <= hitRange &&
+          Math.abs(powerUp.y - targetPlayer.y) <= hitRange &&
+          distSq(powerUp, targetPlayer) <= hitRange * hitRange
+        ) {
+          powerUp.y = HEIGHT + 99
+          pickupsCollectedRef.current += 1
+          if (powerUp.type === 'levelup') {
+            const levelTargets = coOpRunRef.current ? livingPlayersThisTick : [targetPlayer]
+            for (const levelTarget of levelTargets) {
+              if (levelTarget.hp > 0) levelUpPlayer(levelTarget)
+            }
+          } else if (powerUp.type === 'repair') {
+            targetPlayer.hp = Math.min(targetPlayer.maxHp, targetPlayer.hp + 1)
+          } else if (powerUp.type === 'shield') {
+            targetPlayer.shield = Math.min(8, targetPlayer.shield + 3)
+            targetPlayer.invuln = Math.max(targetPlayer.invuln, 0.8)
+          } else if (powerUp.type === 'forcefield') {
+            targetPlayer.forceField = targetPlayer.ship.key === 'spaceEt'
+              ? Math.min(SPACE_ET_PASSIVE_FORCE_FIELD_CHARGES + FORCE_FIELD_ARMOR, targetPlayer.forceField + FORCE_FIELD_ARMOR)
+              : FORCE_FIELD_ARMOR
+            targetPlayer.invuln = Math.max(targetPlayer.invuln, 0.9)
+          } else if (powerUp.type === 'option') {
+            if (!isGodGundamBarragePilot(targetPlayer, progressRef.current)) {
+              targetPlayer.optionTimer = 1
+              targetPlayer.optionStacks = targetPlayer.ship.key === 'mesiah'
+                ? Math.min(2, (targetPlayer.optionStacks ?? 0) + 1)
+                : 1
+            }
+          } else {
+            if (!isGodGundamBarragePilot(targetPlayer, progressRef.current)) {
+              targetPlayer.weapons[powerUp.type] = Math.min(WEAPON_STACK_CAPS[powerUp.type], targetPlayer.weapons[powerUp.type] + 1)
+              targetPlayer.weaponTimers[powerUp.type] = 1
+            }
+          }
+          targetPlayer.score += Math.round(120 * scoreMult)
+          spawnSparks(powerUp.x, powerUp.y, powerColor(powerUp.type), 24, 6)
+          addRipple(powerUp.x, powerUp.y, powerColor(powerUp.type), 11)
+          playPickupVoiceLine(powerUp.type)
+          playGameSound('levelup')
+          break
+        }
       }
-      pickupsCollectedRef.current += 1
-      if (powerUp.type === 'levelup') {
-        if (player.hp > 0) levelUpPlayer(player)
-        if (remotePlayer && remotePlayer.hp > 0) levelUpPlayer(remotePlayer)
-      } else if (powerUp.type === 'repair') {
-        targetPlayer.hp = Math.min(targetPlayer.maxHp, targetPlayer.hp + 1)
-      } else if (powerUp.type === 'shield') {
-        targetPlayer.shield = Math.min(8, targetPlayer.shield + 3)
-        targetPlayer.invuln = Math.max(targetPlayer.invuln, 0.8)
-      } else if (powerUp.type === 'forcefield') {
-        targetPlayer.forceField = Math.min(getRaidForceFieldCap(targetPlayer), targetPlayer.forceField + FORCE_FIELD_ARMOR)
-        targetPlayer.invuln = Math.max(targetPlayer.invuln, 0.9)
-      } else if (powerUp.type === 'option') {
-        targetPlayer.optionTimer = 1
-        targetPlayer.optionStacks = targetPlayer.ship.key === 'mesiah' ? Math.min(2, (targetPlayer.optionStacks ?? 0) + 1) : 1
-      } else {
-        targetPlayer.weapons[powerUp.type] = Math.min(WEAPON_STACK_CAPS[powerUp.type], targetPlayer.weapons[powerUp.type] + 1)
-        targetPlayer.weaponTimers[powerUp.type] = 1
-      }
-      targetPlayer.score += Math.round(120 * scoreMult)
-      pilotContactRef.current[targetPlayer === remotePlayer ? 1 : 0] = makePilotContact('salvage', targetPlayer)
-      const color = powerColor(powerUp.type)
-      spawnSparks(powerUp.x, powerUp.y, color, 16, 5)
-      addRipple(powerUp.x, powerUp.y, color, 9)
-      playPickupVoiceLine(powerUp.type)
-      playGameSound('levelup')
     }
-    activePowerUps.length = remainingPowerUps
+    compactInPlace(powerUpsRef.current, (powerUp) => powerUp.y < HEIGHT + 20)
 
     if (player.score > highScoreRef.current) {
       highScoreRef.current = player.score
@@ -7191,8 +7165,7 @@ export function GradiusRaid({
   const usingGodBarrage = player.ship.key === 'coreLander' && (playerVisualShipKey === 'godGundam' || playerVisualShipKey === 'spiegel')
   const nukeCooldown = Math.ceil(snapshot.nukeCooldown)
   const nukeStageLocked = snapshot.phase === 'playing' && snapshot.stageClear > 0
-  const specialAvailable = snapshot.specialTargetAvailable && !snapshot.specialInFlight
-  const nukeReady = snapshot.phase === 'playing' && player.hp > 0 && !nukeStageLocked && snapshot.nukeCooldown <= 0 && specialAvailable
+  const nukeReady = snapshot.phase === 'playing' && !nukeStageLocked && snapshot.nukeCooldown <= 0
   useEffect(() => {
     if (snapshot.phase !== 'playing') return
     if (snapshot.nukeCooldown > 0) {
@@ -7208,9 +7181,7 @@ export function GradiusRaid({
   const specialCoolingLabel = usingGodBarrage ? hudText.barrageCooling : hudText.nukeCooling
   const specialAvailableLabel = usingGodBarrage ? hudText.barrageAvailable : hudText.nukeAvailable
   const nukeDisplay = snapshot.phase === 'playing' && snapshot.nukeCooldown > 0 ? `${nukeCooldown}s` : specialLabel
-  const specialWaiting = snapshot.specialInFlight ? hudText.specialInFlight : hudText.noSpecialTarget
-  const nukeHint = snapshot.phase === 'playing' && snapshot.nukeCooldown > 0 ? hudText.cooldown
-    : snapshot.phase === 'playing' && !nukeStageLocked && !specialAvailable ? specialWaiting : hudText.space
+  const nukeHint = snapshot.phase === 'playing' && snapshot.nukeCooldown > 0 ? hudText.cooldown : hudText.space
   const bossIncoming = snapshot.bossAlert > 0 && snapshot.bossMessage === 'incoming'
   const bossClear = snapshot.bossAlert > 0 && snapshot.bossMessage === 'clear'
   const bossEntranceSlam = snapshot.phase === 'playing'
@@ -7313,9 +7284,8 @@ export function GradiusRaid({
       ? `${cooldown}s`
       : nukeStageLocked
       ? hudText.cooldown
-      : snapshot.phase === 'playing' && !specialAvailable ? specialWaiting
       : controlHint
-    return { label, hint, ready: snapshot.phase === 'playing' && hudPlayer.hp > 0 && !nukeStageLocked && cooldown <= 0 && specialAvailable }
+    return { label, hint, ready: snapshot.phase === 'playing' && !nukeStageLocked && cooldown <= 0 }
   }
   const renderPilotHud = (hudPlayer: Player, pilotKey: 'p1' | 'p2', pilotLabel: string, controlHint: string) => {
     const specialHud = getPilotSpecialHud(hudPlayer, controlHint)
@@ -7420,7 +7390,7 @@ export function GradiusRaid({
             type="button"
             onClick={() => activateNuke()}
             disabled={!nukeReady}
-            aria-label={nukeReady ? specialLaunchLabel : nukeStageLocked ? specialLockedLabel : snapshot.phase === 'playing' && nukeCooldown > 0 ? `${specialCoolingLabel} ${nukeCooldown} ${hudText.seconds}` : snapshot.phase === 'playing' && !specialAvailable ? specialWaiting : specialAvailableLabel}
+            aria-label={nukeReady ? specialLaunchLabel : nukeStageLocked ? specialLockedLabel : snapshot.phase === 'playing' ? `${specialCoolingLabel} ${nukeCooldown} ${hudText.seconds}` : specialAvailableLabel}
           >
             <span className="raid__nuke-text">
               <b>{nukeDisplay}</b>
