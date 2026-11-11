@@ -45,6 +45,7 @@ export function drawCommandBossTelegraph(ctx: CanvasRenderingContext2D, enemy: E
 const reducedMotion = typeof window !== 'undefined' && typeof window.matchMedia === 'function'
   ? window.matchMedia('(prefers-reduced-motion: reduce)')
   : undefined
+export const prefersRaidReducedMotion = () => reducedMotion?.matches === true
 const phaseColors = ['#67e8f9', '#fbbf24', '#fb7185'] as const
 
 /** Short, local effects driven by the same encounter clock as the attacks. */
@@ -63,7 +64,7 @@ export function drawCommandBossEnergy(ctx: CanvasRenderingContext2D, enemy: Enem
   const x = toX(enemy.x)
   const y = toY(enemy.y)
   const phaseColor = phaseColors[enemy.bossCombatPhase ?? 0] ?? phaseColors[0]
-  const motionReduced = reducedMotion?.matches === true
+  const motionReduced = prefersRaidReducedMotion()
   ctx.save()
   ctx.globalCompositeOperation = 'screen'
 

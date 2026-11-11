@@ -1,6 +1,7 @@
-import { getGameAudioMixSettings, getGameSoundEnabled, getPublicAssetUrl, playGameSound } from '../sound'
+import { getGameAudioMixSettings, getGameSoundEnabled, getPublicAssetUrl, playGameSound, playRaidCue } from '../sound'
 import type { GameSoundKind } from '../sound'
-import type { PowerKind } from './types'
+import { isCommandBeam } from './commandBoss'
+import type { Enemy, PowerKind } from './types'
 import { clamp } from './utils'
 
 export let lastCoreLanderPhysicalSoundAt = 0
@@ -14,6 +15,21 @@ export function playCoreLanderPhysicalAttackSound(seed = Math.random()) {
   const noise = Math.abs(Math.sin(seed * 12.9898) * 43758.5453)
   const index = Math.floor(noise) % CORE_LANDER_PHYSICAL_ATTACK_SOUNDS.length
   playGameSound(CORE_LANDER_PHYSICAL_ATTACK_SOUNDS[index])
+}
+
+export function playCommandBossCharge(enemy: Enemy, phaseChanged: boolean) {
+  const pan = (enemy.x - 50) / 50
+  if (enemy.bossAttackPattern === 'hydra') {
+    playRaidCue('hydra', pan - .55)
+    playRaidCue('hydra', pan + .55, .22)
+    playRaidCue('hydra', pan, .44)
+  } else if (isCommandBeam(enemy.bossAttackPattern)) {
+    playRaidCue('beamCharge', pan)
+  }
+  if (phaseChanged) {
+    playRaidCue('thrusterFault', pan)
+    playRaidCue('thrusterFault', pan, .31)
+  }
 }
 
 export let lastPickupVoiceMs = 0

@@ -665,6 +665,51 @@ export function stopBGM() {
   }
 }
 
+const RAID_CUES = {
+  hydra: [280, 490, .32, .10, 'triangle', 'beam'],
+  beamCharge: [76, 185, .86, .15, 'triangle', 'beam'],
+  thrusterFault: [116, 58, .27, .13, 'triangle', 'impact'],
+  flyby: [640, 185, .14, .07, 'sine', 'impact'],
+  shield: [870, 330, .13, .09, 'sine', 'impact'],
+  heavy: [105, 45, .16, .12, 'triangle', 'impact'],
+  core: [510, 1080, .12, .08, 'triangle', 'impact'],
+  ready: [470, 840, .21, .085, 'sine', 'ui'],
+} as const
+
+export function playRaidCue(kind: keyof typeof RAID_CUES, pan = 0, delay = 0) {
+  try {
+    if (!getGameSoundEnabled()) return
+    const [from, to, duration, volume, wave, bus] = RAID_CUES[kind]
+    const mix = getGameAudioMixSettings()
+    const output = volume * mix.master * mix[bus] * MAX_SFX_OUTPUT
+    if (output <= .0001) return
+    const ctx = getAudioContext()
+    if (!ctx) return
+    const start = ctx.currentTime + delay
+    const oscillator = ctx.createOscillator()
+    const envelope = ctx.createGain()
+    oscillator.type = wave
+    oscillator.frequency.setValueAtTime(from, start)
+    oscillator.frequency.exponentialRampToValueAtTime(to, start + duration)
+    envelope.gain.setValueAtTime(.0001, start)
+    envelope.gain.exponentialRampToValueAtTime(output, start + duration * (kind === 'beamCharge' ? .72 : .24))
+    envelope.gain.exponentialRampToValueAtTime(.0001, start + duration)
+    oscillator.connect(envelope)
+    if (pan && typeof ctx.createStereoPanner === 'function') {
+      const stereo = ctx.createStereoPanner()
+      stereo.pan.value = Math.max(-1, Math.min(1, pan))
+      envelope.connect(stereo)
+      stereo.connect(ctx.destination)
+    } else {
+      envelope.connect(ctx.destination)
+    }
+    oscillator.start(start)
+    oscillator.stop(start + duration)
+  } catch {
+    // Audio must never interrupt the simulation.
+  }
+}
+
 export function playGameSound(
   kind: GameSoundKind
 ) {

@@ -1,6 +1,10 @@
+import { updateFlightPose, type FlightPose } from './combatFeel'
+
 /** Continuous cosmetic travel; independent of gameplay coordinates and hitboxes. */
 export class RaidTravelMotion {
   private lastTime: number | null = null
+  private readonly heading: FlightPose = { time: 0, x: 50, bank: 0 }
+  drift = 0
   far = 0
   near = 0
   rush = 0
@@ -9,7 +13,12 @@ export class RaidTravelMotion {
 
   update(time: number, rush: number, speedScale: number, playerX: number, playerY: number) {
     const dt = this.lastTime === null ? 0 : Math.max(0, Math.min(0.1, (time - this.lastTime) / 1000))
+    if (this.lastTime === null) {
+      this.heading.time = time
+      this.heading.x = playerX
+    }
     this.lastTime = time
+    this.drift = updateFlightPose(this.heading, time, playerX) / .14
     const blend = 1 - Math.exp(-dt * 4)
     const targetRush = Math.max(0, Math.min(1, rush))
     // Exact integral of exponential acceleration keeps travel consistent at

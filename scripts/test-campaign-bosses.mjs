@@ -94,7 +94,7 @@ const getEnemyCanvasSize=()=>250,getStageBossIntroProgress=()=>1;
 const drawGenericBossShip=(ctx,enemy)=>paths.push(['generic',enemy.bossKind,enemy.bossArtStage]);
 const drawCachedStageBossBody=(ctx,kind)=>paths.push([kind]);
 const drawFinalBossSpriteBody=()=>paths.push(['final']),drawDevilGundamBoss=()=>paths.push(['devil']);
-const drawEnemyHitFlash=()=>{},drawBossShield=()=>{},drawCachedBossBar=()=>{},drawCommandBossTelegraph=()=>{},drawCommandBossEnergy=()=>{},drawCommandBossHealthBar=()=>{};
+const drawEnemyHitFlash=()=>{},drawBossShield=()=>{},drawCachedBossBar=()=>{},drawCommandBossTelegraph=()=>{},drawCommandBossEnergy=()=>{},drawCommandBossHealthBar=()=>{},drawHullDamage=()=>{},prefersRaidReducedMotion=()=>false;
 const drawSquidWhipStrike=()=>{},drawSnakeVenomTelegraph=()=>{};
 const getNormalAlienCanvasSprite=()=>{throw Error('boss borrowed a normal model')};
 const getEliteAlienCanvasSprite=()=>{throw Error('boss borrowed an elite model')};

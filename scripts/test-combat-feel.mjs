@@ -39,3 +39,39 @@ assert.ok(explosionDiameter(8,1,0.5)>60,'explosion should be large enough to rea
 assert.ok(explosionDiameter(1000,1,1)<=220,'explosion must stay bounded')
 assert.equal(rippleReplacement([{size:15},{size:12}],2),-1,'tiny hits must not evict major blasts')
 assert.equal(rippleReplacement([{size:15},{size:3}],12),1,'replace the weakest effect first')
+
+const audioSource = readFileSync(new URL('../src/components/games/sound.ts', import.meta.url), 'utf8')
+const cueStart = audioSource.indexOf('const RAID_CUES =')
+const mockAudio = `
+export const events = [];
+export const config = { enabled: true, pan: true, master: 1 };
+const MAX_SFX_OUTPUT = .5;
+const getGameSoundEnabled = () => config.enabled;
+const getGameAudioMixSettings = () => ({ master: config.master, beam: 1, impact: 1, ui: 1 });
+const param = () => ({ setValueAtTime() {}, exponentialRampToValueAtTime() {} });
+const getAudioContext = () => ({
+ currentTime: 2,
+ destination: { type: 'speaker' },
+ createOscillator() {
+  return { frequency: param(), connect() {}, start(t) { events.push(['start', t]); }, stop() {} };
+ },
+ createGain() { return { gain: param(), connect(node) { events.push(['route', node.type]); } }; },
+ createStereoPanner: config.pan ? () => ({ type: 'stereo', pan: {}, connect() {} }) : undefined,
+});
+`
+const cueSource = mockAudio + audioSource.slice(cueStart, audioSource.indexOf('export function playGameSound(', cueStart))
+const audioCode = ts.transpileModule(cueSource, { compilerOptions: { module: ts.ModuleKind.ESNext } }).outputText
+const { events, config, playRaidCue } = await import('data:text/javascript;base64,' + Buffer.from(audioCode).toString('base64'))
+playRaidCue('hydra', .6, .22)
+assert.deepEqual(events.splice(0), [['route', 'stereo'], ['start', 2.22]])
+config.pan = false
+playRaidCue('beamCharge', .6)
+assert.deepEqual(events.splice(0), [['route', 'speaker'], ['start', 2]])
+config.enabled = false
+playRaidCue('flyby')
+assert.equal(events.length, 0)
+config.enabled = true
+config.master = 0
+playRaidCue('ready')
+assert.equal(events.length, 0)
+console.log('Combat audio: timed stereo cues, mono fallback and mixer mute passed')

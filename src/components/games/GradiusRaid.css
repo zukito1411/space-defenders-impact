@@ -3777,7 +3777,7 @@
     border-radius: inherit;
     opacity: 0;
     transform: scale(0.86);
-    animation: raidQuickNukePing 1.8s ease-out infinite;
+    animation: raidQuickNukePing 720ms ease-out;
     pointer-events: none;
   }
 
@@ -4145,4 +4145,33 @@
   object-fit: contain;
   padding: 10px;
   box-sizing: border-box;
+}
+
+
+.raid__hp--critical .raid__pip--filled:not(.raid__pip--force) {
+  outline: 1px solid #fca5a5;
+  outline-offset: 1px;
+}
+
+.raid__pilot-special--ready b {
+  color: #fde68a;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .raid__nuke--ready .raid__nuke-text,
+  .raid__pilot-special--ready b {
+    animation: raidSpecialReadyCue 560ms ease-out;
+  }
+
+  @keyframes raidSpecialReadyCue {
+    0% { opacity: .58; transform: scale(.95); }
+    40% { opacity: 1; transform: scale(1.07); }
+    100% { opacity: 1; transform: scale(1); }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .raid__nuke-quick::after {
+    animation: none;
+  }
 }
