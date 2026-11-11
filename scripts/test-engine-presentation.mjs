@@ -21,6 +21,7 @@ const code=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.ESNe
 const {drawRaidPlayer,drawSupportEngineTrail,drawPlayerEngine,getRaidShipNozzles,warmRaidEngineExhaust}=await import('data:text/javascript;base64,'+Buffer.from(code).toString('base64')).catch(error=>{console.error(error.message);process.exit(1)})
 function context(){
  const ctx={images:[],gradients:0,depth:0,globalAlpha:1,
+ drawImage(...args){this.images.push(args)},fillRect(){},
  save(){this.depth++},restore(){this.depth--},translate(){},rotate(){},
  createLinearGradient(){this.gradients++;return {addColorStop(){}}},
  beginPath(){},moveTo(){},bezierCurveTo(){},closePath(){},fill(){}}
@@ -36,7 +37,7 @@ for(const trail of [false,true]) {
  assert.equal(ctx.gradients,trail?count*2:0,'unexpected procedural exhaust work')
  assert.equal(ctx.depth,0,'ship draw leaked its bank transform')
 }
-for(const key of ['rocket', 'rocketElite', 'xwingElite']) for(const boost of [0,0.5,1.35]) {
+for(const key of ['rocket', 'rocketElite', 'dreadnought', 'dreadnoughtElite', 'xwingElite']) for(const boost of [0,0.5,1.35]) {
  const ctx=context()
  drawRaidPlayer(ctx,{...player,engineBoost:boost},'playing',v=>v*10,v=>v*5,1000,1100+boost,'#ef233c',{trail:false,aura:false,frame:false},key)
  const nozzles=getRaidShipNozzles(key)
@@ -44,24 +45,41 @@ for(const key of ['rocket', 'rocketElite', 'xwingElite']) for(const boost of [0,
  for(const [i,[offsetX,offsetY,aperture]] of nozzles.entries()) {
   const [,x,centerY,length,width]=ctx.images[i]
   const size=76*1.16
-  assert.ok(Math.abs(x-(500+size*offsetX))<1e-9,'wake shifted horizontally')
-  assert.ok(Math.abs(centerY-length*.25-(350+size*offsetY))<1e-9,'boost moved the exhaust root away from its nozzle')
+  assert.ok(Math.abs(x-width*(.5-.452)-(500+size*offsetX))<1e-9,'wake shifted horizontally')
+  assert.ok(Math.abs(centerY-length*(.5-.25)-(350+size*offsetY))<1e-9,'boost moved the exhaust root away from its nozzle')
   assert.ok(Math.abs(width*.12-size*aperture)<1e-9,'boost widened the exhaust at the nozzle')
  }
 }
-const bakeCtx=context()
-let baked=0
-globalThis.document={createElement(){baked++;return {getContext(){return bakeCtx}}}}
-for(let i=0;i<3;i++){
+const masteryCanvases=[]
+globalThis.document={createElement(){
  const ctx=context()
- ctx.drawImage=(...args)=>ctx.images.push(args)
- drawRaidPlayer(ctx,player,'playing',v=>v*10,v=>v*5,1000,1000+i,'#ef233c',{trail:true,aura:false,frame:false},'rocketElite')
- assert.equal(ctx.images.length,2)
- assert.equal(ctx.gradients,0,'mastery wake should reuse its baked plume')
+ const canvas={ctx,getContext(){return ctx}}
+ masteryCanvases.push(canvas)
+ return canvas
+}}
+const ark={...player,ship:{key:'dreadnought'}}
+const renderSignature = (visualKey,time,boost) => {
+ const ctx=context()
+ drawRaidPlayer(ctx,{...ark,engineBoost:boost},'playing',v=>v*10,v=>v*5,420,time,'#ef233c',{trail:true,aura:false,frame:false},visualKey)
+ assert.equal(ctx.images.length,1,'the Ark has one main nozzle')
+ assert.equal(ctx.gradients,0,'signature wake should reuse its baked plume')
+ return ctx.images[0]
 }
+const signatureIdle=renderSignature('dreadnought',0,0)
+const signatureBoost=renderSignature('dreadnought',0,1.35)
+assert.equal(signatureIdle[0],signatureBoost[0])
+assert.ok(Math.abs(signatureBoost[4]/signatureIdle[4]-(1+1.35*.36))<1e-9,'signature trail lost its original boost response')
+assert.equal(renderSignature('dreadnoughtElite',1500,0)[0],signatureIdle[0])
+assert.equal(masteryCanvases.length,2)
+const [wake,texture]=masteryCanvases
+assert.equal(wake.ctx.gradients,2,'original core and bloom are baked into the signature')
+assert.equal(texture.ctx.gradients,1)
+assert.equal(wake.ctx.images[0][0],texture,'signature texture was not combined with the original bloom')
+assert.equal(texture.ctx.globalCompositeOperation,'source-in','atlas plume should take the ship palette')
+const [,left,top,width,length]=signatureIdle
+assert.equal(left+width/2,500)
+assert.ok(Math.abs(top+length*18/116-(350+62*1.16*(274-144)/288))<1e-9,'signature trail detached from the Ark outlet')
 delete globalThis.document
-assert.equal(baked,1)
-assert.equal(bakeCtx.gradients,2)
 
 const heatCanvases=[]
 globalThis.document={createElement(){
@@ -87,6 +105,7 @@ const boosted=thermalDraw(1.35)
 assert.notEqual(idle[0],boosted[0],'boost never changes the flame palette')
 assert.ok(idle[4] < boosted[4] / 2,'idle plume should be compact')
 assert.equal(idle[3],boosted[3])
+assert.ok(Math.abs(idle[1]+idle[3]*.452-30)<1e-9,'cached atlas hot core shifted away from the nozzle')
 assert.equal(idle[2]+idle[4]*.25,boosted[2]+boosted[4]*.25)
 
 for(const key of ['mesiahRaptorBlack','mesiahRaptorWhite','rocket','spaceEt']) {
@@ -100,12 +119,12 @@ for(const key of ['mesiahRaptorBlack','mesiahRaptorWhite','rocket','spaceEt']) {
  assert.deepEqual(rotations,[.6])
  for(const [i,[x,y,aperture]] of vents.entries()) {
   const [,left,top,width,length]=ctx.images[i]
-  assert.ok(Math.abs(left+width/2-32*x)<1e-9)
+  assert.ok(Math.abs(left+width*.452-32*x)<1e-9)
   assert.ok(Math.abs(top+length*.25-32*y)<1e-9)
   assert.ok(Math.abs(width*.12-32*aperture)<1e-9)
  }
 }
 delete globalThis.document
-console.log('Engine: shorter idle, heat ramp, mounted scout exhaust, stable nozzle width and bounded bitmap draws passed')
+console.log('Engine: shorter idle, heat ramp, mounted scout exhaust, aligned atlas hot core, layered signature, and bounded bitmap draws passed')
 
 } catch(error) { console.error(error.message); process.exit(1) }

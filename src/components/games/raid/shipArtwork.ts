@@ -36,11 +36,11 @@ const mesiahNozzles = [nozzle(118, 264, 10), nozzle(144, 266, 23), nozzle(169, 2
 const mesiahEliteNozzles = [nozzle(118, 267, 11), nozzle(144, 268, 24), nozzle(170, 267, 11)]
 
 const RAID_SHIP_NOZZLES: Partial<Record<string, readonly ShipNozzle[]>> = {
-  rocket: [nozzle(115, 266, 18), nozzle(172, 266, 18)],
+  rocket: [nozzle(115, 274, 18), nozzle(172, 274, 18)],
   fast: [nozzle(114, 266, 21), nozzle(143, 260, 11), nozzle(173, 266, 21)],
   gatling: [nozzle(117, 266, 19), nozzle(144, 256, 10), nozzle(171, 266, 19)],
   laser: [nozzle(96, 267, 23), nozzle(192, 267, 23)],
-  dreadnought: [nozzle(144, 268, 23)],
+  dreadnought: [nozzle(144, 274, 23)],
   xwing: [nozzle(119, 255, 15), nozzle(143, 255, 12), nozzle(168, 255, 15)],
   spaceEt: [nozzle(114, 267, 22), nozzle(174, 267, 22)],
   // These two PNGs have different outlet centers when drawn in the scout's square box.
@@ -49,11 +49,11 @@ const RAID_SHIP_NOZZLES: Partial<Record<string, readonly ShipNozzle[]>> = {
   mesiah: mesiahNozzles,
   mesiahBlack: mesiahNozzles,
   mesiahWhite: mesiahNozzles,
-  rocketElite: [nozzle(115, 266, 19), nozzle(172, 266, 19)],
+  rocketElite: [nozzle(115, 274, 19), nozzle(172, 274, 19)],
   fastElite: [nozzle(114, 266, 22), nozzle(173, 266, 22)],
   gatlingElite: [nozzle(116, 266, 21), nozzle(172, 266, 21)],
   laserElite: [nozzle(94, 267, 24), nozzle(193, 267, 24)],
-  dreadnoughtElite: [nozzle(144, 268, 25)],
+  dreadnoughtElite: [nozzle(144, 274, 25)],
   xwingElite: [nozzle(119, 253, 16), nozzle(144, 252, 12), nozzle(170, 253, 16)],
   spaceEtElite: [nozzle(113, 267, 23), nozzle(176, 267, 23)],
   mesiahBlackElite: mesiahEliteNozzles,

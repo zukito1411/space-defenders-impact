@@ -346,6 +346,9 @@ const ENGINE_HEAT_FILTERS = [
   'hue-rotate(165deg) saturate(.78)', 'hue-rotate(192deg) saturate(.9)',
 ]
 let engineHeatSprites: HTMLCanvasElement[] | null = null
+// Root of the bright core in the upright exhaust tile, measured in the art.
+const EXHAUST_ORIGIN_X = .452
+const EXHAUST_ORIGIN_Y = .25
 
 export function warmRaidEngineExhaust() {
   if (engineHeatSprites || typeof document === 'undefined') return
@@ -374,25 +377,26 @@ function getEngineLengthScale(engineBoost: number, time: number) {
 export function drawPlayerEngine(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, time: number, engineBoost = 0, nozzleWidth?: number) {
   const length = size * getEngineLengthScale(engineBoost, time)
   const throttle = clamp(engineBoost / 1.35, 0, 1)
-  const anchor = nozzleWidth === undefined ? .30 : .25
   const width = nozzleWidth === undefined ? size * .36 : nozzleWidth / .12
-  const centerY = y + size * .34 + length * anchor
+  const left = x - width * EXHAUST_ORIGIN_X
+  const top = y + size * .34
+  const plumeTop = top - length * EXHAUST_ORIGIN_Y
   const alpha = .73 + .21 * throttle + Math.sin(time / 80) * .035
   if (engineHeatSprites) {
     const index = Math.round(clamp(throttle + Math.sin(time / 127) * .045, 0, 1) * (engineHeatSprites.length - 1))
     ctx.save()
     ctx.globalCompositeOperation = 'lighter'
     ctx.globalAlpha *= alpha
-    ctx.drawImage(engineHeatSprites[index], x - width / 2, centerY - length / 2, width, length)
+    ctx.drawImage(engineHeatSprites[index], left, plumeTop, width, length)
     ctx.restore()
     return
   }
   const exhaust = getRaidCombatFrame(COMBAT_TILE.exhaust)
-  if (exhaust && drawRaidCombatTexture(ctx, exhaust, x, centerY, length, width, -Math.PI / 2, true, alpha)) return
+  if (exhaust && drawRaidCombatTexture(ctx, exhaust, left + width / 2, plumeTop + length / 2,
+    length, width, -Math.PI / 2, true, alpha)) return
 
   const flameHeight = length * .52
   const flameWidth = nozzleWidth === undefined ? size * .11 : nozzleWidth / 0.96
-  const top = y + size * (nozzleWidth === undefined ? .32 : .34)
   const tip = top + flameHeight
   const gradient = ctx.createLinearGradient(x, top, x, tip)
   gradient.addColorStop(0, 'rgba(255,255,255,0.96)')
@@ -1517,37 +1521,75 @@ export function drawMasteryEngineTrail(ctx: CanvasRenderingContext2D, x: number,
 }
 
 const masteryWakeSprites = new WeakMap<MasteryVisualStyle, HTMLCanvasElement>()
+const MASTERY_WAKE_X = 44
+const MASTERY_WAKE_Y = 18
+const MASTERY_WAKE_LENGTH = 72
+const MASTERY_WAKE_WIDTH = 16
+
+function bakeMasteryWake(style: MasteryVisualStyle, exhaust: NonNullable<ReturnType<typeof getRaidCombatFrame>>) {
+  const wake = document.createElement('canvas')
+  wake.width = 88
+  wake.height = 116
+  const wakeCtx = wake.getContext('2d')
+  if (!wakeCtx) return null
+  paintMasteryWake(wakeCtx, style, MASTERY_WAKE_X, MASTERY_WAKE_Y, MASTERY_WAKE_LENGTH, MASTERY_WAKE_WIDTH, 100)
+
+  // Color the authored plume with the ship's signature palette before merging
+  // it with the original bloom and hot core. Each nozzle draws one bitmap.
+  const texture = document.createElement('canvas')
+  texture.width = wake.width
+  texture.height = wake.height
+  const textureCtx = texture.getContext('2d')
+  if (!textureCtx) return wake
+  const plumeWidth = 70
+  const plumeLength = 123
+  if (!drawRaidCombatTexture(textureCtx, exhaust,
+    MASTERY_WAKE_X + plumeWidth * (.5 - EXHAUST_ORIGIN_X),
+    MASTERY_WAKE_Y + plumeLength * (.5 - EXHAUST_ORIGIN_Y),
+    plumeLength, plumeWidth, -Math.PI / 2, false)) return wake
+  const tint = textureCtx.createLinearGradient(0, MASTERY_WAKE_Y, 0, MASTERY_WAKE_Y + MASTERY_WAKE_LENGTH)
+  tint.addColorStop(0, style.accent)
+  tint.addColorStop(.25, style.core)
+  tint.addColorStop(.63, style.paint)
+  tint.addColorStop(1, 'rgba(0,0,0,0)')
+  textureCtx.globalCompositeOperation = 'source-in'
+  textureCtx.fillStyle = tint
+  textureCtx.fillRect(0, 0, texture.width, texture.height)
+  wakeCtx.globalCompositeOperation = 'lighter'
+  wakeCtx.globalAlpha = .74
+  wakeCtx.drawImage(texture, 0, 0)
+  return wake
+}
 
 export function drawSingleMasteryEngineTrail(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, time: number, color: string, shipKey: string, engineBoost = 0, nozzleWidth?: number) {
   const style = getMasteryVisualStyle(shipKey, color)
-  const tailScale = shipKey === 'spaceEt' ? 1.18 : shipKey === 'dreadnought' ? 0.92 : shipKey === 'mesiah' ? 1.05 : 1
-  const top = y + size * 0.34
-  const length = size * .72 * tailScale * getEngineLengthScale(engineBoost, time)
-  const widthRatio = shipKey === 'dreadnought' ? .15 : .13
-  const width = nozzleWidth === undefined ? size * widthRatio : nozzleWidth / 1.16
+  const pulse = .96 + Math.sin(time / 180) * .05
+  const tailScale = shipKey === 'spaceEt' ? 1.18 : shipKey === 'dreadnought' ? .92 : shipKey === 'mesiah' ? 1.05 : 1
+  const top = y + size * .34
+  const length = size * .72 * tailScale * pulse * (1 + clamp(engineBoost, 0, 1.35) * .36)
+  const width = nozzleWidth === undefined ? size * (shipKey === 'dreadnought' ? .15 : .13) : nozzleWidth / 1.16
+
   if (nozzleWidth !== undefined && typeof document !== 'undefined') {
     let wake = masteryWakeSprites.get(style)
     if (!wake) {
-      const canvas = document.createElement('canvas')
-      canvas.width = 48
-      canvas.height = 115
-      const wakeCtx = canvas.getContext('2d')
-      if (wakeCtx) {
-        drawSingleMasteryEngineTrail(wakeCtx, 24, -24, 100, 0, color, shipKey)
-        masteryWakeSprites.set(style, canvas)
-        wake = canvas
-      }
+      const exhaust = getRaidCombatFrame(COMBAT_TILE.exhaust)
+      wake = exhaust ? bakeMasteryWake(style, exhaust) ?? undefined : undefined
+      if (wake) masteryWakeSprites.set(style, wake)
     }
     if (wake) {
-      const scaleX = width / (100 * widthRatio)
-      const scaleY = length / (72 * tailScale * getEngineLengthScale(0, 0))
+      const scaleX = width / MASTERY_WAKE_WIDTH
+      const scaleY = length / MASTERY_WAKE_LENGTH
       ctx.save()
       ctx.globalCompositeOperation = 'lighter'
-      ctx.drawImage(wake, x - 24 * scaleX, top - 10 * scaleY, 48 * scaleX, 115 * scaleY)
+      ctx.drawImage(wake, x - MASTERY_WAKE_X * scaleX, top - MASTERY_WAKE_Y * scaleY, wake.width * scaleX, wake.height * scaleY)
       ctx.restore()
       return
     }
   }
+  paintMasteryWake(ctx, style, x, top, length, width, size)
+}
+
+function paintMasteryWake(ctx: CanvasRenderingContext2D, style: MasteryVisualStyle, x: number, top: number, length: number, width: number, size: number) {
   const tip = top + length
 
   ctx.save()
