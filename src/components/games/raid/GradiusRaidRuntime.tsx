@@ -5459,7 +5459,6 @@ export function GradiusRaid({
       if (commandProfile) {
         const event = advanceCommandBoss(enemy, dt, livingPlayersThisTick, raidDifficultyRef.current,
           Math.max(0, COMMAND_SHOT_LIMIT - enemyShotsRef.current.length), emitCommandBossShot)
-        if (event & COMMAND_PHASE) addRipple(enemy.x, enemy.y, '#fbbf24', 13)
         if (((event & COMMAND_WARNING) && isCommandBeam(enemy.bossAttackPattern)) || (event & COMMAND_PHASE)) playGameSound('countdown')
         if (event & COMMAND_FIRED) playGameSound(isCommandBeam(enemy.bossAttackPattern) ? 'laser' : 'rocket')
       }

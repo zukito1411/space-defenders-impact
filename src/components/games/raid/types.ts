@@ -136,6 +136,8 @@ export type Enemy = Vec & {
   /** Canonical art identity; optional for compatibility with older co-op packets. */
   bossArtStage?: number
   bossEncounterAge?: number
+  bossPhaseStartedAge?: number
+  bossLastVolleyAge?: number
   bossAttackState?: 'warning' | 'burst' | 'recovery'
   bossAttackPattern?: CommandPattern
   bossAttackSerial?: number

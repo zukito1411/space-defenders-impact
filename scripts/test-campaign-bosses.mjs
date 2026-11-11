@@ -25,7 +25,7 @@ const waveRef={current:1},stageRef={current:1},playerRef={current:{rank:1,forceF
 const devilBossNextEligibleStageRef={current:99},remotePlayerRef={current:null},devilPreBuffRankRef={current:0},devilBossEncounteredRef={current:false},devilAssistPlayerRef={current:true};
 const bossAlertRef={current:0},bossMessageRef={current:''},bossEntranceSlamRef={current:0},enemyHpMultRef={current:1},raidDifficultyRef={current:'normal'};
 const playerName='pilot',shouldForceLocalDevilBossTest=()=>false,getPowerScore=()=>0,isCoOpActive=()=>false,isCreatorPlayerName=()=>false;
-const NORMAL_RAID_DEVIL_BONUS_STAGE=16,MAX_RAID_STAGE=15,PLAYER_MAX_RANK=9,FORCE_FIELD_ARMOR=5;
+const NORMAL_RAID_DEVIL_BONUS_STAGE=16,MAX_RAID_STAGE=15,PLAYER_MAX_RANK=20,FORCE_FIELD_ARMOR=5;
 const BOSS_RUSH_ENTRY_SPEED_SCALE=1.2,BOSS_RUSH_ATTACK_COOLDOWN_SCALE=.72,BOSS_RUSH_MOTION_SCALE=1.18,MULTIPLAYER_BOSS_HP_MULTIPLIER=2;
 const DEVIL_BOSS_MIN_STAGE_GAP=5,DEVIL_BOSS_MAX_STAGE_GAP=10,BOSS_ENTRANCE_SLAM_SECONDS=.8;
 const BOSS_COLORS=Object.fromEntries(['carrier','orb','mantis','serpent','hydra','gate','super','squid','snake','final','devil'].map(k=>[k,'#123456']));
@@ -33,14 +33,19 @@ let enemyId=1,endlessKind='carrier';
 const fullyBuffRaidPlayer=()=>{},spawnDevilEncounterAssist=()=>{},triggerScreenShake=()=>{},startRaidBgm=()=>{},playGameSound=()=>{};
 const pickEndlessBossKind=()=>endlessKind;
 `+spawn+`
-export function spawnAt(stage,mode='campaign',kind='carrier'){stageRef.current=stage;raidModeRef.current=mode;endlessKind=kind;spawnBoss();return enemiesRef.current.pop()}
+export function spawnAt(stage,mode='campaign',kind='carrier',rank=1){playerRef.current.rank=rank;stageRef.current=stage;raidModeRef.current=mode;endlessKind=kind;spawnBoss();return enemiesRef.current.pop()}
 `)
 for(let stage=1;stage<=16;stage++) {
  const enemy=spawning.spawnAt(stage)
  assert.equal(enemy.bossKind,stage===16?'devil':kinds[stage-1])
  const art=getGenericBossArt(enemy.bossKind,enemy.bossArtStage)
  assert.equal(enemy.bossArtStage,stages.includes(stage)?stage:undefined)
- if(art)assert.equal(art.stage,stage)
+ if (art) {
+  assert.equal(art.stage,stage)
+  const veteran=spawning.spawnAt(stage,'campaign','carrier',20)
+  assert.equal(veteran.hp,veteran.maxHp)
+  assert.ok(veteran.hp / enemy.hp > 2.86 && veteran.hp / enemy.hp < 2.864)
+ }
 }
 for(const stage of [5,10,15]) {
  const enemy=spawning.spawnAt(stage,'bossRush')
@@ -89,7 +94,7 @@ const getEnemyCanvasSize=()=>250,getStageBossIntroProgress=()=>1;
 const drawGenericBossShip=(ctx,enemy)=>paths.push(['generic',enemy.bossKind,enemy.bossArtStage]);
 const drawCachedStageBossBody=(ctx,kind)=>paths.push([kind]);
 const drawFinalBossSpriteBody=()=>paths.push(['final']),drawDevilGundamBoss=()=>paths.push(['devil']);
-const drawEnemyHitFlash=()=>{},drawBossShield=()=>{},drawCachedBossBar=()=>{},drawCommandBossTelegraph=()=>{};
+const drawEnemyHitFlash=()=>{},drawBossShield=()=>{},drawCachedBossBar=()=>{},drawCommandBossTelegraph=()=>{},drawCommandBossEnergy=()=>{},drawCommandBossHealthBar=()=>{};
 const drawSquidWhipStrike=()=>{},drawSnakeVenomTelegraph=()=>{};
 const getNormalAlienCanvasSprite=()=>{throw Error('boss borrowed a normal model')};
 const getEliteAlienCanvasSprite=()=>{throw Error('boss borrowed an elite model')};

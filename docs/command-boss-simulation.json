@@ -25,7 +25,7 @@
         0.9384
       ],
       "hpScaleRank1": 1.08,
-      "hpScaleRank20": 1.4083,
+      "hpScaleRank20": 3.091,
       "stationaryHits": 26,
       "strafeHits": 12
     },
@@ -48,7 +48,7 @@
         0.9568
       ],
       "hpScaleRank1": 1.08,
-      "hpScaleRank20": 1.4083,
+      "hpScaleRank20": 3.091,
       "stationaryHits": 9,
       "strafeHits": 7
     },
@@ -71,7 +71,7 @@
         0.92
       ],
       "hpScaleRank1": 1.1,
-      "hpScaleRank20": 1.4344,
+      "hpScaleRank20": 3.1482,
       "stationaryHits": 9,
       "strafeHits": 8
     },
@@ -94,7 +94,7 @@
         0.92
       ],
       "hpScaleRank1": 1.1,
-      "hpScaleRank20": 1.4344,
+      "hpScaleRank20": 3.1482,
       "stationaryHits": 27,
       "strafeHits": 9
     },
@@ -117,7 +117,7 @@
         1.012
       ],
       "hpScaleRank1": 1.12,
-      "hpScaleRank20": 1.4605,
+      "hpScaleRank20": 3.2054,
       "stationaryHits": 26,
       "strafeHits": 15
     },
@@ -140,7 +140,7 @@
         0.9016
       ],
       "hpScaleRank1": 1.12,
-      "hpScaleRank20": 1.4605,
+      "hpScaleRank20": 3.2054,
       "stationaryHits": 28,
       "strafeHits": 16
     },
@@ -163,7 +163,7 @@
         0.9384
       ],
       "hpScaleRank1": 1.14,
-      "hpScaleRank20": 1.4866,
+      "hpScaleRank20": 3.2627,
       "stationaryHits": 8,
       "strafeHits": 14
     },
@@ -186,7 +186,7 @@
         0.9016
       ],
       "hpScaleRank1": 1.14,
-      "hpScaleRank20": 1.4866,
+      "hpScaleRank20": 3.2627,
       "stationaryHits": 18,
       "strafeHits": 10
     },
@@ -209,7 +209,7 @@
         0.9384
       ],
       "hpScaleRank1": 1.16,
-      "hpScaleRank20": 1.5126,
+      "hpScaleRank20": 3.3199,
       "stationaryHits": 24,
       "strafeHits": 5
     },
@@ -232,7 +232,7 @@
         1.0304
       ],
       "hpScaleRank1": 1.16,
-      "hpScaleRank20": 1.5126,
+      "hpScaleRank20": 3.3199,
       "stationaryHits": 19,
       "strafeHits": 17
     },
@@ -255,7 +255,7 @@
         0.9384
       ],
       "hpScaleRank1": 1.18,
-      "hpScaleRank20": 1.5387,
+      "hpScaleRank20": 3.3772,
       "stationaryHits": 24,
       "strafeHits": 15
     },
@@ -278,7 +278,7 @@
         0.9568
       ],
       "hpScaleRank1": 1.18,
-      "hpScaleRank20": 1.5387,
+      "hpScaleRank20": 3.3772,
       "stationaryHits": 13,
       "strafeHits": 17
     }
