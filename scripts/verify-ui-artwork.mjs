@@ -20,6 +20,7 @@ const required = [
   'assets/ui/orbital-hangar-v1.png',
   'assets/ui/console-plate-v1.png',
   'assets/raid-fx/combat-atlas-v2.png',
+  'assets/raid-fx/raid-effects-v1.webp',
   'assets/raid-fx/explosion-atlas-v2.png',
   'assets/raid-fx/boss-atlas-v1.png',
 ]

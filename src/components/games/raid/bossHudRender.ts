@@ -1,3 +1,4 @@
+import { drawRaidVfx, RAID_VFX_TILE } from './combatArt'
 import type { Enemy } from './types'
 import { clamp, drawRadialEllipse, getOffscreenRenderScale, traceRoundedRect } from './utils'
 import { hexToRgba } from './stageBossRender'
@@ -275,6 +276,8 @@ export function drawCachedBossReticle(ctx: CanvasRenderingContext2D, x: number, 
 
 export function drawBossShield(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, time: number, color = '#38bdf8') {
   const pulse = 0.94 + Math.sin(time / 430) * 0.06
+  const diameter = size * 1.2 * pulse
+  if (drawRaidVfx(ctx, RAID_VFX_TILE.shockwave, x, y, diameter, diameter, .48, 0, true)) return
   ctx.save()
   ctx.translate(x, y)
   ctx.scale(pulse, pulse)

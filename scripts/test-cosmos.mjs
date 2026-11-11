@@ -61,6 +61,9 @@ const PLANET_DEPTH=[30,20,10],PLANET_PARALLAX=[.018,.009,.004];
 const COSMIC_REGIONS=${JSON.stringify(regions.COSMIC_REGIONS)};
 const cosmicRegionIndex=${cosmicRegionIndex.toString()},edgeFlyby=${edgeFlyby.toString()};
 const frame={width:512,height:512};
+const travelTexture={width:192,height:192};
+const RAID_VFX_TILE={travel:11};
+const getRaidVfxTexture=id=>id===RAID_VFX_TILE.travel?travelTexture:undefined;
 const wreckFrames=Array.from({length:8},(_,id)=>({width:464,height:464,id}));
 const getWreckTexture=i=>wreckFrames[i];
 const getCosmosBackdrop=i=>i>=0&&i<4?frame:undefined,getCosmosLandmark=getCosmosBackdrop,getCosmosBloom=getCosmosBackdrop,getJourneyPlanet=getCosmosBackdrop,getJourneySurface=getCosmosBackdrop,getJourneyBloom=getCosmosBackdrop,getSurfaceTerrain=()=>globalThis.__surfaceTestTexture??frame;
@@ -118,6 +121,7 @@ scene.cosmosRegion=0;scene.travel.near=300;scene.travel.rush=0
 scene.updateSpeedLines(1000,500,false,false,1)
 assert.ok(scene.speedLineSprites.some(s=>s.visible&&s.alpha>0),'cruise speed lines are missing')
 const line=scene.speedLineSprites.find(s=>s.visible&&s.alpha>0),beforeY=line.y,beforeAlpha=line.alpha
+assert.equal(line.texture.width,192,'speed lines should use the decoded travel artwork')
 scene.travel.near+=1;scene.updateSpeedLines(1000,500,false,false,1)
 assert.ok(line.y>beforeY,'speed lines must follow forward travel, not radiate sideways')
 const cruiseY=line.y
