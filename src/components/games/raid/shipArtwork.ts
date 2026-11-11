@@ -43,6 +43,9 @@ const RAID_SHIP_NOZZLES: Partial<Record<string, readonly ShipNozzle[]>> = {
   dreadnought: [nozzle(144, 268, 23)],
   xwing: [nozzle(119, 255, 15), nozzle(143, 255, 12), nozzle(168, 255, 15)],
   spaceEt: [nozzle(114, 267, 22), nozzle(174, 267, 22)],
+  // These two PNGs have different outlet centers when drawn in the scout's square box.
+  mesiahRaptorBlack: [[(126 - 128) / 256, (234 - 128) / 256, 19 / 256]],
+  mesiahRaptorWhite: [[0, (235 - 128) / 256, 21 / 256]],
   mesiah: mesiahNozzles,
   mesiahBlack: mesiahNozzles,
   mesiahWhite: mesiahNozzles,

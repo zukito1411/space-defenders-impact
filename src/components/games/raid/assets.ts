@@ -1202,11 +1202,20 @@ export function getDerelictWreckCanvasSprite(variant: number) {
   return makeImageCanvasSprite(cacheKey, getPublicAssetUrl(RAID_DERELICT_WRECK_ASSET_PATH), processDerelictWreckAsset)
 }
 
+function processWhiteRaptorExhaust(image: HTMLImageElement) {
+  const canvas = makeSpriteProcessingCanvas(image, 620)
+  if (!canvas) return null
+  // Hide the old baked flame below the nozzle. The adjacent fins remain visible.
+  const top = Math.round(canvas.height * .925)
+  canvas.getContext('2d')?.clearRect(canvas.width * .44, top, canvas.width * .12, canvas.height - top)
+  return canvas
+}
+
 export function getShipCanvasSprite(shipKey: string) {
   const key = `ship-image:${shipKey}`
   const existing = canvasSpriteCache.get(key)
   if (existing) return existing
-  return makeImageCanvasSprite(key, getRaidShipSpriteUrl(shipKey))
+  return makeImageCanvasSprite(key, getRaidShipSpriteUrl(shipKey), shipKey === 'mesiahRaptorWhite' ? processWhiteRaptorExhaust : undefined)
 }
 
 export function getNormalAlienCanvasSprite(variant: number) {

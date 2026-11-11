@@ -13,7 +13,7 @@ import type { CanvasSpriteEntry, GodGundamBarragePose, RaidOtherAssetKey } from 
 import { DEFAULT_PICKUP_VOICE_SAMPLE_URL, PICKUP_VOICE_SAMPLE_URLS } from './audio'
 import { RAID_BOSS_BGM_TRACK, RAID_BOSS_FINAL_BGM_TRACK, RAID_BOSS_SNAKE_BGM_TRACK, RAID_BOSS_SQUID_BGM_TRACK, RAID_DEFAULT_BGM_TRACK, RAID_ENDING_BGM_TRACK, SHIP_OPTIONS } from './constants'
 import { getHomingMissileSprite, warmPowerPickupSpriteCache } from './effectsRender'
-import { getCoreBlastSprite, getHoneycombShieldSprite } from './playerRender'
+import { getCoreBlastSprite, getHoneycombShieldSprite, warmRaidEngineExhaust } from './playerRender'
 import type { RaidAssetPreloadState } from './types'
 import { getCachedProjectileOrbSprite, getCachedProjectileTrailSprite } from './utils'
 
@@ -332,6 +332,7 @@ export function preloadRaidPixiBackgroundAssets(onProgress?: (loaded: number, to
       onProgress?.(Math.min(loaded, total), total)
     }
   })).then(() => {
+    warmRaidEngineExhaust()
     raidPixiAssetWarmComplete = true
   })
 

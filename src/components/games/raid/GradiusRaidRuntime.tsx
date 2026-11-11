@@ -1,3 +1,4 @@
+import { pushSquidBubble } from './bubbleRecoil'
 import { createRaidMainShotEmitter } from './playerMuzzle'
 import { getRaidShipBaseVisualKey } from './shipArtwork'
 import { fireRaidFighter, getRaidFighter, getRaidFighterPathX, getRaidReserveVariant, getRaidStageEncounter, getRaidWingSize, getRaidWingSlot, LEGACY_FIGHTER_COUNT, RAID_STAGE_ENEMY_LIMIT } from './stageEncounters'
@@ -5799,6 +5800,7 @@ export function GradiusRaid({
           const bubbleHitCap = bubbleLevel === 0 ? 20 : bubbleLevel === 1 ? 18 : bubbleLevel === 2 ? 15 : 12
           const bubbleDamage = Math.max(1, Math.ceil(Math.min(shot.damage, bubbleHitCap) * bubbleArmor))
           bubble.hp = (bubble.hp ?? 1) - bubbleDamage
+          if (bubble.hp > 0) pushSquidBubble(bubble, shot.vx, shot.vy, bubbleDamage)
           spawnSparks(shot.x, shot.y, '#f0abfc', 5, 5)
           if (isCoreLanderAoeShot(shot)) {
             detonateCoreLanderBlast(shot)
@@ -6308,6 +6310,7 @@ export function GradiusRaid({
               const splitHp = bubble.hp ?? 120
               const damage = Math.max(1, Math.round(Math.max(30 + stageRef.current * 4 + powerScore * 2, splitHp * 0.45) * damageMultiplier))
               bubble.hp = splitHp - damage
+              if (bubble.hp > 0) pushSquidBubble(bubble, bubble.x - player.x, bubble.y - player.y, damage)
               hitAnyTarget = true
               spawnSparks(bubble.x, bubble.y, '#f0abfc', 6, 5)
               if ((bubble.hp ?? 0) <= 0) {
