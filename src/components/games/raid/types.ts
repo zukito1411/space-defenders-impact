@@ -115,6 +115,8 @@ export type Shot = Vec & {
   spin?: number
   hp?: number
   splitLevel?: number
+  bubbleRecoilHits?: number
+  bubbleRecoilRecovery?: number
   burning?: boolean
 }
 
