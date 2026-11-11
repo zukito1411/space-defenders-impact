@@ -62,6 +62,11 @@ A nuke clears existing shots and cancels a pending command attack into 0.9 secon
 of recovery. The next attack must show a fresh warning; there is no instant
 retaliation.
 
+At 30% HP or below, the reactor opens during recovery. Direct fire traveling up
+the front-center lane deals 25% more damage, rounded to a whole damage point.
+The reactor artwork appears during that window. Shielding, heavy projectiles,
+and hits outside the center lane follow their normal damage rules.
+
 ## HP tuning
 
 At spawn, the game multiplies the existing boss HP formula by the hull's HP

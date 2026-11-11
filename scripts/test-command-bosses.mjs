@@ -148,6 +148,8 @@ const RAID_VFX_TILE = Object.fromEntries(
  ['dangerLane','aim','ionWake','shockwave','muzzle','shield','debris','precision','hullDamage','charredPlate'].map(name=>[name,name]));
 const drawRaidVfx = (ctx,...args) => { ctx.sprites.push(args); return true };
 const drawRaidVfxLane = (ctx,...args) => { ctx.lanes.push(args) };
+const RAID_CONTACT_TILE = { reactor: "reactor" };
+const drawRaidContactArt = drawRaidVfx;
 `
 const warnings=await load(source+vfxStubs+'\nconst PLAYER_RADIUS=3.2;\n'+strip(read('src/components/games/raid/commandBossRender.ts')))
 for(const [w,h] of [[390,844],[1280,720]])for(const p of m.COMMAND_BOSS_PROFILES)for(const pattern of p.sequence) {
@@ -212,8 +214,13 @@ for (const profile of m.COMMAND_BOSS_PROFILES) {
  assert.deepEqual(sprites.map(([tile])=>tile),['hullDamage'])
  sprites.length=0
  ship.hp = ship.maxHp * .3
+ ship.bossAttackState = 'warning'
  damage.drawHullDamage(effectsContext, ship, 0, 0, 130, 0, 1, true)
- assert.deepEqual(sprites.map(([tile])=>tile),['hullDamage','hullDamage','hullDamage','precision'])
+ assert.deepEqual(sprites.map(([tile])=>tile),['hullDamage','hullDamage','hullDamage'])
+ sprites.length=0
+ ship.bossAttackState = 'recovery'
+ damage.drawHullDamage(effectsContext, ship, 0, 0, 130, 0, 1, true)
+ assert.deepEqual(sprites.map(([tile])=>tile),['hullDamage','hullDamage','hullDamage','reactor'])
  sprites.length=0
  ship.hp = 0
  damage.drawHullDamage(effectsContext, ship, 0, 0, 130, 0, 1, true)
@@ -222,10 +229,11 @@ for (const profile of m.COMMAND_BOSS_PROFILES) {
 assert.ok(damage.BOSS_BREAKUP_DELAYS.length <= 5 && damage.BOSS_BREAKUP_DELAYS.at(-1) < 3.15)
 assert.notDeepEqual(damage.getBossBreakupPoint(boss(11), 0), damage.getBossBreakupPoint(boss(11), 1))
 
-const impactBoss = boss(11, .25)
-const contact = { id: 3, x: 51, y: 31, kind: 'pulse' }
-assert.equal(damage.recordBossImpact(impactBoss, contact, true), 'shield')
-assert.equal(damage.recordBossImpact(impactBoss, { ...contact, id: 4 }, true), undefined)
+const impactBoss = {...boss(11, .25), bossAttackState: 'recovery'}
+const contact = { id: 3, x: 51, y: 31, kind: 'pulse', vy:-100, damage:20 }
+assert.equal(damage.getBossImpactKind(impactBoss, contact, true), 'shield')
+assert.equal(damage.recordBossImpact(impactBoss, contact, 'shield'), true)
+assert.equal(damage.recordBossImpact(impactBoss, { ...contact, id: 4 }, 'shield'), false)
 sprites.length=0
 damage.drawBossImpact(effectsContext, impactBoss, 195, 168.8, 3.9, 8.44, 130, false)
 assert.equal(sprites.length, 1)
@@ -233,10 +241,18 @@ const [shieldTile, shieldX, shieldY] = sprites[0]
 assert.equal(shieldTile, 'shield')
 assert.ok(shieldX > 195 && shieldY > 168.8)
 assert.ok(Math.hypot(shieldX - 195, shieldY - 168.8) <= 130 * .52 + 1e-8)
-impactBoss.bossImpactTime = .09
-assert.equal(damage.recordBossImpact(impactBoss, contact, false), 'core')
-impactBoss.bossImpactTime = 0
-assert.equal(damage.recordBossImpact(impactBoss, { ...contact, kind: 'rocket' }, false), 'heavy')
+const core = damage.getBossImpactKind(impactBoss, contact, false)
+assert.equal(core, 'core')
+assert.equal(damage.recordBossImpact(impactBoss, contact, core), false, 'visual throttling should remain independent of damage')
+assert.equal(damage.getRaidDirectHitDamage(contact, core), 25)
+assert.equal(damage.getRaidDirectHitDamage(contact, 'shield'), 0)
+for (const bossAttackState of ['warning','burst']) {
+ assert.equal(damage.getBossImpactKind({...impactBoss,bossAttackState}, contact, false), 'armor')
+}
+assert.equal(damage.getBossImpactKind({...impactBoss,hp:impactBoss.maxHp*.31}, contact, false), 'armor')
+assert.equal(damage.getBossImpactKind(impactBoss, {...contact,x:55}, false), 'armor')
+assert.equal(damage.getBossImpactKind(impactBoss, {...contact,kind:'rocket'}, false), 'heavy')
+assert.equal(damage.getRaidDirectHitDamage(contact, 'heavy'), 20)
 console.log('Boss VFX: projected beam widths, per-muzzle artwork, hull damage and contact placement passed')
 
 // Real network interpolation preserves committed targets and never blends different attack warnings.

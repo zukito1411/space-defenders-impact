@@ -1016,6 +1016,11 @@ export function drawSpiegelBurningMirage(
 
 const flightPoses = new Map<string, FlightPose>()
 
+export function getRaidPilotBodySize(shipKey: string, viewportWidth: number) {
+  const baseSize = viewportWidth < 860 ? 62 : viewportWidth > 1100 ? 86 : 76
+  return shipKey === 'mesiah' ? baseSize * 1.62 : shipKey === 'coreLander' ? baseSize * 1.38 : baseSize
+}
+
 export function drawRaidPlayer(
   ctx: CanvasRenderingContext2D,
   player: Player,
@@ -1044,8 +1049,7 @@ export function drawRaidPlayer(
   ctx.rotate(phase === 'playing' && player.hp > 0 && player.ship.key !== 'coreLander' ? bank : 0)
   ctx.translate(-x, -y)
   try {
-  const baseSize = viewportWidth < 860 ? 62 : viewportWidth > 1100 ? 86 : 76
-  const size = player.ship.key === 'mesiah' ? baseSize * 1.62 : player.ship.key === 'coreLander' ? baseSize * 1.38 : baseSize
+  const size = getRaidPilotBodySize(player.ship.key, viewportWidth)
   const isDown = phase === 'gameover' || player.hp <= 0
   const rotation = isDown ? 28 * DEG : 0
   const scale = isDown ? 0.88 : 1

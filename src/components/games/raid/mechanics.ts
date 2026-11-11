@@ -2,29 +2,8 @@ import type { GodGundamBarragePose } from './assets'
 import { CORE_LANDER_BASE_DAMAGE_BONUS, CORE_LANDER_BURNING_DAMAGE_BONUS, CORE_LANDER_BURNING_FIRE_INTERVAL_SECONDS, CORE_LANDER_BURNING_RAGE_DAMAGE_BONUS, CORE_LANDER_BURNING_RAGE_FIRE_INTERVAL_REDUCTION, CORE_LANDER_FIRE_INTERVAL_SECONDS, DEVIL_BOSS_NUKE_DAMAGE_MULTIPLIER, FINAL_BOSS_NUKE_DAMAGE_MULTIPLIER, FORCE_FIELD_ARMOR, GOD_GUNDAM_BARRAGE_BASE_DAMAGE_MULTIPLIER, GOD_GUNDAM_BARRAGE_BURNING_DAMAGE_MULTIPLIER, GOD_GUNDAM_BARRAGE_BURNING_RAGE_DAMAGE_MULTIPLIER, GOD_GUNDAM_MELEE_BOSS_DAMAGE_MULTIPLIER, GOD_GUNDAM_MELEE_BURNING_DAMAGE_MULTIPLIER, GOD_GUNDAM_MELEE_BURNING_RAGE_DAMAGE_MULTIPLIER, GOD_GUNDAM_MELEE_BURNING_RANGE_BONUS, GOD_GUNDAM_MELEE_DAMAGE_PER_SECOND, GOD_GUNDAM_MELEE_MINIBOSS_DAMAGE_MULTIPLIER, GOD_GUNDAM_MELEE_RANGE, GOD_GUNDAM_STAGE_ATTACK_BONUS, LEVEL_UP_HEAL, MAX_RAID_STAGE, NUKE_BOSS_DAMAGE_MAX_FLOOR, NUKE_BOSS_DAMAGE_MAX_RATIO, NUKE_BOSS_DAMAGE_MIN_FLOOR, NUKE_BOSS_DAMAGE_MIN_RATIO, NUKE_MAX_COOLDOWN_SECONDS, NUKE_MIN_COOLDOWN_SECONDS, PLAYER_BASE_ATTACK_PER_LEVEL, PLAYER_MAX_RANK, SPACE_ET_FORCE_FIELD_REGEN_SECONDS, SPACE_ET_PASSIVE_FORCE_FIELD_CHARGES, SPIEGEL_AFTERIMAGE_CAP, SPIEGEL_AFTERIMAGE_LIFE_MULTIPLIER, SPIEGEL_LOW_HP_BARRAGE_DAMAGE_MULTIPLIER, SPIEGEL_LOW_HP_BARRAGE_RAGE_DAMAGE_MULTIPLIER, SPIEGEL_LOW_HP_PASSIVE_DAMAGE_MULTIPLIER, SPIEGEL_LOW_HP_PASSIVE_RAGE_DAMAGE_MULTIPLIER, SPIEGEL_LOW_HP_SHADOW_CLONE_DAMAGE_MULTIPLIER, SPIEGEL_LOW_HP_SHADOW_CLONE_RAGE_DAMAGE_MULTIPLIER, SPIEGEL_PASSIVE_DAMAGE_MULTIPLIER, SPIEGEL_SHADOW_CLONE_DAMAGE_MULTIPLIER, WEAPON_KEYS, WEAPON_STACK_CAPS } from './constants'
 import { updateMesiahDrones, updateMesiahScoutDrones } from './playerRender'
 import { getCoreLanderBarrageSequence, getPlayerCoreLanderCombatModel } from './state'
-import type { CoreLanderCombatModel, Enemy, Player, RaidRandomEvent, Shot, Vec } from './types'
+import type { CoreLanderCombatModel, Enemy, Player, RaidRandomEvent, Vec } from './types'
 import { clamp, distSq } from './utils'
-
-export function acquireHomingTarget(shot: Shot, enemies: Enemy[]) {
-  let target: Enemy | null = null
-  let bestScore = Number.POSITIVE_INFINITY
-
-  for (const enemy of enemies) {
-    if (enemy.hp <= 0 || enemy.y < -10) continue
-    const dx = shot.x - enemy.x
-    const dy = shot.y - enemy.y
-    const distance = dx * dx + dy * dy
-    const forwardBias = enemy.y > shot.y + 18 ? 2400 : 0
-    const bossBias = enemy.isBoss ? -1400 : enemy.isMiniBoss ? -700 : 0
-    const score = distance + forwardBias + bossBias
-    if (score < bestScore) {
-      bestScore = score
-      target = enemy
-    }
-  }
-
-  return target
-}
 
 export function getNukeStageScale(stage: number) {
   return clamp((stage - 1) / Math.max(1, MAX_RAID_STAGE - 1), 0, 1)

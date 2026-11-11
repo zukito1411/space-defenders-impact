@@ -15,7 +15,7 @@ source = source.replace("import { getPublicAssetUrl } from '../sound'", 'const g
 const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText
 const art = await import('data:text/javascript;base64,' + Buffer.from(code).toString('base64'))
 await art.preloadRaidCombatArt()
-assert.equal(art.getRaidCombatRootTextures().length, 5)
+assert.equal(art.getRaidCombatRootTextures().length, 6)
 for (const kind of ['squidBubble','squidInk','squidSpine','snakeFang','venomSpit','poisonCloud']) {
   const spec = {kind,width:30,height:60,rotation:Math.PI/2,alpha:0.7,x:120,y:80}
   const texture = art.applyRaidBossArtwork(spec)
@@ -65,3 +65,11 @@ const warningContext = {globalAlpha:1, save(){}, restore(){}, translate(...args)
 art.drawRaidVfxLane(warningContext,art.RAID_VFX_TILE.dangerLane,40,0,40,720,58,.5)
 assert.deepEqual(draws[0],[40,360])
 assert.deepEqual(draws[1].slice(7),[58,720])
+
+const contactDraws = []
+const contactContext = {globalAlpha:1, save(){}, restore(){}, translate(){}, rotate(){}, drawImage(...args){contactDraws.push(args)}}
+for (const tile of Object.values(art.RAID_CONTACT_TILE)) {
+ assert.equal(art.drawRaidContactArt(contactContext,tile,50,60,30,40,.8),true)
+}
+assert.equal(new Set(contactDraws.map(draw=>draw[0])).size,1,'contact effects share one decoded atlas')
+assert.equal(new Set(contactDraws.map(draw=>draw[1]+4096*draw[2])).size,4,'each contact effect uses a distinct frame')
