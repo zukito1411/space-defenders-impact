@@ -4,8 +4,9 @@ import ts from 'typescript'
 let source=readFileSync(new URL('../src/components/games/raid/playerRender.ts',import.meta.url),'utf8')
 source=source.replace(/^import .*\n/gm,'')
 const artwork=readFileSync(new URL('../src/components/games/raid/shipArtwork.ts',import.meta.url),'utf8')
+const muzzle=readFileSync(new URL('../src/components/games/raid/playerMuzzle.ts',import.meta.url),'utf8').replace(/^import .*\n/gm,'')
 source=`
-const DEG=Math.PI/180, PLAYER_COLOR='#ef233c';
+const WIDTH=100, HEIGHT=100, DEG=Math.PI/180, PLAYER_COLOR='#ef233c';
 const updateFlightPose=()=>0;
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const isCoreLanderBurning=()=>false, getCoreLanderBurningRage=()=>0;
@@ -15,7 +16,7 @@ const COMBAT_TILE={exhaust:12};
 const drawRaidCombatTexture=(ctx,...args)=>{ctx.images.push(args);return true};
 const drawCanvasSprite=()=>{},drawSpriteGlow=()=>{};
 const hexToRgba=()=>'';
-`+artwork+'\n'+source
+`+artwork+'\n'+muzzle+'\n'+source
 const code=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText
 const {drawRaidPlayer,getRaidShipNozzles}=await import('data:text/javascript;base64,'+Buffer.from(code).toString('base64')).catch(error=>{console.error(error.message);process.exit(1)})
 function context(){

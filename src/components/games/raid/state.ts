@@ -1,3 +1,4 @@
+import { getRaidPlayerHullSize } from './playerMuzzle'
 import { getRaidShipBaseVisualKey, getRaidShipFrameKey, isRaidEliteFrameKey } from './shipArtwork'
 import { getCoreLanderModel, getEquippedShipCosmetics, getMesiahShipColor, loadProgress } from '../../../progression'
 import { RAID_CORE_LANDER_BARRAGE_POSE_SCALES, RAID_CORE_LANDER_BARRAGE_SEQUENCES, RAID_GOD_GUNDAM_BARRAGE_FILTER, RAID_GOD_GUNDAM_BARRAGE_IMPACT_STOPS, RAID_GOD_GUNDAM_BARRAGE_SEQUENCE, RAID_GOD_GUNDAM_BURNING_BARRAGE_FILTER, RAID_GOD_GUNDAM_BURNING_BARRAGE_IMPACT_STOPS, RAID_SPIEGEL_BARRAGE_FILTER, RAID_SPIEGEL_BARRAGE_IMPACT_STOPS } from './assets'
@@ -242,8 +243,7 @@ export function isGodGundamBarragePilot(player: Player, progress: ReturnType<typ
 }
 
 export function getGodGundamGameplayRenderSize(viewportWidth: number) {
-  const baseSize = viewportWidth < 860 ? 62 : viewportWidth > 1100 ? 86 : 76
-  return baseSize * 1.38 * 1.08
+  return getRaidPlayerHullSize('coreLander', viewportWidth) * 1.08
 }
 
 export function getCoreLanderBarrageSequence(model: CoreLanderCombatModel) {
