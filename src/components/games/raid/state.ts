@@ -242,8 +242,8 @@ export function isGodGundamBarragePilot(player: Player, progress: ReturnType<typ
   return player.ship.key === 'coreLander' && Boolean(getPlayerCoreLanderCombatModel(player, progress))
 }
 
-export function getGodGundamGameplayRenderSize(viewportWidth: number) {
-  return getRaidPlayerHullSize('coreLander', viewportWidth) * 1.08
+export function getGodGundamGameplayRenderSize(viewportWidth: number, landscape = false) {
+  return getRaidPlayerHullSize('coreLander', viewportWidth, landscape) * 1.08
 }
 
 export function getCoreLanderBarrageSequence(model: CoreLanderCombatModel) {
