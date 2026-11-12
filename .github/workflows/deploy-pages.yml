@@ -1,0 +1,79 @@
+name: Deploy Space Impact Defenders to GitHub Pages
+
+# The push filter runs this workflow ONCE when this workflow file is added.
+# Normal gameplay commits do not automatically redeploy Pages.
+# Future deployments can be started manually from Actions > Run workflow.
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/deploy-pages.yml
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: space-defenders-github-pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build website for /space-defenders-impact/
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Typecheck and build for the GitHub Pages project URL
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx tsc -b
+          npx vite build --base /space-defenders-impact/
+          node scripts/verify-ui-artwork.mjs
+
+      - name: Verify deployed URL paths and SPA fallback
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s dist/index.html
+          grep -q '/space-defenders-impact/assets/' dist/index.html
+          test -s dist/assets/ui/orbital-hangar-v1.png
+          test -s dist/assets/ui/console-plate-v1.png
+          cp dist/index.html dist/404.html
+          touch dist/.nojekyll
+          echo 'GitHub Pages project-path build verified.'
+          du -sh dist
+
+      - name: Upload built website
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: dist
+
+  deploy:
+    name: Publish GitHub Pages website
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
