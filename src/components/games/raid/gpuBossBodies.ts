@@ -137,7 +137,7 @@ export class RaidGpuBossBodies {
         if (!enemy.isBoss || enemy.bossKind !== 'devil' ||
           !raidObjectInView(frame.bounds, enemy.x, enemy.y, enemy.radius + 26)) continue
         this.lastDevilUseMs = frame.time
-        const size = getEnemyCanvasSize(enemy, frame.width)
+        const size = getEnemyCanvasSize(enemy, frame.width, frame.landscape)
         const pose = getDevilBossPose(enemy, frame.time)
         const art = this.prepareDevil(pose, size)
         if (!art) continue // Canvas draws the model until its texture is ready.
