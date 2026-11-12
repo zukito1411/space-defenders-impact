@@ -172,7 +172,6 @@ export function updateMesiahDrones(player: Player, enemies: Enemy[], dt: number,
 export function updateMesiahScoutDrones(player: Player, enemies: Enemy[], dt: number, isSmallViewport: boolean) {
   const scouts = normalizeMesiahScoutDrones(player)
   const supportStacks = getOptionSupportStacks(player)
-  const supportSizeScale = typeof player.sizeScale === 'number' && Number.isFinite(player.sizeScale) ? Math.max(1, Math.min(1.5, player.sizeScale)) : 1
   const active = player.ship.key === 'mesiah' && player.hp > 0 && supportStacks > 0
   const elapsed = player.mesiahDroneTimer
   const liveTargets = mesiahLiveTargetsScratch
@@ -249,6 +248,7 @@ export function drawRaidOptions(
   const isWhiteMesiah = isMesiah && getRaidShipBaseVisualKey(mesiahVisualShipKey) === 'mesiahWhite'
   const isMesiahSortie = isMesiah
   const supportStacks = getOptionSupportStacks(player)
+  const supportSizeScale = typeof player.sizeScale === 'number' && Number.isFinite(player.sizeScale) ? Math.max(1, Math.min(1.5, player.sizeScale)) : 1
   if (supportStacks <= 0 && !isArk && !isMesiah) return
 
   const drawSupportPair = (shipKey: string, offset: number, yOffset: number, maxBox: number, scale: number, filter: string) => {
