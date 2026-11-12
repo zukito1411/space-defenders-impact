@@ -1173,6 +1173,12 @@ export function getCachedCanvasPattern(ctx: CanvasRenderingContext2D, texture: H
   return pattern
 }
 
+export const SPACE_JET_FORCE_FIELD_ASSET_PATH = 'assets/raid-fx/space-jet-force-field-v1.webp'
+export function getSpaceJetForceFieldSprite() {
+  const key = 'space-jet-force-field-v1'
+  return canvasSpriteCache.get(key) ?? makeImageCanvasSprite(key, getPublicAssetUrl(SPACE_JET_FORCE_FIELD_ASSET_PATH))
+}
+
 export function getRaidOtherCanvasSprite(key: RaidOtherAssetKey) {
   const cacheKey = `other-image:${key}`
   const existing = canvasSpriteCache.get(cacheKey)
@@ -1437,7 +1443,7 @@ export function drawSpriteGlow(ctx: CanvasRenderingContext2D, x: number, y: numb
   ctx.restore()
 }
 
-export function getEnemyCanvasSize(enemy: Enemy, viewportWidth: number) {
+function getBaseEnemyCanvasSize(enemy: Enemy, viewportWidth: number) {
   const isMobileView = viewportWidth <= 640
   if (!enemy.isBoss) {
     if (enemy.isMiniBoss) {
@@ -1456,4 +1462,9 @@ export function getEnemyCanvasSize(enemy: Enemy, viewportWidth: number) {
   if (enemy.bossKind === 'gate') return Math.min(viewportWidth * (isMobileView ? 0.44 : 0.4), 360)
   if (enemy.bossKind === 'hydra') return Math.min(viewportWidth * (isMobileView ? 0.39 : 0.35), 305)
   return Math.min(viewportWidth * (isMobileView ? 0.34 : 0.3), 260)
+}
+
+/** Increase only rendered actor artwork for the side-flight view. */
+export function getEnemyCanvasSize(enemy: Enemy, viewportWidth: number, landscape = false) {
+  return getBaseEnemyCanvasSize(enemy, viewportWidth) * (landscape ? 1.15 : 1)
 }
