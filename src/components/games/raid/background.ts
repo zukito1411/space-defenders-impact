@@ -1170,6 +1170,8 @@ export class PixiRaidBackground {
       this.updateBackgroundObjects(width, height, seconds, stageTheme, isLow, isMedium)
       // Space scenery stays anchored during ship steering, while independent
       // scrolling and animation continue. Only the world surface camera steers.
+      // Keep this stage flag for the existing orbital effects mode selection.
+      const space = !isWateryWorldTheme(stageTheme) && !isVolcanicWorldTheme(stageTheme)
       this.nebulaGraphics.position.set(0, 0)
       for (const layer of this.farStarLayers) layer.x = 0
       for (const layer of this.nearStarLayers) layer.x = 0
