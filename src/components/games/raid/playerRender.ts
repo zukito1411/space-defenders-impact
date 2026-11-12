@@ -1271,12 +1271,13 @@ export function drawRaidPlayer(
     : player.forceField > 0
     ? player.ship.key === 'spaceEt' ? 'rgba(125,249,255,0.46)' : 'rgba(34,211,238,0.34)'
     : player.shield > 0 ? 'rgba(252,211,77,0.16)' : player.invuln > 0 ? 'rgba(226,232,240,0.1)' : null
-  if (sunSide && eclipse < .86 && !isDown) {
+  // Diffuse portrait-space lighting appears as a detached ring beside thin side-view ships.
+  if (!landscape && sunSide && eclipse < .86 && !isDown) {
     drawSpriteGlow(ctx, x + sunSide * renderSize * .18, y - renderSize * .13, renderSize * .71,
       'rgba(255,226,178,.27)', .62 * Math.abs(sunlight) * (1 - eclipse))
   }
   if (spriteGlow) drawSpriteGlow(ctx, x, y, renderSize, spriteGlow, 0.68)
-  else if (!isDown) drawSpriteGlow(ctx, x, y, renderSize, environmentRim ?? hexToRgba(color, 0.09), 0.55)
+  else if (!isDown && !landscape) drawSpriteGlow(ctx, x, y, renderSize, environmentRim ?? hexToRgba(color, 0.09), 0.55)
   if (sideSprite?.loaded) {
     // The playfield turns clockwise; rotate the right-facing art into its
     // logical upward flight direction before the camera transform.
@@ -1937,3 +1938,4 @@ export function drawPowerPickupIcon(ctx: CanvasRenderingContext2D, type: PowerKi
 
   ctx.restore()
 }
+

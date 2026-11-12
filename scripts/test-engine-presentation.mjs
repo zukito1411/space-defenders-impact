@@ -17,13 +17,13 @@ const getOptionSupportStacks=()=>1,getShipSpriteSize=()=>30;
 const getRaidCombatFrame=()=>({source:{resource:{}}});
 const COMBAT_TILE={exhaust:12};
 const drawRaidCombatTexture=(ctx,...args)=>{ctx.images.push(args);return true};
-const drawCanvasSprite=()=>{},drawSpriteGlow=()=>{};
+const drawCanvasSprite=()=>{},drawSpriteGlow=(ctx,...args)=>ctx.glows.push(args);
 const hexToRgba=()=>'';
 `+artwork+'\n'+muzzle+'\n'+source
 const code=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText
 const {drawRaidPlayer,drawRaidOptions,drawSupportEngineTrail,drawPlayerEngine,getRaidShipNozzles,getRaidPlayerHullSize,getRaidShipBaseVisualKey,warmRaidEngineExhaust}=await import('data:text/javascript;base64,'+Buffer.from(code).toString('base64')).catch(error=>{console.error(error.message);process.exit(1)})
 function context(){
- const ctx={images:[],hulls:[],gradients:0,depth:0,globalAlpha:1,
+ const ctx={images:[],hulls:[],glows:[],gradients:0,depth:0,globalAlpha:1,
  drawImage(...args){this.images.push(args)},fillRect(){},
  save(){this.depth++},restore(){this.depth--},translate(){},rotate(){},
  createLinearGradient(){this.gradients++;return {addColorStop(){}}},
@@ -59,6 +59,12 @@ for(const key of [...hullKeys,...hullKeys.map(key=>key+'Elite'),...combatKeys]) 
   assert.equal(ctx.images.length,nozzles.length,key+' emitted at an unexpected number of outlets')
   for(const [i,nozzle] of nozzles.entries()) assertAtlasMount(ctx.images[i],nozzle,size,350)
  }
+}
+// Side-view ships should not have free-floating ambient or sunlight blobs.
+for (const landscape of [false,true]) {
+ const ctx=context()
+ drawRaidPlayer(ctx,player,'playing',v=>v*10,v=>v*5,420,1100,'#ef233c',regularCosmetics,'rocket',null,'rgba(255,200,150,.2)',0,1,false,landscape)
+ assert.equal(ctx.glows.length,landscape?0:2,'unexpected detached environmental glow')
 }
 // Side-view thruster roots stay attached when the configured ship size changes.
 for(const sizeScale of [1,1.2,1.5]) {
@@ -189,3 +195,4 @@ delete globalThis.document
 console.log('Engine: shorter idle, heat ramp, mounted scout exhaust, aligned atlas hot core, layered signature, and bounded bitmap draws passed')
 
 } catch(error) { console.error(error.message); process.exit(1) }
+
