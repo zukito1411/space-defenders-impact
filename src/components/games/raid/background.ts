@@ -1189,10 +1189,10 @@ export class PixiRaidBackground {
       if (frame.landscape && (isWateryWorldTheme(groundTheme) || isVolcanicWorldTheme(groundTheme))) {
         // The playfield is rotated clockwise for side flight. Keep atmospheric
         // clouds upright on screen and remove the overhead terrain landmarks.
-        for (const sprite of [...this.wateryIslandSprites, ...this.volcanicIslandSprites]) sprite.visible = false
-        for (const sprite of [...this.wateryCloudSprites, ...this.volcanicCloudSprites]) {
-          if (sprite.visible) sprite.rotation -= Math.PI / 2
-        }
+        for (const sprite of this.wateryIslandSprites) sprite.visible = false
+        for (const sprite of this.volcanicIslandSprites) sprite.visible = false
+        for (const sprite of this.wateryCloudSprites) if (sprite.visible) sprite.rotation -= Math.PI / 2
+        for (const sprite of this.volcanicCloudSprites) if (sprite.visible) sprite.rotation -= Math.PI / 2
       }
       // Water and volcanic clouds keep their time-based drift, but do not
       // follow the player's steering. Island/terrain parallax remains intact.
