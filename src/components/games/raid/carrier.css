@@ -27,7 +27,7 @@
 .raid__carrier-signal i { display: block; width: 2px; height: 11px; background: #6ae1e9; animation: carrier-signal .7s ease-in-out infinite alternate; }
 @keyframes carrier-signal { from { transform: scaleY(.25); opacity: .45; } to { transform: scaleY(1); opacity: 1; } }
 #root .raid__carrier-comms h3 { color: #f2f7f8; font-size: 18px; letter-spacing: -.02em; line-height: 1.2; margin: 10px 0 7px; }
-#root .raid__carrier-comms p { font-size: 13px; line-height: 1.55; color: #c5d7e0; margin: 0; min-height: 4.65em; }
+#root .raid__carrier-comms p { font-size: 13px; line-height: 1.55; color: #c5d7e0; margin: 0; min-height: 4.65em; text-align: left; }
 .raid__carrier-cursor { display: inline-block; width: 5px; height: 12px; margin-left: 3px; vertical-align: middle; background: #7becf2; animation: carrier-cursor 1s step-end infinite; }
 @keyframes carrier-cursor { 50% { opacity: 0; } }
 .raid__carrier-actions { display: flex; align-items: center; gap: 6px; margin-top: 12px; }
@@ -54,10 +54,10 @@
 .raid:not([data-carrier-stage="flight"]) > .raid__nuke-quick { visibility: hidden; pointer-events: none; }
 .raid--landscape .raid__carrier-briefing { background: linear-gradient(90deg,#020a12ed, #020a1299 36%, transparent 58%); }
 .raid--landscape .raid__carrier-masthead { top: max(14px, env(safe-area-inset-top)); left: max(20px, env(safe-area-inset-left)); right: max(20px, env(safe-area-inset-right)); }
-.raid--landscape .raid__carrier-mission { top: max(54px, calc(env(safe-area-inset-top) + 44px)); width: 41%; left: max(20px, env(safe-area-inset-left)); right: auto; }
-#root .raid--landscape .raid__carrier-mission h2 { font-size: clamp(20px, 3.2vw, 38px); margin: 8px 0 10px; }
+.raid--landscape .raid__carrier-mission { top: max(50px, calc(env(safe-area-inset-top) + 40px)); width: 41%; left: max(20px, env(safe-area-inset-left)); right: auto; }
+#root .raid--landscape .raid__carrier-mission h2 { font-size: clamp(20px, 2.9vw, 34px); margin: 7px 0 9px; }
 .raid--landscape .raid__carrier-goals { gap: 5px; }
-.raid--landscape .raid__carrier-goals > span { font-size: 9px; padding: 6px; }
+.raid--landscape .raid__carrier-goals > span { font-size: 9px; padding: 5px; }
 .raid--landscape .raid__carrier-comms { width: 41%; box-sizing: border-box; left: max(20px, env(safe-area-inset-left)); right: auto; padding: 12px; bottom: max(14px, env(safe-area-inset-bottom)); }
 #root .raid--landscape .raid__carrier-comms h3 { font-size: 17px; margin: 7px 0 5px; }
 #root .raid--landscape .raid__carrier-comms p { font-size: 12px; min-height: 4.65em; }

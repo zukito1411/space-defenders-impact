@@ -38,7 +38,22 @@ try {
     assert.equal(layout.overlap,false,`${name}: mission and comms overlap`)
     assert.equal(layout.overflow,false,`${name}: briefing overflow`)
     assert.ok(layout.commsBottom<=height,`${name}: actions below screen`)
-    if(reduced)await page.waitForTimeout(3000)
+    for(let beat=0;beat<3;beat++){
+      const advance=page.locator('.raid__carrier-advance')
+      if(beat>0)await advance.click()
+      const paragraph=page.locator('.raid__carrier-comms p')
+      const full=await paragraph.getAttribute('aria-label')
+      if(await paragraph.innerText()!==full)await advance.click()
+      assert.equal(await paragraph.innerText(),full,`${name}: full transmission is readable`)
+      const reading=await page.locator('.raid__carrier-briefing').evaluate(el=>{
+        const a=el.querySelector('.raid__carrier-mission').getBoundingClientRect(),b=el.querySelector('.raid__carrier-comms').getBoundingClientRect()
+        return {overlap:a.bottom>b.top,overflow:el.scrollHeight>el.clientHeight}
+      })
+      assert.equal(reading.overlap,false,`${name}: full transmission overlaps mission`)
+      assert.equal(reading.overflow,false,`${name}: full transmission scrolls`)
+    }
+    await page.screenshot({path:`presentation-review/${name}-clearance.png`})
+    if(reduced)await page.waitForTimeout(1000)
     assert.equal(await page.locator('.raid__launch-ship').count(),0,'no duplicated ship layer')
     await page.locator('.raid__carrier-skip').click()
     await page.waitForFunction(()=>document.querySelector('.raid')?.dataset.carrierStage==='ignition',{},{timeout:30000})

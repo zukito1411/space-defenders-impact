@@ -1749,7 +1749,7 @@ export function GradiusRaid({
         const baseHull = getRaidPlayerHullSize(pilot.ship.key, cssWidth, landscapeRef.current, pilot.sizeScale)
         const displayScale = Math.min(carrier.scale, Math.max(1, cssWidth * .34 / baseHull))
         const hull = baseHull * displayScale
-        drawCarrierClamps(ctx, toX(cx), toY(cy), hull, docked ? 0 : reducedMotion ? Number(carrier.release > .5) : carrier.release)
+        drawCarrierClamps(ctx, toX(cx), toY(cy), hull, docked ? 0 : reducedMotion ? Number(carrier.release > .5) : carrier.release, landscapeRef.current)
         drawRaidPlayer(ctx, pilot, phaseRef.current, projectX, projectY, cssWidth, time, color,
           getCachedEquippedCosmetics(pilot.ship.key), getRaidPlayerVisualShipKey(pilot, progressRef.current),
           null, null, 0, 0, reducedMotion, landscapeRef.current,
