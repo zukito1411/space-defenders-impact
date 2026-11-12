@@ -1173,6 +1173,12 @@ export function getCachedCanvasPattern(ctx: CanvasRenderingContext2D, texture: H
   return pattern
 }
 
+export const SPACE_JET_FORCE_FIELD_ASSET_PATH = 'assets/raid-fx/space-jet-force-field-v1.webp'
+export function getSpaceJetForceFieldSprite() {
+  const key = 'space-jet-force-field-v1'
+  return canvasSpriteCache.get(key) ?? makeImageCanvasSprite(key, getPublicAssetUrl(SPACE_JET_FORCE_FIELD_ASSET_PATH))
+}
+
 export function getRaidOtherCanvasSprite(key: RaidOtherAssetKey) {
   const cacheKey = `other-image:${key}`
   const existing = canvasSpriteCache.get(cacheKey)
@@ -1437,23 +1443,24 @@ export function drawSpriteGlow(ctx: CanvasRenderingContext2D, x: number, y: numb
   ctx.restore()
 }
 
-export function getEnemyCanvasSize(enemy: Enemy, viewportWidth: number) {
+export function getEnemyCanvasSize(enemy: Enemy, viewportWidth: number, landscape = false) {
+  const visualScale = landscape ? 1.15 : 1
   const isMobileView = viewportWidth <= 640
   if (!enemy.isBoss) {
     if (enemy.isMiniBoss) {
       const miniSize = isMobileView ? Math.min(viewportWidth * .18, 150) : Math.min(viewportWidth * .15, 132)
       const smallestBossSize = Math.min(viewportWidth * (isMobileView ? .34 : .30), 260)
-      return Math.min(miniSize * 1.12, smallestBossSize * .72)
+      return (Math.min(miniSize * 1.12, smallestBossSize * .72)) * visualScale
     }
     const normalSize = isMobileView ? Math.min(viewportWidth * .125, 92) : Math.min(viewportWidth * .105, 82)
-    return normalSize * (getRaidFighter(enemy.variant) ? 1.18 * 1.10 : 1.15)
+    return (normalSize * (getRaidFighter(enemy.variant) ? 1.18 * 1.10 : 1.15)) * visualScale
   }
-  if (enemy.bossKind === 'devil') return Math.min(viewportWidth * (isMobileView ? 0.94 : 0.68), isMobileView ? 520 : 720)
-  if (enemy.bossKind === 'final') return Math.min(viewportWidth * 0.64, 620)
-  if (enemy.bossKind === 'squid') return isMobileView ? Math.min(viewportWidth * 0.46, 380) : Math.min(viewportWidth * 0.34, 340)
-  if (enemy.bossKind === 'snake') return Math.min(viewportWidth * (isMobileView ? 0.66 : 0.62), 600)
-  if (enemy.bossKind === 'super') return Math.min(viewportWidth * (isMobileView ? 0.52 : 0.48), 430)
-  if (enemy.bossKind === 'gate') return Math.min(viewportWidth * (isMobileView ? 0.44 : 0.4), 360)
-  if (enemy.bossKind === 'hydra') return Math.min(viewportWidth * (isMobileView ? 0.39 : 0.35), 305)
-  return Math.min(viewportWidth * (isMobileView ? 0.34 : 0.3), 260)
+  if (enemy.bossKind === 'devil') return (Math.min(viewportWidth * (isMobileView ? 0.94 : 0.68), isMobileView ? 520 : 720)) * visualScale
+  if (enemy.bossKind === 'final') return (Math.min(viewportWidth * 0.64, 620)) * visualScale
+  if (enemy.bossKind === 'squid') return (isMobileView ? Math.min(viewportWidth * 0.46, 380) : Math.min(viewportWidth * 0.34, 340)) * visualScale
+  if (enemy.bossKind === 'snake') return (Math.min(viewportWidth * (isMobileView ? 0.66 : 0.62), 600)) * visualScale
+  if (enemy.bossKind === 'super') return (Math.min(viewportWidth * (isMobileView ? 0.52 : 0.48), 430)) * visualScale
+  if (enemy.bossKind === 'gate') return (Math.min(viewportWidth * (isMobileView ? 0.44 : 0.4), 360)) * visualScale
+  if (enemy.bossKind === 'hydra') return (Math.min(viewportWidth * (isMobileView ? 0.39 : 0.35), 305)) * visualScale
+  return (Math.min(viewportWidth * (isMobileView ? 0.34 : 0.3), 260)) * visualScale
 }

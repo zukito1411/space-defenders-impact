@@ -171,7 +171,7 @@ export function drawRaidEnemy(
 ) {
   const x = toX(enemy.x)
   const y = toY(enemy.y)
-  const size = getEnemyCanvasSize(enemy, viewportWidth) * (viewportWidth > 1100 ? 0.96 : 1)
+  const size = getEnemyCanvasSize(enemy, viewportWidth, landscape) * (viewportWidth > 1100 ? 0.96 : 1)
 
   if (enemy.isBoss) {
     const defeatFade = getBossDefeatFade(enemy)

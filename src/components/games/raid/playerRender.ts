@@ -4,7 +4,7 @@ import { getRaidExhaustScale, getRaidShipBaseVisualKey, getRaidShipFrameKey, get
 import { updateFlightPose, type FlightPose } from './combatFeel'
 import { COMBAT_TILE, drawRaidCombatTexture, getRaidCombatFrame } from './combatArt'
 import type { ShipCosmeticEquipState } from '../../../progression'
-import { drawCanvasSprite, drawCanvasSpriteContain, drawSpriteGlow, getCanvasSpriteDimensions, getCanvasSpriteSource, getRaidSideShipCanvasSprite, getShipCanvasSprite } from './assets'
+import { drawCanvasSprite, drawCanvasSpriteContain, drawSpriteGlow, getCanvasSpriteDimensions, getCanvasSpriteSource, getRaidSideShipCanvasSprite, getShipCanvasSprite, getSpaceJetForceFieldSprite } from './assets'
 import type { CanvasSpriteEntry } from './assets'
 import { hexToRgba } from './bossRender'
 import { ALLY_PLAYER_COLOR, FORCE_FIELD_ARMOR, GOD_GUNDAM_BURNING_BODY_SCALE, GOD_GUNDAM_BURNING_BODY_Y_OFFSET, GOD_GUNDAM_BURNING_HALO_SCALE, GOD_GUNDAM_BURNING_HALO_Y_OFFSET, MESIAH_DRONE_HOME_OFFSET, MESIAH_DRONE_MAX_FIRE_RANGE, MESIAH_DRONE_MIN_FIRE_RANGE, MESIAH_DRONE_MOBILE_HOME_OFFSET, PLAYER_COLOR, SPACE_ET_PASSIVE_FORCE_FIELD_CHARGES, SPIEGEL_AFTERIMAGE_CAP, getShipSpriteSize } from './constants'
@@ -252,7 +252,7 @@ export function drawRaidOptions(
 
   const drawSupportPair = (shipKey: string, offset: number, yOffset: number, maxBox: number, scale: number, filter: string) => {
     const optionShipSize = getShipSpriteSize(shipKey, 'option')
-    const drawSize = Math.min(optionShipSize * scale, maxBox)
+    const drawSize = Math.min(optionShipSize * scale, maxBox) * (landscape ? 1.15 : 1)
     const sprite = getShipCanvasSprite(shipKey)
     const sideSprite = landscape ? getRaidSideShipCanvasSprite(shipKey) : null
 
@@ -294,7 +294,7 @@ export function drawRaidOptions(
     const droneShipKey = isWhiteMesiah ? 'mesiahRaptorWhite' : 'mesiahRaptorBlack'
     const sprite = getShipCanvasSprite(droneShipKey)
     const sideSprite = landscape ? getRaidSideShipCanvasSprite(droneShipKey) : null
-    const drawSize = Math.min(getShipSpriteSize(droneShipKey, 'option') * (viewportWidth < 860 ? 1.14 : 1.28), viewportWidth < 860 ? 35 : 54)
+    const drawSize = Math.min(getShipSpriteSize(droneShipKey, 'option') * (viewportWidth < 860 ? 1.14 : 1.28), viewportWidth < 860 ? 35 : 54) * (landscape ? 1.15 : 1)
     for (const drone of normalizeMesiahDrones(player)) {
       const idle = !isMesiahSortie || !drone.active
       const x = toX(drone.x)
@@ -316,7 +316,7 @@ export function drawRaidOptions(
       const scoutSprite = getShipCanvasSprite(scoutShipKey)
       const sideScoutSprite = landscape ? getRaidSideShipCanvasSprite(scoutShipKey) : null
       const scoutSizeKey = scoutShipKey
-      const scoutSize = Math.min(getShipSpriteSize(scoutSizeKey, 'option') * (viewportWidth < 860 ? 1.14 : 1.28), viewportWidth < 860 ? 35 : 54)
+      const scoutSize = Math.min(getShipSpriteSize(scoutSizeKey, 'option') * (viewportWidth < 860 ? 1.14 : 1.28), viewportWidth < 860 ? 35 : 54) * (landscape ? 1.15 : 1)
       for (const scout of normalizeMesiahScoutDrones(player)) {
         if (!scout.active || scout.stack >= supportStacks) continue
         const x = toX(scout.x)
@@ -938,6 +938,19 @@ export function drawPlasmaForceField(ctx: CanvasRenderingContext2D, x: number, y
 }
 
 export function drawCometForceField(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, time: number, charge: number) {
+  const shield = getSpaceJetForceFieldSprite()
+  if (shield.loaded) {
+    const { source } = getCanvasSpriteDimensions(shield)
+    const pulse = 0.98 + Math.sin(time / 620) * 0.02
+    ctx.save()
+    ctx.translate(x, y)
+    // Sprite is horizontal; align its long axis with the logical flight axis.
+    ctx.rotate(Math.PI / 2)
+    ctx.globalAlpha *= 0.65 + clamp(charge, 0, 1) * 0.3
+    ctx.drawImage(source, -size * pulse, -size * pulse * 0.5, size * pulse * 2, size * pulse)
+    ctx.restore()
+    return
+  }
   const energy = clamp(charge, 0.35, 1)
   const pulse = 0.98 + Math.sin(time / 165) * 0.055
   const radiusX = size * (0.41 + energy * 0.045) * pulse
@@ -1129,7 +1142,7 @@ export function drawRaidPlayer(
   ctx.rotate(phase === 'playing' && player.hp > 0 && player.ship.key !== 'coreLander' ? bank : 0)
   ctx.translate(-x, -y)
   try {
-  const size = getRaidPlayerHullSize(player.ship.key, viewportWidth)
+  const size = getRaidPlayerHullSize(player.ship.key, viewportWidth, landscape)
   const isDown = phase === 'gameover' || player.hp <= 0
   const rotation = isDown ? 28 * DEG : 0
   const scale = isDown ? 0.88 : 1

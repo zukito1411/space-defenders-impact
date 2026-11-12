@@ -23,7 +23,7 @@
     height: 100%;
     min-height: 0;
     max-height: none;
-    padding: calc(var(--compact-top) + 38px) var(--compact-right) var(--compact-bottom) var(--compact-left);
+    padding: calc(var(--compact-top) + 54px) var(--compact-right) var(--compact-bottom) var(--compact-left);
     gap: 8px clamp(16px, 4vw, 44px);
     overflow: hidden;
     overscroll-behavior: none;
@@ -203,7 +203,7 @@
 /* Larger landscape displays retain comfortable type and controls while using
    the same fixed home composition. */
 @media (orientation: landscape) and (min-height: 601px) {
-  #root .start-screen__content { padding-top: calc(var(--compact-top) + 52px); padding-bottom: max(20px, env(safe-area-inset-bottom, 0px)); row-gap: 18px; }
+  #root .start-screen__content { padding-top: calc(var(--compact-top) + 54px); padding-bottom: max(20px, env(safe-area-inset-bottom, 0px)); row-gap: 18px; }
   #root .start-screen__brand { font-size: .65rem; }
   #root .start-screen__title-lockup { gap: 12px; }
   #root .start-screen__eyebrow { font-size: .7rem; }

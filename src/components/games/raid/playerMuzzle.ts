@@ -3,8 +3,8 @@ import type { Shot, Vec } from './types'
 
 type PlayerShot = Omit<Shot, 'id'>
 
-export function getRaidPlayerHullSize(shipKey: string, viewportWidth: number) {
-  const size = viewportWidth < 860 ? 62 : viewportWidth > 1100 ? 86 : 76
+export function getRaidPlayerHullSize(shipKey: string, viewportWidth: number, landscape = false) {
+  const size = (viewportWidth < 860 ? 62 : viewportWidth > 1100 ? 86 : 76) * (landscape ? 1.15 : 1)
   if (shipKey === 'mesiah') return size * 1.78
   if (shipKey === 'coreLander') return size * 1.38
   return size * 1.16
@@ -19,8 +19,9 @@ export function createRaidMainShotEmitter(
   viewportWidth: number,
   viewportHeight: number,
   bank: number,
+  landscape = false,
 ) {
-  const size = getRaidPlayerHullSize(shipKey, viewportWidth) * (combatModel ? 1.08 : 1)
+  const size = getRaidPlayerHullSize(shipKey, viewportWidth, landscape) * (combatModel ? 1.08 : 1)
   const sx = size * WIDTH / viewportWidth
   const sy = size * HEIGHT / viewportHeight
   const sin = Math.sin(bank)

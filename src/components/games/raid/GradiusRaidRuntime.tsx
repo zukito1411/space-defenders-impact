@@ -1677,6 +1677,7 @@ export function GradiusRaid({
       height: cssHeight,
       dpr,
       visualScale,
+      landscape: landscapeRef.current,
       time,
       guestView: Boolean(multiplayerSessionRef.current && !multiplayerSessionRef.current.isHost),
       measureGpu: measured,
@@ -2372,14 +2373,14 @@ export function GradiusRaid({
     const bossCanvasStart = measured ? performance.now() : 0
     const normalEnemyFilter = getNormalEnemyFilter(time)
     for (const enemy of enemiesRef.current) {
-      const spriteMargin = enemy.isBoss ? 26 : enemy.isMiniBoss ? 12 : 5
+      const spriteMargin = enemy.isBoss ? 26 : enemy.isMiniBoss ? 12 : landscapeRef.current ? 8 : 5
       if (!raidObjectInView(drawBounds, enemy.x, enemy.y, enemy.radius + spriteMargin)) continue
       if (gpuForegroundDrawn && !enemy.isBoss && !enemy.isMiniBoss) continue
       drawRaidEnemy(ctx, enemy, toX, toY, cssWidth, time, normalEnemyFilter, dpr,
         gpuForegroundDrawn && Boolean(enemy.isBoss && pixiBackground?.isBossGpuRendered(enemy.id)), landscapeRef.current)
       if (enemy.bossImpactTime && enemy.hp > 0) {
         drawBossImpact(ctx, enemy, toX(enemy.x), toY(enemy.y), cssWidth / WIDTH, cssHeight / HEIGHT,
-          getEnemyCanvasSize(enemy, cssWidth), reducedMotion)
+          getEnemyCanvasSize(enemy, cssWidth, landscapeRef.current), reducedMotion)
       }
     }
     costs.bossMs = measured ? performance.now() - bossCanvasStart : 0
@@ -3171,7 +3172,7 @@ export function GradiusRaid({
     const pilotColor = player === devilAssistPlayerRef.current ? '#facc15' : ownPilot ? PLAYER_COLOR : ALLY_PLAYER_COLOR
     const emitMainShot = canFireMain && viewport
       ? createRaidMainShotEmitter(pushShot, player, shipKey, Boolean(coreLanderCombatModel),
-        viewport.cssWidth, viewport.cssHeight, shipKey === 'coreLander' ? 0 : getRaidPlayerFlightBank(pilotColor, player.x))
+        viewport.cssWidth, viewport.cssHeight, shipKey === 'coreLander' ? 0 : getRaidPlayerFlightBank(pilotColor, player.x), landscapeRef.current)
       : pushShot
     const defaultScoutOffset = isArk
       ? (isSmallViewport ? 14 : 7.4)

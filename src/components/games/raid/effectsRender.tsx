@@ -216,7 +216,7 @@ export function drawGodGundamBarrage(
   const visibleTargetCount = visibleTargets.length
   if (visibleTargetCount === 0) return
 
-  const spriteSize = getGodGundamGameplayRenderSize(viewportWidth)
+  const spriteSize = getGodGundamGameplayRenderSize(viewportWidth, landscape)
   const dashDuration = 0.46
   const dashProgress = clamp(barrage.age / dashDuration, 0, 1)
   if (dashProgress < 1) {
@@ -355,7 +355,7 @@ export function drawGodGundamPassiveStrikes(
     const impactStops = clone && model === 'spiegel' ? RAID_SPIEGEL_SHADOW_CLONE_IMPACT_STOPS : getCoreLanderBarrageImpactStops(model, burning)
     const energyColor = clone && model === 'spiegel' ? '#020617' : getCoreLanderBarrageEnergyColor(model, burning)
     const shadowColor = clone && model === 'spiegel' ? 'rgba(0,0,0,0.72)' : getCoreLanderBarrageShadowColor(model, burning)
-    const spriteSize = getGodGundamGameplayRenderSize(viewportWidth) * Math.max(1, strike.size) * (clone ? 0.94 : 1)
+    const spriteSize = getGodGundamGameplayRenderSize(viewportWidth, landscape) * Math.max(1, strike.size) * (clone ? 0.94 : 1)
     const targetRadius = Math.max(12, viewportWidth * (strike.targetRadius / WIDTH) * 0.78)
     const progress = clamp(strike.age / strike.duration, 0, 1)
     const fade = Math.sin(progress * Math.PI)

@@ -10,7 +10,7 @@ const code = ts.transpileModule([
   const WIDTH = 100, HEIGHT = 100
   const useCallback = callback => callback
   const clamp = (value, low, high) => Math.max(low, Math.min(high, value))
-  const playerRef = {}, remotePlayerRef = {}, devilAssistPlayerRef = {}, fireCaptureRef = {}, viewportMetricsRef = {}
+  const playerRef = {}, remotePlayerRef = {}, devilAssistPlayerRef = {}, fireCaptureRef = {}, viewportMetricsRef = {}, landscapeRef = { current: false }
   const shots = [], colors = [], stageRef = { current: 1 }, progressRef = {}, enemiesRef = { current: [] }
   const PLAYER_COLOR = 'red', ALLY_PLAYER_COLOR = 'cyan'
   const WEAPON_KEYS = ['spread', 'laser', 'scatter', 'rocket', 'homing']
@@ -30,8 +30,9 @@ const code = ts.transpileModule([
   section(read('assets.ts'), 'export function getEnemyCanvasSize'),
   section(runtime, '  const firePlayer = useCallback', '  // Keep the stable ref'),
   `
-  export function fire(key, viewport, tilt, { guest, ally, combatModel, armed } = {}) {
+  export function fire(key, viewport, tilt, { guest, ally, combatModel, armed, landscape } = {}) {
     bank = tilt
+    landscapeRef.current = Boolean(landscape)
     viewportMetricsRef.current = viewport
     shots.length = 0
     colors.length = 0
@@ -88,6 +89,17 @@ for (const [cssWidth, cssHeight] of [[360, 800], [720, 390], [1440, 900]]) {
   const missiles = armed.filter(shot => shot.kind === 'rocket' || shot.kind === 'homing')
   assert.ok(missiles.length > 2)
   for (const shot of missiles) assert.ok(Math.abs(shot.x - 50) * cssWidth / 100 <= getRaidPlayerHullSize('rocket', cssWidth) * .181)
+}
+
+// Landscape enlarges visual hull and muzzle anchors without affecting combat values.
+const landscapeViewport = { cssWidth: 390, cssHeight: 844 }
+const portraitFire = fire('rocket', landscapeViewport, 0)
+const landscapeFire = fire('rocket', landscapeViewport, 0, { landscape: true })
+assert.deepEqual(landscapeFire.shots.map(({ x, y, ...shot }) => shot), portraitFire.shots.map(({ x, y, ...shot }) => shot))
+close((80 - landscapeFire.shots[0].y) / (80 - portraitFire.shots[0].y), 1.15)
+for (const [isBoss, isMiniBoss, bossKind] of [[false, false, null], [false, true, null], [true, false, 'squid'], [true, false, 'snake'], [true, false, 'devil']]) {
+  const enemy = { isBoss, isMiniBoss, variant: 0, bossKind }
+  close(getEnemyCanvasSize(enemy, 390, true), getEnemyCanvasSize(enemy, 390, false) * 1.15)
 }
 
 const sizes = (isBoss, isMiniBoss, variant, width, bossKind) => getEnemyCanvasSize({ isBoss, isMiniBoss, variant, bossKind }, width)
