@@ -76,9 +76,9 @@ for(const sizeScale of [1,1.2,1.5]) {
  assert.equal(ctx.hulls.length,2)
  assert.equal(ctx.images.length,2)
  for(const size of ctx.hulls) assert.ok(Math.abs(size-scoutSize)<1e-9)
- for(const [,left,top,width,length] of ctx.images) {
-  assert.ok(Math.abs(left+width*.452-scoutSize*.10)<1e-9)
-  assert.ok(Math.abs(top+length*.25-scoutSize*.22)<1e-9)
+ for(const [,x,centerY,length,width] of ctx.images) {
+  assert.ok(Math.abs(x-width*(.5-.452)-scoutSize*.10)<1e-9)
+  assert.ok(Math.abs(centerY-length*(.5-.25)-scoutSize*.22)<1e-9)
   assert.ok(Math.abs(width*.12-scoutSize*.05)<1e-9)
  }
 }
