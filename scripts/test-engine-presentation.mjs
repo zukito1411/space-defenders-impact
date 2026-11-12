@@ -12,6 +12,8 @@ const GOD_GUNDAM_BURNING_BODY_SCALE=1.09,GOD_GUNDAM_BURNING_BODY_Y_OFFSET=-.064;
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const isCoreLanderBurning=()=>false, getCoreLanderBurningRage=()=>0;
 const getShipCanvasSprite=()=>({});
+const getRaidSideShipCanvasSprite=()=>({loaded:true}),getRaidSideShipNozzles=()=>[[.10,.22,.05]],drawCanvasSpriteContain=(ctx,sprite,x,y,size)=>ctx.hulls.push(size);
+const getOptionSupportStacks=()=>1,getShipSpriteSize=()=>30;
 const getRaidCombatFrame=()=>({source:{resource:{}}});
 const COMBAT_TILE={exhaust:12};
 const drawRaidCombatTexture=(ctx,...args)=>{ctx.images.push(args);return true};
@@ -19,9 +21,9 @@ const drawCanvasSprite=()=>{},drawSpriteGlow=()=>{};
 const hexToRgba=()=>'';
 `+artwork+'\n'+muzzle+'\n'+source
 const code=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText
-const {drawRaidPlayer,drawSupportEngineTrail,drawPlayerEngine,getRaidShipNozzles,getRaidPlayerHullSize,getRaidShipBaseVisualKey,warmRaidEngineExhaust}=await import('data:text/javascript;base64,'+Buffer.from(code).toString('base64')).catch(error=>{console.error(error.message);process.exit(1)})
+const {drawRaidPlayer,drawRaidOptions,drawSupportEngineTrail,drawPlayerEngine,getRaidShipNozzles,getRaidPlayerHullSize,getRaidShipBaseVisualKey,warmRaidEngineExhaust}=await import('data:text/javascript;base64,'+Buffer.from(code).toString('base64')).catch(error=>{console.error(error.message);process.exit(1)})
 function context(){
- const ctx={images:[],gradients:0,depth:0,globalAlpha:1,
+ const ctx={images:[],hulls:[],gradients:0,depth:0,globalAlpha:1,
  drawImage(...args){this.images.push(args)},fillRect(){},
  save(){this.depth++},restore(){this.depth--},translate(){},rotate(){},
  createLinearGradient(){this.gradients++;return {addColorStop(){}}},
@@ -56,6 +58,28 @@ for(const key of [...hullKeys,...hullKeys.map(key=>key+'Elite'),...combatKeys]) 
   const size=getRaidPlayerHullSize(shipKey,viewportWidth)*(combatKeys.includes(key)?1.08:1)
   assert.equal(ctx.images.length,nozzles.length,key+' emitted at an unexpected number of outlets')
   for(const [i,nozzle] of nozzles.entries()) assertAtlasMount(ctx.images[i],nozzle,size,350)
+ }
+}
+// Side-view thruster roots stay attached when the configured ship size changes.
+for(const sizeScale of [1,1.2,1.5]) {
+ const ctx=context()
+ drawRaidPlayer(ctx,{...player,sizeScale},'playing',v=>v*10,v=>v*5,420,1100,'#ef233c',regularCosmetics,'rocket',null,null,0,0,false,true)
+ const size=getRaidPlayerHullSize('rocket',420,true,sizeScale)
+ assert.equal(ctx.images.length,1)
+ assertAtlasMount(ctx.images[0],[.10,.22,.05],size,350)
+}
+// Scout artwork and exhaust use the same configured size.
+for(const sizeScale of [1,1.2,1.5]) {
+ const ctx=context()
+ drawRaidOptions(ctx,{...player,sizeScale},v=>v*10,v=>v*5,420,1100,'#ef233c','rocket',true)
+ const scoutSize=Math.min(30*1.28,36)*1.15*sizeScale
+ assert.equal(ctx.hulls.length,2)
+ assert.equal(ctx.images.length,2)
+ for(const size of ctx.hulls) assert.ok(Math.abs(size-scoutSize)<1e-9)
+ for(const [,left,top,width,length] of ctx.images) {
+  assert.ok(Math.abs(left+width*.452-scoutSize*.10)<1e-9)
+  assert.ok(Math.abs(top+length*.25-scoutSize*.22)<1e-9)
+  assert.ok(Math.abs(width*.12-scoutSize*.05)<1e-9)
  }
 }
 for(const [baseKey,burningKey] of [['coreLander','coreLanderBurning'],['coreLanderElite','coreLanderBurningElite'],['godGundam','godGundamBurning']]) {

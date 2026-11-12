@@ -40,7 +40,7 @@ steer.update(900, 0, 1, 50, 65)
 assert.equal(steer.drift, 0, 'resume should clear the visual bank')
 console.log('Travel: 30/60/120/144Hz agreement, rush continuity, resume and parallax bounds passed')
 
-const cueCode = ts.transpileModule('const HEIGHT=100,WIDTH=100,PLAYER_RADIUS=3.2;\n' +
+const cueCode = ts.transpileModule('const HEIGHT=100,WIDTH=100,PLAYER_RADIUS=3.2; const getRaidPlayerHitRadius=p=>PLAYER_RADIUS*(p.sizeScale??1);\n' +
   read('flightCues.ts').replace(/^import .*\n/gm, ''), { compilerOptions: { module: ts.ModuleKind.ESNext } }).outputText
 const cues = await import('data:text/javascript;base64,' + Buffer.from(cueCode).toString('base64'))
 const pilot = { x: 50, y: 75, hp: 1, maxHp: 4 }

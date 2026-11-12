@@ -1,11 +1,12 @@
-import { HEIGHT, PLAYER_RADIUS, WIDTH } from './constants'
+import { HEIGHT, WIDTH } from './constants'
+import { getRaidPlayerHitRadius } from './shipSize'
 import type { AsteroidHazard, MeteorHazard, Player, PowerUp, Shot, Vec } from './types'
 
-export function passesNearPilot(shot: Shot, pilot: Vec, dt: number) {
+export function passesNearPilot(shot: Shot, pilot: Vec & { sizeScale?: number }, dt: number) {
   if (shot.kind === 'beam' || shot.kind === 'poisonCloud' || shot.kind === 'squidBubble' || dt <= 0) return false
   const dx = shot.x - pilot.x
   const dy = shot.y - pilot.y
-  const hitRadius = shot.radius + PLAYER_RADIUS
+  const hitRadius = shot.radius + getRaidPlayerHitRadius(pilot)
   const audibleRadius = hitRadius + 3.8
   if (Math.abs(dx) > audibleRadius + Math.abs(shot.vx) * dt || Math.abs(dy) > audibleRadius + Math.abs(shot.vy) * dt) return false
   const velocitySq = shot.vx * shot.vx + shot.vy * shot.vy

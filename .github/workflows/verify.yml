@@ -29,7 +29,8 @@ jobs:
         run: node scripts/test-devil-landscape.mjs
       - name: Test multitouch quick special
         run: node scripts/test-raid-touch-special.mjs
-      - name: Typecheck and build
+      - name: Test player size and thruster alignment
+        run: |\n          node scripts/test-raid-ship-size.mjs\n          node scripts/test-engine-presentation.mjs\n          node scripts/test-raid-travel.mjs\n      - name: Typecheck and build
         run: npm run build
 
   android-release-smoke:
