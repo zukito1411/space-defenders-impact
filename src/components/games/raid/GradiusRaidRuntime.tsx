@@ -1,11 +1,13 @@
+import { sampleLaunchFlight } from './raidLaunch'
+import { getWeaponIgnition } from './weaponPresentation'
 import { RaidLaunchSequence } from './RaidLaunchSequence'
-import { getHullImpactDirection, muzzleFlashProgress, sampleDistantBattle } from './flightEffects'
+import { getHullImpactDirection, raidStereoPan, sampleDistantBattle } from './flightEffects'
 import { registerSquidBubbleHit } from './bubbleRecoil'
 import { createRaidMainShotEmitter } from './playerMuzzle'
 import { clampRaidShipSize, getRaidPlayerHitRadius, useRaidShipSize } from './shipSize'
 import { ShipSizeControls } from '../../ui/ShipSizeControls'
 import { getRaidShipBaseVisualKey, isRaidEliteFrameKey } from './shipArtwork'
-import { fireRaidFighter, getRaidFighter, getRaidFighterPathX, getRaidReserveVariant, getRaidStageEncounter, getRaidWingSize, getRaidWingSlot, LEGACY_FIGHTER_COUNT, RAID_STAGE_ENEMY_LIMIT } from './stageEncounters'
+import { commitRaidFighterManeuver, getRaidFighterSpeedScale, fireRaidFighter, getRaidFighter, getRaidFighterPathX, getRaidReserveVariant, getRaidStageEncounter, getRaidWingSize, getRaidWingSlot, LEGACY_FIGHTER_COUNT, RAID_STAGE_ENEMY_LIMIT } from './stageEncounters'
 import { BOSS_BREAKUP_DELAYS, drawBossImpact, getBossBreakupPoint, recordBossImpact } from './bossDamageFx'
 import { prefersRaidReducedMotion } from './commandBossRender'
 import { drawIncomingHazard, drawRecoveryCue, findIncomingHazard, needsRepair, passesNearPilot } from './flightCues'
@@ -31,7 +33,7 @@ import { useRaidFlightView } from './flightView'
 import { FlightViewControls } from '../../ui/FlightViewControls'
 import { GameDialog } from '../../ui/GameDialog'
 import type { CSSProperties } from 'react'
-import { RAID_DEVIL_MASTER_PROJECTILE_FILTER, RAID_DEVIL_MASTER_PROJECTILE_GLOW_STOPS, RAID_OTHER_ASSET_PATHS, RAID_PLAYER_LASER_HEAD_STOPS, RAID_SNAKE_FANG_GLOW_STOPS, RAID_SQUID_BUBBLE_STOPS, RAID_SQUID_INK_STOPS, RAID_VENOM_SPIT_STOPS, drawCanvasSpriteContain, getEnemyCanvasSize, getDerelictWreckVariantData, getDevilMasterProjectileCanvasSprite, getRaidSideShipCanvasSprite } from './assets'
+import { RAID_DEVIL_MASTER_PROJECTILE_FILTER, RAID_DEVIL_MASTER_PROJECTILE_GLOW_STOPS, RAID_OTHER_ASSET_PATHS, RAID_PLAYER_LASER_HEAD_STOPS, RAID_SNAKE_FANG_GLOW_STOPS, RAID_SQUID_BUBBLE_STOPS, RAID_SQUID_INK_STOPS, RAID_VENOM_SPIT_STOPS, drawCanvasSpriteContain, getEnemyCanvasSize, getDerelictWreckVariantData, getDevilMasterProjectileCanvasSprite, getRaidSideShipCanvasSprite, getNormalAlienCanvasSprite } from './assets'
 import type { CanvasSpriteEntry } from './assets'
 import { playCommandBossCharge, playCoreLanderPhysicalAttackSound, playPickupVoiceLine, warmPickupVoiceSamples } from './audio'
 import { DEFAULT_RAID_PALETTE, PixiRaidBackground, RAID_BOSS_BACKGROUND_THEME_FINAL, RAID_BOSS_BACKGROUND_THEME_SNAKE, RAID_BOSS_BACKGROUND_THEME_SQUID, drawVolcanicWorldForegroundClouds, drawWateryWorldForegroundClouds, getRaidCameraShakeOffset, isVolcanicWorldTheme, isWateryWorldTheme } from './background'
@@ -272,8 +274,9 @@ export function GradiusRaid({
   const pickupsCollectedRef = useRef(0)
   const nukesUsedRef = useRef(0)
   const shotsRef = useRef<Shot[]>([])
-  const muzzleFlashesRef = useRef<Array<{ x: number; y: number; kind: Shot['kind']; at: number }>>([])
-  const lastMuzzleFlashRef = useRef(-Infinity)
+  const muzzleFlashesRef = useRef<Array<{ owner: Player; x: number; y: number; kind: Shot['kind']; at: number }>>([])
+  const activeShotOwnerRef = useRef<Player | null>(null)
+  const lastMuzzleFlashRef = useRef(new WeakMap<Player, number>())
   const enemyShotsRef = useRef<Shot[]>([])
   const expiredSquidBubblesRef = useRef<Shot[]>([])
   const spawnedSquidBubblesRef = useRef<Shot[]>([])
@@ -313,6 +316,7 @@ export function GradiusRaid({
   const bossEntranceSlamRef = useRef(0)
   const stageClearRef = useRef(0)
   const stageEntryRef = useRef(0)
+  const initialLaunchRef = useRef(false)
   const pendingNextStageRef = useRef<number | null>(null)
   const nearMissCooldownRef = useRef(0)
   const specialWasCoolingRef = useRef(false)
@@ -736,6 +740,7 @@ export function GradiusRaid({
     sparksRef.current = state.sparks.map((spark) => ({ ...spark }))
     ripplesRef.current = state.ripples.map((ripple) => ({ ...ripple }))
     const prevPhase = phaseRef.current
+    if (state.phase === 'playing' && prevPhase !== 'playing' && prevPhase !== 'paused') initialLaunchRef.current = true
     const prevStageTheme = stageRef.current
     const prevBossMessage = bossMessageRef.current
     const prevStageClear = stageClearRef.current
@@ -810,14 +815,14 @@ export function GradiusRaid({
       if (command && state.phase === 'playing') {
         const previous = prevEnemiesForAudio.find((enemy) => enemy.id === command.id)
         if (previous && command.bossAttackSerial !== previous.bossAttackSerial) {
-          playCommandBossCharge(command, (command.bossCombatPhase ?? 0) > (previous.bossCombatPhase ?? 0))
+          playCommandBossCharge(command, (command.bossCombatPhase ?? 0) > (previous.bossCombatPhase ?? 0), landscapeRef.current)
         }
         if (command.bossLastVolleyAge !== undefined && command.bossLastVolleyAge !== previous?.bossLastVolleyAge) {
           playGameSound(isCommandBeam(command.bossAttackPattern) ? 'laser' : 'rocket')
         }
         const impact = command.bossImpact
         if (impact && (command.bossImpactTime ?? 0) > 0 && impact.kind !== 'armor' && impact.shotId !== previous?.bossImpact?.shotId) {
-          playRaidCue(impact.kind, (command.x + impact.x - 50) / 50)
+          playRaidCue(impact.kind, raidStereoPan(command.x + impact.x, command.y + impact.y, landscapeRef.current))
         }
       }
       if (state.bossMessage === 'clear' && prevBossMessage !== 'clear') {
@@ -991,6 +996,7 @@ export function GradiusRaid({
     if (!session || session.isHost || phaseRef.current !== 'playing') return
     journeyStageAgeRef.current += dt
     stageEntryRef.current = Math.max(0, stageEntryRef.current - dt)
+    if (stageEntryRef.current <= 0) initialLaunchRef.current = false
 
     const hostPlayer = playerRef.current
     const bufferedHost = getBufferedPlayerVisual(
@@ -1024,7 +1030,7 @@ export function GradiusRaid({
       shot.y += shot.vy * dt
       if (ownPilot && ownPilot.hp > 0 && ownPilot.invuln <= .1 && nearMissCooldownRef.current <= 0 && passesNearPilot(shot, ownPilot, dt)) {
         nearMissCooldownRef.current = .65
-        playRaidCue('flyby', (shot.x - ownPilot.x) / 8)
+        playRaidCue('flyby', (landscapeRef.current ? ownPilot.y - shot.y : shot.x - ownPilot.x) / 8)
       }
     }
     keepNetworkVisibleInPlace(enemyShotsRef.current)
@@ -1600,6 +1606,9 @@ export function GradiusRaid({
     const ownShipRef = isGuestView ? remotePlayerRef.current : playerRef.current
     const playing = phaseRef.current === 'playing'
     const reducedMotion = prefersRaidReducedMotion()
+    const launchProgress = 1 - stageEntryRef.current / getRaidStageEntrySeconds(stageRef.current, raidModeRef.current)
+    const launchOpacity = initialLaunchRef.current && stageEntryRef.current > 0 && !reducedMotion ? Math.max(0, Math.min(1, (1 - launchProgress) / .45)) : 0
+    root.style.setProperty('--raid-launch-opacity', String(launchOpacity))
     const toX = (value: number) => (value / WIDTH) * cssWidth
     const toY = (value: number) => (value / HEIGHT) * cssHeight
     // Actual viewport dimensions decide which sprites reach the renderer.
@@ -2394,25 +2403,22 @@ export function GradiusRaid({
       drawDerelictWreck(ctx, wreck, toX, toY, cssWidth, time)
     }
 
-    // Small distant exchange on the edge of the field, never in front of the pilot.
     const battle = playing && !activeBoss && gfxProfile.drawDecorativeOverlays && !reducedMotion
+      && !isWateryWorldTheme(backgroundStageTheme) && !isVolcanicWorldTheme(backgroundStageTheme)
       ? sampleDistantBattle(journeyStageAgeRef.current, stageRef.current) : -1
     if (battle >= 0) {
-      const fade = Math.min(1, battle * 5, (1 - battle) * 5)
-      ctx.save()
-      ctx.globalAlpha = fade * .28
-      ctx.strokeStyle = '#8deaff'
-      ctx.lineWidth = Math.max(1, visualScale)
-      ctx.beginPath()
-      for (let i = 0; i < 3; i += 1) {
-        const travel = (battle * 1.6 + i * .32) % 1
-        const px = cssWidth * (.06 + i * .035)
-        const py = cssHeight * (.1 + travel * .28)
-        ctx.moveTo(px, py)
-        ctx.lineTo(px + visualScale * 5, py - visualScale * 13)
-      }
-      ctx.stroke()
-      ctx.restore()
+      const fade = Math.max(0, Math.min(1, battle * 6, (1 - battle) * 6))
+      const farSize = Math.max(10, Math.min(cssWidth, cssHeight) * .045)
+      const ax = cssWidth * (.08 + battle * .15), ay = cssHeight * (.14 + battle * .14)
+      const bx = ax + farSize * 1.4, by = ay - farSize * 2
+      drawCanvasSpriteContain(ctx, getNormalAlienCanvasSprite(8), ax, ay, farSize, 'none', fade * .33, .25, 1, '#8deaff')
+      drawCanvasSpriteContain(ctx, getNormalAlienCanvasSprite(9), bx, by, farSize * .8, 'none', fade * .3, 2.9, 1, '#ffc07b')
+      const bolt = getRaidCombatFrame(COMBAT_TILE.ionNeedle)
+      const travel = (battle * 6) % 1
+      if (bolt && battle < .75) drawRaidCombatTexture(ctx, bolt, ax + (bx - ax) * travel, ay + (by - ay) * travel,
+        farSize * .7, farSize * .15, Math.atan2(by - ay, bx - ax), true, fade * .35)
+      const burst = battle > .72 ? getRaidExplosionFrame(Math.min(1, (battle - .72) / .28)) : undefined
+      if (burst) drawRaidCombatTexture(ctx, burst, bx, by, farSize * 1.5, farSize * 1.5, 0, true, fade * .4)
     }
 
     const bossCanvasStart = measured ? performance.now() : 0
@@ -2515,18 +2521,19 @@ export function GradiusRaid({
     const hideDevilAssistForBarrage = Boolean(devilAssistShipRef && !stageClearActive && isGodGundamBarragePilot(devilAssistShipRef, progressRef.current) && (devilAssistShipRef.godMeleeCloak ?? 0) > 0)
     // Reuse the preloaded muzzle atlas, with a strict six-flash budget.
     const flashes = muzzleFlashesRef.current
-    const muzzleTexture = gfxProfile.drawDecorativeOverlays && !reducedMotion ? getRaidCombatFrame(COMBAT_TILE.muzzle) : undefined
     for (let i = flashes.length - 1; i >= 0; i -= 1) {
       const flash = flashes[i]
-      const progress = muzzleFlashProgress(time, flash.at)
-      if (progress < 0) { flashes.splice(i, 1); continue }
-      if (!muzzleTexture || !playing) continue
-      const size = (flash.kind === 'laser' || flash.kind === 'coreBlast' ? 34 : flash.kind === 'rocket' || flash.kind === 'homing' ? 27 : 22) * visualScale
-      drawRaidCombatTexture(ctx, muzzleTexture, toX(flash.x), toY(flash.y), size, size, 0, true, (1 - progress) * .75)
+      const material = getWeaponIgnition(flash.kind)
+      const progress = (time - flash.at) / material.duration
+      if (progress >= 1 || progress < 0 || flash.owner.hp <= 0) { flashes.splice(i, 1); continue }
+      if (!playing || reducedMotion || !gfxProfile.drawDecorativeOverlays || stageEntryRef.current > 0) continue
+      const texture = getRaidCombatFrame(material.tile)
+      if (texture) drawRaidCombatTexture(ctx, texture, toX(flash.owner.x + flash.x), toY(flash.owner.y + flash.y),
+        material.width * visualScale, material.height * visualScale, -Math.PI / 2, true, (1 - progress) * .8)
     }
-    if (gfxProfile.drawOptionShips && ownShipRef && !hideOwnShipForBarrage) drawRaidOptions(ctx, ownShipRef, toX, toY, cssWidth, time, PLAYER_COLOR, getRaidPlayerVisualShipKey(ownShipRef, progressRef.current), landscapeRef.current)
-    if (gfxProfile.drawOptionShips && allyShipRef && !hideAllyShipForBarrage) drawRaidOptions(ctx, allyShipRef, toX, toY, cssWidth, time, ALLY_PLAYER_COLOR, getRaidPlayerVisualShipKey(allyShipRef, progressRef.current), landscapeRef.current)
-    if (gfxProfile.drawOptionShips && devilAssistShipRef && !hideDevilAssistForBarrage) drawRaidOptions(ctx, devilAssistShipRef, toX, toY, cssWidth, time, '#facc15', getRaidPlayerVisualShipKey(devilAssistShipRef, progressRef.current), landscapeRef.current)
+    if (stageEntryRef.current <= 0 && gfxProfile.drawOptionShips && ownShipRef && !hideOwnShipForBarrage) drawRaidOptions(ctx, ownShipRef, toX, toY, cssWidth, time, PLAYER_COLOR, getRaidPlayerVisualShipKey(ownShipRef, progressRef.current), landscapeRef.current)
+    if (stageEntryRef.current <= 0 && gfxProfile.drawOptionShips && allyShipRef && !hideAllyShipForBarrage) drawRaidOptions(ctx, allyShipRef, toX, toY, cssWidth, time, ALLY_PLAYER_COLOR, getRaidPlayerVisualShipKey(allyShipRef, progressRef.current), landscapeRef.current)
+    if (stageEntryRef.current <= 0 && gfxProfile.drawOptionShips && devilAssistShipRef && !hideDevilAssistForBarrage) drawRaidOptions(ctx, devilAssistShipRef, toX, toY, cssWidth, time, '#facc15', getRaidPlayerVisualShipKey(devilAssistShipRef, progressRef.current), landscapeRef.current)
     const journeyRim = COSMIC_REGIONS[
       backgroundStageTheme === RAID_BOSS_BACKGROUND_THEME_SQUID || stageRef.current === 4 ? 3
         : backgroundStageTheme === RAID_BOSS_BACKGROUND_THEME_SNAKE || stageRef.current === 9 ? 1
@@ -3030,12 +3037,14 @@ export function GradiusRaid({
     bossMessageRef.current = null
     bossEntranceSlamRef.current = 0
     stageClearRef.current = 0
-    stageEntryRef.current = !isEndless && (stage === 5 || stage === 10 || stage >= MAX_RAID_STAGE) ? getRaidStageEntrySeconds(stage, mode) : 0
+    stageEntryRef.current = getRaidStageEntrySeconds(stage, mode)
+    initialLaunchRef.current = true
+    playRaidCue('launch')
     if (stageEntryRef.current > 0) {
-      playerRef.current.y = HEIGHT + 12
+      playerRef.current.y = 94
       playerRef.current.invuln = Math.max(playerRef.current.invuln, stageEntryRef.current + 0.35)
       if (remotePlayerRef.current) {
-        remotePlayerRef.current.y = HEIGHT + 14
+        remotePlayerRef.current.y = 96
         remotePlayerRef.current.invuln = Math.max(remotePlayerRef.current.invuln, stageEntryRef.current + 0.35)
       }
     }
@@ -3057,7 +3066,7 @@ export function GradiusRaid({
     godMeleeStrikesRef.current = []
     bossDefeatExplosionEventsRef.current = []
     muzzleFlashesRef.current = []
-    lastMuzzleFlashRef.current = -Infinity
+    lastMuzzleFlashRef.current = new WeakMap()
     nearMissCooldownRef.current = 0
     specialWasCoolingRef.current = false
     leaderboardSubmittedRef.current = false
@@ -3213,13 +3222,14 @@ export function GradiusRaid({
   const pushShot = useCallback((shot: Omit<Shot, 'id'>) => {
     // In capture mode (local prediction), redirect to the capture buffer instead of the shared shot list
     const target = fireCaptureRef.current ?? shotsRef.current
-    // One bounded cosmetic flash per volley; it never changes projectiles or hitboxes.
+    // Attach ignition to its pilot rather than leaving a flash at an old position.
     const now = performance.now()
-    if (graphicsQualityRef.current !== 'low' && now - lastMuzzleFlashRef.current >= 85) {
-      lastMuzzleFlashRef.current = now
+    const owner = activeShotOwnerRef.current
+    if (owner && graphicsQualityRef.current !== 'low' && now - (lastMuzzleFlashRef.current.get(owner) ?? -Infinity) >= 75) {
+      lastMuzzleFlashRef.current.set(owner, now)
       const flashes = muzzleFlashesRef.current
       if (flashes.length >= 6) flashes.shift()
-      flashes.push({ x: shot.x, y: shot.y, kind: shot.kind, at: now })
+      flashes.push({ owner, x: shot.x - owner.x, y: shot.y - owner.y, kind: shot.kind, at: now })
     }
     const scale = missileLaunchScale(shot.kind)
     target.push({ ...shot, vx: shot.vx * scale, vy: shot.vy * scale, id: shotId++ })
@@ -3231,6 +3241,7 @@ export function GradiusRaid({
 
   const firePlayer = useCallback((sourcePlayer = playerRef.current) => {
     const player = sourcePlayer
+    activeShotOwnerRef.current = player
     if (isGodGundamBarragePilot(player, progressRef.current) && (player.godMeleeCloak ?? 0) > 0) return
     const stacks = player.weapons
     let totalStacks = 0
@@ -3859,6 +3870,7 @@ export function GradiusRaid({
       ? coreLanderFireInterval
       : Math.max(minFireCooldown, (tunedBaseInterval - Math.min(0.045, totalStacks * 0.006)) / player.ship.fireRate)
     playGameSound(stacks.laser > 0 || shipKey === 'laser' || shipKey === 'xwing' ? 'laser' : 'shoot')
+    if (shipKey === 'dreadnought') playRaidCue('heavy', raidStereoPan(player.x, player.y, landscapeRef.current))
   }, [pushShot])
   // Keep the stable ref current so predictGuestPlayer can call firePlayer without a forward-reference issue
   firePlayerRef.current = firePlayer
@@ -4197,7 +4209,7 @@ export function GradiusRaid({
       spawnSparks(player.x, player.y, '#22d3ee', 24, 7)
       addRipple(player.x, player.y, '#22d3ee', player.forceField > 0 ? 12 : 17)
       if (player.forceField <= 0) triggerScreenShake(1.2, 150)
-      if (player.forceField > 0) playRaidCue('shield', (player.x - 50) / 50)
+      if (player.forceField > 0) playRaidCue('shield', raidStereoPan(player.x, player.y, landscapeRef.current))
       else playGameSound('explosion')
       return
     }
@@ -4206,11 +4218,13 @@ export function GradiusRaid({
       player.invuln = 0.35
       spawnSparks(player.x, player.y, '#fcd34d', 20, 6)
       addRipple(player.x, player.y, '#fcd34d', 9)
-      playRaidCue('shield', (player.x - 50) / 50)
+      playRaidCue('shield', raidStereoPan(player.x, player.y, landscapeRef.current))
       return
     }
     triggerScreenShake(player.hp <= scaledAmount ? 2.4 : 0.85, player.hp <= scaledAmount ? 230 : 100)
+    const wasCritical = needsRepair(player)
     player.hp -= scaledAmount
+    if (!wasCritical && needsRepair(player)) playRaidCue('alarm')
     player.invuln = 1.05
     spawnSparks(player.x, player.y, '#fca5a5', 22, 6)
     addRipple(player.x, player.y, '#ef4444', 10)
@@ -4557,14 +4571,17 @@ export function GradiusRaid({
     if (stageEntryRef.current > 0) {
       stageEntryRef.current = Math.max(0, stageEntryRef.current - dt)
       const entryProgress = 1 - stageEntryRef.current / getRaidStageEntrySeconds(stageRef.current, raidModeRef.current)
-      const easedEntry = 1 - Math.pow(1 - clamp(entryProgress, 0, 1), 3)
+      const easedEntry = sampleLaunchFlight(entryProgress, prefersRaidReducedMotion())
+      player.engineBoost = Math.max(player.engineBoost ?? 0, .9)
       player.x += (50 - player.x) * Math.min(1, dt * 6.4)
-      player.y = HEIGHT + 12 + (82 - (HEIGHT + 12)) * easedEntry
+      const entryStartY = initialLaunchRef.current ? 94 : HEIGHT + 12
+      player.y = entryStartY + (82 - entryStartY) * easedEntry
       player.invuln = Math.max(player.invuln, 0.4)
       const remotePlayer = remotePlayerRef.current
       if (remotePlayer) {
         remotePlayer.x += (58 - remotePlayer.x) * Math.min(1, dt * 6.4)
-        remotePlayer.y = HEIGHT + 14 + (84 - (HEIGHT + 14)) * easedEntry
+        const allyEntryStartY = initialLaunchRef.current ? 96 : HEIGHT + 14
+        remotePlayer.y = allyEntryStartY + (84 - allyEntryStartY) * easedEntry
         remotePlayer.invuln = Math.max(remotePlayer.invuln, 0.4)
       }
       const devilAssistPlayer = devilAssistPlayerRef.current
@@ -4575,6 +4592,7 @@ export function GradiusRaid({
         devilAssistPlayer.invuln = Math.max(devilAssistPlayer.invuln, 0.4)
         devilAssistPlayer.engineBoost = Math.max(devilAssistPlayer.engineBoost ?? 0, 1.1)
       }
+      if (stageEntryRef.current <= 0) initialLaunchRef.current = false
       pointerTargetRef.current = null
       pointerVisualRef.current = null
       remotePointerTargetRef.current = null
@@ -5140,7 +5158,10 @@ export function GradiusRaid({
                           bossKind === 'orb' ? 17 + Math.sin(bossMotionT * 1.8) * 4 :
                             18
       const fighter = !enemy.isBoss && !enemy.isMiniBoss ? getRaidFighter(enemy.variant) : undefined
-      if (fighter) enemy.formationAge = (enemy.formationAge ?? 0) + dt
+      if (fighter) {
+        enemy.formationAge = (enemy.formationAge ?? 0) + dt
+        commitRaidFighterManeuver(enemy, getNearestLivingPlayerThisTick(enemy))
+      }
       const trainT = (enemy.y - enemy.trainSlot * 6.2) * enemy.pathSpeed + enemy.phase
       const trainX = fighter ? getRaidFighterPathX(enemy, getNearestLivingPlayerThisTick(enemy)) :
         enemy.pattern === 0 ? enemy.originX + Math.sin(trainT) * enemy.amplitude :
@@ -5666,7 +5687,7 @@ export function GradiusRaid({
       if (commandProfile) {
         const event = advanceCommandBoss(enemy, dt, livingPlayersThisTick, raidDifficultyRef.current,
           Math.max(0, COMMAND_SHOT_LIMIT - enemyShotsRef.current.length), emitCommandBossShot)
-        if (event & COMMAND_WARNING) playCommandBossCharge(enemy, Boolean(event & COMMAND_PHASE))
+        if (event & COMMAND_WARNING) playCommandBossCharge(enemy, Boolean(event & COMMAND_PHASE), landscapeRef.current)
         if (event & COMMAND_FIRED) playGameSound(isCommandBeam(enemy.bossAttackPattern) ? 'laser' : 'rocket')
       }
       const nextFire = fireCooldown - dt * (enemy.isBoss ? bossFireDrain : 1)
@@ -5686,7 +5707,7 @@ export function GradiusRaid({
         ? (enemy.y < bossYTarget ? Math.min(bossYTarget, enemy.y + enemy.vy * dt) : bossYTarget)
         : enemy.isMiniBoss
           ? (enemy.y < miniBossYTarget ? Math.min(miniBossYTarget, enemy.y + enemy.vy * dt) : miniBossYTarget)
-          : enemy.y + enemy.vy * dt
+          : enemy.y + enemy.vy * dt * (fighter ? getRaidFighterSpeedScale(enemy) : 1)
       if (enemy.isBoss && bossMessageRef.current === 'incoming') {
         if (enemy.y >= Math.min(5, bossYTarget - 6)) {
           bossAlertRef.current = 0
@@ -6469,7 +6490,7 @@ export function GradiusRaid({
         ) {
           const bossShielded = (enemy.isBoss && (enemy.shieldTime > 0 || enemy.y < 15)) || (enemy.isMiniBoss && (enemy.shieldTime > 0 || enemy.y < 8))
           const impact = recordBossImpact(enemy, shot, bossShielded)
-          if (impact && impact !== 'armor') playRaidCue(impact, (shot.x - 50) / 50)
+          if (impact && impact !== 'armor') playRaidCue(impact, raidStereoPan(shot.x, shot.y, landscapeRef.current))
           if (!bossShielded) {
             enemy.hp -= shot.damage
             playBossCriticalStinger(enemy)
@@ -6674,7 +6695,7 @@ export function GradiusRaid({
           : null
         if (pilot) {
           nearMissCooldownRef.current = .65
-          playRaidCue('flyby', (enemyShot.x - pilot.x) / 8)
+          playRaidCue('flyby', (landscapeRef.current ? pilot.y - enemyShot.y : enemyShot.x - pilot.x) / 8)
         }
       }
       for (const targetPlayer of livingPlayersThisTick) {
@@ -7341,7 +7362,7 @@ export function GradiusRaid({
   const stageSelectButtons = Array.from({ length: MAX_RAID_STAGE }, (_, index) => index + 1)
   const usingGodBarrage = player.ship.key === 'coreLander' && (playerVisualShipKey === 'godGundam' || playerVisualShipKey === 'spiegel')
   const nukeCooldown = Math.ceil(snapshot.nukeCooldown)
-  const nukeStageLocked = snapshot.phase === 'playing' && snapshot.stageClear > 0
+  const nukeStageLocked = snapshot.phase === 'playing' && (snapshot.stageClear > 0 || stageEntryRef.current > 0)
   const nukeReady = snapshot.phase === 'playing' && !nukeStageLocked && snapshot.nukeCooldown <= 0
   useEffect(() => {
     if (snapshot.phase !== 'playing') return
@@ -7506,7 +7527,7 @@ export function GradiusRaid({
       ref={rootRef}
       onPointerDown={(event) => {
         if (sameScreenCoopRef.current) return
-        if (isUiPointerTarget(event.target) || phaseRef.current !== 'playing') return
+        if (isUiPointerTarget(event.target) || phaseRef.current !== 'playing' || stageEntryRef.current > 0) return
         if (event.pointerType !== 'mouse' && steeringPointerIdRef.current !== null) return
         updatePointer(event.clientX, event.clientY, event.pointerType)
         if (event.pointerType !== 'mouse') {
@@ -7591,10 +7612,9 @@ export function GradiusRaid({
         </div>
       )}
 
-      <RaidLaunchSequence phase={snapshot.phase} shipKey={playerVisualShipKey} landscape={landscape} />
-
       <div className="raid__playfield">
         <div ref={pixiBackgroundHostRef} className="raid__pixi-background" aria-hidden="true" />
+        <RaidLaunchSequence />
         <canvas ref={fxCanvasRef} className="raid__fx-canvas" />
         {showPerfHud && !landscape && <div ref={perfHudRef} className="raid__perf-hud" aria-hidden="true">Measuring FPS…</div>}
       </div>
@@ -7667,7 +7687,7 @@ export function GradiusRaid({
             <i aria-hidden="true" />
           </div>
           <div className="raid__boss-warning-stripes" aria-hidden="true" />
-          <small>{hudText.bossVectorIncoming}</small>
+          <small>{getGenericBossArt(snapshot.enemies.find(enemy => enemy.isBoss)?.bossKind ?? null, snapshot.stageTheme)?.name ?? hudText.bossVectorIncoming}</small>
         </div>
       )}
 

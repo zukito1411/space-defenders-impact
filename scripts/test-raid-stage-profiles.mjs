@@ -108,3 +108,12 @@ for (const role of [0,1,2,3,4,5]) {
 }
 console.log('Raid stages: 15 unique rotations, six layouts and aircraft, formation integrity, authored shots and live caps passed')
 
+
+const ram = { ...formationEnemy, y: 24, variant: api.LEGACY_FIGHTER_COUNT+3 }
+api.commitRaidFighterManeuver(ram,{x:70,y:80})
+assert.equal(ram.fighterAimX,70)
+api.commitRaidFighterManeuver(ram,{x:10,y:80})
+assert.equal(ram.fighterAimX,70,'committed ram must not retarget after warning')
+assert.ok(api.getRaidFighterSpeedScale(ram)<1)
+assert.ok(api.getRaidFighterCharge({...ram,y:35})>0)
+assert.ok(api.getRaidFighterSpeedScale({...ram,y:41})>1)

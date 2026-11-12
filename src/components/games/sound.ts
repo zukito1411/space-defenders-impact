@@ -358,9 +358,6 @@ export function getGameSoundBgmDuckProfile(kind: GameSoundKind): GameBgmDuckProf
       releaseMs: BGM_STINGER_DUCK_RELEASE_MS,
     }
   }
-  if (kind === 'levelup') {
-    return { volumeScale: 0.72, attackMs: 45, holdMs: 300, releaseMs: 360 }
-  }
   if (kind === 'nuke_explosion') {
     return { volumeScale: 0.18, attackMs: 45, holdMs: 940, releaseMs: 620 }
   }
@@ -669,6 +666,8 @@ export function stopBGM() {
 }
 
 const RAID_CUES = {
+  launch: [65, 210, .8, .085, 'triangle', 'ui'],
+  alarm: [420, 230, .3, .07, 'triangle', 'ui'],
   hydra: [280, 490, .32, .10, 'triangle', 'beam'],
   beamCharge: [76, 185, .86, .15, 'triangle', 'beam'],
   thrusterFault: [116, 58, .27, .13, 'triangle', 'impact'],

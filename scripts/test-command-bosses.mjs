@@ -295,7 +295,7 @@ const updateStart=runtime.indexOf('  const updateGame = useCallback(')
 const hostLoop=runtime.slice(runtime.indexOf('    const enemies = enemiesRef.current',updateStart),runtime.indexOf('    enemies.length = liveEnemyCount',updateStart)+'    enemies.length = liveEnemyCount'.length)
 try {
 const host=await load(source+`
-const HEIGHT=100,WIDTH=100;
+const HEIGHT=100,WIDTH=100,landscapeRef={current:false};
 const player={x:50,y:82},livingPlayersThisTick=[player];
 export const enemiesRef={current:[]},enemyShotsRef={current:[]};
 const raidModeRef={current:'campaign'},raidDifficultyRef={current:'normal'},stageRef={current:1},waveRef={current:1};

@@ -2,15 +2,25 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import ts from 'typescript'
 const read = path => readFileSync(new URL('../' + path, import.meta.url), 'utf8')
-const code = ts.transpileModule(read('src/components/games/raid/raidLaunch.ts').replace(/^import .*\n/gm, ''), { compilerOptions: { module: ts.ModuleKind.ESNext } }).outputText
-const { shouldPlayRaidLaunch } = await import('data:text/javascript;base64,' + Buffer.from(code).toString('base64'))
-for (const before of ['select','briefing','gameover','victory']) assert.equal(shouldPlayRaidLaunch(before,'playing',false),true)
-for (const before of ['paused','playing']) assert.equal(shouldPlayRaidLaunch(before,'playing',false),false)
-assert.equal(shouldPlayRaidLaunch('select','playing',true),false)
-assert.equal(shouldPlayRaidLaunch('select','briefing',false),false)
+const code = ts.transpileModule(read('src/components/games/raid/raidLaunch.ts'), { compilerOptions: { module: ts.ModuleKind.ESNext } }).outputText
+const { sampleLaunchFlight } = await import('data:text/javascript;base64,' + Buffer.from(code).toString('base64'))
+for (const hz of [30,60,120]) {
+  let previous=-1
+  for (let frame=0;frame<=hz;frame++) {
+    const p=sampleLaunchFlight(frame/hz,false)
+    assert.ok(p>=previous && p>=0 && p<=1)
+    previous=p
+  }
+  assert.equal(previous,1)
+}
+assert.equal(sampleLaunchFlight(0,true),1)
+assert.equal(sampleLaunchFlight(NaN,false),0)
 const component=read('src/components/games/raid/RaidLaunchSequence.tsx')
-assert.match(component,/pointer|Cosmetic launch/)
-assert.match(component,/sideView=\{landscape\}/)
+assert.doesNotMatch(component,/RaidShipSprite|<img|setTimeout/,'launch must never create another ship or race a timer')
+const runtime=read('src/components/games/raid/GradiusRaidRuntime.tsx')
+assert.match(runtime,/stageEntryRef.current = getRaidStageEntrySeconds\(stage, mode\)/)
+assert.match(runtime,/const easedEntry = sampleLaunchFlight/)
+assert.match(runtime,/stageEntryRef.current <= 0 && gfxProfile.drawOptionShips/)
 const css=read('src/landscape-ui.css')
 assert.match(css,/\.raid__launch-sequence\s*\{[^}]*pointer-events:\s*none/s)
-console.log('Launch: new run only, reduced motion, orientation and nonblocking controls passed')
+console.log('Launch: one simulation ship, frame-rate independent flight, reduced motion and no duplicate overlay ship passed')

@@ -1,3 +1,4 @@
+import { raidStereoPan } from './flightEffects'
 import { getGameAudioMixSettings, getGameSoundEnabled, getPublicAssetUrl, playGameSound, playRaidCue } from '../sound'
 import type { GameSoundKind } from '../sound'
 import { isCommandBeam } from './commandBoss'
@@ -17,8 +18,8 @@ export function playCoreLanderPhysicalAttackSound(seed = Math.random()) {
   playGameSound(CORE_LANDER_PHYSICAL_ATTACK_SOUNDS[index])
 }
 
-export function playCommandBossCharge(enemy: Enemy, phaseChanged: boolean) {
-  const pan = (enemy.x - 50) / 50
+export function playCommandBossCharge(enemy: Enemy, phaseChanged: boolean, landscape = false) {
+  const pan = raidStereoPan(enemy.x, enemy.y, landscape)
   if (enemy.bossAttackPattern === 'hydra') {
     playRaidCue('hydra', pan - .55)
     playRaidCue('hydra', pan + .55, .22)

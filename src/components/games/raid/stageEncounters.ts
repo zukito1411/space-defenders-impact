@@ -115,7 +115,8 @@ export function getRaidFighterPathX(enemy: Enemy, target?: Vec) {
 
   // Ram ships lean into the pilot's lane; interceptors make a smaller pursuit.
   // Artillery and heavy gunships hold steadier lanes; sensors sweep wider.
-  const targetDelta = target && Number.isFinite(target.x) ? Math.max(-24, Math.min(24, target.x - enemy.originX)) : 0
+  const aimX = enemy.fighterAimX ?? target?.x
+  const targetDelta = aimX !== undefined && Number.isFinite(aimX) ? Math.max(-24, Math.min(24, aimX - enemy.originX)) : 0
   const pursuit = role === RAM ? targetDelta * .28 : role === INTERCEPTOR ? targetDelta * .14 : 0
   const personality = role === SENSOR ? Math.sin(age * 1.35 + enemy.phase) * 2 : role === SCOUT ? Math.sin(age * 2.7 + enemy.phase) * 1.1 : 0
   const heavyScale = role === GUNSHIP || role === ARTILLERY ? .75 : 1
@@ -137,7 +138,23 @@ export function fireRaidFighter(enemy: Enemy, target: Vec, available: number, em
 
 /** These frames are shared by the Pixi foreground and Canvas fallback. */
 export function getRaidFighterCharge(enemy: Enemy) {
+  if (enemy.variant === LEGACY_FIGHTER_COUNT + RAM && enemy.fighterAimX !== undefined && enemy.y >= 24 && enemy.y < 40) return (enemy.y - 24) / 16
   if (enemy.y < 0 || enemy.fireCooldown <= 0 || enemy.fireCooldown >= .34 || !getRaidFighter(enemy.variant)?.shots) return 0
   return 1 - enemy.fireCooldown / .34
 }
 
+
+/** Host commits the maneuver once: enemies cannot keep chasing a dodging pilot. */
+export function commitRaidFighterManeuver(enemy: Enemy, target: Vec) {
+  const role = enemy.variant - LEGACY_FIGHTER_COUNT
+  if ((role === RAM || role === INTERCEPTOR) && enemy.y >= 24 && enemy.fighterAimX === undefined) {
+    enemy.fighterAimX = Math.max(8, Math.min(92, target.x))
+  }
+}
+export function getRaidFighterSpeedScale(enemy: Enemy) {
+  const role = enemy.variant - LEGACY_FIGHTER_COUNT
+  if (enemy.y < 24) return 1
+  if (role === RAM) return enemy.y < 40 ? .65 : 1.35
+  if (role === INTERCEPTOR) return enemy.y >= 40 ? 1.15 : 1
+  return role === ARTILLERY ? .86 : role === GUNSHIP ? .92 : 1
+}

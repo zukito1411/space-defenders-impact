@@ -53,3 +53,8 @@ export function muzzleFlashProgress(now: number, startedAt: number) {
   const age = now - startedAt
   return Number.isFinite(age) && age >= 0 && age < 110 ? age / 110 : -1
 }
+
+/** Convert logical flight coordinates to the audible left/right screen axis. */
+export function raidStereoPan(x: number, y: number, landscape: boolean) {
+  return Math.max(-1, Math.min(1, (landscape ? 50 - y : x - 50) / 50))
+}
