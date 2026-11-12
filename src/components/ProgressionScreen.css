@@ -1567,10 +1567,15 @@
     min-height: 108px;
   }
 
-  .progress-ship-preview__ship,
-  .progress-ship-preview__canvas {
+  .progress-ship-preview__ship {
     width: 92px;
     height: 108px;
+  }
+
+  .progress-ship-preview__canvas {
+    width: 92px;
+    height: auto;
+    aspect-ratio: 104 / 118;
   }
 
   .progress-cosmetics {
@@ -1727,3 +1732,4 @@
     transform: scale(1.018);
   }
 }
+

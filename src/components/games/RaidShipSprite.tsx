@@ -79,8 +79,9 @@ export function RaidShipSprite({ shipKey, size, className = 'raid__ship-sprite',
       alt=""
       aria-hidden="true"
       draggable={false}
-      style={{ width: size, height: size }}
+      style={{ width: size, height: size, objectFit: 'contain' }}
     />
   )
 }
+
 
