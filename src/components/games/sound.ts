@@ -358,6 +358,9 @@ export function getGameSoundBgmDuckProfile(kind: GameSoundKind): GameBgmDuckProf
       releaseMs: BGM_STINGER_DUCK_RELEASE_MS,
     }
   }
+  if (kind === 'levelup') {
+    return { volumeScale: 0.72, attackMs: 45, holdMs: 300, releaseMs: 360 }
+  }
   if (kind === 'nuke_explosion') {
     return { volumeScale: 0.18, attackMs: 45, holdMs: 940, releaseMs: 620 }
   }
@@ -828,3 +831,4 @@ export function playGameSound(
     // Sound should never break gameplay.
   }
 }
+

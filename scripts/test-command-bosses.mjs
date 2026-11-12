@@ -150,6 +150,8 @@ const BOSS_FX = Object.fromEntries(
  ['lane','aim','ionWake','pulse','muzzle','shield','impact','precision','damage','char'].map(name=>[name,name]));
 const drawBossFx = (ctx,...args) => { ctx.sprites.push(args); return true };
 const drawBossFxLane = (ctx,...args) => { ctx.lanes.push(args) };
+const COMBAT_TILE={smoke:11}, getRaidCombatFrame=()=>({});
+const drawRaidCombatTexture=ctx=>{ctx.smoke=(ctx.smoke??0)+1;return true};
 `
 const warnings=await load(source+vfxStubs+'\nconst PLAYER_RADIUS=3.2;\n'+strip(read('src/components/games/raid/commandBossRender.ts')))
 for(const [w,h] of [[390,844],[1280,720]])for(const p of m.COMMAND_BOSS_PROFILES)for(const pattern of p.sequence) {
@@ -221,6 +223,13 @@ for (const profile of m.COMMAND_BOSS_PROFILES) {
  damage.drawHullDamage(effectsContext, ship, 0, 0, 130, 0, 1, true)
  assert.deepEqual(sprites.map(([tile])=>tile), Array(profile.stage === 11 ? 3 : 1).fill('char'))
 }
+const critical = boss(1, .25)
+effectsContext.smoke = 0
+damage.drawHullDamage(effectsContext, critical, 0, 0, 130, 0, 1, false)
+assert.equal(effectsContext.smoke, 1, 'critical boss damage draws a bounded smoke cue')
+effectsContext.smoke = 0
+damage.drawHullDamage(effectsContext, critical, 0, 0, 130, 0, 1, true)
+assert.equal(effectsContext.smoke, 0, 'reduced motion suppresses smoke')
 assert.ok(damage.BOSS_BREAKUP_DELAYS.length <= 5 && damage.BOSS_BREAKUP_DELAYS.at(-1) < 3.15)
 assert.notDeepEqual(damage.getBossBreakupPoint(boss(11), 0), damage.getBossBreakupPoint(boss(11), 1))
 
@@ -314,3 +323,4 @@ assert.equal(host.legacyFires,0,'ordinary bosses still call the legacy fire path
 console.log('Command host integration: all twelve ships emit through the real enemy loop, retain dt timing/movement, and bypass the old pause/fire callback')
 
 } catch (error) { throw new Error(`Production host loop check: ${error.name}: ${error.message}`) }
+
