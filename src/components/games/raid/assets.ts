@@ -1,4 +1,5 @@
 import { getRaidFighter, LEGACY_FIGHTER_COUNT } from './stageEncounters'
+import { getRaidSideShipSpriteUrl } from './sideArtwork'
 import { getGenericBossArt } from './bossCatalog'
 import { getWreckCanvasSprite } from './wreckArt'
 import { getRaidAlienSpriteUrl, getRaidEliteSpriteUrl, getRaidShipSpriteUrl, RAID_ALIEN_SPRITE_COUNT, RAID_ELITE_SPRITE_COUNT } from '../RaidShipSprite'
@@ -1216,6 +1217,13 @@ export function getShipCanvasSprite(shipKey: string) {
   const existing = canvasSpriteCache.get(key)
   if (existing) return existing
   return makeImageCanvasSprite(key, getRaidShipSpriteUrl(shipKey), shipKey === 'mesiahRaptorWhite' ? processWhiteRaptorExhaust : undefined)
+}
+
+export function getRaidSideShipCanvasSprite(shipKey: string) {
+  const url = getRaidSideShipSpriteUrl(shipKey)
+  if (!url) return null
+  const key = `ship-side:${url}`
+  return canvasSpriteCache.get(key) ?? makeImageCanvasSprite(key, url)
 }
 
 export function getNormalAlienCanvasSprite(variant: number) {

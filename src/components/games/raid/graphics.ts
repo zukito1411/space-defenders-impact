@@ -109,9 +109,11 @@ export type RaidViewportMetrics = {
   multiplayer: boolean
 }
 
-export function makeRaidViewportMetrics(root: HTMLElement, quality: GraphicsQuality, multiplayer: boolean): RaidViewportMetrics {
-  const cssWidth = Math.max(1, root.clientWidth || (typeof window !== 'undefined' ? window.innerWidth : 1) || 1)
-  const cssHeight = Math.max(1, root.clientHeight || (typeof window !== 'undefined' ? window.innerHeight : 1) || 1)
+export function makeRaidViewportMetrics(root: HTMLElement, quality: GraphicsQuality, multiplayer: boolean, landscape = false): RaidViewportMetrics {
+  const rootWidth = Math.max(1, root.clientWidth || (typeof window !== 'undefined' ? window.innerWidth : 1) || 1)
+  const rootHeight = Math.max(1, root.clientHeight || (typeof window !== 'undefined' ? window.innerHeight : 1) || 1)
+  const cssWidth = landscape ? rootHeight : rootWidth
+  const cssHeight = landscape ? rootWidth : rootHeight
   const isSmallViewport = cssWidth <= 860 || cssHeight <= 560
   const profile = getRaidGraphicsProfile(quality, isSmallViewport, multiplayer)
   const dpr = Math.max(0.7, Math.min(profile.dprCap, typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1))

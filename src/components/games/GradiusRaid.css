@@ -1017,6 +1017,16 @@
   contain: layout paint style;
 }
 
+/* Keep both rendering layers in the same logical flight space. */
+.raid--landscape .raid__playfield {
+  inset: auto;
+  left: 50%;
+  top: 50%;
+  width: var(--raid-field-width, 100vh);
+  height: var(--raid-field-height, 100vw);
+  transform: translate(-50%, -50%) rotate(90deg);
+}
+
 .raid__pixi-background {
   position: absolute;
   inset: 0;
@@ -2944,6 +2954,12 @@
   text-transform: uppercase;
 }
 
+.raid__flight-view-hint {
+  margin: 9px 0 0;
+  color: #aebbd0;
+  font-size: .78rem;
+}
+
 .raid__gfx-row--settings {
   margin-top: 10px;
 }
@@ -4173,5 +4189,327 @@
 @media (prefers-reduced-motion: reduce) {
   .raid__nuke-quick::after {
     animation: none;
+  }
+}
+
+/* Landscape has its own compact layout; portrait selectors remain unchanged. */
+.raid--landscape {
+  height: 100dvh;
+}
+.raid--landscape .raid__hud {
+  inset: max(6px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) auto max(8px, env(safe-area-inset-left));
+  gap: 5px;
+  align-items: stretch;
+}
+.raid--landscape .raid__hud:not(.raid__hud--same-screen) {
+  grid-template-columns: minmax(66px, 1.1fr) minmax(36px, .55fr) minmax(80px, 1.2fr) minmax(70px, 1fr) minmax(76px, 1fr) 68px 40px;
+}
+.raid--landscape .raid__hud .raid__stat,
+.raid--landscape .raid__hud .raid__hp {
+  min-width: 0;
+  min-height: 38px;
+  margin: 0;
+  padding: 5px 7px;
+  border-radius: 3px;
+  background: rgba(3, 9, 17, .86);
+  backdrop-filter: none;
+  box-shadow: inset 0 1px rgba(190, 223, 240, .08);
+}
+.raid--landscape .raid__hud .raid__stat span {
+  font-size: 8px;
+  line-height: 1.1;
+  letter-spacing: .07em;
+}
+.raid--landscape .raid__hud .raid__stat b {
+  margin-top: 3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 11px;
+  line-height: 1.05;
+}
+.raid--landscape .raid__hud .raid__hp {
+  grid-column: auto;
+  justify-self: stretch;
+  align-content: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 3px;
+  max-width: none;
+}
+.raid--landscape .raid__pip {
+  width: 6px;
+  height: 5px;
+}
+.raid--landscape .raid__hud .raid__pause {
+  width: 40px;
+  min-width: 40px;
+  height: 38px;
+  min-height: 38px;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 3px;
+  pointer-events: auto;
+  touch-action: manipulation;
+}
+.raid--landscape .raid__pause-mark {
+  font-size: 17px;
+  line-height: 1;
+}
+.raid--landscape .raid__hud .raid__nuke {
+  width: 68px;
+  min-width: 0;
+  min-height: 38px;
+  padding: 4px 6px;
+  border-radius: 3px;
+  pointer-events: auto;
+}
+.raid--landscape .raid__nuke-text b {
+  font-size: 10px;
+  letter-spacing: .06em;
+}
+.raid--landscape .raid__nuke-text small {
+  display: none;
+}
+.raid--landscape:not(.raid--same-screen) .raid__nuke-quick {
+  display: none;
+}
+.raid--landscape.raid--same-screen .raid__nuke-quick {
+  left: auto;
+  right: max(8px, env(safe-area-inset-right));
+  bottom: max(8px, env(safe-area-inset-bottom));
+  min-width: 68px;
+  min-height: 38px;
+  padding: 6px 10px;
+  transform: none;
+  border-radius: 3px;
+}
+.raid--landscape .raid__connection {
+  top: auto;
+  right: max(8px, env(safe-area-inset-right));
+  bottom: max(8px, env(safe-area-inset-bottom));
+  min-height: 18px;
+  padding: 2px 6px;
+  font-size: 9px;
+}
+.raid--landscape .raid__sector-arrival {
+  top: calc(max(6px, env(safe-area-inset-top)) + 52px);
+  left: max(12px, env(safe-area-inset-left));
+  right: auto;
+  max-width: min(36vw, 260px);
+  gap: 2px;
+  padding: 5px 9px;
+}
+.raid--landscape .raid__sector-arrival strong {
+  font-size: 15px;
+}
+.raid--landscape .raid__sector-arrival small,
+.raid--landscape .raid__sector-arrival span {
+  font-size: 8px;
+}
+.raid--landscape .raid__boss-warning {
+  top: calc(max(6px, env(safe-area-inset-top)) + 50px);
+  width: min(340px, calc(100% - 32px));
+  gap: 3px;
+  padding: 4px 8px;
+}
+.raid--landscape .raid__boss-warning-panel--top {
+  min-height: 23px;
+  font-size: 13px;
+}
+.raid--landscape .raid__boss-warning-panel--main {
+  min-height: 28px;
+}
+.raid--landscape .raid__boss-warning-panel--main span {
+  font-size: 13px;
+}
+.raid--landscape .raid__boss-warning-stripes {
+  height: 8px;
+}
+.raid--landscape .raid__overlay,
+.raid--landscape .raid__settings-overlay,
+.raid--landscape .raid__stage-modal {
+  padding: max(8px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+}
+.raid--landscape .raid__panel {
+  max-height: calc(100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 13px 16px;
+  scrollbar-width: thin;
+}
+.raid--landscape .raid__stage-modal-panel {
+  max-height: calc(100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 12px 16px;
+}
+.raid--landscape .raid__stage-select--modal {
+  margin-top: 10px;
+  gap: 5px;
+}
+.raid--landscape .raid__stage-button {
+  min-height: 34px;
+}
+.raid--landscape .raid__panel h2 {
+  margin-top: 5px;
+  font-size: 28px;
+}
+.raid--landscape .raid__kicker {
+  font-size: 9px;
+  letter-spacing: .12em;
+}
+.raid--landscape .raid__ship-grid {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 10px;
+}
+.raid--landscape .raid__ship-card {
+  min-height: 91px;
+  padding: 7px 6px;
+  gap: 4px;
+  align-content: start;
+}
+.raid--landscape .raid__ship-card .raid__ship-sprite {
+  width: 100% !important;
+  height: 37px !important;
+  object-fit: contain;
+  margin: 0;
+}
+.raid--landscape .raid__ship-card span {
+  font-size: 11px;
+}
+.raid--landscape .raid__ship-card small {
+  font-size: 9px;
+  line-height: 1.2;
+}
+.raid--landscape .raid__pause-actions {
+  margin-top: 10px;
+  gap: 7px;
+}
+.raid--landscape .raid__pause-actions .raid__start,
+.raid--landscape .raid__pause-actions .raid__menu-button,
+.raid--landscape .raid__menu-button--wide {
+  min-height: 36px;
+  margin-top: 0;
+  padding: 8px 12px;
+  font-size: 11px;
+}
+.raid--landscape .raid__settings-section {
+  margin-top: 10px;
+  padding: 10px;
+}
+.raid--landscape .raid__records {
+  margin-top: 10px;
+  font-size: 11px;
+}
+.raid--landscape .raid__perf-hud {
+  max-width: min(520px, calc(100% - 160px));
+  max-height: 25dvh;
+  overflow: hidden;
+  font-size: 9px;
+}
+.raid--landscape .raid__hud--same-screen {
+  grid-template-columns: minmax(0, 1fr) 40px minmax(0, 1fr);
+  gap: 7px;
+}
+.raid--landscape .raid__pilot-panel {
+  width: 100%;
+  max-width: none;
+  grid-template-columns: 28px minmax(0, 1fr) 24px minmax(0, 1.4fr) 44px;
+  gap: 3px;
+}
+.raid--landscape .raid__pilot-tag {
+  grid-column: auto;
+  min-height: 32px;
+  padding: 3px;
+  border-radius: 3px;
+}
+.raid--landscape .raid__pilot-tag b {
+  min-width: 24px;
+  min-height: 20px;
+  font-size: 9px;
+}
+.raid--landscape .raid__pilot-tag span {
+  display: none;
+}
+.raid--landscape .raid__pilot-special {
+  grid-column: 5;
+  grid-row: 1;
+  min-height: 32px;
+  min-width: 0;
+  padding: 4px;
+  border-radius: 3px;
+  backdrop-filter: none;
+  overflow: hidden;
+}
+.raid--landscape .raid__pilot-special span {
+  font-size: 7px;
+  letter-spacing: 0;
+}
+.raid--landscape .raid__pilot-special b {
+  font-size: 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.raid--landscape .raid__pilot-panel .raid__hp--pilot {
+  grid-column: 1 / -1;
+  min-height: 13px;
+  padding: 3px 5px;
+}
+@media (max-width: 740px) {
+  .raid--landscape .raid__ship-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .raid--landscape .raid__hud:not(.raid__hud--same-screen) {
+    grid-template-columns: minmax(42px, 1fr) 28px minmax(65px, 1.2fr) minmax(42px, 1fr) minmax(56px, 1fr) 60px 40px;
+    gap: 3px;
+  }
+  .raid--landscape .raid__hud .raid__stat,
+  .raid--landscape .raid__hud .raid__hp {
+    padding: 5px;
+  }
+  .raid--landscape .raid__hud .raid__nuke {
+    width: 60px;
+  }
+}
+@media (max-width: 540px) {
+  .raid--landscape .raid__hud:not(.raid__hud--same-screen) {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .raid--landscape .raid__hud:not(.raid__hud--same-screen) .raid__hp {
+    grid-column: span 2;
+    min-height: 30px;
+  }
+  .raid--landscape .raid__hud:not(.raid__hud--same-screen) .raid__nuke {
+    width: 100%;
+    min-height: 30px;
+  }
+  .raid--landscape .raid__hud:not(.raid__hud--same-screen) .raid__pause {
+    height: 30px;
+    min-height: 30px;
+    justify-self: end;
+  }
+  .raid--landscape .raid__boss-warning {
+    top: calc(max(6px, env(safe-area-inset-top)) + 76px);
+  }
+  .raid--landscape .raid__sector-arrival {
+    top: calc(max(6px, env(safe-area-inset-top)) + 80px);
+  }
+}
+@media (max-height: 440px) {
+  .raid--landscape .raid__panel h2 {
+    font-size: 24px;
+  }
+  .raid--landscape .raid__panel {
+    padding: 10px 12px;
+  }
+  .raid--landscape .raid__ship-card {
+    min-height: 80px;
+  }
+  .raid--landscape .raid__pause-actions--pre {
+    margin-top: 7px;
   }
 }

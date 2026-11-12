@@ -1,0 +1,265 @@
+{
+  "generator": "built-in imagegen",
+  "naming": "Stable v1 filenames as requested.",
+  "styleReference": "public/assets/ships/sideview/space-jet-v1.png",
+  "spaceJet": "Existing accepted asset preserved.",
+  "ships": [
+    {
+      "key": "mesiah",
+      "name": "mesiah",
+      "destination": "public/assets/ships/sideview/mesiah-v1.png",
+      "reference": "public/assets/ships/mesiah-black-remaster-v1.webp",
+      "prompt": "Edit this existing side-view spacecraft game sprite. Correct the ground-clearance design without changing the identity, rendered style or pointing direction. Preserve the massive carrier proportions, pointed wedge bow, bridge, open flank hangar docks, red-tipped missiles, gold emblems and heavy stern engines. Remove the swept fin projecting downward below the aft keel; keep the upper rear structures. Make the lower armored keel broad, structurally supported and unobstructed with flush retractable heavy landing-pad bay doors. The flight pose needs a clean practical lower hull: no ventral tail blade, no long downward fins, no spikes underneath that would strike a landing surface. Gear remains retracted in flight; indicate its closed bays rather than adding extended wheels or legs. Retain attractive engineering detail and substantial rear structures. Right-facing strict side elevation, same full ship and overall scale, uncropped with transparent margins. Transparent background and clean alpha edges. No background, caption, haze, flames, unrelated redesign, vector shapes or extra objects.",
+      "workflow": "Corrective image edit of the side profile derived from the top-view reference."
+    },
+    {
+      "key": "dreadnought",
+      "name": "obsidian-ark",
+      "destination": "public/assets/ships/sideview/obsidian-ark-v1.png",
+      "reference": "public/assets/ships/obsidian-ark-remaster-v1.webp",
+      "prompt": "Edit this existing side-view spacecraft game sprite. Correct the ground-clearance design without changing the identity, rendered style or pointing direction. Remove the large downward-projecting swept tail/fin beneath the rear fuselage completely. Keep the upper swept tail, engines, cockpit, nose, weaponry, colors, markings and detailed hull recognizable. Main wings should project sideways horizontally and be seen mostly edge-on, not form a second vertical tail below the fuselage. Complete the belly with close-fitting armor and flush landing-gear bay doors. The flight pose needs a clean practical lower hull: no ventral tail blade, no long downward fins, no spikes underneath that would strike a landing surface. Gear remains retracted in flight; indicate its closed bays rather than adding extended wheels or legs. Retain attractive engineering detail and substantial rear structures. Right-facing strict side elevation, same full ship and overall scale, uncropped with transparent margins. Transparent background and clean alpha edges. No background, caption, haze, flames, unrelated redesign, vector shapes or extra objects.",
+      "workflow": "Corrective image edit of the side profile derived from the top-view reference."
+    },
+    {
+      "key": "xwing",
+      "name": "crosswing-nova",
+      "destination": "public/assets/ships/sideview/crosswing-nova-v1.png",
+      "reference": "public/assets/ships/crosswing-nova-remaster-v1.webp",
+      "prompt": "Use case: stylized-concept. Asset type: one production 2D side-scrolling shooter ship sprite. Image 1 is the authoritative TOP-VIEW design of this exact craft; image 2 is accepted side-view Space Jet artwork for rendering style ONLY, never copy its ship design. Change the camera to an orthographic SIDE ELEVATION, nose pointing RIGHT and stern LEFT. Preserve image 1's actual ship identity, palette, markings, weapons, recognizable front/rear structure and detailed painted metal finish. This is CROSSWING NOVA, the reference's white-and-red X-wing-inspired fighter. Preserve its narrow white nose, blue cockpit, red panel bands, four long wingtip laser cannons, four engine pods and distinctive S-foil wing geometry. Render S-FOILS FULLY OPEN in combat. Side view must show the near upper foil reaching upward and the near lower foil reaching downward, with visible gaps between them and the fuselage, long forward-pointing laser barrels at foil tips; hints of the far foils behind. Retain four engines, not three. The resulting silhouette should have an obvious open wing spread and a recognizable long nose; about 2.5 times wider than tall. Do not put all wings edge-on into one horizontal strip or close the foils. Full complete ship centered, uncropped, with 8 percent clear transparent margin around all extremities. Camera level with the side of the fuselage so canopy side and hull thickness are visible; no top-down rotated view. Crisp, cinematic, convincingly engineered spacecraft game art with readable large forms and finer mechanical detail. True transparent background. No backdrop, no haze, no cast shadow, no exhaust flames, no typography, no extra ships, no vector/icon/polygon placeholder style."
+    },
+    {
+      "key": "rocket",
+      "name": "black-comet",
+      "destination": "public/assets/ships/sideview/black-comet-v1.png",
+      "reference": "public/assets/ships/black-comet-remaster-v1.webp",
+      "prompt": "Edit this existing side-view spacecraft game sprite. Correct the ground-clearance design without changing the identity, rendered style or pointing direction. Remove the large downward-projecting swept tail/fin beneath the rear fuselage completely. Keep the upper swept tail, engines, cockpit, nose, weaponry, colors, markings and detailed hull recognizable. Main wings should project sideways horizontally and be seen mostly edge-on, not form a second vertical tail below the fuselage. Complete the belly with close-fitting armor and flush landing-gear bay doors. The flight pose needs a clean practical lower hull: no ventral tail blade, no long downward fins, no spikes underneath that would strike a landing surface. Gear remains retracted in flight; indicate its closed bays rather than adding extended wheels or legs. Retain attractive engineering detail and substantial rear structures. Right-facing strict side elevation, same full ship and overall scale, uncropped with transparent margins. Transparent background and clean alpha edges. No background, caption, haze, flames, unrelated redesign, vector shapes or extra objects.",
+      "workflow": "Corrective image edit of the side profile derived from the top-view reference."
+    },
+    {
+      "key": "fast",
+      "name": "red-wraith",
+      "destination": "public/assets/ships/sideview/red-wraith-v1.png",
+      "reference": "public/assets/ships/red-wraith-remaster-v1.webp",
+      "prompt": "Edit this existing side-view spacecraft game sprite. Correct the ground-clearance design without changing the identity, rendered style or pointing direction. Remove the large downward-projecting swept tail/fin beneath the rear fuselage completely. Keep the upper swept tail, engines, cockpit, nose, weaponry, colors, markings and detailed hull recognizable. Main wings should project sideways horizontally and be seen mostly edge-on, not form a second vertical tail below the fuselage. Complete the belly with close-fitting armor and flush landing-gear bay doors. The flight pose needs a clean practical lower hull: no ventral tail blade, no long downward fins, no spikes underneath that would strike a landing surface. Gear remains retracted in flight; indicate its closed bays rather than adding extended wheels or legs. Retain attractive engineering detail and substantial rear structures. Right-facing strict side elevation, same full ship and overall scale, uncropped with transparent margins. Transparent background and clean alpha edges. No background, caption, haze, flames, unrelated redesign, vector shapes or extra objects.",
+      "workflow": "Corrective image edit of the side profile derived from the top-view reference."
+    },
+    {
+      "key": "gatling",
+      "name": "crimson-saw",
+      "destination": "public/assets/ships/sideview/crimson-saw-v1.png",
+      "reference": "public/assets/ships/crimson-saw-remaster-v1.webp",
+      "prompt": "Edit this existing side-view spacecraft game sprite. Correct the ground-clearance design without changing the identity, rendered style or pointing direction. Remove the large downward-projecting swept tail/fin beneath the rear fuselage completely. Keep the upper swept tail, engines, cockpit, nose, weaponry, colors, markings and detailed hull recognizable. Main wings should project sideways horizontally and be seen mostly edge-on, not form a second vertical tail below the fuselage. Complete the belly with close-fitting armor and flush landing-gear bay doors. The flight pose needs a clean practical lower hull: no ventral tail blade, no long downward fins, no spikes underneath that would strike a landing surface. Gear remains retracted in flight; indicate its closed bays rather than adding extended wheels or legs. Retain attractive engineering detail and substantial rear structures. Right-facing strict side elevation, same full ship and overall scale, uncropped with transparent margins. Transparent background and clean alpha edges. No background, caption, haze, flames, unrelated redesign, vector shapes or extra objects.",
+      "workflow": "Corrective image edit of the side profile derived from the top-view reference."
+    },
+    {
+      "key": "laser",
+      "name": "night-lance",
+      "destination": "public/assets/ships/sideview/night-lance-v1.png",
+      "reference": "public/assets/ships/night-lance-remaster-v1.webp",
+      "prompt": "Edit this existing side-view spacecraft game sprite. Correct the ground-clearance design without changing the identity, rendered style or pointing direction. Remove the large downward-projecting swept tail/fin beneath the rear fuselage completely. Keep the upper swept tail, engines, cockpit, nose, weaponry, colors, markings and detailed hull recognizable. Main wings should project sideways horizontally and be seen mostly edge-on, not form a second vertical tail below the fuselage. Complete the belly with close-fitting armor and flush landing-gear bay doors. The flight pose needs a clean practical lower hull: no ventral tail blade, no long downward fins, no spikes underneath that would strike a landing surface. Gear remains retracted in flight; indicate its closed bays rather than adding extended wheels or legs. Retain attractive engineering detail and substantial rear structures. Right-facing strict side elevation, same full ship and overall scale, uncropped with transparent margins. Transparent background and clean alpha edges. No background, caption, haze, flames, unrelated redesign, vector shapes or extra objects.",
+      "workflow": "Corrective image edit of the side profile derived from the top-view reference."
+    },
+    {
+      "key": "coreLander",
+      "name": "core-lander",
+      "destination": "public/assets/ships/sideview/core-lander-v1.png",
+      "reference": "public/assets/ships/core-lander.png",
+      "prompt": "Edit this existing side-view spacecraft game sprite. Correct the ground-clearance design without changing the identity, rendered style or pointing direction. The long swept red-and-white wing blades in this side view are currently incorrectly oriented vertically. Reorient those wings laterally into the horizontal wing plane, viewed mostly edge-on from the side, with visible white/red wing-root detailing and folding hinges. Neither blade may hang down below the belly. Preserve the compact central body, black canopy, red insignia and three rear thrusters. The flight pose needs a clean practical lower hull: no ventral tail blade, no long downward fins, no spikes underneath that would strike a landing surface. Gear remains retracted in flight; indicate its closed bays rather than adding extended wheels or legs. Retain attractive engineering detail and substantial rear structures. Right-facing strict side elevation, same full ship and overall scale, uncropped with transparent margins. Transparent background and clean alpha edges. No background, caption, haze, flames, unrelated redesign, vector shapes or extra objects.",
+      "workflow": "Corrective image edit of the side profile derived from the top-view reference."
+    },
+    {
+      "key": "godGundam",
+      "name": "god-gundam",
+      "destination": "public/assets/ships/sideview/god-gundam-v1.png",
+      "reference": [
+        "https://bandai-a.akamaihd.net/bc/img/model/b/1000175254_2.jpg",
+        "https://bandai-a.akamaihd.net/bc/img/model/xl/1000175254_3.jpg"
+      ],
+      "prompt": "Use case: stylized-concept. Create ONE polished production raster sprite of GF13-017NJII GOD GUNDAM for a landscape 2D shooter, genuine transparent background. Attached Bandai RG photos are the authoritative identity references, not an image to trace or a background to keep. Match the actual God Gundam: anatomically proportioned lean athletic white armored mobile fighter, compact classic Gundam helmet with a thin yellow V-fin (not a huge conical golden hat), small red chin and green twin eyes, royal-blue chest with two golden chest vents, white waist and thighs, blue side skirts, red feet, red-rimmed white shoulders, recognizably large blue God Finger forearm guards with yellow talons, slim white shins, six narrow white/red energy fins folded compactly behind its Core Lander backpack. Correct proportions, no giant shoulder horns, no exposed rocket nozzles grafted onto the ribs. Right-facing 3/4 SIDE flight/combat view: face points right, spine mostly upright and slightly leaning forward, near arm forward bent at elbow with a clenched fist, far arm slightly behind, near knee bent slightly forward and far leg trailing diagonally left/down. Adult athletic humanoid anatomy, assertive martial-arts silhouette, NOT a crouched fetal pose or horizontal flying Superman pose. Keep the chest partly visible for identity. Highly finished realistic painted mechanical game art with strong readable colored armor masses, sharp highlights, plausible joints, minimal micro-noise. Full figure centered uncropped with even 8 percent transparent margins. No floor, no pedestal, no watermark, no captions, no surrounding glow/halo, no smoke, no exhaust or effect baked into alpha. This is the NORMAL form, keep backpack fins folded. Output exactly one complete right-facing mech.",
+      "sha256": "b071c2faffaf"
+    },
+    {
+      "key": "spiegel",
+      "name": "spiegel",
+      "destination": "public/assets/ships/sideview/spiegel-v1.png",
+      "reference": [
+        "public/assets/ships/spiegel.png"
+      ],
+      "prompt": "Use case: stylized-concept. Asset type: transparent production sprite for a detailed 2D landscape sci-fi shooter. Input image(s) are identity/design references. SPIEGEL ninja Gundam: preserve the reference's black/dark charcoal armor, white segmented body panels, RED square vents and red feet, yellow circular waist buttons, gold V-fin, broad angular shoulders, long metallic forearm blades. Right-facing near-side flight/combat silhouette, head upright looking right, torso leaning forward slightly, near blade-bearing arm extended forward, legs bent and swept back to the left. Keep anatomical articulation and the reference identity; no redesign into God Gundam, no backpack wings, no gun, no effects baked in. High-quality realistic pre-rendered mechanical game art, crisp plates and readable strong silhouette. Right-facing side view, completely visible and centered with at least 10 percent transparent margin on all sides. Keep the head at the top and the feet at the bottom of the image for humanoids; do not rotate the person like a vertical fighter jet. No background, ground, shadows, stars, captions, text, motion trail, exhaust, extra objects, icons or simple vector polygons. Clean genuine alpha transparency."
+    },
+    {
+      "key": "coreLanderBurning",
+      "name": "core-lander-burning",
+      "destination": "public/assets/ships/sideview/core-lander-burning-v1.png",
+      "reference": [
+        "public/assets/ships/sideview/core-lander-v1.png",
+        "public/assets/ships/core-lander-burning.png"
+      ],
+      "prompt": "Use case: stylized-concept. Asset type: transparent production sprite for a detailed 2D landscape sci-fi shooter. Input image(s) are identity/design references. BURNING CORE LANDER spacecraft: first reference is the existing normal side profile; second reference is the authoritative awakened top-view form. Keep the same right-facing white/red fuselage, black compact cockpit, insignia, three red-detailed aft engines and fine armor finish of image1. Translate the second image's deployed four white/red blade wings and horizontal red stabilizers into the same side perspective with clearly hinged opening structures. This is the awakened flight form, but keep the fixed lower hull clear of ground-striking tail blades; the wing panels are folding wings with visible mechanisms. Full hull visible, not a humanoid. No yellow paint, no giant blue canopy, no flame. High-quality realistic pre-rendered mechanical game art, crisp plates and readable strong silhouette. Right-facing side view, completely visible and centered with at least 10 percent transparent margin on all sides. Keep the head at the top and the feet at the bottom of the image for humanoids; do not rotate the person like a vertical fighter jet. No background, ground, shadows, stars, captions, text, motion trail, exhaust, extra objects, icons or simple vector polygons. Clean genuine alpha transparency."
+    },
+    {
+      "key": "godGundamBurning",
+      "name": "god-gundam-burning",
+      "destination": "public/assets/ships/sideview/god-gundam-burning-v1.png",
+      "reference": [
+        "public/assets/ships/sideview/god-gundam-v1.png",
+        "https://bandai-a.akamaihd.net/bc/img/model/b/1000175254_2.jpg"
+      ],
+      "prompt": "Edit IMAGE 1, the newly designed God Gundam game sprite, into the matching Hyper/Burning mode. IMAGE 2 is the authoritative Bandai design reference for armor identity only. Preserve image1's exact body center, head and limbs, right-facing camera and attractive athletic proportions for a smooth form crossfade. Keep blue chest, white/red armor and correctly proportioned small gold V-fin. Deploy ALL SIX white/red energy-generating backpack fins into an elegant radial fan behind the torso (three on each side, layered with perspective), and open the chest's golden energy multiplier covers to reveal a small green luminous center. Show the authentic God Finger arm guards, white waist/thighs, slim shins and red feet. Do not add arms, swords or random animal wings. Do not repaint the body entirely gold. Premium crisp realistic mechanical game art; readable at mobile sprite scale. Full figure and all fins uncropped, with the same framing and transparent margins as image1. True alpha transparency. No backdrop, no rim haze, no surrounding aura, no exhaust, no text or watermark. Six engineered narrow backpack fins, NOT feathers and NOT four giant blade wings.",
+      "sha256": "6d4915d5010f"
+    },
+    {
+      "key": "mesiahWhite",
+      "name": "mesiah-white",
+      "destination": "public/assets/ships/sideview/mesiah-white-v1.png",
+      "reference": [
+        "public/assets/ships/sideview/mesiah-v1.png",
+        "public/assets/ships/mesiah-white-remaster-v1.webp"
+      ],
+      "prompt": "Production transparent side-view spacecraft sprite for the existing detailed sci-fi game. Image1 is the existing side-view Mesiah mothership, image2 is the authoritative WHITE Mesiah top-view livery. Preserve image1's exact right-facing carrier silhouette, thick keel, open docks, bridge, pointed wedge bow, engines and all mechanical detail. Apply image2's white/light-silver armor, darker recesses and fine gold edge trim. Maintain red-tipped missile pods and markings. Match the original side-profile framing and scale. This is a palette/armor-finish variant of the same mothership. Keep the reference's identity and premium realistically rendered metal detailing, clean alpha edges, fully uncropped and centered with clear transparent margins. No backdrop, shadows, smoke, flare, text, unrelated objects, vector/icon shapes or perspective from above."
+    },
+    {
+      "key": "mesiahRaptorBlack",
+      "name": "mesiah-raptor-black",
+      "destination": "public/assets/ships/sideview/mesiah-raptor-black-v1.png",
+      "reference": [
+        "public/assets/ships/mesiah-raptor-black.png"
+      ],
+      "prompt": "Production transparent side-view spacecraft sprite for the existing detailed sci-fi game. Generate a true RIGHT-FACING side-elevation sprite of the same Mesiah Raptor escort fighter in the top-view reference. Preserve dark charcoal steel armor, narrow dark cockpit with red trim, red pinstripes and small red markings, paired long missile/ordnance pods and compact single aft main engine. Sharp arrowhead nose, swept lateral rear wings viewed mostly edge-on, one dorsal aft fin if appropriate. Clean lower hull for landing gear, no large downward tail blade. Full craft centered with transparent margins, no flame. Keep the reference's identity and premium realistically rendered metal detailing, clean alpha edges, fully uncropped and centered with clear transparent margins. No backdrop, shadows, smoke, flare, text, unrelated objects, vector/icon shapes or perspective from above."
+    },
+    {
+      "key": "mesiahRaptorWhite",
+      "name": "mesiah-raptor-white",
+      "destination": "public/assets/ships/sideview/mesiah-raptor-white-v1.png",
+      "reference": [
+        "public/assets/ships/mesiah-raptor-white.png"
+      ],
+      "prompt": "Production transparent side-view spacecraft sprite for the existing detailed sci-fi game. Generate a true RIGHT-FACING side-elevation sprite of the same WHITE Mesiah Raptor escort fighter in the top-view reference. Preserve white/light-silver armor over black mechanical recesses, narrow dark cockpit with red trim, red pinstripes and small red markings, paired long missile/ordnance pods and compact single aft main engine. Sharp arrowhead nose, swept lateral rear wings viewed mostly edge-on, one dorsal aft fin if appropriate. Clean lower hull for landing gear, no large downward tail blade. Full craft centered with transparent margins; omit the reference's baked engine flame. Keep the reference's identity and premium realistically rendered metal detailing, clean alpha edges, fully uncropped and centered with clear transparent margins. No backdrop, shadows, smoke, flare, text, unrelated objects, vector/icon shapes or perspective from above."
+    },
+    {
+      "key": "rocketElite",
+      "name": "black-comet-elite",
+      "destination": "public/assets/ships/sideview/black-comet-elite-v1.png",
+      "reference": [
+        "public/assets/ships/sideview/black-comet-v1.png",
+        "public/assets/ships/black-comet-elite-remaster-v1.webp"
+      ],
+      "prompt": "Edit image 1 into an unmistakable ELITE upgrade for a premium 2D side-scrolling sci-fi shooter. Image 1 is the authoritative right-facing side profile and its layout must remain compatible; image 2 is the game's top-view elite livery reference. Preserve the recognizable ship, exact right-facing camera, cockpit, weapons, tail, practical unobstructed lower keel and engine exit positions. Upgrade the ship with more substantial layered armor, distinctive brushed gold reinforcement, precise cyan luminous inset power channels, reinforced weapon shrouds, darker recessed machinery and elite insignia panel detailing. Use the second reference's color identity; this must look like an upgraded engineered ship, not a hue filter or glowing outline. Keep original major hull length, center position, engines and full-asset framing, with restrained changes to thickness only. Retain premium detailed realistically painted metal finish and sharp readable silhouette. No extra fixed ventral fins or tail blades beneath the belly. Crosswing must keep all combat S-foils fully OPEN, never fold them. For carriers retain bulky docks, open hangar recesses and bridge. ONE complete craft, uncropped with transparent margins, true alpha background. Do not add exhaust, bloom haze, backdrop, shadow, text, UI, icon/vector shapes, extra ships or rotated top view.",
+      "sha256": "ef5def01b05d"
+    },
+    {
+      "key": "fastElite",
+      "name": "red-wraith-elite",
+      "destination": "public/assets/ships/sideview/red-wraith-elite-v1.png",
+      "reference": [
+        "public/assets/ships/sideview/red-wraith-v1.png",
+        "public/assets/ships/red-wraith-elite-remaster-v1.webp"
+      ],
+      "prompt": "Edit image 1 into an unmistakable ELITE upgrade for a premium 2D side-scrolling sci-fi shooter. Image 1 is the authoritative right-facing side profile and its layout must remain compatible; image 2 is the game's top-view elite livery reference. Preserve the recognizable ship, exact right-facing camera, cockpit, weapons, tail, practical unobstructed lower keel and engine exit positions. Upgrade the ship with more substantial layered armor, distinctive brushed gold reinforcement, precise cyan luminous inset power channels, reinforced weapon shrouds, darker recessed machinery and elite insignia panel detailing. Use the second reference's color identity; this must look like an upgraded engineered ship, not a hue filter or glowing outline. Keep original major hull length, center position, engines and full-asset framing, with restrained changes to thickness only. Retain premium detailed realistically painted metal finish and sharp readable silhouette. No extra fixed ventral fins or tail blades beneath the belly. Crosswing must keep all combat S-foils fully OPEN, never fold them. For carriers retain bulky docks, open hangar recesses and bridge. ONE complete craft, uncropped with transparent margins, true alpha background. Do not add exhaust, bloom haze, backdrop, shadow, text, UI, icon/vector shapes, extra ships or rotated top view.",
+      "sha256": "59dd2a6cb3a7"
+    },
+    {
+      "key": "gatlingElite",
+      "name": "crimson-saw-elite",
+      "destination": "public/assets/ships/sideview/crimson-saw-elite-v1.png",
+      "reference": [
+        "public/assets/ships/sideview/crimson-saw-v1.png",
+        "public/assets/ships/crimson-saw-elite-remaster-v1.webp"
+      ],
+      "prompt": "Edit image 1 into an unmistakable ELITE upgrade for a premium 2D side-scrolling sci-fi shooter. Image 1 is the authoritative right-facing side profile and its layout must remain compatible; image 2 is the game's top-view elite livery reference. Preserve the recognizable ship, exact right-facing camera, cockpit, weapons, tail, practical unobstructed lower keel and engine exit positions. Upgrade the ship with more substantial layered armor, distinctive brushed gold reinforcement, precise cyan luminous inset power channels, reinforced weapon shrouds, darker recessed machinery and elite insignia panel detailing. Use the second reference's color identity; this must look like an upgraded engineered ship, not a hue filter or glowing outline. Keep original major hull length, center position, engines and full-asset framing, with restrained changes to thickness only. Retain premium detailed realistically painted metal finish and sharp readable silhouette. No extra fixed ventral fins or tail blades beneath the belly. Crosswing must keep all combat S-foils fully OPEN, never fold them. For carriers retain bulky docks, open hangar recesses and bridge. ONE complete craft, uncropped with transparent margins, true alpha background. Do not add exhaust, bloom haze, backdrop, shadow, text, UI, icon/vector shapes, extra ships or rotated top view.",
+      "sha256": "012984b9c016"
+    },
+    {
+      "key": "laserElite",
+      "name": "night-lance-elite",
+      "destination": "public/assets/ships/sideview/night-lance-elite-v1.png",
+      "reference": [
+        "public/assets/ships/sideview/night-lance-v1.png",
+        "public/assets/ships/night-lance-elite-remaster-v1.webp"
+      ],
+      "prompt": "Edit image 1 into an unmistakable ELITE upgrade for a premium 2D side-scrolling sci-fi shooter. Image 1 is the authoritative right-facing side profile and its layout must remain compatible; image 2 is the game's top-view elite livery reference. Preserve the recognizable ship, exact right-facing camera, cockpit, weapons, tail, practical unobstructed lower keel and engine exit positions. Upgrade the ship with more substantial layered armor, distinctive brushed gold reinforcement, precise cyan luminous inset power channels, reinforced weapon shrouds, darker recessed machinery and elite insignia panel detailing. Use the second reference's color identity; this must look like an upgraded engineered ship, not a hue filter or glowing outline. Keep original major hull length, center position, engines and full-asset framing, with restrained changes to thickness only. Retain premium detailed realistically painted metal finish and sharp readable silhouette. No extra fixed ventral fins or tail blades beneath the belly. Crosswing must keep all combat S-foils fully OPEN, never fold them. For carriers retain bulky docks, open hangar recesses and bridge. ONE complete craft, uncropped with transparent margins, true alpha background. Do not add exhaust, bloom haze, backdrop, shadow, text, UI, icon/vector shapes, extra ships or rotated top view.",
+      "sha256": "5e25da05d1b2",
+      "cleanupPrompt": "Precise background cleanup of this ONE side-view elite spacecraft sprite. Preserve the ship itself EXACTLY, including its armor, gold framing, cyan channels, cockpit, silhouette, framing, stern nozzles and right-facing direction. Remove ALL stray colored pixels, gray/white matte, clouds, colored edge spills and debris OUTSIDE the solid engineered hull. Large messy white and gray patches currently surround the top and bottom; they must become completely transparent. Background extraction only. Clean smooth alpha contours right at the hull edge, with no halos, shadows, bloom, speckles, color spill or scenery. The final must contain only the single isolated complete spacecraft on genuine 100 percent transparent background. Do not cut away actual wing, engine or gun details. Keep exact pixel framing and aspect ratio."
+    },
+    {
+      "key": "dreadnoughtElite",
+      "name": "obsidian-ark-elite",
+      "destination": "public/assets/ships/sideview/obsidian-ark-elite-v1.png",
+      "reference": [
+        "public/assets/ships/sideview/obsidian-ark-v1.png",
+        "public/assets/ships/obsidian-ark-elite-remaster-v1.webp"
+      ],
+      "prompt": "Edit image 1 into an unmistakable ELITE upgrade for a premium 2D side-scrolling sci-fi shooter. Image 1 is the authoritative right-facing side profile and its layout must remain compatible; image 2 is the game's top-view elite livery reference. Preserve the recognizable ship, exact right-facing camera, cockpit, weapons, tail, practical unobstructed lower keel and engine exit positions. Upgrade the ship with more substantial layered armor, distinctive brushed gold reinforcement, precise cyan luminous inset power channels, reinforced weapon shrouds, darker recessed machinery and elite insignia panel detailing. Use the second reference's color identity; this must look like an upgraded engineered ship, not a hue filter or glowing outline. Keep original major hull length, center position, engines and full-asset framing, with restrained changes to thickness only. Retain premium detailed realistically painted metal finish and sharp readable silhouette. No extra fixed ventral fins or tail blades beneath the belly. Crosswing must keep all combat S-foils fully OPEN, never fold them. For carriers retain bulky docks, open hangar recesses and bridge. ONE complete craft, uncropped with transparent margins, true alpha background. Do not add exhaust, bloom haze, backdrop, shadow, text, UI, icon/vector shapes, extra ships or rotated top view.",
+      "sha256": "a4bf9fc7ffb7"
+    },
+    {
+      "key": "xwingElite",
+      "name": "crosswing-nova-elite",
+      "destination": "public/assets/ships/sideview/crosswing-nova-elite-v1.png",
+      "reference": [
+        "public/assets/ships/sideview/crosswing-nova-v1.png",
+        "public/assets/ships/crosswing-nova-elite-remaster-v1.webp"
+      ],
+      "prompt": "Edit image 1 into an unmistakable ELITE upgrade for a premium 2D side-scrolling sci-fi shooter. Image 1 is the authoritative right-facing side profile and its layout must remain compatible; image 2 is the game's top-view elite livery reference. Preserve the recognizable ship, exact right-facing camera, cockpit, weapons, tail, practical unobstructed lower keel and engine exit positions. Upgrade the ship with more substantial layered armor, distinctive brushed gold reinforcement, precise cyan luminous inset power channels, reinforced weapon shrouds, darker recessed machinery and elite insignia panel detailing. Use the second reference's color identity; this must look like an upgraded engineered ship, not a hue filter or glowing outline. Keep original major hull length, center position, engines and full-asset framing, with restrained changes to thickness only. Retain premium detailed realistically painted metal finish and sharp readable silhouette. No extra fixed ventral fins or tail blades beneath the belly. Crosswing must keep all combat S-foils fully OPEN, never fold them. For carriers retain bulky docks, open hangar recesses and bridge. ONE complete craft, uncropped with transparent margins, true alpha background. Do not add exhaust, bloom haze, backdrop, shadow, text, UI, icon/vector shapes, extra ships or rotated top view.",
+      "sha256": "1e0e076189a9"
+    },
+    {
+      "key": "spaceEtElite",
+      "name": "space-jet-elite",
+      "destination": "public/assets/ships/sideview/space-jet-elite-v1.png",
+      "reference": [
+        "public/assets/ships/sideview/space-jet-v1.png",
+        "public/assets/ships/space-jet-elite-remaster-v1.webp"
+      ],
+      "prompt": "Edit image 1 into an unmistakable ELITE upgrade for a premium 2D side-scrolling sci-fi shooter. Image 1 is the authoritative right-facing side profile and its layout must remain compatible; image 2 is the game's top-view elite livery reference. Preserve the recognizable ship, exact right-facing camera, cockpit, weapons, tail, practical unobstructed lower keel and engine exit positions. Upgrade the ship with more substantial layered armor, distinctive brushed gold reinforcement, precise cyan luminous inset power channels, reinforced weapon shrouds, darker recessed machinery and elite insignia panel detailing. Use the second reference's color identity; this must look like an upgraded engineered ship, not a hue filter or glowing outline. Keep original major hull length, center position, engines and full-asset framing, with restrained changes to thickness only. Retain premium detailed realistically painted metal finish and sharp readable silhouette. No extra fixed ventral fins or tail blades beneath the belly. Crosswing must keep all combat S-foils fully OPEN, never fold them. For carriers retain bulky docks, open hangar recesses and bridge. ONE complete craft, uncropped with transparent margins, true alpha background. Do not add exhaust, bloom haze, backdrop, shadow, text, UI, icon/vector shapes, extra ships or rotated top view.",
+      "sha256": "8d2d1702f93e"
+    },
+    {
+      "key": "mesiahBlackElite",
+      "name": "mesiah-elite",
+      "destination": "public/assets/ships/sideview/mesiah-elite-v1.png",
+      "reference": [
+        "public/assets/ships/sideview/mesiah-v1.png",
+        "public/assets/ships/mesiah-black-elite-remaster-v1.webp"
+      ],
+      "prompt": "Edit image 1 into an unmistakable ELITE upgrade for a premium 2D side-scrolling sci-fi shooter. Image 1 is the authoritative right-facing side profile and its layout must remain compatible; image 2 is the game's top-view elite livery reference. Preserve the recognizable ship, exact right-facing camera, cockpit, weapons, tail, practical unobstructed lower keel and engine exit positions. Upgrade the ship with more substantial layered armor, distinctive brushed gold reinforcement, precise cyan luminous inset power channels, reinforced weapon shrouds, darker recessed machinery and elite insignia panel detailing. Use the second reference's color identity; this must look like an upgraded engineered ship, not a hue filter or glowing outline. Keep original major hull length, center position, engines and full-asset framing, with restrained changes to thickness only. Retain premium detailed realistically painted metal finish and sharp readable silhouette. No extra fixed ventral fins or tail blades beneath the belly. Crosswing must keep all combat S-foils fully OPEN, never fold them. For carriers retain bulky docks, open hangar recesses and bridge. ONE complete craft, uncropped with transparent margins, true alpha background. Do not add exhaust, bloom haze, backdrop, shadow, text, UI, icon/vector shapes, extra ships or rotated top view.",
+      "sha256": "eeb846760888"
+    },
+    {
+      "key": "mesiahWhiteElite",
+      "name": "mesiah-white-elite",
+      "destination": "public/assets/ships/sideview/mesiah-white-elite-v1.png",
+      "reference": [
+        "public/assets/ships/sideview/mesiah-white-v1.png",
+        "public/assets/ships/mesiah-white-elite-remaster-v1.webp"
+      ],
+      "prompt": "Edit image 1 into an unmistakable ELITE upgrade for a premium 2D side-scrolling sci-fi shooter. Image 1 is the authoritative right-facing side profile and its layout must remain compatible; image 2 is the game's top-view elite livery reference. Preserve the recognizable ship, exact right-facing camera, cockpit, weapons, tail, practical unobstructed lower keel and engine exit positions. Upgrade the ship with more substantial layered armor, distinctive brushed gold reinforcement, precise cyan luminous inset power channels, reinforced weapon shrouds, darker recessed machinery and elite insignia panel detailing. Use the second reference's color identity; this must look like an upgraded engineered ship, not a hue filter or glowing outline. Keep original major hull length, center position, engines and full-asset framing, with restrained changes to thickness only. Retain premium detailed realistically painted metal finish and sharp readable silhouette. No extra fixed ventral fins or tail blades beneath the belly. Crosswing must keep all combat S-foils fully OPEN, never fold them. For carriers retain bulky docks, open hangar recesses and bridge. ONE complete craft, uncropped with transparent margins, true alpha background. Do not add exhaust, bloom haze, backdrop, shadow, text, UI, icon/vector shapes, extra ships or rotated top view.",
+      "sha256": "256938ba06ea"
+    },
+    {
+      "key": "coreLanderElite",
+      "name": "core-lander-elite",
+      "destination": "public/assets/ships/sideview/core-lander-elite-v1.png",
+      "reference": [
+        "public/assets/ships/sideview/core-lander-v1.png",
+        "public/assets/ships/core-lander-elite.webp"
+      ],
+      "prompt": "Edit image 1 into an unmistakable ELITE upgrade for a premium 2D side-scrolling sci-fi shooter. Image 1 is the authoritative right-facing side profile and its layout must remain compatible; image 2 is the game's top-view elite livery reference. Preserve the recognizable ship, exact right-facing camera, cockpit, weapons, tail, practical unobstructed lower keel and engine exit positions. Upgrade the ship with more substantial layered armor, distinctive brushed gold reinforcement, precise cyan luminous inset power channels, reinforced weapon shrouds, darker recessed machinery and elite insignia panel detailing. Use the second reference's color identity; this must look like an upgraded engineered ship, not a hue filter or glowing outline. Keep original major hull length, center position, engines and full-asset framing, with restrained changes to thickness only. Retain premium detailed realistically painted metal finish and sharp readable silhouette. No extra fixed ventral fins or tail blades beneath the belly. Crosswing must keep all combat S-foils fully OPEN, never fold them. For carriers retain bulky docks, open hangar recesses and bridge. ONE complete craft, uncropped with transparent margins, true alpha background. Do not add exhaust, bloom haze, backdrop, shadow, text, UI, icon/vector shapes, extra ships or rotated top view.",
+      "sha256": "a096bfa18bf2"
+    },
+    {
+      "key": "coreLanderBurningElite",
+      "name": "core-lander-burning-elite",
+      "destination": "public/assets/ships/sideview/core-lander-burning-elite-v1.png",
+      "reference": [
+        "public/assets/ships/sideview/core-lander-burning-v1.png",
+        "public/assets/ships/core-lander-burning-elite.webp"
+      ],
+      "prompt": "Edit image 1 into an unmistakable ELITE upgrade for a premium 2D side-scrolling sci-fi shooter. Image 1 is the authoritative right-facing side profile and its layout must remain compatible; image 2 is the game's top-view elite livery reference. Preserve the recognizable ship, exact right-facing camera, cockpit, weapons, tail, practical unobstructed lower keel and engine exit positions. Upgrade the ship with more substantial layered armor, distinctive brushed gold reinforcement, precise cyan luminous inset power channels, reinforced weapon shrouds, darker recessed machinery and elite insignia panel detailing. Use the second reference's color identity; this must look like an upgraded engineered ship, not a hue filter or glowing outline. Keep original major hull length, center position, engines and full-asset framing, with restrained changes to thickness only. Retain premium detailed realistically painted metal finish and sharp readable silhouette. No extra fixed ventral fins or tail blades beneath the belly. Crosswing must keep all combat S-foils fully OPEN, never fold them. For carriers retain bulky docks, open hangar recesses and bridge. ONE complete craft, uncropped with transparent margins, true alpha background. Do not add exhaust, bloom haze, backdrop, shadow, text, UI, icon/vector shapes, extra ships or rotated top view.",
+      "sha256": "98bc853fc28f"
+    }
+  ],
+  "landingClearance": "Clear lower hulls with closed retractable landing-gear bays; fixed tail surfaces stay dorsal or lateral. Crosswing retains deployed folding combat S-foils.",
+  "godGundamDesignSource": "https://www.bandaispirits.co.jp/products/search/detail.php?grp_id=5325&prd_id=4573102633583000",
+  "eliteScope": "All eleven player elite side frames. Standard Space Jet and all portrait art preserved."
+}

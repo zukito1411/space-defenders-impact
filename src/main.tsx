@@ -7,6 +7,7 @@ import { getPublicAssetUrl } from './components/games/sound'
 
 import './index.css'
 import './game-ui.css'
+import './landscape-ui.css'
 
 const root = document.getElementById('root')!
 

@@ -1,6 +1,6 @@
 import { BOSS_FX, drawBossFx, drawBossFxLane, COMBAT_TILE, drawRaidCombatTexture, getRaidCombatFrame, getRaidExplosionFrame } from './combatArt'
 import { impactAlpha, impactFrameProgress } from './combatFeel'
-import { getCanvasSpriteDimensions, RAID_DERELICT_WRECK_FILTER, RAID_SPIEGEL_SHADOW_CLONE_FILTER, RAID_SPIEGEL_SHADOW_CLONE_IMPACT_STOPS, drawCanvasImageContain, drawCanvasSpriteContain, getDerelictWreckCanvasSprite, getDerelictWreckVariantIndex, getGodGundamBarrageCanvasSprite, getRaidOtherCanvasSprite, getShipCanvasSprite } from './assets'
+import { getCanvasSpriteDimensions, RAID_DERELICT_WRECK_FILTER, RAID_SPIEGEL_SHADOW_CLONE_FILTER, RAID_SPIEGEL_SHADOW_CLONE_IMPACT_STOPS, drawCanvasImageContain, drawCanvasSpriteContain, getDerelictWreckCanvasSprite, getDerelictWreckVariantIndex, getGodGundamBarrageCanvasSprite, getRaidOtherCanvasSprite, getRaidSideShipCanvasSprite, getShipCanvasSprite } from './assets'
 import type { CachedCanvasDrawSource } from './assets'
 import { PICKUP_VOICE_SAMPLE_URLS } from './audio'
 import { forEachDevilBossBeamLane, forEachFinalBossBeamLane, getDevilBossBeamRadius, getDevilBossChargeDuration, getFinalBossBeamRadius } from './bossAttacks'
@@ -195,6 +195,7 @@ export function drawGodGundamBarrage(
   toY: (value: number) => number,
   viewportWidth: number,
   time: number,
+  landscape = false,
 ) {
   const durationFade = Math.min(1, barrage.age / 0.32, (barrage.duration - barrage.age) / 0.42)
   if (durationFade <= 0) return
@@ -229,7 +230,9 @@ export function drawGodGundamBarrage(
     const y = startY + (endY - startY) * easedDash
     const angle = Math.atan2(endY - startY, endX - startX)
     const dashAlpha = Math.sin(dashProgress * Math.PI)
-    const dashSprite = getShipCanvasSprite(model === 'godGundam' && burning ? 'godGundamBurning' : model)
+    const dashKey = model === 'godGundam' && burning ? 'godGundamBurning' : model
+    const sideDashSprite = landscape ? getRaidSideShipCanvasSprite(dashKey) : null
+    const dashSprite = sideDashSprite?.loaded ? sideDashSprite : getShipCanvasSprite(dashKey)
     ctx.save()
     ctx.globalCompositeOperation = 'lighter'
     ctx.globalAlpha = (model === 'spiegel' ? 0.42 : 0.72) * dashAlpha
@@ -247,8 +250,8 @@ export function drawGodGundamBarrage(
       ctx.stroke()
     }
     ctx.translate(x, y)
-    ctx.rotate(angle + Math.PI / 2)
-    drawCanvasSpriteContain(ctx, dashSprite, 0, 0, spriteSize * 0.82, barrageFilter, 0.86 * dashAlpha, 0, 1, energyColor)
+    ctx.rotate(sideDashSprite?.loaded ? angle : angle + Math.PI / 2)
+    drawCanvasSpriteContain(ctx, dashSprite, 0, 0, spriteSize * 0.82, sideDashSprite?.loaded ? 'none' : barrageFilter, 0.86 * dashAlpha, 0, 1, energyColor)
     ctx.restore()
   }
 
@@ -266,6 +269,7 @@ export function drawGodGundamBarrage(
     const targetIndex = drawIndex === 0 ? primaryIndex : drawIndex <= primaryIndex ? drawIndex - 1 : drawIndex
     const target = visibleTargets[targetIndex]
     const targetX = toX(target.x)
+    const targetY = toY(target.y)
     const targetRadiusX = Math.max(28, viewportWidth * (target.radius / WIDTH) * 0.72)
     const layers = target.isBoss ? 4 : target.isMiniBoss ? 3 : 2
     for (let layer = layers - 1; layer >= 0; layer -= 1) {
@@ -281,10 +285,20 @@ export function drawGodGundamBarrage(
         : 1 - (frameProgress - 0.72) / 0.28 * 0.16
       const side = pose.side
       const attackSide = side === 0 ? ((frame + drawIndex) % 2 === 0 ? -1 : 1) : side
-      const startX = targetX + attackSide * (targetRadiusX + spriteSize * (target.isBoss ? 0.5 : 0.38))
-      const hitX = targetX + attackSide * targetRadiusX * 0.22
-      const startY = toY(target.y + pose.offsetY) + Math.sin(time / 95 + frame * 1.7 + target.id) * spriteSize * 0.018
-      const hitY = toY(target.y + pose.impactY)
+      let startX = targetX + attackSide * (targetRadiusX + spriteSize * (target.isBoss ? 0.5 : 0.38))
+      let hitX = targetX + attackSide * targetRadiusX * 0.22
+      let startY = toY(target.y + pose.offsetY) + Math.sin(time / 95 + frame * 1.7 + target.id) * spriteSize * 0.018
+      let hitY = toY(target.y + pose.impactY)
+      if (landscape) {
+        // Rotate only the presentation offsets: attacks approach the target
+        // along the upright pose's facing direction, with unchanged hit timing.
+        const startOffsetX = startX - targetX
+        const hitOffsetX = hitX - targetX
+        startX = targetX + startY - targetY
+        startY = targetY - startOffsetX
+        hitX = targetX + hitY - targetY
+        hitY = targetY - hitOffsetX
+      }
       const x = startX + (hitX - startX) * approach
       const y = startY + (hitY - startY) * approach
       const alpha = durationFade * (1 - layer * 0.18) * Math.sin(Math.min(1, frameProgress) * Math.PI)
@@ -298,8 +312,8 @@ export function drawGodGundamBarrage(
         ctx.strokeStyle = 'rgba(255,255,255,0.72)'
         ctx.lineWidth = Math.max(1, spriteSize * 0.018)
         ctx.beginPath()
-        ctx.moveTo(x + attackSide * spriteSize * 0.22, y - spriteSize * 0.04)
-        ctx.lineTo(hitX - attackSide * spriteSize * 0.18, hitY)
+        ctx.moveTo(x + (landscape ? -spriteSize * .04 : attackSide * spriteSize * .22), y - (landscape ? attackSide * spriteSize * .22 : spriteSize * .04))
+        ctx.lineTo(hitX - (landscape ? 0 : attackSide * spriteSize * .18), hitY + (landscape ? attackSide * spriteSize * .18 : 0))
         ctx.stroke()
         ctx.restore()
       }
@@ -308,6 +322,7 @@ export function drawGodGundamBarrage(
       const poseScale = getCoreLanderBarragePoseScale(model, pose.pose)
       ctx.save()
       ctx.translate(x, y)
+      if (landscape) ctx.rotate(-Math.PI / 2)
       if (shouldMirrorCoreLanderBarragePose(model, attackSide)) ctx.scale(-1, 1)
       // Large per-sprite software shadows are costly on Android Canvas.
     // Impact glows remain visible via separate additive energy effects.
@@ -325,6 +340,7 @@ export function drawGodGundamPassiveStrikes(
   toX: (value: number) => number,
   toY: (value: number) => number,
   viewportWidth: number,
+  landscape = false,
 ) {
   for (const clonePass of [true, false]) {
   for (const strike of strikes) {
@@ -385,11 +401,19 @@ export function drawGodGundamPassiveStrikes(
       const approach = localProgress < 0.72
         ? 1 - prep * prep * prep
         : 1 - (localProgress - 0.72) / 0.28 * 0.14
-      const startAttackX = hitX + attackSide * (targetRadius + spriteSize * (0.36 + layer * 0.08))
+      let startAttackX = hitX + attackSide * (targetRadius + spriteSize * (0.36 + layer * 0.08))
       const forcedSourceOffsetY = forcedAttackSide && model === 'spiegel' ? clamp(toY(strike.sourceY) - hitY, -spriteSize * 0.42, spriteSize * 0.42) : 0
-      const startAttackY = hitY + pose.offsetY * (viewportWidth / WIDTH) + forcedSourceOffsetY - spriteSize * 0.08 * layer
-      const impactX = hitX + attackSide * targetRadius * 0.2
-      const impactY = hitY + pose.impactY * (viewportWidth / WIDTH)
+      let startAttackY = hitY + pose.offsetY * (viewportWidth / WIDTH) + forcedSourceOffsetY - spriteSize * 0.08 * layer
+      let impactX = hitX + attackSide * targetRadius * 0.2
+      let impactY = hitY + pose.impactY * (viewportWidth / WIDTH)
+      if (landscape) {
+        const startOffsetX = startAttackX - hitX
+        const impactOffsetX = impactX - hitX
+        startAttackX = hitX + startAttackY - hitY
+        startAttackY = hitY - startOffsetX
+        impactX = hitX + impactY - hitY
+        impactY = hitY - impactOffsetX
+      }
       const x = startAttackX + (impactX - startAttackX) * approach
       const y = startAttackY + (impactY - startAttackY) * approach
       const alpha = fade * (1 - layer * 0.18) * Math.sin(localProgress * Math.PI)
@@ -403,8 +427,8 @@ export function drawGodGundamPassiveStrikes(
         ctx.strokeStyle = 'rgba(255,255,255,0.36)'
         ctx.lineWidth = Math.max(1, spriteSize * 0.018)
         ctx.beginPath()
-        ctx.moveTo(x + attackSide * spriteSize * 0.22, y - spriteSize * 0.04)
-        ctx.lineTo(impactX - attackSide * spriteSize * 0.16, impactY)
+        ctx.moveTo(x + (landscape ? -spriteSize * .04 : attackSide * spriteSize * .22), y - (landscape ? attackSide * spriteSize * .22 : spriteSize * .04))
+        ctx.lineTo(impactX - (landscape ? 0 : attackSide * spriteSize * .16), impactY + (landscape ? attackSide * spriteSize * .16 : 0))
         ctx.stroke()
         ctx.restore()
       }
@@ -413,6 +437,7 @@ export function drawGodGundamPassiveStrikes(
       const poseScale = getCoreLanderBarragePoseScale(model, pose.pose)
       ctx.save()
       ctx.translate(x, y)
+      if (landscape) ctx.rotate(-Math.PI / 2)
       if (shouldMirrorCoreLanderBarragePose(model, attackSide)) ctx.scale(-1, 1)
       ctx.shadowBlur = typeof window !== 'undefined' && window.innerHeight <= 600 ? 0 : Math.max(5, spriteSize * (clone ? 0.045 : 0.08))
       ctx.shadowColor = shadowColor

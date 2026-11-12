@@ -1,0 +1,49 @@
+#root .start-screen__topbar {
+  position: absolute;
+  z-index: 8;
+  top: max(14px, env(safe-area-inset-top, 0px));
+  left: max(22px, env(safe-area-inset-left, 0px));
+  right: max(22px, env(safe-area-inset-right, 0px));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+#root .start-screen__topbar .language-picker { position: static; min-width: 0; margin-left: auto; }
+#root .start-screen__topbar .language-picker select { max-width: 100%; }
+#root .start-screen__topbar .start-screen__settings { min-height: 36px; padding: 7px 14px; font-size: .68rem; }
+#root .home-settings .home-settings__panel {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 14px;
+  width: min(780px, 100%);
+  min-height: 0;
+  max-height: calc(100dvh - max(18px, env(safe-area-inset-top, 0px)) - max(18px, env(safe-area-inset-bottom, 0px)));
+  padding: 18px;
+  overflow: hidden;
+  text-align: left;
+}
+.home-settings__heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+#root .home-settings__heading h2 { margin: 0; font-size: 1.6rem; }
+#root .home-settings__heading .game-button { min-height: 40px; padding: 8px 12px; }
+.home-settings__sections { display: grid; min-height: 0; gap: 10px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+#root .home-settings__sections .raid__settings-section { min-width: 0; margin: 0; padding: 12px; }
+#root .home-settings__sections .raid__flight-view-hint { margin: 10px 0 0; color: var(--ui-muted); font-size: .72rem; line-height: 1.4; }
+#root .home-settings__sections .raid__gfx-row { margin-top: 10px; }
+#root .home-settings__sections .raid__gfx-btn { min-height: 44px; }
+#root .home-settings__sections .raid__volume-control { grid-template-columns: minmax(70px, .8fr) minmax(0, 1fr) 38px; gap: 8px; }
+
+@media (orientation: landscape) {
+  #root .start-screen__topbar { top: var(--compact-top); left: var(--compact-left); right: var(--compact-right); }
+  #root .home-settings .home-settings__panel { padding: 12px; gap: 10px; max-height: calc(100dvh - var(--compact-top) - var(--compact-bottom)); }
+  .home-settings__sections { grid-template-columns: repeat(2, minmax(0, 1fr)); align-content: start; }
+  #root .home-settings__audio { grid-column: 2; grid-row: 1 / span 2; }
+  #root .home-settings__sections .raid__settings-section { padding: 10px; }
+  #root .home-settings__sections .raid__settings-heading { font-size: .65rem; }
+  #root .home-settings__sections .raid__gfx-btn { padding: 7px 9px; font-size: .68rem; }
+  #root .home-settings__sections .raid__volume-control { font-size: .65rem; }
+}
+
+@media (max-width: 400px) {
+  #root .start-screen__topbar .language-picker > span { display: none; }
+}

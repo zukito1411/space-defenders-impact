@@ -5,6 +5,8 @@ import './App.css'
 import { GameButton, GameMenuAction } from './components/ui/GameButton'
 import { GameDialog } from './components/ui/GameDialog'
 import { GameMenuHints } from './components/ui/GameMenuHints'
+import { HomeSettingsDialog } from './components/HomeSettingsDialog'
+import { restoreDisplayOrientation } from './components/games/raid/flightView'
 import { LeaderboardsScreen } from './components/LeaderboardsScreen'
 import { ProgressionScreen } from './components/ProgressionScreen'
 import { RaidMultiplayerLobby, type RaidMultiplayerConnectionMode, type RaidMultiplayerSession } from './components/RaidMultiplayerLobby'
@@ -203,6 +205,8 @@ function App() {
   const [lastRunUpdate, setLastRunUpdate] = useState<{ result: RunResult; update: ProgressUpdate } | null>(null)
   const [raidAssetPreload, setRaidAssetPreload] = useState<RaidAssetPreloadState>({ status: 'idle', loaded: 0, total: 1 })
   const [cloudSyncStatus, setCloudSyncStatus] = useState<'offline' | 'connected' | 'conflict'>('offline')
+  const [homeSettingsOpen, setHomeSettingsOpen] = useState(false)
+  useEffect(() => { restoreDisplayOrientation() }, [])
   const cloudConnectedRef = useRef(false)
   const cloudSyncInFlightRef = useRef(false)
 
@@ -986,12 +990,15 @@ function App() {
   if (screen === 'title') {
     return (
       <div className="start-screen">
-        <label className="language-picker">
-          <span>{text.language}</span>
-          <select value={language} onChange={(event) => handleLanguageChange(event.target.value)}>
-            {LANGUAGE_OPTIONS.map((option) => <option key={option.code} value={option.code}>{option.label}</option>)}
-          </select>
-        </label>
+        <div className="start-screen__topbar">
+          <GameButton tone="quiet" className="start-screen__settings" aria-haspopup="dialog" aria-expanded={homeSettingsOpen} onClick={() => setHomeSettingsOpen(true)}>{raidText.menu.settings}</GameButton>
+          <label className="language-picker">
+            <span>{text.language}</span>
+            <select value={language} onChange={(event) => handleLanguageChange(event.target.value)}>
+              {LANGUAGE_OPTIONS.map((option) => <option key={option.code} value={option.code}>{option.label}</option>)}
+            </select>
+          </label>
+        </div>
         <main className="start-screen__content">
           <div className="start-screen__command-panel">
             <div className="start-screen__brand">
@@ -1051,6 +1058,7 @@ function App() {
         </main>
         {playerNamePrompt}
         {runResultsOverlay}
+        {homeSettingsOpen && <HomeSettingsDialog language={language} onClose={() => setHomeSettingsOpen(false)} />}
       </div>
     )
   }

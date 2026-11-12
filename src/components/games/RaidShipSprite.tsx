@@ -1,4 +1,5 @@
 import { RAID_ELITE_FRAME_PATHS } from './raid/shipArtwork'
+import { getRaidSideShipSpriteUrl } from './raid/sideArtwork'
 import { getPublicAssetUrl } from './sound'
 import { LEGACY_FIGHTER_COUNT, RAID_FIGHTER_ASSETS } from './raid/stageEncounters'
 
@@ -53,11 +54,11 @@ export function getRaidEliteSpriteUrl(variant: number) {
   return getPublicAssetUrl(RAID_ELITE_ASSET_PATHS[index])
 }
 
-export function RaidShipSprite({ shipKey, size, className = 'raid__ship-sprite' }: { shipKey: string; size: number; className?: string }) {
+export function RaidShipSprite({ shipKey, size, className = 'raid__ship-sprite', sideView = false }: { shipKey: string; size: number; className?: string; sideView?: boolean }) {
   return (
     <img
       className={className}
-      src={getRaidShipSpriteUrl(shipKey)}
+      src={(sideView && getRaidSideShipSpriteUrl(shipKey)) || getRaidShipSpriteUrl(shipKey)}
       alt=""
       aria-hidden="true"
       draggable={false}

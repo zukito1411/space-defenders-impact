@@ -1,9 +1,10 @@
 import { getRaidPlayerHullSize } from './playerMuzzle'
+import { getRaidSideShipNozzles } from './sideArtwork'
 import { getRaidExhaustScale, getRaidShipBaseVisualKey, getRaidShipFrameKey, getRaidShipNozzles, isRaidEliteFrameKey, usesRaidRemasteredHullArt } from './shipArtwork'
 import { updateFlightPose, type FlightPose } from './combatFeel'
 import { COMBAT_TILE, drawRaidCombatTexture, getRaidCombatFrame } from './combatArt'
 import type { ShipCosmeticEquipState } from '../../../progression'
-import { drawCanvasSprite, drawSpriteGlow, getCanvasSpriteSource, getShipCanvasSprite } from './assets'
+import { drawCanvasSprite, drawCanvasSpriteContain, drawSpriteGlow, getCanvasSpriteDimensions, getCanvasSpriteSource, getRaidSideShipCanvasSprite, getShipCanvasSprite } from './assets'
 import type { CanvasSpriteEntry } from './assets'
 import { hexToRgba } from './bossRender'
 import { ALLY_PLAYER_COLOR, FORCE_FIELD_ARMOR, GOD_GUNDAM_BURNING_BODY_SCALE, GOD_GUNDAM_BURNING_BODY_Y_OFFSET, GOD_GUNDAM_BURNING_HALO_SCALE, GOD_GUNDAM_BURNING_HALO_Y_OFFSET, MESIAH_DRONE_HOME_OFFSET, MESIAH_DRONE_MAX_FIRE_RANGE, MESIAH_DRONE_MIN_FIRE_RANGE, MESIAH_DRONE_MOBILE_HOME_OFFSET, PLAYER_COLOR, SPACE_ET_PASSIVE_FORCE_FIELD_CHARGES, SPIEGEL_AFTERIMAGE_CAP, getShipSpriteSize } from './constants'
@@ -220,14 +221,14 @@ export function updateMesiahScoutDrones(player: Player, enemies: Enemy[], dt: nu
   }
 }
 
-export function drawSupportEngineTrail(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, time: number, rotation = 0, alpha = 0.82, shipKey = '', throttle = .28) {
+export function drawSupportEngineTrail(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, time: number, rotation = 0, alpha = 0.82, shipKey = '', throttle = .28, landscape = false) {
   if (shipKey === 'coreLander') return
   ctx.save()
   ctx.translate(x, y)
   ctx.rotate(rotation)
   ctx.globalAlpha *= alpha
   const wakeScale = shipKey === 'godGundam' || shipKey === 'spiegel' ? undefined : .65
-  drawHullExhaust(ctx, 0, 0, size, time, throttle, shipKey, wakeScale)
+  drawHullExhaust(ctx, 0, 0, size, time, throttle, shipKey, wakeScale, undefined, shipKey, landscape)
   ctx.restore()
 }
 
@@ -240,6 +241,7 @@ export function drawRaidOptions(
   time: number,
   color = PLAYER_COLOR,
   mesiahVisualShipKey = 'mesiahBlack',
+  landscape = false,
 ) {
   const isArk = player.ship.key === 'dreadnought'
   const isMesiah = player.ship.key === 'mesiah' && player.hp > 0
@@ -252,15 +254,17 @@ export function drawRaidOptions(
     const optionShipSize = getShipSpriteSize(shipKey, 'option')
     const drawSize = Math.min(optionShipSize * scale, maxBox)
     const sprite = getShipCanvasSprite(shipKey)
+    const sideSprite = landscape ? getRaidSideShipCanvasSprite(shipKey) : null
 
     for (const side of [-1, 1]) {
       const x = toX(clamp(player.x + offset * side, 4, 96))
       const y = toY(player.y + yOffset) + Math.sin(time / 900 + (side > 0 ? 0.18 : 0)) * 2.5
       const trailOverHull = shipKey === 'godGundam' || shipKey === 'spiegel'
       const throttle = .14 + (player.engineBoost ?? 0) * .58
-      if (!trailOverHull) drawSupportEngineTrail(ctx, x, y, drawSize, time, 0, 0.9, shipKey, throttle)
-      drawCanvasSprite(ctx, sprite, x, y, drawSize, filter, 1, 0, 1, color)
-      if (trailOverHull) drawSupportEngineTrail(ctx, x, y, drawSize, time, 0, .7, shipKey, throttle)
+      if (!trailOverHull) drawSupportEngineTrail(ctx, x, y, drawSize, time, 0, 0.9, shipKey, throttle, Boolean(sideSprite?.loaded))
+      if (sideSprite?.loaded) drawCanvasSpriteContain(ctx, sideSprite, x, y, drawSize, 'none', 1, -Math.PI / 2, 1, color)
+      else drawCanvasSprite(ctx, sprite, x, y, drawSize, filter, 1, 0, 1, color)
+      if (trailOverHull) drawSupportEngineTrail(ctx, x, y, drawSize, time, 0, .7, shipKey, throttle, Boolean(sideSprite?.loaded))
     }
   }
 
@@ -289,6 +293,7 @@ export function drawRaidOptions(
   if (isMesiah) {
     const droneShipKey = isWhiteMesiah ? 'mesiahRaptorWhite' : 'mesiahRaptorBlack'
     const sprite = getShipCanvasSprite(droneShipKey)
+    const sideSprite = landscape ? getRaidSideShipCanvasSprite(droneShipKey) : null
     const drawSize = Math.min(getShipSpriteSize(droneShipKey, 'option') * (viewportWidth < 860 ? 1.14 : 1.28), viewportWidth < 860 ? 35 : 54)
     for (const drone of normalizeMesiahDrones(player)) {
       const idle = !isMesiahSortie || !drone.active
@@ -299,8 +304,9 @@ export function drawRaidOptions(
       const filter = idle
         ? 'brightness(0.86) contrast(1.08) saturate(0.92)'
         : 'brightness(1.08) contrast(1.18) saturate(1.35)'
-      drawSupportEngineTrail(ctx, x, y, drawSize * scale, time, idle ? 0 : drone.rotation, idle ? 0.7 : 0.92, droneShipKey, idle ? .06 : .70)
-      drawCanvasSprite(ctx, sprite, x, y, drawSize, filter, alpha, idle ? 0 : drone.rotation, scale, color)
+      drawSupportEngineTrail(ctx, x, y, drawSize * scale, time, idle ? 0 : drone.rotation, idle ? 0.7 : 0.92, droneShipKey, idle ? .06 : .70, Boolean(sideSprite?.loaded))
+      if (sideSprite?.loaded) drawCanvasSpriteContain(ctx, sideSprite, x, y, drawSize, 'none', alpha, (idle ? 0 : drone.rotation) - Math.PI / 2, scale, color)
+      else drawCanvasSprite(ctx, sprite, x, y, drawSize, filter, alpha, idle ? 0 : drone.rotation, scale, color)
     }
   }
 
@@ -308,14 +314,16 @@ export function drawRaidOptions(
     if (player.ship.key === 'mesiah') {
       const scoutShipKey = isWhiteMesiah ? 'mesiahRaptorWhite' : 'mesiahRaptorBlack'
       const scoutSprite = getShipCanvasSprite(scoutShipKey)
+      const sideScoutSprite = landscape ? getRaidSideShipCanvasSprite(scoutShipKey) : null
       const scoutSizeKey = scoutShipKey
       const scoutSize = Math.min(getShipSpriteSize(scoutSizeKey, 'option') * (viewportWidth < 860 ? 1.14 : 1.28), viewportWidth < 860 ? 35 : 54)
       for (const scout of normalizeMesiahScoutDrones(player)) {
         if (!scout.active || scout.stack >= supportStacks) continue
         const x = toX(scout.x)
         const y = toY(scout.y)
-        drawSupportEngineTrail(ctx, x, y, scoutSize, time, scout.rotation, 0.9, scoutShipKey, scout.canFire ? .48 : .78)
-        drawCanvasSprite(ctx, scoutSprite, x, y, scoutSize, 'brightness(1.14) contrast(1.16) saturate(1.34)', 1, scout.rotation, 1, color)
+        drawSupportEngineTrail(ctx, x, y, scoutSize, time, scout.rotation, 0.9, scoutShipKey, scout.canFire ? .48 : .78, Boolean(sideScoutSprite?.loaded))
+        if (sideScoutSprite?.loaded) drawCanvasSpriteContain(ctx, sideScoutSprite, x, y, scoutSize, 'none', 1, scout.rotation - Math.PI / 2, 1, color)
+        else drawCanvasSprite(ctx, scoutSprite, x, y, scoutSize, 'brightness(1.14) contrast(1.16) saturate(1.34)', 1, scout.rotation, 1, color)
       }
     } else {
       const supportShipKey = player.ship.key === 'coreLander'
@@ -1020,6 +1028,7 @@ export function drawSpiegelBurningMirage(
   afterimages: SpiegelAfterimage[],
   toX: (value: number) => number,
   toY: (value: number) => number,
+  landscape = false,
 ) {
   const strength = clamp(alpha * Math.max(movement, afterimages[0]?.life ?? 0), 0, 1)
   if (strength <= 0.025) return
@@ -1033,7 +1042,8 @@ export function drawSpiegelBurningMirage(
     const life = clamp(afterimage.life, 0, 1)
     const ghostAlpha = strength * life * (0.28 - index * 0.016)
     if (ghostAlpha <= 0.012) continue
-    drawCanvasSprite(ctx, sprite, toX(afterimage.x), toY(afterimage.y), size * (0.985 + life * 0.018), filter, ghostAlpha, 0, 1, PLAYER_COLOR, false)
+    if (landscape) drawCanvasSpriteContain(ctx, sprite, toX(afterimage.x), toY(afterimage.y), size * (0.985 + life * 0.018), 'none', ghostAlpha, -Math.PI / 2, 1, PLAYER_COLOR, false)
+    else drawCanvasSprite(ctx, sprite, toX(afterimage.x), toY(afterimage.y), size * (0.985 + life * 0.018), filter, ghostAlpha, 0, 1, PLAYER_COLOR, false)
   }
   ctx.restore()
 }
@@ -1047,7 +1057,7 @@ export function getRaidPlayerFlightBank(color: string, x: number) {
 
 const solarHullRims = new WeakMap<CanvasSpriteEntry, [HTMLCanvasElement | undefined, HTMLCanvasElement | undefined]>()
 
-function drawSolarHullRim(ctx: CanvasRenderingContext2D, sprite: CanvasSpriteEntry, x: number, y: number, size: number, side: number, alpha: number) {
+function drawSolarHullRim(ctx: CanvasRenderingContext2D, sprite: CanvasSpriteEntry, x: number, y: number, size: number, side: number, alpha: number, landscape = false) {
   if (!sprite.loaded || typeof document === 'undefined') return
   const slot = side < 0 ? 0 : 1
   let rims = solarHullRims.get(sprite)
@@ -1062,7 +1072,15 @@ function drawSolarHullRim(ctx: CanvasRenderingContext2D, sprite: CanvasSpriteEnt
     rim.width = rim.height = edge
     const bake = rim.getContext('2d')
     if (!bake) return
-    bake.drawImage(getCanvasSpriteSource(sprite), 0, 0, edge, edge)
+    if (landscape) {
+      const { source, width, height } = getCanvasSpriteDimensions(sprite)
+      const fit = edge / Math.max(1, width, height)
+      bake.save()
+      bake.translate(edge / 2, edge / 2)
+      bake.rotate(-Math.PI / 2)
+      bake.drawImage(source, -width * fit / 2, -height * fit / 2, width * fit, height * fit)
+      bake.restore()
+    } else bake.drawImage(getCanvasSpriteSource(sprite), 0, 0, edge, edge)
     bake.globalCompositeOperation = 'source-in'
     const ramp = bake.createLinearGradient(slot === 0 ? 0 : edge, 12, slot === 0 ? edge : 0, 62)
     ramp.addColorStop(0, 'rgba(255,226,181,.7)')
@@ -1095,6 +1113,7 @@ export function drawRaidPlayer(
   eclipse = 0,
   sunlight = 0,
   reducedMotion = false,
+  landscape = false,
 ) {
   const x = toX(player.x)
   const y = toY(player.y)
@@ -1118,11 +1137,13 @@ export function drawRaidPlayer(
   const engineBoost = clamp(player.engineBoost ?? 0, 0, 1.35)
   const coreLanderBurning = isCoreLanderBurning(player)
   const coreLanderCombatModel: CoreLanderCombatModel | null = player.ship.key === 'coreLander' && (visualShipKey === 'godGundam' || visualShipKey === 'spiegel') ? visualShipKey : null
+  const eliteFrame = isRaidEliteFrameKey(visualShipKey)
+  const sideVisualKey = coreLanderCombatModel ?? (player.ship.key === 'coreLander' ? getRaidShipFrameKey('coreLander', eliteFrame) : visualShipKey)
+  const sideSprite = landscape ? getRaidSideShipCanvasSprite(sideVisualKey) : null
   const renderSize = coreLanderCombatModel ? size * 1.08 : size
   const cosmeticShipKey = coreLanderCombatModel ?? player.ship.key
-  const eliteFrame = isRaidEliteFrameKey(visualShipKey)
   const remasteredHull = usesRaidRemasteredHullArt(visualShipKey)
-  const nozzles = getRaidShipNozzles(visualShipKey)
+  const nozzles = (landscape ? getRaidSideShipNozzles(sideVisualKey) : undefined) ?? getRaidShipNozzles(visualShipKey)
   const masteryPaintColor = cosmetics.frame && !remasteredHull ? getMasteryPaintColor(cosmeticShipKey, color) : color
   const coreLanderBurningBlend = player.ship.key === 'coreLander'
     ? clamp(player.burningBlend ?? (coreLanderBurning ? 1 : 0), 0, 1)
@@ -1130,9 +1151,12 @@ export function drawRaidPlayer(
   const coreLanderBurningRage = player.ship.key === 'coreLander' ? getCoreLanderBurningRage(player) : 0
   const crossfadeCoreLander = player.ship.key === 'coreLander' && !coreLanderCombatModel && coreLanderBurningBlend > .01
   const trailColor = cosmetics.trail ? color : undefined
+  const sideBurningKey = coreLanderCombatModel === 'godGundam' ? 'godGundamBurning' : !coreLanderCombatModel ? getRaidShipFrameKey('coreLanderBurning', eliteFrame) : null
+  const sideBurningSprite = landscape && player.ship.key === 'coreLander' && sideBurningKey && coreLanderBurningBlend > .01
+    ? getRaidSideShipCanvasSprite(sideBurningKey) : null
 
   if (!isDown && !coreLanderCombatModel && !crossfadeCoreLander) {
-    drawHullExhaust(ctx, x, y, renderSize, time, engineBoost, visualShipKey, undefined, trailColor, cosmeticShipKey)
+    drawHullExhaust(ctx, x, y, renderSize, time, engineBoost, visualShipKey, undefined, trailColor, cosmeticShipKey, landscape && Boolean(sideSprite?.loaded))
   }
   const sunSide = Math.sign(sunlight)
   const maneuverJet = pose.maneuverJet ?? 0
@@ -1158,19 +1182,41 @@ export function drawRaidPlayer(
     ])
     ctx.restore()
   }
-  if (!isDown && cosmetics.aura) drawMasteryAura(ctx, x, y, renderSize, time, cosmeticShipKey, masteryPaintColor, nozzles ? visualShipKey : cosmeticShipKey)
+  if (!isDown && cosmetics.aura) {
+    if (sideSprite?.loaded) {
+      const blend = sideBurningSprite?.loaded ? coreLanderBurningBlend : 0
+      ctx.save()
+      ctx.globalAlpha *= 1 - blend
+      drawMasteryAura(ctx, x, y, renderSize, time, cosmeticShipKey, masteryPaintColor, sideVisualKey, true)
+      ctx.restore()
+      if (sideBurningSprite?.loaded && sideBurningKey && blend > 0) {
+        ctx.save()
+        ctx.globalAlpha *= blend
+        drawMasteryAura(ctx, x, y, renderSize, time, cosmeticShipKey, masteryPaintColor, sideBurningKey, true)
+        ctx.restore()
+      }
+    } else drawMasteryAura(ctx, x, y, renderSize, time, cosmeticShipKey, masteryPaintColor, nozzles ? visualShipKey : cosmeticShipKey)
+  }
   if (!isDown && coreLanderBurningBlend > 0.04) {
     if (coreLanderCombatModel === 'spiegel') {
       if ((player.godMeleeCloak ?? 0) <= 0) {
-        drawSpiegelBurningMirage(ctx, getShipCanvasSprite('spiegel'), renderSize, coreLanderBurningBlend, player.spiegelAfterimageStrength ?? 0, player.spiegelAfterimages ?? [], toX, toY)
+        drawSpiegelBurningMirage(ctx, sideSprite?.loaded ? sideSprite : getShipCanvasSprite('spiegel'), renderSize, coreLanderBurningBlend, player.spiegelAfterimageStrength ?? 0, player.spiegelAfterimages ?? [], toX, toY, landscape && Boolean(sideSprite?.loaded))
       }
     } else {
       const pulse = 0.88 + Math.sin(time / 150) * 0.12
-      drawCoreLanderBurningCometWake(ctx, x, y, renderSize, time, coreLanderBurningBlend, Boolean(coreLanderCombatModel))
-      const haloX = x
-      const haloY = coreLanderCombatModel ? y + renderSize * GOD_GUNDAM_BURNING_HALO_Y_OFFSET : y
+      if (sideSprite?.loaded) drawSideBurningWake(ctx, x, y, renderSize, time, coreLanderBurningBlend, sideBurningKey ?? sideVisualKey, cosmeticShipKey, engineBoost)
+      else drawCoreLanderBurningCometWake(ctx, x, y, renderSize, time, coreLanderBurningBlend, Boolean(coreLanderCombatModel))
+      const sideCombatHalo = Boolean(sideSprite?.loaded && coreLanderCombatModel)
+      const haloX = sideCombatHalo ? x - renderSize * .12 : x
+      const haloY = sideCombatHalo ? y + renderSize * .13 : coreLanderCombatModel ? y + renderSize * GOD_GUNDAM_BURNING_HALO_Y_OFFSET : y
       const haloSize = coreLanderCombatModel ? renderSize * GOD_GUNDAM_BURNING_HALO_SCALE : renderSize
-      drawCoreLanderBurningHalo(ctx, haloX, haloY, haloSize, time, coreLanderBurningBlend)
+      if (sideCombatHalo) {
+        ctx.save()
+        ctx.translate(haloX, haloY)
+        ctx.scale(1, .72)
+        drawCoreLanderBurningHalo(ctx, 0, 0, haloSize, time, coreLanderBurningBlend)
+        ctx.restore()
+      } else drawCoreLanderBurningHalo(ctx, haloX, haloY, haloSize, time, coreLanderBurningBlend)
       ctx.save()
       ctx.globalAlpha *= coreLanderBurningBlend
       drawRadialEllipse(ctx, x, y, renderSize * 0.54 * pulse, renderSize * 0.64 * pulse, [
@@ -1217,7 +1263,16 @@ export function drawRaidPlayer(
   }
   if (spriteGlow) drawSpriteGlow(ctx, x, y, renderSize, spriteGlow, 0.68)
   else if (!isDown) drawSpriteGlow(ctx, x, y, renderSize, environmentRim ?? hexToRgba(color, 0.09), 0.55)
-  if (crossfadeCoreLander) {
+  if (sideSprite?.loaded) {
+    // The playfield turns clockwise; rotate the right-facing art into its
+    // logical upward flight direction before the camera transform.
+    const burningBlend = sideBurningSprite?.loaded ? coreLanderBurningBlend : 0
+    if (burningBlend < .99) drawCanvasSpriteContain(ctx, sideSprite, x, y, renderSize, 'none', alpha * (1 - burningBlend), rotation - Math.PI / 2, scale, masteryPaintColor)
+    if (sideBurningSprite?.loaded && burningBlend > 0) {
+      drawCanvasSpriteContain(ctx, sideBurningSprite, x, y, renderSize, 'none', alpha * burningBlend, rotation - Math.PI / 2, scale, masteryPaintColor)
+    }
+    if (crossfadeCoreLander && !isDown) drawCrossfadeExhaust(ctx, x, y, renderSize, sideVisualKey, y, renderSize, sideBurningKey ?? 'coreLanderBurning', coreLanderBurningBlend, time, engineBoost, trailColor, cosmeticShipKey, true)
+  } else if (crossfadeCoreLander) {
     const baseKey = getRaidShipFrameKey('coreLander', eliteFrame)
     const burningKey = getRaidShipFrameKey('coreLanderBurning', eliteFrame)
     const baseSprite = getShipCanvasSprite(baseKey)
@@ -1254,8 +1309,7 @@ export function drawRaidPlayer(
       masteryPaintColor,
     )
     return
-  }
-  if (coreLanderCombatModel && coreLanderBurningBlend > 0.01) {
+  } else if (coreLanderCombatModel && coreLanderBurningBlend > 0.01) {
     const baseSprite = getShipCanvasSprite(coreLanderCombatModel)
     if (coreLanderCombatModel === 'spiegel') {
       for (const side of [-1, 1] as const) {
@@ -1331,12 +1385,16 @@ export function drawRaidPlayer(
     )
   }
   if (sunSide && nozzles && player.ship.key !== 'coreLander' && !isDown && eclipse < .86) {
-    drawSolarHullRim(ctx, sprite, x, y, renderSize, sunSide, .56 * Math.abs(sunlight) * (1 - eclipse))
+    drawSolarHullRim(ctx, sideSprite?.loaded ? sideSprite : sprite, x, y, renderSize, sunSide, .56 * Math.abs(sunlight) * (1 - eclipse), Boolean(sideSprite?.loaded))
   }
   if (coreLanderCombatModel && !isDown) {
     ctx.save()
     ctx.globalAlpha *= .7
-    if (coreLanderCombatModel === 'godGundam' && coreLanderBurningBlend > .01) {
+    if (landscape && sideSprite?.loaded) {
+      if (coreLanderCombatModel === 'godGundam' && coreLanderBurningBlend > .01) {
+        drawCrossfadeExhaust(ctx, x, y, renderSize, sideVisualKey, y, renderSize, 'godGundamBurning', coreLanderBurningBlend, time, engineBoost, trailColor, cosmeticShipKey, true)
+      } else drawHullExhaust(ctx, x, y, renderSize, time, engineBoost, sideVisualKey, undefined, trailColor, cosmeticShipKey, true)
+    } else if (coreLanderCombatModel === 'godGundam' && coreLanderBurningBlend > .01) {
       drawCrossfadeExhaust(ctx, x, y, renderSize, visualShipKey,
         y + renderSize * GOD_GUNDAM_BURNING_BODY_Y_OFFSET, renderSize * GOD_GUNDAM_BURNING_BODY_SCALE, 'godGundamBurning',
         coreLanderBurningBlend, time, engineBoost, trailColor, cosmeticShipKey)
@@ -1490,8 +1548,8 @@ export function getGodGundamBurningSpriteFilter(blend: number, rage: number) {
 }
 
 function drawHullExhaust(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, time: number,
-  boost: number, visualKey: string, wakeScale?: number, trailColor?: string, cosmeticKey = visualKey) {
-  const nozzles = getRaidShipNozzles(visualKey)
+  boost: number, visualKey: string, wakeScale?: number, trailColor?: string, cosmeticKey = visualKey, landscape = false) {
+  const nozzles = (landscape ? getRaidSideShipNozzles(visualKey) : undefined) ?? getRaidShipNozzles(visualKey)
   if (!nozzles) {
     if (trailColor) drawSingleMasteryEngineTrail(ctx, x, y, size, time, trailColor, cosmeticKey, boost)
     else drawPlayerEngine(ctx, x, y + size * .02, size * (wakeScale ?? 1), time, boost)
@@ -1508,16 +1566,16 @@ function drawHullExhaust(ctx: CanvasRenderingContext2D, x: number, y: number, si
 
 function drawCrossfadeExhaust(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, visualKey: string,
   burningY: number, burningSize: number, burningKey: string, blend: number, time: number, boost: number,
-  trailColor: string | undefined, cosmeticKey: string) {
+  trailColor: string | undefined, cosmeticKey: string, landscape = false) {
   if (blend < .99) {
     ctx.save()
     ctx.globalAlpha *= 1 - blend
-    drawHullExhaust(ctx, x, y, size, time, boost, visualKey, undefined, trailColor, cosmeticKey)
+    drawHullExhaust(ctx, x, y, size, time, boost, visualKey, undefined, trailColor, cosmeticKey, landscape)
     ctx.restore()
   }
   ctx.save()
   ctx.globalAlpha *= blend
-  drawHullExhaust(ctx, x, burningY, burningSize, time, boost, burningKey, undefined, trailColor, cosmeticKey)
+  drawHullExhaust(ctx, x, burningY, burningSize, time, boost, burningKey, undefined, trailColor, cosmeticKey, landscape)
   ctx.restore()
 }
 
@@ -1626,9 +1684,59 @@ function paintMasteryWake(ctx: CanvasRenderingContext2D, style: MasteryVisualSty
   ctx.restore()
 }
 
-export function drawMasteryAura(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, time: number, shipKey: string, color: string, visualShipKey = shipKey) {
+const sideAuraSprites = new WeakMap<CanvasSpriteEntry, HTMLCanvasElement>()
+const SIDE_AURA_SIZE = 320
+const SIDE_AURA_EDGE = 512
+
+function getSideAuraSprite(sprite: CanvasSpriteEntry) {
+  const cached = sideAuraSprites.get(sprite)
+  if (cached) return cached
+  if (!sprite.loaded || typeof document === 'undefined') return null
+  const canvas = document.createElement('canvas')
+  canvas.width = canvas.height = SIDE_AURA_EDGE
+  const bake = canvas.getContext('2d')
+  if (!bake) return null
+  bake.globalCompositeOperation = 'lighter'
+  drawCanvasSpriteContain(bake, sprite, 256, 256, SIDE_AURA_SIZE * 1.18, 'blur(22.4px) brightness(1.55) saturate(1.75)', .24, -Math.PI / 2, 1, PLAYER_COLOR, false)
+  drawCanvasSpriteContain(bake, sprite, 256, 256, SIDE_AURA_SIZE * 1.08, 'blur(10.24px) brightness(1.55) saturate(1.8)', .28, -Math.PI / 2, 1, PLAYER_COLOR, false)
+  sideAuraSprites.set(sprite, canvas)
+  return canvas
+}
+
+export function warmRaidSideCosmetics(visualShipKey: string, aura = true) {
+  const sprite = getRaidSideShipCanvasSprite(visualShipKey)
+  if (sprite && aura) void sprite.ready.then(() => { getSideAuraSprite(sprite) })
+}
+
+function drawSideBurningWake(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, time: number, alpha: number, visualShipKey: string, cosmeticShipKey: string, boost: number) {
+  const nozzles = getRaidSideShipNozzles(visualShipKey)
+  if (!nozzles) return
+  const lengthScale = size * .9
+  ctx.save()
+  ctx.globalAlpha *= alpha * .42
+  for (const [offsetX, offsetY, aperture] of nozzles) {
+    // The logical +Y wake becomes leftward flight exhaust after camera rotation.
+    drawSingleMasteryEngineTrail(ctx, x + size * offsetX, y + size * offsetY - lengthScale * .34, lengthScale, time, '#fbbf24', cosmeticShipKey, boost, size * Math.max(aperture, .035))
+  }
+  ctx.restore()
+}
+
+export function drawMasteryAura(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, time: number, shipKey: string, color: string, visualShipKey = shipKey, landscape = false) {
   const style = getMasteryVisualStyle(shipKey, color)
   const pulse = 0.95 + Math.sin(time / 260) * 0.12
+  if (landscape) {
+    const sprite = getRaidSideShipCanvasSprite(visualShipKey)
+    const aura = sprite && getSideAuraSprite(sprite)
+    if (aura) {
+      const scale = size / SIDE_AURA_SIZE
+      ctx.save()
+      ctx.globalCompositeOperation = 'lighter'
+      ctx.globalAlpha *= pulse
+      ctx.drawImage(aura, x - aura.width * scale / 2, y - aura.height * scale / 2, aura.width * scale, aura.height * scale)
+      ctx.restore()
+    }
+    return
+  }
   const sprite = getShipCanvasSprite(visualShipKey)
   ctx.save()
   ctx.globalCompositeOperation = 'lighter'

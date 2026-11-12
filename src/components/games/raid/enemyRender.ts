@@ -134,6 +134,29 @@ function drawBossResidualHit(ctx: CanvasRenderingContext2D, enemy: Enemy, size: 
   drawBossFx(ctx, BOSS_FX.impact, 0, 0, size * .22, size * .21, alpha, 0, true)
 }
 
+function drawRaidEnemyHealthBar(
+  ctx: CanvasRenderingContext2D, enemy: Enemy, x: number, y: number, size: number,
+  viewportWidth: number, viewportHeight: number, landscape: boolean, command = false,
+) {
+  const draw = command ? drawCommandBossHealthBar : drawCachedBossBar
+  if (!landscape) {
+    draw(ctx, enemy, x, y, size)
+    return
+  }
+  // Keep the existing boss-bar artwork upright and contained on short screens.
+  const barSize = Math.min(size, viewportWidth * .32)
+  const margin = barSize * .9 + 12
+  const screenX = clamp(viewportHeight - y, margin, viewportHeight - margin)
+  const barTop = clamp(x + size * .4, 90, viewportWidth - 40)
+  const offset = command ? 12 : enemy.bossKind === 'devil' ? 30 : enemy.bossKind === 'final' ? 20
+    : enemy.bossKind === 'snake' || enemy.bossKind === 'squid' || enemy.bossKind === 'super' ? 16 : 12
+  ctx.save()
+  ctx.translate(0, viewportHeight)
+  ctx.rotate(-Math.PI / 2)
+  draw(ctx, enemy, screenX, barTop - barSize * .5 - offset, barSize)
+  ctx.restore()
+}
+
 export function drawRaidEnemy(
   ctx: CanvasRenderingContext2D,
   enemy: Enemy,
@@ -144,6 +167,7 @@ export function drawRaidEnemy(
   normalEnemyFilter: string,
   dpr = 1,
   skipGpuStageBossBody = false,
+  landscape = false,
 ) {
   const x = toX(enemy.x)
   const y = toY(enemy.y)
@@ -164,7 +188,7 @@ export function drawRaidEnemy(
       ctx.restore()
       if (enemy.hp > 0) {
         if (enemy.shieldTime > 0 || enemy.y < 18) drawBossShield(ctx, x, y + size * 0.18, size * 0.86, time, enemy.color)
-        drawCachedBossBar(ctx, enemy, x, y + size * 0.16, size)
+        drawRaidEnemyHealthBar(ctx, enemy, x, y + size * 0.16, size, viewportWidth, toY(100), landscape)
       }
       return
     }
@@ -200,7 +224,7 @@ export function drawRaidEnemy(
           drawSnakeVenomTelegraph(ctx, x, y, toX(enemy.chargeLane), toY(enemy.chargeTargetY ?? enemy.y + 34), size, viewportWidth, time, enemy.chargeTimer, enemy.chargePattern, enemy.beamVolleyRecovery ?? 0)
         }
         if (enemy.shieldTime > 0 || enemy.y < 15) drawBossShield(ctx, x, y, size, time, enemy.color)
-        drawCachedBossBar(ctx, enemy, x, y, size)
+        drawRaidEnemyHealthBar(ctx, enemy, x, y, size, viewportWidth, toY(100), landscape)
       }
       return
     }
@@ -218,7 +242,7 @@ export function drawRaidEnemy(
     ctx.restore()
     if (enemy.hp > 0) {
       if (enemy.shieldTime > 0 || enemy.y < 15) drawBossShield(ctx, x, y, size, time, enemy.color)
-      drawCommandBossHealthBar(ctx, enemy, x, y, size)
+      drawRaidEnemyHealthBar(ctx, enemy, x, y, size, viewportWidth, toY(100), landscape, true)
     }
     return
   }
@@ -234,7 +258,7 @@ export function drawRaidEnemy(
     drawBossResidualHit(ctx, enemy, size)
     ctx.restore()
     if (enemy.shieldTime > 0 || enemy.y < 8) drawBossShield(ctx, x, y, size * 0.78, time, enemy.color)
-    drawCachedBossBar(ctx, enemy, x, y, size * 0.82)
+    drawRaidEnemyHealthBar(ctx, enemy, x, y, size * 0.82, viewportWidth, toY(100), landscape)
     return
   }
 
