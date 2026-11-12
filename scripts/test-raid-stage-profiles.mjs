@@ -95,4 +95,16 @@ for (const [role, asset] of api.RAID_FIGHTER_ASSETS.entries()) {
   assert.equal(api.getRaidFighterCharge({ ...enemy, y: -1 }), 0)
   assert.equal(api.getRaidFighterCharge(enemy) > 0, fighter.shots > 0)
 }
+// Pursuit is role-specific, bounded, and never starts during formation entry.
+const formationEnemy = { originX: 50, x: 50, y: 50, formationAge: 2, formationMotion: 0, phase: 0, trainSlot: 0 }
+for (const role of [0,1,2,3,4,5]) {
+  const ship = { ...formationEnemy, variant: api.LEGACY_FIGHTER_COUNT + role }
+  const left = api.getRaidFighterPathX(ship, { x: 0, y: 80 })
+  const right = api.getRaidFighterPathX(ship, { x: 100, y: 80 })
+  assert.ok(left >= 4 && right <= 96)
+  if (role === 1 || role === 3) assert.ok(right > left, 'pursuit should follow the pilot lane')
+  else assert.equal(right, left, 'non-pursuit role should retain its own path')
+  assert.equal(api.getRaidFighterPathX({ ...ship, y: 0 }, { x: 0, y: 80 }), api.getRaidFighterPathX({ ...ship, y: 0 }, { x: 100, y: 80 }))
+}
 console.log('Raid stages: 15 unique rotations, six layouts and aircraft, formation integrity, authored shots and live caps passed')
+

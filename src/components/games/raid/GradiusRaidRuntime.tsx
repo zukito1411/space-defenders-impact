@@ -1,3 +1,4 @@
+import { RaidLaunchSequence } from './RaidLaunchSequence'
 import { getHullImpactDirection, muzzleFlashProgress, sampleDistantBattle } from './flightEffects'
 import { registerSquidBubbleHit } from './bubbleRecoil'
 import { createRaidMainShotEmitter } from './playerMuzzle'
@@ -138,6 +139,7 @@ export function GradiusRaid({
   multiplayerSession,
   sameScreenCoop = false,
   sameScreenGuestShipKey = 'fast',
+  initialShipKey,
   playerName,
   language = 'en',
   onRunComplete,
@@ -147,11 +149,13 @@ export function GradiusRaid({
   multiplayerSession?: RaidMultiplayerSession | null
   sameScreenCoop?: boolean
   sameScreenGuestShipKey?: string
+  initialShipKey?: string
   playerName: string
   language?: LanguageCode
   onRunComplete?: (result: RunResult) => void
 }) {
   const initialRaidMode: RaidMode = multiplayerSession || sameScreenCoop ? 'campaign' : initialMode
+  const initialShip = SHIP_OPTIONS.find(ship => ship.key === initialShipKey) ?? SHIP_OPTIONS[0]
   const rootRef = useRef<HTMLDivElement | null>(null)
   const [landscape, setLandscape] = useRaidFlightView()
   const shipSize = useRaidShipSize()
@@ -200,7 +204,7 @@ export function GradiusRaid({
   const gamepadPointerActiveRef = useRef<{ p1: boolean; p2: boolean }>({ p1: false, p2: false })
   const gamepadPilotAssignmentsRef = useRef<{ p1: number | null; p2: number | null }>({ p1: null, p2: null })
   const gamepadNextMenuNavRef = useRef(0)
-  const selectedShipRef = useRef<ShipOption>(SHIP_OPTIONS[0])
+  const selectedShipRef = useRef<ShipOption>(initialShip)
   const progressRef = useRef(loadProgress())
   const shipCosmeticsCacheRef = useRef(new Map<string, { progress: ReturnType<typeof loadProgress>, cosmetics: Required<ShipCosmeticEquipState> }>())
   const multiplayerSessionRef = useRef<RaidMultiplayerSession | null>(multiplayerSession ?? null)
@@ -342,7 +346,7 @@ export function GradiusRaid({
   const raidBgmRequestedBossKindRef = useRef<BossKind | null>(null)
   const startRaidBgmRef = useRef<(stage: number, mode?: RaidBgmMode, bossKind?: BossKind | null) => void>(() => {})
   const stopRaidBgmRef = useRef<() => void>(() => {})
-  const [selectedShipKey, setSelectedShipKey] = useState(SHIP_OPTIONS[0].key)
+  const [selectedShipKey, setSelectedShipKey] = useState(initialShip.key)
   useEffect(() => {
     if (!landscape) return
     const visualKey = getDefaultPlayerVisualShipKey(selectedShipKey, progressRef.current)
@@ -5138,7 +5142,7 @@ export function GradiusRaid({
       const fighter = !enemy.isBoss && !enemy.isMiniBoss ? getRaidFighter(enemy.variant) : undefined
       if (fighter) enemy.formationAge = (enemy.formationAge ?? 0) + dt
       const trainT = (enemy.y - enemy.trainSlot * 6.2) * enemy.pathSpeed + enemy.phase
-      const trainX = fighter ? getRaidFighterPathX(enemy) :
+      const trainX = fighter ? getRaidFighterPathX(enemy, getNearestLivingPlayerThisTick(enemy)) :
         enemy.pattern === 0 ? enemy.originX + Math.sin(trainT) * enemy.amplitude :
           enemy.pattern === 1 ? enemy.originX + Math.sin(trainT) * enemy.amplitude + Math.sin(trainT * 2.1) * 5 :
             enemy.pattern === 2 ? enemy.originX + Math.sin(trainT * 0.72) * enemy.amplitude * 0.7 :
@@ -7587,6 +7591,8 @@ export function GradiusRaid({
         </div>
       )}
 
+      <RaidLaunchSequence phase={snapshot.phase} shipKey={playerVisualShipKey} landscape={landscape} />
+
       <div className="raid__playfield">
         <div ref={pixiBackgroundHostRef} className="raid__pixi-background" aria-hidden="true" />
         <canvas ref={fxCanvasRef} className="raid__fx-canvas" />
@@ -8085,4 +8091,5 @@ export function GradiusRaid({
     </div>
   )
 }
+
 
