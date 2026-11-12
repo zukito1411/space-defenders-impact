@@ -996,6 +996,7 @@ export function GradiusRaid({
     if (!session || session.isHost || phaseRef.current !== 'playing') return
     journeyStageAgeRef.current += dt
     stageEntryRef.current = Math.max(0, stageEntryRef.current - dt)
+    if (stageEntryRef.current <= 0) initialLaunchRef.current = false
 
     const hostPlayer = playerRef.current
     const bufferedHost = getBufferedPlayerVisual(
