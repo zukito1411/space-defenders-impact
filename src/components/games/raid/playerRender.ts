@@ -248,11 +248,12 @@ export function drawRaidOptions(
   const isWhiteMesiah = isMesiah && getRaidShipBaseVisualKey(mesiahVisualShipKey) === 'mesiahWhite'
   const isMesiahSortie = isMesiah
   const supportStacks = getOptionSupportStacks(player)
+  const supportSizeScale = typeof player.sizeScale === 'number' && Number.isFinite(player.sizeScale) ? Math.max(1, Math.min(1.5, player.sizeScale)) : 1
   if (supportStacks <= 0 && !isArk && !isMesiah) return
 
   const drawSupportPair = (shipKey: string, offset: number, yOffset: number, maxBox: number, scale: number, filter: string) => {
     const optionShipSize = getShipSpriteSize(shipKey, 'option')
-    const drawSize = Math.min(optionShipSize * scale, maxBox) * (landscape ? 1.15 : 1)
+    const drawSize = Math.min(optionShipSize * scale, maxBox) * (landscape ? 1.15 : 1) * supportSizeScale
     const sprite = getShipCanvasSprite(shipKey)
     const sideSprite = landscape ? getRaidSideShipCanvasSprite(shipKey) : null
 
@@ -294,7 +295,7 @@ export function drawRaidOptions(
     const droneShipKey = isWhiteMesiah ? 'mesiahRaptorWhite' : 'mesiahRaptorBlack'
     const sprite = getShipCanvasSprite(droneShipKey)
     const sideSprite = landscape ? getRaidSideShipCanvasSprite(droneShipKey) : null
-    const drawSize = Math.min(getShipSpriteSize(droneShipKey, 'option') * (viewportWidth < 860 ? 1.14 : 1.28), viewportWidth < 860 ? 35 : 54) * (landscape ? 1.15 : 1)
+    const drawSize = Math.min(getShipSpriteSize(droneShipKey, 'option') * (viewportWidth < 860 ? 1.14 : 1.28), viewportWidth < 860 ? 35 : 54) * (landscape ? 1.15 : 1) * supportSizeScale
     for (const drone of normalizeMesiahDrones(player)) {
       const idle = !isMesiahSortie || !drone.active
       const x = toX(drone.x)
@@ -316,7 +317,7 @@ export function drawRaidOptions(
       const scoutSprite = getShipCanvasSprite(scoutShipKey)
       const sideScoutSprite = landscape ? getRaidSideShipCanvasSprite(scoutShipKey) : null
       const scoutSizeKey = scoutShipKey
-      const scoutSize = Math.min(getShipSpriteSize(scoutSizeKey, 'option') * (viewportWidth < 860 ? 1.14 : 1.28), viewportWidth < 860 ? 35 : 54) * (landscape ? 1.15 : 1)
+      const scoutSize = Math.min(getShipSpriteSize(scoutSizeKey, 'option') * (viewportWidth < 860 ? 1.14 : 1.28), viewportWidth < 860 ? 35 : 54) * (landscape ? 1.15 : 1) * supportSizeScale
       for (const scout of normalizeMesiahScoutDrones(player)) {
         if (!scout.active || scout.stack >= supportStacks) continue
         const x = toX(scout.x)
@@ -1142,7 +1143,7 @@ export function drawRaidPlayer(
   ctx.rotate(phase === 'playing' && player.hp > 0 && player.ship.key !== 'coreLander' ? bank : 0)
   ctx.translate(-x, -y)
   try {
-  const size = getRaidPlayerHullSize(player.ship.key, viewportWidth, landscape)
+  const size = getRaidPlayerHullSize(player.ship.key, viewportWidth, landscape, player.sizeScale)
   const isDown = phase === 'gameover' || player.hp <= 0
   const rotation = isDown ? 28 * DEG : 0
   const scale = isDown ? 0.88 : 1

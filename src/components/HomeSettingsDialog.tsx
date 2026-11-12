@@ -5,6 +5,7 @@ import { useRaidFlightView } from './games/raid/flightView'
 import { GameDialog } from './ui/GameDialog'
 import { GameButton } from './ui/GameButton'
 import { FlightViewControls } from './ui/FlightViewControls'
+import { ShipSizeControls } from './ui/ShipSizeControls'
 import './HomeSettingsDialog.css'
 
 export function HomeSettingsDialog({ language, onClose }: { language: LanguageCode; onClose: () => void }) {
@@ -27,6 +28,7 @@ export function HomeSettingsDialog({ language, onClose }: { language: LanguageCo
         </header>
         <div className="home-settings__sections">
           <FlightViewControls language={language} landscape={landscape} onChange={setLandscape} />
+          <ShipSizeControls language={language} />
           <div className="raid__settings-section">
             <span className="raid__settings-heading">{text.graphics}</span>
             <div className="raid__gfx-row raid__gfx-row--settings" role="group" aria-label={text.graphics}>

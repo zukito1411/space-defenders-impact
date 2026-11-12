@@ -29,6 +29,11 @@ jobs:
         run: node scripts/test-devil-landscape.mjs
       - name: Test multitouch quick special
         run: node scripts/test-raid-touch-special.mjs
+      - name: Test player size and thruster alignment
+        run: |
+          node scripts/test-raid-ship-size.mjs
+          node scripts/test-engine-presentation.mjs
+          node scripts/test-raid-travel.mjs
       - name: Typecheck and build
         run: npm run build
 

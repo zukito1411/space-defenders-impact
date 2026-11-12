@@ -62,6 +62,8 @@ export type SpiegelAfterimage = Vec & {
 }
 
 export type Player = Vec & {
+  /** Visual and collision scale; missing on older multiplayer clients. */
+  sizeScale?: number
   hp: number
   maxHp: number
   invuln: number
@@ -357,6 +359,7 @@ export type MultiplayerInput = {
   position: Vec | null
   keys: string[]
   nuke: number
+  shipSizeScale?: number
   at: number
 }
 

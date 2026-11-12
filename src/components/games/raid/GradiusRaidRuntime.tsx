@@ -1,6 +1,8 @@
 import { getHullImpactDirection } from './flightEffects'
 import { registerSquidBubbleHit } from './bubbleRecoil'
 import { createRaidMainShotEmitter } from './playerMuzzle'
+import { clampRaidShipSize, getRaidPlayerHitRadius, useRaidShipSize } from './shipSize'
+import { ShipSizeControls } from '../../ui/ShipSizeControls'
 import { getRaidShipBaseVisualKey, isRaidEliteFrameKey } from './shipArtwork'
 import { fireRaidFighter, getRaidFighter, getRaidFighterPathX, getRaidReserveVariant, getRaidStageEncounter, getRaidWingSize, getRaidWingSlot, LEGACY_FIGHTER_COUNT, RAID_STAGE_ENEMY_LIMIT } from './stageEncounters'
 import { BOSS_BREAKUP_DELAYS, drawBossImpact, getBossBreakupPoint, recordBossImpact } from './bossDamageFx'
@@ -36,7 +38,7 @@ import type { RaidPalette } from './background'
 import { forEachDevilBossBeamLane, forEachFinalBossBeamLane, getDevilBossBeamRadius, getDevilBossChargeDuration, getFinalBossBeamLaneCount, getFinalBossBeamRadius } from './bossAttacks'
 import { clearNormalEnemyRasters, drawRaidEnemy, getNormalEnemyFilter, pruneNormalEnemyRasters } from './bossRender'
 import { PickupPreviewCanvas, getBriefingPickupType } from './briefing'
-import { ALLY_PLAYER_COLOR, ASTEROID_CLUSTER_SPAWN_DELAY_SECONDS, ASTEROID_CLUSTER_WARNING_SECONDS, BOSS_COLORS, BOSS_ENTRANCE_SLAM_SECONDS, BOSS_ENTRANCE_SLOWMO_SCALE, BOSS_RESPAWN_SECONDS, BOSS_RUSH_ATTACK_COOLDOWN_SCALE, BOSS_RUSH_ENTRY_SPEED_SCALE, BOSS_RUSH_MOTION_SCALE, BOSS_RUSH_SPECIAL_RECHARGE_SCALE, BOSS_RUSH_STAGES, CORE_LANDER_AOE_RADIUS, DARK_ENEMY_COLORS, DEG, DEVIL_BOSS_MAX_STAGE_GAP, DEVIL_BOSS_MIN_STAGE_GAP, DIFFICULTY_CONFIGS, EMPTY_WEAPON_FLAGS, EMPTY_WEAPON_TIMERS, FINAL_BOSS_BEAM_CHARGE_SECONDS, FINAL_BOSS_BEAM_LIFE_SECONDS, FORCE_FIELD_ARMOR, GAMEPLAY_ALERT_SNAPSHOT_INTERVAL_MS, GAMEPLAY_SNAPSHOT_INTERVAL_MS, GOD_GUNDAM_BARRAGE_DURATION_SECONDS, GOD_GUNDAM_BARRAGE_HIT_INTERVAL_SECONDS, GOD_GUNDAM_DEFEAT_HOLD_SECONDS, GOD_GUNDAM_MELEE_DAMAGE_PER_SECOND, GOD_GUNDAM_MELEE_EXHAUST_COOLDOWN_SECONDS, GOD_GUNDAM_MELEE_EXHAUST_LIMIT_SECONDS, GOD_GUNDAM_MELEE_HEAT_RECOVERY_PER_SECOND, GOD_GUNDAM_MELEE_VISUAL_DURATION_SECONDS, GOD_GUNDAM_MELEE_VISUAL_INTERVAL_SECONDS, HEIGHT, HOMING_RETARGET_SECONDS, HOMING_RETARGET_STAGGER_SECONDS, IDLE_SNAPSHOT_INTERVAL_MS, MAX_ASTEROIDS, MAX_ION_STRIKES, MAX_METEORS, MAX_RAID_STAGE, MAX_WRECKS, MESIAH_DRONE_FIRE_INTERVAL_SECONDS, MESIAH_ROCKET_FIRE_INTERVAL_SECONDS, MINI_BOSS_COLORS, MULTIPLAYER_BOSS_HP_MULTIPLIER, MULTIPLAYER_CONNECTION_CHECK_MS, MULTIPLAYER_CORRECTION_DRAIN_RATE, MULTIPLAYER_ENTITY_MARGIN, MULTIPLAYER_GUEST_SNAP_DISTANCE_SQ, MULTIPLAYER_GUEST_STALE_MS, MULTIPLAYER_HEARTBEAT_INTERVAL_MS, MULTIPLAYER_HEARTBEAT_TIMEOUT_MS, MULTIPLAYER_INPUT_INTERVAL_MS, MULTIPLAYER_MAX_ASTEROIDS, MULTIPLAYER_MAX_BUFFERED_BYTES, MULTIPLAYER_MAX_ENEMIES, MULTIPLAYER_MAX_ENEMY_SHOTS, MULTIPLAYER_MAX_GUEST_CORRECTION, MULTIPLAYER_MAX_ION_STRIKES, MULTIPLAYER_MAX_METEORS, MULTIPLAYER_MAX_POWERUPS, MULTIPLAYER_MAX_RIPPLES, MULTIPLAYER_MAX_SHOTS, MULTIPLAYER_MAX_SPARKS, MULTIPLAYER_MAX_WRECKS, MULTIPLAYER_REMOTE_BUFFER_MAX, MULTIPLAYER_REMOTE_CORRECTION_BLEND, MULTIPLAYER_REMOTE_INPUT_BLEND, MULTIPLAYER_REMOTE_INPUT_SNAP_DISTANCE_SQ, MULTIPLAYER_STATE_INTERVAL_MS, MULTIPLAYER_STATE_LOST_MS, MULTIPLAYER_STATE_STALE_MS, NORMAL_POWER_DROP_COOLDOWN, NUKE_FLASH_SECONDS, NUKE_MISSILE_SECONDS, PLAYER_COLOR, PLAYER_MAX_RANK, PLAYER_RADIUS, POWER_PITY_KILLS, RAID_BACKGROUND_THEME_COUNT, RAID_BGM_STAGE_RATES, RAID_BOSS_APPROACH_SILENCE_SECONDS, RAID_BOSS_BGM_TRACK, RAID_BOSS_FINAL_BGM_TRACK, RAID_BOSS_SNAKE_BGM_TRACK, RAID_BOSS_SQUID_BGM_TRACK, RAID_CHECKPOINTS, RAID_DEFAULT_BGM_TRACK, RAID_ENDING_BGM_TRACK, RANDOM_EVENT_WARNING_SECONDS, SHIP_OPTIONS, SIDE_VALUES, SPACE_ET_PASSIVE_FORCE_FIELD_CHARGES, SPIEGEL_KUNAI_DAMAGE_MULTIPLIER, SPIEGEL_KUNAI_SPLASH_DAMAGE_MULTIPLIER, SPIEGEL_SHADOW_CLONE_OFFSET, STAGE_CLEAR_SECONDS, STAGE_ENTRY_SECONDS, VICTORY_BLACKOUT_SECONDS, WEAPON_FIRE_INTERVALS, WEAPON_KEYS, WEAPON_STACK_CAPS, WIDTH, getBossRushStage, getNextBossRushStage, getShipSpriteSize, pickEndlessBossKind, shouldForceLocalDerelictWreckTest, shouldForceLocalDevilBossTest } from './constants'
+import { ALLY_PLAYER_COLOR, ASTEROID_CLUSTER_SPAWN_DELAY_SECONDS, ASTEROID_CLUSTER_WARNING_SECONDS, BOSS_COLORS, BOSS_ENTRANCE_SLAM_SECONDS, BOSS_ENTRANCE_SLOWMO_SCALE, BOSS_RESPAWN_SECONDS, BOSS_RUSH_ATTACK_COOLDOWN_SCALE, BOSS_RUSH_ENTRY_SPEED_SCALE, BOSS_RUSH_MOTION_SCALE, BOSS_RUSH_SPECIAL_RECHARGE_SCALE, BOSS_RUSH_STAGES, CORE_LANDER_AOE_RADIUS, DARK_ENEMY_COLORS, DEG, DEVIL_BOSS_MAX_STAGE_GAP, DEVIL_BOSS_MIN_STAGE_GAP, DIFFICULTY_CONFIGS, EMPTY_WEAPON_FLAGS, EMPTY_WEAPON_TIMERS, FINAL_BOSS_BEAM_CHARGE_SECONDS, FINAL_BOSS_BEAM_LIFE_SECONDS, FORCE_FIELD_ARMOR, GAMEPLAY_ALERT_SNAPSHOT_INTERVAL_MS, GAMEPLAY_SNAPSHOT_INTERVAL_MS, GOD_GUNDAM_BARRAGE_DURATION_SECONDS, GOD_GUNDAM_BARRAGE_HIT_INTERVAL_SECONDS, GOD_GUNDAM_DEFEAT_HOLD_SECONDS, GOD_GUNDAM_MELEE_DAMAGE_PER_SECOND, GOD_GUNDAM_MELEE_EXHAUST_COOLDOWN_SECONDS, GOD_GUNDAM_MELEE_EXHAUST_LIMIT_SECONDS, GOD_GUNDAM_MELEE_HEAT_RECOVERY_PER_SECOND, GOD_GUNDAM_MELEE_VISUAL_DURATION_SECONDS, GOD_GUNDAM_MELEE_VISUAL_INTERVAL_SECONDS, HEIGHT, HOMING_RETARGET_SECONDS, HOMING_RETARGET_STAGGER_SECONDS, IDLE_SNAPSHOT_INTERVAL_MS, MAX_ASTEROIDS, MAX_ION_STRIKES, MAX_METEORS, MAX_RAID_STAGE, MAX_WRECKS, MESIAH_DRONE_FIRE_INTERVAL_SECONDS, MESIAH_ROCKET_FIRE_INTERVAL_SECONDS, MINI_BOSS_COLORS, MULTIPLAYER_BOSS_HP_MULTIPLIER, MULTIPLAYER_CONNECTION_CHECK_MS, MULTIPLAYER_CORRECTION_DRAIN_RATE, MULTIPLAYER_ENTITY_MARGIN, MULTIPLAYER_GUEST_SNAP_DISTANCE_SQ, MULTIPLAYER_GUEST_STALE_MS, MULTIPLAYER_HEARTBEAT_INTERVAL_MS, MULTIPLAYER_HEARTBEAT_TIMEOUT_MS, MULTIPLAYER_INPUT_INTERVAL_MS, MULTIPLAYER_MAX_ASTEROIDS, MULTIPLAYER_MAX_BUFFERED_BYTES, MULTIPLAYER_MAX_ENEMIES, MULTIPLAYER_MAX_ENEMY_SHOTS, MULTIPLAYER_MAX_GUEST_CORRECTION, MULTIPLAYER_MAX_ION_STRIKES, MULTIPLAYER_MAX_METEORS, MULTIPLAYER_MAX_POWERUPS, MULTIPLAYER_MAX_RIPPLES, MULTIPLAYER_MAX_SHOTS, MULTIPLAYER_MAX_SPARKS, MULTIPLAYER_MAX_WRECKS, MULTIPLAYER_REMOTE_BUFFER_MAX, MULTIPLAYER_REMOTE_CORRECTION_BLEND, MULTIPLAYER_REMOTE_INPUT_BLEND, MULTIPLAYER_REMOTE_INPUT_SNAP_DISTANCE_SQ, MULTIPLAYER_STATE_INTERVAL_MS, MULTIPLAYER_STATE_LOST_MS, MULTIPLAYER_STATE_STALE_MS, NORMAL_POWER_DROP_COOLDOWN, NUKE_FLASH_SECONDS, NUKE_MISSILE_SECONDS, PLAYER_COLOR, PLAYER_MAX_RANK, POWER_PITY_KILLS, RAID_BACKGROUND_THEME_COUNT, RAID_BGM_STAGE_RATES, RAID_BOSS_APPROACH_SILENCE_SECONDS, RAID_BOSS_BGM_TRACK, RAID_BOSS_FINAL_BGM_TRACK, RAID_BOSS_SNAKE_BGM_TRACK, RAID_BOSS_SQUID_BGM_TRACK, RAID_CHECKPOINTS, RAID_DEFAULT_BGM_TRACK, RAID_ENDING_BGM_TRACK, RANDOM_EVENT_WARNING_SECONDS, SHIP_OPTIONS, SIDE_VALUES, SPACE_ET_PASSIVE_FORCE_FIELD_CHARGES, SPIEGEL_KUNAI_DAMAGE_MULTIPLIER, SPIEGEL_KUNAI_SPLASH_DAMAGE_MULTIPLIER, SPIEGEL_SHADOW_CLONE_OFFSET, STAGE_CLEAR_SECONDS, STAGE_ENTRY_SECONDS, VICTORY_BLACKOUT_SECONDS, WEAPON_FIRE_INTERVALS, WEAPON_KEYS, WEAPON_STACK_CAPS, WIDTH, getBossRushStage, getNextBossRushStage, getShipSpriteSize, pickEndlessBossKind, shouldForceLocalDerelictWreckTest, shouldForceLocalDevilBossTest } from './constants'
 import { drawAsteroidHazard, drawAsteroidWarning, drawDerelictWreck, drawDevilChargeWarnings, drawFinalChargeLines, drawGodGundamBarrage, drawGodGundamPassiveStrikes, drawIonStrike, drawMeteorHazard, drawNukeBlast, drawNukeMissile, drawHomingTargetLock, drawPowerUpCanvas, drawRandomEventOverlay, drawRandomEventWarning, getHomingMissileSprite, godBarrageDamageTargetsScratch } from './effectsRender'
 import { createAsteroidHazard, getAsteroidClusterInterval, getRandomEventDuration, getRandomEventInterval, getRaidAmbushLane, getRaidAmbushWaveSize, RAID_AMBUSH_WAVE_SPACING, pickNextRandomRaidEventKind, splitAsteroidHazard } from './events'
 import { RAID_FX_CANVAS_CONTEXT_SETTINGS, getRaidGraphicsProfile, makeRaidViewportMetrics } from './graphics'
@@ -152,6 +154,9 @@ export function GradiusRaid({
   const initialRaidMode: RaidMode = multiplayerSession || sameScreenCoop ? 'campaign' : initialMode
   const rootRef = useRef<HTMLDivElement | null>(null)
   const [landscape, setLandscape] = useRaidFlightView()
+  const shipSize = useRaidShipSize()
+  const shipSizeRef = useRef(shipSize)
+  shipSizeRef.current = shipSize
   const landscapeRef = useRef(landscape)
   landscapeRef.current = landscape
   const pixiBackgroundHostRef = useRef<HTMLDivElement | null>(null)
@@ -452,6 +457,8 @@ export function GradiusRaid({
       player.hp,
       player.maxHp,
       player.visualShipKey,
+      player.sizeScale ?? 1,
+      remotePlayer?.sizeScale ?? 1,
       Math.ceil(player.shield * 10),
       player.forceField,
       player.score,
@@ -502,6 +509,14 @@ export function GradiusRaid({
       raidMode: raidModeRef.current,
     })
   }, [])
+
+  useEffect(() => {
+    const session = multiplayerSessionRef.current
+    const own = session && !session.isHost ? remotePlayerRef.current : playerRef.current
+    if (own) own.sizeScale = shipSize
+    if (sameScreenCoopRef.current && remotePlayerRef.current) remotePlayerRef.current.sizeScale = shipSize
+    syncSnapshot()
+  }, [shipSize, syncSnapshot])
 
   const getLivingPlayers = useCallback(() => {
     const players = [playerRef.current]
@@ -881,6 +896,7 @@ export function GradiusRaid({
         position: remotePlayerRef.current ? compactVec(remotePlayerRef.current) : null,
         keys: [...keysRef.current],
         nuke: multiplayerLocalNukeRef.current,
+        shipSizeScale: shipSizeRef.current,
         at: time,
       },
     })
@@ -900,6 +916,7 @@ export function GradiusRaid({
 
     const guestPlayer = remotePlayerRef.current
     if (!guestPlayer || guestPlayer.hp <= 0) return
+    guestPlayer.sizeScale = shipSizeRef.current
 
     if (stageEntryRef.current > 0) {
       pointerTargetRef.current = null
@@ -1248,6 +1265,7 @@ export function GradiusRaid({
         for (const key of input.keys as string[]) remoteKeysRef.current.add(key.toLowerCase())
         multiplayerRemoteNukeRef.current = input.nuke
         const remotePlayer = remotePlayerRef.current
+        if (remotePlayer) remotePlayer.sizeScale = clampRaidShipSize(input.shipSizeScale)
         if (remotePlayer && remotePlayer.hp > 0 && input.position) {
           const targetX = clamp(input.position.x, 4, 96)
           const targetY = clamp(input.position.y, 13, 93)
@@ -2386,10 +2404,10 @@ export function GradiusRaid({
     costs.bossMs = measured ? performance.now() - bossCanvasStart : 0
 
     if (godMeleeStrikesRef.current.length > 0) {
-      drawGodGundamPassiveStrikes(ctx, godMeleeStrikesRef.current, toX, toY, cssWidth, landscapeRef.current)
+      drawGodGundamPassiveStrikes(ctx, godMeleeStrikesRef.current, toX, toY, cssWidth, landscapeRef.current, shipSizeRef.current)
     }
     if (godBarrageRef.current) {
-      drawGodGundamBarrage(ctx, godBarrageRef.current, enemiesRef.current, toX, toY, cssWidth, time, landscapeRef.current)
+      drawGodGundamBarrage(ctx, godBarrageRef.current, enemiesRef.current, toX, toY, cssWidth, time, landscapeRef.current, shipSizeRef.current)
     }
 
     let homingLockId: number | undefined
@@ -2645,6 +2663,8 @@ export function GradiusRaid({
   const detonateNuke = useCallback((targetX = 50, targetY = 46) => {
     if (phaseRef.current !== 'playing') return
     const player = playerRef.current
+    player.sizeScale = shipSizeRef.current
+    if (sameScreenCoopRef.current && remotePlayerRef.current) remotePlayerRef.current.sizeScale = shipSizeRef.current
     const scoreMult = scoreMultRef.current
     nukeBlastOriginRef.current = { x: targetX, y: targetY }
     nukeFlashRef.current = NUKE_FLASH_SECONDS
@@ -2899,12 +2919,14 @@ export function GradiusRaid({
     }
 
     playerRef.current = getInitialPlayer(session?.isHost ? hostShip : selectedShipRef.current, session?.isHost ? hostVisualShipKey : localVisualShipKey)
+    playerRef.current.sizeScale = shipSizeRef.current
     devilAssistPlayerRef.current = null
     devilAssistMoveTargetRef.current = null
     devilAssistEntryRef.current = 0
     applyStartingStageLevel(playerRef.current, stage)
     if (session?.isHost || sameScreen) {
       remotePlayerRef.current = getInitialPlayer(guestShip, guestVisualShipKey)
+      remotePlayerRef.current.sizeScale = sameScreen ? shipSizeRef.current : 1
       applyStartingStageLevel(remotePlayerRef.current, stage)
       remotePlayerRef.current.x = 58
       remotePlayerRef.current.y = 84
@@ -3110,6 +3132,7 @@ export function GradiusRaid({
     selectedShipRef.current = ship
     setSelectedShipKey(ship.key)
     playerRef.current = getInitialPlayer(ship, getDefaultPlayerVisualShipKey(ship.key, progressRef.current))
+    playerRef.current.sizeScale = shipSizeRef.current
     playGameSound('select')
     syncSnapshot()
   }, [syncSnapshot])
@@ -3172,7 +3195,7 @@ export function GradiusRaid({
     const pilotColor = player === devilAssistPlayerRef.current ? '#facc15' : ownPilot ? PLAYER_COLOR : ALLY_PLAYER_COLOR
     const emitMainShot = canFireMain && viewport
       ? createRaidMainShotEmitter(pushShot, player, shipKey, Boolean(coreLanderCombatModel),
-        viewport.cssWidth, viewport.cssHeight, shipKey === 'coreLander' ? 0 : getRaidPlayerFlightBank(pilotColor, player.x), landscapeRef.current)
+        viewport.cssWidth, viewport.cssHeight, shipKey === 'coreLander' ? 0 : getRaidPlayerFlightBank(pilotColor, player.x), landscapeRef.current, player.sizeScale)
       : pushShot
     const defaultScoutOffset = isArk
       ? (isSmallViewport ? 14 : 7.4)
@@ -6585,7 +6608,6 @@ export function GradiusRaid({
 
     const nearMissAlly = sameScreenCoopRef.current ? remotePlayerRef.current : null
     for (const enemyShot of enemyShotsRef.current) {
-      const hitRange = enemyShot.radius + PLAYER_RADIUS
       if (nearMissCooldownRef.current <= 0) {
         const pilot = player.hp > 0 && player.invuln <= .1 && passesNearPilot(enemyShot, player, dt) ? player
           : nearMissAlly && nearMissAlly.hp > 0 && nearMissAlly.invuln <= .1 && passesNearPilot(enemyShot, nearMissAlly, dt) ? nearMissAlly
@@ -6597,8 +6619,9 @@ export function GradiusRaid({
       }
       for (const targetPlayer of livingPlayersThisTick) {
         if (targetPlayer.hp <= 0) continue
+        const hitRange = enemyShot.radius + getRaidPlayerHitRadius(targetPlayer)
         if (enemyShot.kind === 'beam' && enemyShot.life !== undefined) {
-          const beamHitRange = enemyShot.radius * 0.82 + PLAYER_RADIUS * 0.72
+          const beamHitRange = enemyShot.radius * 0.82 + getRaidPlayerHitRadius(targetPlayer) * 0.72
           const beamHits = enemyShot.angle === undefined
             ? Math.abs(enemyShot.x - targetPlayer.x) <= beamHitRange
             : Math.abs((targetPlayer.x - enemyShot.x) * Math.sin(enemyShot.angle) - (targetPlayer.y - enemyShot.y) * Math.cos(enemyShot.angle)) <= beamHitRange
@@ -6630,9 +6653,9 @@ export function GradiusRaid({
     spawnedSquidBubbles.length = 0
 
     for (const enemy of enemiesRef.current) {
-      const hitRange = enemy.radius + PLAYER_RADIUS
       for (const targetPlayer of livingPlayersThisTick) {
         if (targetPlayer.hp <= 0) continue
+        const hitRange = enemy.radius + getRaidPlayerHitRadius(targetPlayer)
         if (
           Math.abs(enemy.x - targetPlayer.x) <= hitRange &&
           Math.abs(enemy.y - targetPlayer.y) <= hitRange &&
@@ -6673,9 +6696,9 @@ export function GradiusRaid({
 
     for (const asteroid of asteroidsRef.current) {
       if (asteroid.hp <= 0) continue
-      const hitRange = asteroid.radius + PLAYER_RADIUS
       for (const targetPlayer of livingPlayersThisTick) {
         if (targetPlayer.hp <= 0) continue
+        const hitRange = asteroid.radius + getRaidPlayerHitRadius(targetPlayer)
         if (
           Math.abs(asteroid.x - targetPlayer.x) <= hitRange &&
           Math.abs(asteroid.y - targetPlayer.y) <= hitRange &&
@@ -6689,9 +6712,9 @@ export function GradiusRaid({
     }
 
     for (const meteor of meteorsRef.current) {
-      const hitRange = meteor.radius + PLAYER_RADIUS
       for (const targetPlayer of livingPlayersThisTick) {
         if (targetPlayer.hp <= 0) continue
+        const hitRange = meteor.radius + getRaidPlayerHitRadius(targetPlayer)
         if (
           Math.abs(meteor.x - targetPlayer.x) <= hitRange &&
           Math.abs(meteor.y - targetPlayer.y) <= hitRange &&
@@ -6711,7 +6734,7 @@ export function GradiusRaid({
       if (strike.warmup > 0) continue
       for (const targetPlayer of livingPlayersThisTick) {
         if (targetPlayer.hp <= 0) continue
-        if (Math.abs(targetPlayer.x - strike.x) <= strike.width * 0.62 + PLAYER_RADIUS) {
+        if (Math.abs(targetPlayer.x - strike.x) <= strike.width * 0.62 + getRaidPlayerHitRadius(targetPlayer)) {
           damagePlayer(1, targetPlayer)
         }
       }
@@ -6722,8 +6745,8 @@ export function GradiusRaid({
       for (const targetPlayer of livingPlayersThisTick) {
         if (targetPlayer.hp <= 0) continue
         if (
-          Math.abs(wreck.x - targetPlayer.x) <= wreck.width * 0.5 + PLAYER_RADIUS &&
-          Math.abs(wreck.y - targetPlayer.y) <= wreck.height * 0.58 + PLAYER_RADIUS
+          Math.abs(wreck.x - targetPlayer.x) <= wreck.width * 0.5 + getRaidPlayerHitRadius(targetPlayer) &&
+          Math.abs(wreck.y - targetPlayer.y) <= wreck.height * 0.58 + getRaidPlayerHitRadius(targetPlayer)
         ) {
           damagePlayer(2, targetPlayer)
           wreck.hp = Math.max(0, wreck.hp - 70)
@@ -6745,9 +6768,9 @@ export function GradiusRaid({
 
     for (const powerUp of powerUpsRef.current) {
       const pickupAssist = powerUp.type === 'levelup' ? 4.2 : 1.8
-      const hitRange = powerUp.radius + PLAYER_RADIUS + pickupAssist
       for (const targetPlayer of livingPlayersThisTick) {
         if (targetPlayer.hp <= 0) continue
+        const hitRange = powerUp.radius + getRaidPlayerHitRadius(targetPlayer) + pickupAssist
         if (
           Math.abs(powerUp.x - targetPlayer.x) <= hitRange &&
           Math.abs(powerUp.y - targetPlayer.y) <= hitRange &&
@@ -7623,6 +7646,7 @@ export function GradiusRaid({
               clearPointer()
               setLandscape(next)
             }} />
+            <ShipSizeControls language={language} />
             <div className="raid__settings-section">
               <span className="raid__settings-heading">{menuText.graphics}</span>
               <div className="raid__gfx-row raid__gfx-row--settings">
