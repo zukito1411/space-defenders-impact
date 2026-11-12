@@ -1,0 +1,83 @@
+.raid__carrier-briefing {
+  position: absolute; inset: 0; z-index: 18; overflow: hidden;
+  color: #e5f6fc; font-family: inherit; isolation: isolate;
+  background: linear-gradient(180deg, rgba(2,10,18,.82), transparent 35%, transparent 65%, rgba(2,10,18,.88));
+}
+.raid__carrier-masthead {
+  position: absolute; top: max(18px, env(safe-area-inset-top)); left: max(18px, env(safe-area-inset-left)); right: max(18px, env(safe-area-inset-right));
+  display: flex; justify-content: space-between; gap: 12px; color: #99d4dd; font: 600 10px/1.5 ui-monospace, monospace; letter-spacing: .12em;
+  border-bottom: 1px solid #63929d55; padding-bottom: 10px;
+}
+.raid__carrier-masthead span:first-child { display: flex; align-items: center; gap: 8px; }
+.raid__carrier-masthead i { width: 5px; height: 5px; background: #8bf6dd; box-shadow: 0 0 10px #68ecbf; }
+.raid__carrier-mission { position: absolute; top: max(64px, calc(env(safe-area-inset-top) + 54px)); left: 20px; right: 20px; text-shadow: 0 2px 12px #000; }
+.raid__carrier-mission > small { display: flex; justify-content: space-between; gap: 10px; color: #f5c879; font: 600 10px/1.5 ui-monospace, monospace; letter-spacing: .13em; }
+#root .raid__carrier-mission h2 { margin: 10px 0 14px; max-width: 19em; color: #e6f8ff; font-size: clamp(22px, 6.6vw, 38px); line-height: 1.12; letter-spacing: -.03em; text-wrap: balance; }
+.raid__carrier-goals { display: flex; gap: 7px; }
+.raid__carrier-goals > span { flex: 1; padding: 8px; border-top: 1px solid #7fbac369; background: #0616209c; color: #b9cdd5; font-size: 10px; line-height: 1.4; }
+.raid__carrier-goals b { display: block; margin-bottom: 3px; color: #77e5ee; font: 600 10px/1.3 ui-monospace, monospace; }
+.raid__carrier-vessel { position: absolute; top: 44%; left: 50%; transform: translateX(-50%); text-align: center; white-space: nowrap; pointer-events: none; text-shadow: 0 2px 6px #000; }
+.raid__carrier-vessel span { display: block; color: #b8aa88; font: 600 9px/1.5 ui-monospace, monospace; letter-spacing: .12em; }
+.raid__carrier-vessel strong { display: block; color: #e9faff; font-size: 15px; letter-spacing: .09em; text-transform: uppercase; }
+.raid__carrier-vessel > i { display: block; height: 24px; width: 1px; background: linear-gradient(#91d6df99, transparent); margin: 8px auto 0; }
+.raid__carrier-comms { position: absolute; left: max(16px, env(safe-area-inset-left)); right: max(16px, env(safe-area-inset-right)); bottom: max(16px, env(safe-area-inset-bottom)); padding: 15px; border: 1px solid #61879380; border-left: 3px solid #6be8e9; border-radius: 3px; background: linear-gradient(110deg,#081b28f5,#06121df0); box-shadow: 0 14px 40px #0008, inset 0 1px #b1f8ff0d; }
+.raid__carrier-speaker { display: flex; align-items: center; gap: 9px; color: #79e1e6; font-size: 10px; text-transform: uppercase; letter-spacing: .14em; }
+.raid__carrier-speaker small { margin-left: auto; color: #7d9ca9; font: 500 10px/1 ui-monospace, monospace; letter-spacing: .1em; }
+.raid__carrier-signal { display: flex; align-items: center; gap: 2px; height: 15px; }
+.raid__carrier-signal i { display: block; width: 2px; height: 11px; background: #6ae1e9; animation: carrier-signal .7s ease-in-out infinite alternate; }
+@keyframes carrier-signal { from { transform: scaleY(.25); opacity: .45; } to { transform: scaleY(1); opacity: 1; } }
+#root .raid__carrier-comms h3 { color: #f2f7f8; font-size: 18px; letter-spacing: -.02em; line-height: 1.2; margin: 10px 0 7px; }
+#root .raid__carrier-comms p { font-size: 13px; line-height: 1.55; color: #c5d7e0; margin: 0; min-height: 4.65em; }
+.raid__carrier-cursor { display: inline-block; width: 5px; height: 12px; margin-left: 3px; vertical-align: middle; background: #7becf2; animation: carrier-cursor 1s step-end infinite; }
+@keyframes carrier-cursor { 50% { opacity: 0; } }
+.raid__carrier-actions { display: flex; align-items: center; gap: 6px; margin-top: 12px; }
+#root .raid__carrier-actions button { font-family: inherit; font-size: 10px; line-height: 1.25; min-height: 44px; padding: 8px; cursor: pointer; text-transform: none; letter-spacing: .01em; border: 1px solid transparent; border-radius: 3px; background-image: none; box-shadow: none; }
+#root .raid__carrier-actions .raid__carrier-back { color: #8aa7b4; background-color: transparent; padding-left: 0; flex: .9; text-align: left; }
+#root .raid__carrier-actions .raid__carrier-skip { color: #b9d5df; border-color: #405968; background-color: #0c202c; flex: .8; }
+#root .raid__carrier-actions .raid__carrier-advance { display: flex; align-items: center; justify-content: center; gap: 9px; flex: 1.4; background: linear-gradient(120deg,#1f4a56,#18313f); color: #d9ffff; border-color: #74c7d4; }
+.raid__carrier-advance > span { font-size: 22px; }
+#root .raid__carrier-actions button:focus-visible { outline: 2px solid #fff3b4; outline-offset: 3px; }
+#root .raid__carrier-actions button:hover { filter: brightness(1.2); }
+.raid__carrier-wait { color: #83dce3; margin-left: auto; font-size: 11px; }
+.raid__carrier-flight-status { position: absolute; z-index: 10; inset: max(20px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) auto max(20px, env(safe-area-inset-left)); display: flex; align-items: flex-start; justify-content: space-between; color: #d8f7ff; text-shadow: 0 1px 9px #000; font: 600 11px/1.5 ui-monospace, monospace; letter-spacing: .12em; pointer-events: none; }
+.raid__carrier-flight-status > div { padding: 10px 13px; background: #061824d9; border-left: 2px solid #e8bf7a; }
+.raid__carrier-flight-status span { display: none; }
+.raid[data-carrier-stage="ignition"] .raid__carrier-phase--ignition,
+.raid[data-carrier-stage="launch"] .raid__carrier-phase--launch,
+.raid[data-carrier-stage="clear"] .raid__carrier-phase--clear { display: block; }
+.raid__carrier-flight-status i { display: block; width: 100%; height: 2px; background: #76e2e3; margin-top: 6px; opacity: .65; }
+#root .raid__carrier-flight-status button { pointer-events: auto; width: 44px; height: 44px; border: 1px solid #74a2b3; border-radius: 4px; background: #051520d9; color: #dcfaff; font-size: 24px; cursor: pointer; }
+.raid[data-carrier-stage="docked"] > .raid__hud,
+.raid[data-carrier-stage="ignition"] > .raid__hud,
+.raid[data-carrier-stage="launch"] > .raid__hud,
+.raid[data-carrier-stage="clear"] > .raid__hud,
+.raid:not([data-carrier-stage="flight"]) > .raid__nuke-quick { visibility: hidden; pointer-events: none; }
+.raid--landscape .raid__carrier-briefing { background: linear-gradient(90deg,#020a12ed, #020a1299 36%, transparent 58%); }
+.raid--landscape .raid__carrier-masthead { top: max(14px, env(safe-area-inset-top)); left: max(20px, env(safe-area-inset-left)); right: max(20px, env(safe-area-inset-right)); }
+.raid--landscape .raid__carrier-mission { top: max(54px, calc(env(safe-area-inset-top) + 44px)); width: 41%; left: max(20px, env(safe-area-inset-left)); right: auto; }
+#root .raid--landscape .raid__carrier-mission h2 { font-size: clamp(20px, 3.2vw, 38px); margin: 8px 0 10px; }
+.raid--landscape .raid__carrier-goals { gap: 5px; }
+.raid--landscape .raid__carrier-goals > span { font-size: 9px; padding: 6px; }
+.raid--landscape .raid__carrier-comms { width: 41%; box-sizing: border-box; left: max(20px, env(safe-area-inset-left)); right: auto; padding: 12px; bottom: max(14px, env(safe-area-inset-bottom)); }
+#root .raid--landscape .raid__carrier-comms h3 { font-size: 17px; margin: 7px 0 5px; }
+#root .raid--landscape .raid__carrier-comms p { font-size: 12px; min-height: 4.65em; }
+.raid--landscape .raid__carrier-actions { margin-top: 8px; }
+.raid--landscape .raid__carrier-vessel { top: 72%; left: 56%; }
+@media (max-height: 700px) and (orientation: portrait) {
+  .raid__carrier-mission { top: 58px; }
+  #root .raid__carrier-mission h2 { font-size: 22px; margin: 7px 0 10px; }
+  .raid__carrier-vessel { top: 37%; }
+  .raid__carrier-comms { padding: 11px; bottom: 10px; }
+  #root .raid__carrier-comms h3 { font-size: 16px; margin: 6px 0; }
+  #root .raid__carrier-comms p { font-size: 12px; min-height: 4.65em; }
+  .raid__carrier-actions { margin-top: 7px; }
+}
+@media (max-height: 360px) and (orientation: landscape) {
+  .raid--landscape .raid__carrier-mission { top: 45px; width: 42%; }
+  #root .raid--landscape .raid__carrier-mission h2 { font-size: 19px; margin: 5px 0; }
+  .raid--landscape .raid__carrier-goals { display: none; }
+  .raid--landscape .raid__carrier-comms { width: 43%; padding: 10px; bottom: 10px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .raid__carrier-signal i, .raid__carrier-cursor { animation: none; }
+}

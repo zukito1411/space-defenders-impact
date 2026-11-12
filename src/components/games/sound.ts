@@ -666,7 +666,8 @@ export function stopBGM() {
 }
 
 const RAID_CUES = {
-  launch: [65, 210, .8, .085, 'triangle', 'ui'],
+  engineStart: [32, 105, 1.6, .065, 'triangle', 'ui'],
+  launch: [65, 260, 1.4, .085, 'triangle', 'ui'],
   alarm: [420, 230, .3, .07, 'triangle', 'ui'],
   hydra: [280, 490, .32, .10, 'triangle', 'beam'],
   beamCharge: [76, 185, .86, .15, 'triangle', 'beam'],

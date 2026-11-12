@@ -1128,6 +1128,7 @@ export function drawRaidPlayer(
   sunlight = 0,
   reducedMotion = false,
   landscape = false,
+  presentation?: { scale: number; engine: number; hideCombatFx: boolean },
 ) {
   const x = toX(player.x)
   const y = toY(player.y)
@@ -1143,7 +1144,7 @@ export function drawRaidPlayer(
   ctx.rotate(phase === 'playing' && player.hp > 0 && player.ship.key !== 'coreLander' ? bank : 0)
   ctx.translate(-x, -y)
   try {
-  const size = getRaidPlayerHullSize(player.ship.key, viewportWidth, landscape, player.sizeScale)
+  const size = getRaidPlayerHullSize(player.ship.key, viewportWidth, landscape, player.sizeScale) * (presentation?.scale ?? 1)
   const isDown = phase === 'gameover' || player.hp <= 0
   const rotation = isDown ? 28 * DEG : 0
   const scale = isDown ? 0.88 : 1
@@ -1169,8 +1170,11 @@ export function drawRaidPlayer(
   const sideBurningSprite = landscape && player.ship.key === 'coreLander' && sideBurningKey && coreLanderBurningBlend > .01
     ? getRaidSideShipCanvasSprite(sideBurningKey) : null
 
-  if (!isDown && !coreLanderCombatModel && !crossfadeCoreLander) {
+  if (!isDown && !coreLanderCombatModel && !crossfadeCoreLander && (presentation?.engine ?? 1) > 0) {
+    ctx.save()
+    ctx.globalAlpha *= presentation?.engine ?? 1
     drawHullExhaust(ctx, x, y, renderSize, time, engineBoost, visualShipKey, undefined, trailColor, cosmeticShipKey, landscape && Boolean(sideSprite?.loaded))
+    ctx.restore()
   }
   const sunSide = Math.sign(sunlight)
   const maneuverJet = pose.maneuverJet ?? 0
@@ -1242,10 +1246,10 @@ export function drawRaidPlayer(
     }
   }
 
-  if (player.shield > 0) drawHoneycombShield(ctx, x, y, renderSize, time, clamp(player.shield / 8, 0, 1))
-  else if (player.invuln > 0) drawInvulnerabilityShimmer(ctx, x, y, renderSize, time)
+  if (!presentation?.hideCombatFx && player.shield > 0) drawHoneycombShield(ctx, x, y, renderSize, time, clamp(player.shield / 8, 0, 1))
+  else if (!presentation?.hideCombatFx && player.invuln > 0) drawInvulnerabilityShimmer(ctx, x, y, renderSize, time)
 
-  if (player.forceField > 0) {
+  if (!presentation?.hideCombatFx && player.forceField > 0) {
     const forceCharge = player.ship.key === 'spaceEt'
       ? clamp(player.forceField / SPACE_ET_PASSIVE_FORCE_FIELD_CHARGES, 0.42, 1)
       : clamp(player.forceField / FORCE_FIELD_ARMOR, 0, 1)
@@ -1262,7 +1266,7 @@ export function drawRaidPlayer(
     ? 'brightness(1.34) contrast(1.36) saturate(1.68)'
     : 'brightness(1.2) contrast(1.18) saturate(1.36)'
   const sprite = getShipCanvasSprite(visualShipKey)
-  const spriteGlow = coreLanderBurning
+  const spriteGlow = presentation?.hideCombatFx ? null : coreLanderBurning
     ? coreLanderCombatModel
       ? coreLanderCombatModel === 'spiegel'
         ? `rgba(${Math.round(226 - 74 * coreLanderBurningRage)},${Math.round(232 - 119 * coreLanderBurningRage)},${Math.round(240 - 127 * coreLanderBurningRage)},${(0.18 + coreLanderBurningRage * 0.1).toFixed(2)})`

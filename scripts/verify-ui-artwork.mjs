@@ -5,6 +5,8 @@ import { join } from 'node:path'
 // if the shared menu artwork was not copied from public/ into dist/.
 const campaignBossAssets = JSON.parse(readFileSync('docs/campaign-boss-art-manifest.json', 'utf8')).assets
 const required = [
+  'assets/carrier/carrier-bay-landscape-v1.webp',
+  'assets/carrier/carrier-bay-portrait-v1.webp',
   ...campaignBossAssets.map((asset) => asset.path.replace(/^public\//, '')),
   'assets/aliens/fighter-auric-artillery-v1.webp',
   'assets/aliens/fighter-cinder-interceptor-v1.webp',

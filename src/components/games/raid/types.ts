@@ -386,6 +386,8 @@ export type MultiplayerHostState = {
   guestPointer: Vec | null
   journeyAge?: number
   stageEntry?: number
+  carrierLaunch?: boolean
+  raidMode?: RaidMode
   stageClear: number
   unlockedStage: number
   nukeCooldown: number
