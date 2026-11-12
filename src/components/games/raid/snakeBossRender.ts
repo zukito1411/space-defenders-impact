@@ -140,11 +140,11 @@ export function drawReferenceSnakeBossDetails(ctx: CanvasRenderingContext2D, siz
   ctx.restore()
 }
 
-export function drawSnakeBiteLungeModel(ctx: CanvasRenderingContext2D, x: number, y: number, targetX: number, targetY: number, size: number, time: number, warm: number, pulse: number) {
+export function drawSnakeBiteLungeModel(ctx: CanvasRenderingContext2D, x: number, y: number, targetX: number, targetY: number, size: number, time: number, warm: number, pulse: number, landscape = false) {
   const seconds = time / 1000
   const reach = Math.min(size, 380)
-  const startX = x
-  const startY = y - size * 0.14
+  const startX = landscape ? x - size * 0.14 : x
+  const startY = landscape ? y : y - size * 0.14
   const lunge = 0.16 + warm * 0.84
   const endX = startX + (targetX - startX) * lunge
   const endY = startY + (targetY - startY) * lunge
@@ -196,12 +196,13 @@ export function drawSnakeBiteLungeModel(ctx: CanvasRenderingContext2D, x: number
 
   ctx.save()
   ctx.translate(endX, endY)
+  if (landscape) ctx.rotate(-Math.PI / 2)
   drawCobraBossHead(ctx, size * 0.72, time, true)
   ctx.restore()
   ctx.restore()
 }
 
-export function drawSnakeVenomTelegraph(ctx: CanvasRenderingContext2D, x: number, y: number, targetX: number, targetY: number, size: number, viewportWidth: number, time: number, chargeTimer: number, pattern: Enemy['chargePattern'], retractTimer = 0) {
+export function drawSnakeVenomTelegraph(ctx: CanvasRenderingContext2D, x: number, y: number, targetX: number, targetY: number, size: number, viewportWidth: number, time: number, chargeTimer: number, pattern: Enemy['chargePattern'], retractTimer = 0, landscape = false) {
   const chargeWarm = clamp(1 - chargeTimer / (pattern === 'horizontal' ? 1.18 : pattern === 'cross' ? 1.08 : 0.95), 0, 1)
   const warm = pattern === 'cross' && chargeTimer <= 0 && retractTimer > 0
     ? clamp(retractTimer / 0.42, 0, 1)
@@ -221,7 +222,7 @@ export function drawSnakeVenomTelegraph(ctx: CanvasRenderingContext2D, x: number
   }
 
   if (pattern === 'cross') {
-    drawSnakeBiteLungeModel(ctx, x, y, laneX, targetY, size, time, warm, pulse)
+    drawSnakeBiteLungeModel(ctx, x, y, laneX, targetY, size, time, warm, pulse, landscape)
     ctx.restore()
     return
   }

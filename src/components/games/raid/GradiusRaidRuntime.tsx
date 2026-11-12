@@ -1651,6 +1651,7 @@ export function GradiusRaid({
         time,
         quality: gfxQuality,
         stageTheme: backgroundStageTheme,
+        landscape: landscapeRef.current,
         runToken: runStartTimeRef.current,
         stageNumber: stageRef.current,
         raidMode: raidModeRef.current,
@@ -2471,7 +2472,7 @@ export function GradiusRaid({
     if (allyShipRef && !hideAllyShipForBarrage) drawRaidPlayer(ctx, allyShipRef, phaseRef.current, toX, toY, cssWidth, time, ALLY_PLAYER_COLOR, getCachedEquippedCosmetics(allyShipRef.ship.key), getRaidPlayerVisualShipKey(allyShipRef, progressRef.current), sameScreenIdentityAura ? ALLY_PLAYER_COLOR : null, journeyRim, pixiBackground?.getEclipseAt(toX(allyShipRef.x), toY(allyShipRef.y)), sunlight, reducedMotion, landscapeRef.current)
     if (devilAssistShipRef && !hideDevilAssistForBarrage) drawRaidPlayer(ctx, devilAssistShipRef, phaseRef.current, toX, toY, cssWidth, time, '#facc15', getCachedEquippedCosmetics(devilAssistShipRef.ship.key), getRaidPlayerVisualShipKey(devilAssistShipRef, progressRef.current), null, journeyRim, pixiBackground?.getEclipseAt(toX(devilAssistShipRef.x), toY(devilAssistShipRef.y)), sunlight, reducedMotion, landscapeRef.current)
 
-    if (gfxProfile.drawDecorativeOverlays) {
+    if (gfxProfile.drawDecorativeOverlays && !(landscapeRef.current && (isWateryWorldTheme(backgroundStageTheme) || isVolcanicWorldTheme(backgroundStageTheme)))) {
       if (isWateryWorldTheme(backgroundStageTheme)) {
         drawWateryWorldForegroundClouds(ctx, cssWidth, cssHeight, time, gfxQuality)
       } else if (isVolcanicWorldTheme(backgroundStageTheme)) {

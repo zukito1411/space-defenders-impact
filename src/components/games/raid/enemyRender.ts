@@ -198,6 +198,8 @@ export function drawRaidEnemy(
       ctx.save()
       ctx.translate(x, y)
       ctx.globalAlpha *= defeatFade
+      // Counter the rotated playfield so the organic boss is upright on screen.
+      if (landscape && (displayBossKind === 'squid' || displayBossKind === 'snake')) ctx.rotate(-Math.PI / 2)
       ctx.rotate(displayBossKind === 'snake' ? 0 : rotation * 0.45)
       ctx.globalAlpha *= 0.58 + introProgress * 0.42
       ctx.scale(floatScale * introScale, floatScale * introScale)
@@ -218,10 +220,10 @@ export function drawRaidEnemy(
       ctx.restore()
       if (enemy.hp > 0) {
         if (displayBossKind === 'squid' && enemy.chargeTimer > 0 && enemy.chargePattern !== 'rotate') {
-          drawSquidWhipStrike(ctx, x, y, toX(enemy.chargeLane), toY(enemy.chargeTargetY ?? enemy.y + 34), size, time, enemy.chargeTimer)
+          drawSquidWhipStrike(ctx, x, y, toX(enemy.chargeLane), toY(enemy.chargeTargetY ?? enemy.y + 34), size, time, enemy.chargeTimer, landscape)
         }
         if (displayBossKind === 'snake' && (enemy.chargeTimer > 0 || (enemy.chargePattern === 'cross' && (enemy.beamVolleyRecovery ?? 0) > 0))) {
-          drawSnakeVenomTelegraph(ctx, x, y, toX(enemy.chargeLane), toY(enemy.chargeTargetY ?? enemy.y + 34), size, viewportWidth, time, enemy.chargeTimer, enemy.chargePattern, enemy.beamVolleyRecovery ?? 0)
+          drawSnakeVenomTelegraph(ctx, x, y, toX(enemy.chargeLane), toY(enemy.chargeTargetY ?? enemy.y + 34), size, viewportWidth, time, enemy.chargeTimer, enemy.chargePattern, enemy.beamVolleyRecovery ?? 0, landscape)
         }
         if (enemy.shieldTime > 0 || enemy.y < 15) drawBossShield(ctx, x, y, size, time, enemy.color)
         drawRaidEnemyHealthBar(ctx, enemy, x, y, size, viewportWidth, toY(100), landscape)
