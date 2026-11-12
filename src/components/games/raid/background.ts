@@ -6,7 +6,7 @@ import { createSurfaceCameraFrame, sampleSurfaceCamera, getSurfaceIslandY, posit
 import { getSurfaceTerrain, preloadSurfaceArt } from './surfaceArt'
 import { createRaidJourneyView, sampleRaidJourney } from './journey'
 import type { RaidJourneyInput } from './journey'
-import { sceneryTint, PLANET_DEPTH, PLANET_PARALLAX } from './sceneryMaterial'
+import { sceneryTint, PLANET_DEPTH } from './sceneryMaterial'
 import { cosmicRegionIndex, COSMIC_REGIONS, edgeFlyby } from './cosmos'
 import { getCosmosBackdrop, getCosmosLandmark, getCosmosBloom, getJourneyPlanet, getJourneySurface, getJourneyBloom, preloadCosmosArt } from './cosmosArt'
 import { projectDepthStar, type DepthStar } from './depthProjection'
@@ -1168,15 +1168,11 @@ export class PixiRaidBackground {
       this.updateSceneryBloom(stageTheme, isLow, isMedium)
       this.updateRareCometFlyby(width, height, seconds, isLow, isMedium, stageTheme)
       this.updateBackgroundObjects(width, height, seconds, stageTheme, isLow, isMedium)
-      // Depth response stays in scenery; foreground gameplay never shifts.
-      const space = !isWateryWorldTheme(stageTheme) && !isVolcanicWorldTheme(stageTheme)
-      const px = space ? -this.travel.x * width : 0
-      const py = space ? -this.travel.y * height : 0
-      this.nebulaGraphics.position.set(px * 0.006, py * 0.004)
-      for (const layer of this.farStarLayers) layer.x = px * 0.002
-      for (const layer of this.nearStarLayers) layer.x = px * 0.024
-      for (const sprite of this.galaxySprites) { sprite.x += px * 0.001; sprite.y += py * 0.001 }
-      for (const sprite of this.asteroidSprites) { sprite.x += px * 0.035; sprite.y += py * 0.02 }
+      // Space scenery stays anchored during ship steering, while independent
+      // scrolling and animation continue. Only the world surface camera steers.
+      this.nebulaGraphics.position.set(0, 0)
+      for (const layer of this.farStarLayers) layer.x = 0
+      for (const layer of this.nearStarLayers) layer.x = 0
       // Scrolling water/volcano island and cloud sprites are inexpensive
       // position/visibility updates. They MUST advance each render frame,
       // independently of the 40-80 ms cached vector-ground redraw cadence.
@@ -1185,18 +1181,8 @@ export class PixiRaidBackground {
       } else if (quality !== 'low' && isVolcanicWorldTheme(groundTheme)) {
         this.updateVolcanicWorldAssetSprites(width, height, seconds, quality)
       }
-      // Ground UVs and landmarks already share their camera offsets.
-      // Only higher-altitude weather receives this independent parallax.
-      if (quality !== 'low' && (isWateryWorldTheme(groundTheme) || isVolcanicWorldTheme(groundTheme))) {
-        const dx = -this.travel.x * width
-        const dy = -this.travel.y * height
-        const clouds = isWateryWorldTheme(groundTheme) ? this.wateryCloudSprites : this.volcanicCloudSprites
-        for (const sprite of clouds) {
-          if (!sprite.visible) continue
-          sprite.x += dx * 0.065
-          sprite.y += dy * 0.03
-        }
-      }
+      // Water and volcanic clouds keep their time-based drift, but do not
+      // follow the player's steering. Island/terrain parallax remains intact.
       this.updateJourneyWorld(width, height, groundTheme)
       this.updateOrbitalEffects(width, height, frame.stageNumber ?? 1, frame.stageAge ?? 0, frame.stageRush,
         bossIntensity, isLow, isMedium, !space)
@@ -1532,7 +1518,7 @@ export class PixiRaidBackground {
       if (i >= nearCount) { sprite.visible = false; continue }
       const seed = BACKGROUND_STARS[farCount + i]
       const depth = projectDepthStar(seed.x, seed.y, seed.tint, this.travel.near,
-        width, height, this.travel.x, this.travel.y, this.depthStarScratch)
+        width, height, 0, 0, this.depthStarScratch)
       const star = this.depthStarScratch
       sprite.visible = star.alpha > 0.005
       if (!sprite.visible) continue
@@ -2131,8 +2117,8 @@ export class PixiRaidBackground {
           const size = Math.max(width, height) * (departing ? this.journey.departureSize : this.journey.size)
           const x = departing ? this.journey.departureX : this.journey.x
           const y = departing ? this.journey.departureY : this.journey.y
-          setPixiSpriteContain(sprite, texture, width * x - this.travel.x * width * 0.012,
-            height * y - this.travel.y * height * 0.006, this.reducedMotion ? Math.min(size, Math.max(width,height)) : size,
+          setPixiSpriteContain(sprite, texture, width * x,
+            height * y, this.reducedMotion ? Math.min(size, Math.max(width,height)) : size,
             this.reducedMotion ? Math.min(size, Math.max(width,height)) : size, 1, 0)
           sprite.tint = sceneryTint(0xffffff, departing ? 0.92 - Math.min(1, (this.journeyInput.stageAge ?? 0) / 14) * (this.journey.phase === 'ascent' ? 0 : 0.2) : 0.92)
           sprite.zIndex = departing ? 30 : this.journey.departing >= 0 ? 20 : 30
@@ -2147,8 +2133,8 @@ export class PixiRaidBackground {
         const progress = Math.min(1, age / 90)
         const size = Math.min(width, height) * (region.landmark === 1 ? 1.22 : 1.04)
         sprite.visible = true
-        setPixiSpriteContain(sprite, orbital, width * (region.landmark === 1 ? 0.94 : 0.04) - this.travel.x * width * 0.018,
-          height * (-0.18 + progress * 0.58) - this.travel.y * height * 0.008, size, size,
+        setPixiSpriteContain(sprite, orbital, width * (region.landmark === 1 ? 0.94 : 0.04),
+          height * (-0.18 + progress * 0.58), size, size,
           1, 0)
         sprite.tint = sceneryTint(region.tint, this.cosmosRegion >= 2 ? 0.52 : 0.94)
         continue
@@ -2162,8 +2148,6 @@ export class PixiRaidBackground {
       const y = getRaidScenePlanetY(planet, height, seconds * (index === 0 ? 0.75 : index === 1 ? 0.12 : 0.05), radius * 2)
       const size = radius * getRaidScenePlanetDrawScale(planet.asset) * depth
       setPixiSpriteContain(sprite, texture, width * planet.x, y, size, size, 1, planet.rotation)
-      sprite.x -= this.travel.x * width * PLANET_PARALLAX[index]
-      sprite.y -= this.travel.y * height * (PLANET_PARALLAX[index] * 0.5)
     }
   }
 
@@ -2279,8 +2263,8 @@ export class PixiRaidBackground {
         this.scenicHasWreckArt = true
         // Padding covers the rotated silhouette and steering at both wrap points.
         const padding = size * 0.8 + height * 0.02
-        setPixiSpriteContain(sprite, texture, width * 0.92 - this.travel.x * width * 0.03,
-          -padding + progress * (height + padding * 2) - this.travel.y * height * 0.015,
+        setPixiSpriteContain(sprite, texture, width * 0.92,
+          -padding + progress * (height + padding * 2),
           size, size, 1, -0.12)
         sprite.zIndex = 40
         sprite.tint = sceneryTint(region.tint, 0.7)
@@ -2678,7 +2662,7 @@ export class PixiRaidBackground {
       sprite.tint = sceneryTint(COSMIC_REGIONS[this.cosmosRegion < 0 ? 0 : this.cosmosRegion].tint, 0.5)
       const debris = BACKGROUND_DEBRIS[index]
       const y = ((seconds * debris.speed + debris.delay / 48 + 1) % 1) * height * 1.2 - height * 0.05
-      const x = width * (debris.x - this.travel.x * .04 - this.travel.drift * .024)
+      const x = width * debris.x
       setPixiSpriteContain(sprite, asteroidTexture, x, y, debris.width * 1.35 * scene.debrisBias, debris.height * 1.35 * scene.debrisBias, 1, seconds * debris.spin * DEG / 12)
     }
   }
