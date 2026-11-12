@@ -190,7 +190,7 @@ export function GradiusRaid({
   const keysRef = useRef(new Set<string>())
   const pointerTargetRef = useRef<Vec | null>(null)
   const pointerVisualRef = useRef<Vec | null>(null)
-  const touchPointerActiveRef = useRef(false)
+  const steeringPointerIdRef = useRef<number | null>(null)
   const gamepadButtonsRef = useRef(new Map<number, Set<number>>())
   const gamepadPointerActiveRef = useRef<{ p1: boolean; p2: boolean }>({ p1: false, p2: false })
   const gamepadPilotAssignmentsRef = useRef<{ p1: number | null; p2: number | null }>({ p1: null, p2: null })
@@ -7227,7 +7227,7 @@ export function GradiusRaid({
   const clearPointer = () => {
     pointerTargetRef.current = null
     pointerVisualRef.current = null
-    touchPointerActiveRef.current = false
+    steeringPointerIdRef.current = null
   }
 
   const isUiPointerTarget = (target: EventTarget | null) => (
@@ -7424,23 +7424,29 @@ export function GradiusRaid({
       onPointerDown={(event) => {
         if (sameScreenCoopRef.current) return
         if (isUiPointerTarget(event.target) || phaseRef.current !== 'playing') return
+        if (event.pointerType !== 'mouse' && steeringPointerIdRef.current !== null) return
         updatePointer(event.clientX, event.clientY, event.pointerType)
         if (event.pointerType !== 'mouse') {
-          touchPointerActiveRef.current = true
+          steeringPointerIdRef.current = event.pointerId
           event.currentTarget.setPointerCapture(event.pointerId)
         }
       }}
       onPointerMove={(event) => {
         if (sameScreenCoopRef.current) return
         if (phaseRef.current !== 'playing') return
-        if (event.pointerType === 'mouse' || touchPointerActiveRef.current) {
+        if (event.pointerType === 'mouse' || event.pointerId === steeringPointerIdRef.current) {
           updatePointer(event.clientX, event.clientY, event.pointerType)
         }
       }}
       onPointerUp={(event) => {
-        if (event.pointerType !== 'mouse') clearPointer()
+        if (event.pointerType !== 'mouse' && event.pointerId === steeringPointerIdRef.current) clearPointer()
       }}
-      onPointerCancel={clearPointer}
+      onPointerCancel={(event) => {
+        if (event.pointerId === steeringPointerIdRef.current) clearPointer()
+      }}
+      onLostPointerCapture={(event) => {
+        if (event.pointerId === steeringPointerIdRef.current) clearPointer()
+      }}
       onPointerLeave={(event) => {
         if (event.pointerType === 'mouse') clearPointer()
       }}
@@ -7532,6 +7538,10 @@ export function GradiusRaid({
         <button
           className="raid__nuke-quick"
           type="button"
+          onPointerDown={(event) => event.stopPropagation()}
+          onPointerMove={(event) => event.stopPropagation()}
+          onPointerUp={(event) => event.stopPropagation()}
+          onPointerCancel={(event) => event.stopPropagation()}
           onClick={() => activateNuke()}
           aria-label={specialLaunchLabel}
         >
