@@ -96,22 +96,30 @@ export function getRaidReserveVariant(stage: number, serial: number) {
   return serial % 4 === 3 ? profile.legacy : LEGACY_FIGHTER_COUNT + (wing[1 + serial % (wing.length - 1)] as number)
 }
 
-export function getRaidFighterPathX(enemy: Enemy) {
+export function getRaidFighterPathX(enemy: Enemy, target?: Vec) {
   const motion = enemy.formationMotion
   const age = enemy.formationAge ?? 0
   const role = enemy.variant - LEGACY_FIGHTER_COUNT
   const side = enemy.originX < 50 ? -1 : 1
   const isAgile = role === INTERCEPTOR || role === SENSOR
   const roleWeave = isAgile ? Math.sin(age * 2.1 + enemy.phase + enemy.trainSlot * .55) : 0
-  // Hold the silhouette during approach, then let the agile ships break formation.
+  // The wing approaches together, then individual pilots break formation.
   const release = Math.min(1, Math.max(0, (enemy.y - 16) / 22))
   const offset = roleWeave * release * 6
-  if (motion === 0) return enemy.originX + Math.sin(age * 1.25 + enemy.phase) * 5 + offset
-  if (motion === 1) return enemy.originX - side * (1 - Math.cos(age * .92)) * 4 + offset
-  if (motion === 2) return enemy.originX - side * Math.sin(age * 1.18) * 9 + offset
-  if (isAgile) return enemy.originX + roleWeave * 13
-  const amplitude = role === RAM ? 3 : 6
-  return enemy.originX + Math.sin(age * 1.1 + enemy.phase) * amplitude
+  let base: number
+  if (motion === 0) base = enemy.originX + Math.sin(age * 1.25 + enemy.phase) * 5 + offset
+  else if (motion === 1) base = enemy.originX - side * (1 - Math.cos(age * .92)) * 4 + offset
+  else if (motion === 2) base = enemy.originX - side * Math.sin(age * 1.18) * 9 + offset
+  else if (isAgile) base = enemy.originX + roleWeave * 13
+  else base = enemy.originX + Math.sin(age * 1.1 + enemy.phase) * (role === RAM ? 3 : 6)
+
+  // Ram ships lean into the pilot's lane; interceptors make a smaller pursuit.
+  // Artillery and heavy gunships hold steadier lanes; sensors sweep wider.
+  const targetDelta = target && Number.isFinite(target.x) ? Math.max(-24, Math.min(24, target.x - enemy.originX)) : 0
+  const pursuit = role === RAM ? targetDelta * .28 : role === INTERCEPTOR ? targetDelta * .14 : 0
+  const personality = role === SENSOR ? Math.sin(age * 1.35 + enemy.phase) * 2 : role === SCOUT ? Math.sin(age * 2.7 + enemy.phase) * 1.1 : 0
+  const heavyScale = role === GUNSHIP || role === ARTILLERY ? .75 : 1
+  return Math.max(4, Math.min(96, enemy.originX + (base - enemy.originX) * heavyScale + (pursuit + personality) * release))
 }
 
 export function fireRaidFighter(enemy: Enemy, target: Vec, available: number, emit: (shot: Omit<Shot, 'id'>) => void) {
@@ -132,3 +140,4 @@ export function getRaidFighterCharge(enemy: Enemy) {
   if (enemy.y < 0 || enemy.fireCooldown <= 0 || enemy.fireCooldown >= .34 || !getRaidFighter(enemy.variant)?.shots) return 0
   return 1 - enemy.fireCooldown / .34
 }
+

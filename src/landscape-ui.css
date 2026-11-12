@@ -703,3 +703,22 @@
   0% { color: #fff6c9; text-shadow: 0 0 14px #ffc76b; }
   100% { text-shadow: none; }
 }
+
+
+/* Brief non-blocking launch from the hangar; reduced motion skips the overlay. */
+#root .raid-hangar__launch { width: 100%; min-height: 44px; }
+#root .raid__launch-sequence {
+  position: absolute; inset: 0; z-index: 16; pointer-events: none; overflow: hidden;
+  background: linear-gradient(#03121b66, #03091299), var(--launch-hangar) center / cover;
+  animation: raid-launch-scene 1.1s ease-out both;
+}
+#root .raid__launch-ship, #root .raid__launch-wake { position: absolute; left: 50%; top: 55%; }
+#root .raid__launch-ship { animation: raid-launch-vertical 1.1s ease-in both; }
+#root .raid__launch-ship img { display: block; width: min(180px, 32vw) !important; height: auto !important; aspect-ratio: 1; object-fit: contain; filter: drop-shadow(0 0 14px #70e5f5a0); }
+#root .raid__launch-wake { width: 16px; height: 26%; border-radius: 50%; background: linear-gradient(#e7ffffdd, #52d9f7a0, transparent); filter: blur(7px); animation: raid-launch-vertical 1.1s ease-in both; }
+#root .raid__launch-sequence--landscape .raid__launch-ship { animation-name: raid-launch-horizontal; }
+#root .raid__launch-sequence--landscape .raid__launch-wake { width: 25%; height: 16px; background: linear-gradient(90deg, transparent, #52d9f7a0, #e7ffffdd); animation-name: raid-launch-horizontal; }
+@keyframes raid-launch-scene { 0%, 55% { opacity: .9; } 100% { opacity: 0; } }
+@keyframes raid-launch-vertical { from { transform: translate(-50%, 15vh) scale(.55); opacity: .6; } to { transform: translate(-50%, -85vh) scale(1.15); opacity: 1; } }
+@keyframes raid-launch-horizontal { from { transform: translate(-55vw, -50%) scale(.55); opacity: .6; } to { transform: translate(55vw, -50%) scale(1.15); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { #root .raid__launch-sequence { display: none; } }

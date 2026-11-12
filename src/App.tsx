@@ -1459,6 +1459,10 @@ function App() {
                   </div>
                 </div>
 
+                <GameButton tone="primary" className="raid-hangar__launch" disabled={!isSelectedUnlocked || !raidAssetsReady} onClick={() => startRocketRaidSingle('campaign')}>
+                  {text.rocketMode.start}
+                </GameButton>
+
                 <div className="raid-hangar__cosmetics">
                   {RAID_HANGAR_COSMETICS.map((cosmetic) => {
                     const unlocked = isShipCosmeticUnlocked(progress.shipMastery[selectedShip.key], cosmetic)
@@ -1710,6 +1714,7 @@ function App() {
         <GradiusRaid
           onClose={closeRocketRaid}
           initialMode={raidLaunchMode}
+          initialShipKey={raidMultiplayerSession || raidSameScreenCoop || (hangarShipKey === 'mesiah' && !canPlayGradiusEndless) || (hangarShipKey === 'coreLander' && !isCoreLanderUnlocked(progress)) ? undefined : hangarShipKey}
           multiplayerSession={raidMultiplayerSession}
           sameScreenCoop={raidSameScreenCoop}
           sameScreenGuestShipKey={sameScreenGuestShipKey}
@@ -1734,4 +1739,5 @@ function App() {
 }
 
 export default App
+
 
