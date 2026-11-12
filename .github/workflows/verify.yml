@@ -23,6 +23,8 @@ jobs:
         run: npm ci
       - name: Test Air Raid collision broad phase
         run: node scripts/test-raid-spatial-hash.mjs
+      - name: Test Air Raid muzzle and actor sizes
+        run: node scripts/test-raid-muzzles.mjs
       - name: Typecheck and build
         run: npm run build
 
