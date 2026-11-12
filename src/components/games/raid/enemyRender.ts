@@ -183,12 +183,18 @@ export function drawRaidEnemy(
     if (displayBossKind === 'devil') {
       ctx.save()
       ctx.translate(x, y)
+      // The landscape playfield rotates clockwise; counter-rotate the body.
+      if (landscape) ctx.rotate(-Math.PI / 2)
       drawDevilGundamBoss(ctx, enemy, size, time, skipGpuStageBossBody)
+      if (landscape) ctx.translate(0, size * 0.28)
       drawBossResidualHit(ctx, enemy, size)
       ctx.restore()
       if (enemy.hp > 0) {
-        if (enemy.shieldTime > 0 || enemy.y < 18) drawBossShield(ctx, x, y + size * 0.18, size * 0.86, time, enemy.color)
-        drawRaidEnemyHealthBar(ctx, enemy, x, y + size * 0.16, size, viewportWidth, toY(100), landscape)
+        const bodyX = landscape ? x + size * 0.28 : x
+        const shieldY = landscape ? y : y + size * 0.18
+        const barY = landscape ? y : y + size * 0.16
+        if (enemy.shieldTime > 0 || enemy.y < 18) drawBossShield(ctx, bodyX, shieldY, size * 0.86, time, enemy.color)
+        drawRaidEnemyHealthBar(ctx, enemy, bodyX, barY, size, viewportWidth, toY(100), landscape)
       }
       return
     }

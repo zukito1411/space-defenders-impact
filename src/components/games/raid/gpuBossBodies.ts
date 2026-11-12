@@ -163,7 +163,7 @@ export class RaidGpuBossBodies {
           sprite.position.set(px, py)
           sprite.width = drawSize
           sprite.height = drawSize
-          sprite.rotation = tilt
+          sprite.rotation = tilt - (frame.landscape ? Math.PI / 2 : 0)
           sprite.tint = 0xffffff
         }
         if (pair.fromTexture && smoothBlend < 1) {

@@ -25,6 +25,8 @@ jobs:
         run: node scripts/test-raid-spatial-hash.mjs
       - name: Test Air Raid muzzle and actor sizes
         run: node scripts/test-raid-muzzles.mjs
+      - name: Test Devil Gundam landscape rendering
+        run: node scripts/test-devil-landscape.mjs
       - name: Typecheck and build
         run: npm run build
 
