@@ -24,6 +24,7 @@ export type RaidGpuForegroundFrame = {
   height: number
   dpr: number
   visualScale: number
+  landscape?: boolean
   time: number
   guestView: boolean
   measureGpu: boolean
@@ -292,8 +293,8 @@ export class RaidGpuForeground {
     const pulse = 0.94 + (Math.sin(frame.time / 700) + 1) * 0.03
     for (const alien of frame.enemies) {
       if (alien.isBoss || alien.isMiniBoss) continue
-      if (!raidObjectInView(frame.bounds, alien.x, alien.y, alien.radius + 5)) continue
-      const size = getEnemyCanvasSize(alien, frame.width) * (frame.width > 1100 ? 0.96 : 1)
+      if (!raidObjectInView(frame.bounds, alien.x, alien.y, alien.radius + (frame.landscape ? 8 : 5))) continue
+      const size = getEnemyCanvasSize(alien, frame.width, frame.landscape) * (frame.width > 1100 ? 0.96 : 1)
       const texture = this.alienTexture(alien.variant) ?? this.alienTexture(0)
       if (!texture) continue
       this.visibleEnemies.add(alien.id)
