@@ -1443,7 +1443,8 @@ export function drawSpriteGlow(ctx: CanvasRenderingContext2D, x: number, y: numb
   ctx.restore()
 }
 
-function getBaseEnemyCanvasSize(enemy: Enemy, viewportWidth: number) {
+export function getEnemyCanvasSize(enemy: Enemy, viewportWidth: number, landscape = false) {
+  const baseSize = () => {
   const isMobileView = viewportWidth <= 640
   if (!enemy.isBoss) {
     if (enemy.isMiniBoss) {
@@ -1462,9 +1463,6 @@ function getBaseEnemyCanvasSize(enemy: Enemy, viewportWidth: number) {
   if (enemy.bossKind === 'gate') return Math.min(viewportWidth * (isMobileView ? 0.44 : 0.4), 360)
   if (enemy.bossKind === 'hydra') return Math.min(viewportWidth * (isMobileView ? 0.39 : 0.35), 305)
   return Math.min(viewportWidth * (isMobileView ? 0.34 : 0.3), 260)
-}
-
-/** Increase only rendered actor artwork for the side-flight view. */
-export function getEnemyCanvasSize(enemy: Enemy, viewportWidth: number, landscape = false) {
-  return getBaseEnemyCanvasSize(enemy, viewportWidth) * (landscape ? 1.15 : 1)
+  }
+  return baseSize() * (landscape ? 1.15 : 1)
 }
