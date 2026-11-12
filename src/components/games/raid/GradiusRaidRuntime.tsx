@@ -3041,10 +3041,10 @@ export function GradiusRaid({
     initialLaunchRef.current = true
     playRaidCue('launch')
     if (stageEntryRef.current > 0) {
-      playerRef.current.y = HEIGHT + 12
+      playerRef.current.y = 94
       playerRef.current.invuln = Math.max(playerRef.current.invuln, stageEntryRef.current + 0.35)
       if (remotePlayerRef.current) {
-        remotePlayerRef.current.y = HEIGHT + 14
+        remotePlayerRef.current.y = 96
         remotePlayerRef.current.invuln = Math.max(remotePlayerRef.current.invuln, stageEntryRef.current + 0.35)
       }
     }
@@ -4572,15 +4572,16 @@ export function GradiusRaid({
       stageEntryRef.current = Math.max(0, stageEntryRef.current - dt)
       const entryProgress = 1 - stageEntryRef.current / getRaidStageEntrySeconds(stageRef.current, raidModeRef.current)
       const easedEntry = sampleLaunchFlight(entryProgress, prefersRaidReducedMotion())
-      if (stageEntryRef.current <= 0) initialLaunchRef.current = false
       player.engineBoost = Math.max(player.engineBoost ?? 0, .9)
       player.x += (50 - player.x) * Math.min(1, dt * 6.4)
-      player.y = HEIGHT + 12 + (82 - (HEIGHT + 12)) * easedEntry
+      const entryStartY = initialLaunchRef.current ? 94 : HEIGHT + 12
+      player.y = entryStartY + (82 - entryStartY) * easedEntry
       player.invuln = Math.max(player.invuln, 0.4)
       const remotePlayer = remotePlayerRef.current
       if (remotePlayer) {
         remotePlayer.x += (58 - remotePlayer.x) * Math.min(1, dt * 6.4)
-        remotePlayer.y = HEIGHT + 14 + (84 - (HEIGHT + 14)) * easedEntry
+        const allyEntryStartY = initialLaunchRef.current ? 96 : HEIGHT + 14
+        remotePlayer.y = allyEntryStartY + (84 - allyEntryStartY) * easedEntry
         remotePlayer.invuln = Math.max(remotePlayer.invuln, 0.4)
       }
       const devilAssistPlayer = devilAssistPlayerRef.current
@@ -4591,6 +4592,7 @@ export function GradiusRaid({
         devilAssistPlayer.invuln = Math.max(devilAssistPlayer.invuln, 0.4)
         devilAssistPlayer.engineBoost = Math.max(devilAssistPlayer.engineBoost ?? 0, 1.1)
       }
+      if (stageEntryRef.current <= 0) initialLaunchRef.current = false
       pointerTargetRef.current = null
       pointerVisualRef.current = null
       remotePointerTargetRef.current = null

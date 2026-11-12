@@ -21,7 +21,11 @@ try {
     await page.waitForFunction(()=>Number(getComputedStyle(document.querySelector('.raid__launch-sequence')).opacity)>.05,{},{timeout:120000})
     assert.equal(await page.locator('.raid__launch-ship').count(),0,'duplicate launch ship')
     assert.equal(await page.locator('.raid__launch-sequence img').count(),0,'backdrop must not draw a second ship')
-    await page.waitForTimeout(250)
+    await page.waitForFunction(()=>{const opacity=Number(getComputedStyle(document.querySelector('.raid__launch-sequence')).opacity);return opacity>0 && opacity<.8},{},{timeout:30000})
+    assert.ok(await page.locator('.raid__fx-canvas').evaluate(canvas=>{
+      const data=canvas.getContext('2d').getImageData(Math.floor(canvas.width*.3),Math.floor(canvas.height*.7),Math.floor(canvas.width*.4),Math.floor(canvas.height*.3)).data
+      let visible=0;for(let i=3;i<data.length;i+=4)if(data[i]>100)visible++;return visible>30
+    }),'gameplay ship must be visible above the launch backdrop')
     await page.screenshot({path:`presentation-review/${landscape?'landscape':'portrait'}-launch.png`})
     await page.waitForFunction(()=>Number(getComputedStyle(document.querySelector('.raid__launch-sequence')).opacity)===0,{},{timeout:30000})
     await page.waitForTimeout(2000)
