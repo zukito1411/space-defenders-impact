@@ -240,3 +240,60 @@
 @media (orientation: landscape) and (max-height: 600px) and (pointer: coarse) {
   #root .mode-screen__panel > .game-menu-hints { display: none; }
 }
+
+
+/* Keep the portrait home menu within the display, including on short phones. */
+@media (orientation: portrait) {
+  #root .start-screen { height: 100dvh; min-height: 0; overflow: hidden; }
+  #root .start-screen__content {
+    width: min(540px, 100%);
+    height: 100%;
+    min-height: 0;
+    max-height: none;
+    margin: 0 auto;
+    padding: max(60px, calc(env(safe-area-inset-top, 0px) + 48px))
+      max(14px, env(safe-area-inset-right, 0px))
+      max(8px, env(safe-area-inset-bottom, 0px))
+      max(14px, env(safe-area-inset-left, 0px));
+    justify-content: space-evenly;
+    gap: clamp(4px, 1dvh, 10px);
+    overflow: hidden;
+  }
+  #root .start-screen__command-panel {
+    width: 100%;
+    margin: 0;
+    gap: clamp(5px, 1.2dvh, 12px);
+  }
+  #root .start-screen__brand { font-size: .52rem; }
+  #root .start-screen__version { display: none; }
+  #root .start-screen__title-lockup { gap: 4px; }
+  #root .start-screen__eyebrow { font-size: .58rem; }
+  #root .start-screen h1 {
+    max-width: none;
+    font-size: clamp(1.5rem, min(7vw, 4.2dvh), 2.7rem);
+    line-height: .98;
+  }
+  #root .start-screen__title-lockup p { font-size: .68rem; line-height: 1.25; }
+  #root .start-screen__actions { gap: 5px; }
+  #root .start-screen__actions .game-menu-action { min-height: 48px; padding: 6px 10px; }
+  #root .start-screen .game-menu-action__copy { gap: 2px; }
+  #root .start-screen .game-menu-action__copy strong { font-size: .83rem; line-height: 1.1; }
+  #root .start-screen .game-menu-action__copy small { font-size: .64rem; line-height: 1.15; }
+  #root .start-screen__pilot { padding-top: 5px; gap: 2px 8px; }
+  #root .start-screen__pilot-identity { gap: 0; }
+  #root .start-screen__pilot-identity > span { font-size: .5rem; }
+  #root .start-screen__pilot strong { font-size: .76rem; }
+  #root .start-screen__pilot .game-button { min-height: 44px; padding: 5px 10px; }
+  #root .start-screen__sync { font-size: .57rem; line-height: 1.15; }
+  #root .start-screen__command-deck { width: 100%; max-width: none; margin: 0; gap: 4px; }
+  #root .start-screen__command-deck button { min-height: 44px; padding: 5px; font-size: .56rem; }
+  #root .start-screen__footer { max-width: none; margin: 0; gap: 2px 8px; font-size: .48rem; line-height: 1.15; }
+  #root .start-screen .game-menu-hints,
+  #root .start-screen__asset-loading { display: none; }
+}
+@media (orientation: portrait) and (max-height: 650px) {
+  #root .start-screen__brand,
+  #root .start-screen__title-lockup p { display: none; }
+  #root .start-screen__content { gap: 3px; }
+  #root .start-screen__command-panel { gap: 4px; }
+}
