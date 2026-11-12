@@ -231,13 +231,13 @@ export function drawReferenceSquidBossDetails(ctx: CanvasRenderingContext2D, siz
   ctx.restore()
 }
 
-export function drawSquidWhipStrike(ctx: CanvasRenderingContext2D, x: number, y: number, targetX: number, targetY: number, size: number, time: number, chargeTimer: number) {
+export function drawSquidWhipStrike(ctx: CanvasRenderingContext2D, x: number, y: number, targetX: number, targetY: number, size: number, time: number, chargeTimer: number, landscape = false) {
   const chargeDuration = 0.9
   const warm = clamp(1 - chargeTimer / chargeDuration, 0, 1)
   const side = targetX < x ? -1 : 1
   const reachSize = Math.min(size, 380)
-  const baseX = x + side * reachSize * 0.22
-  const baseY = y + size * 0.08
+  const baseX = landscape ? x + size * 0.08 : x + side * reachSize * 0.22
+  const baseY = landscape ? y - side * reachSize * 0.22 : y + size * 0.08
   const tipY = y + (targetY - y) * (0.62 + warm * 0.38)
   const tipX = x + clamp(targetX - x, -reachSize * 0.78, reachSize * 0.78) + Math.sin(time / 90) * reachSize * 0.025
   const warningPulse = 0.55 + Math.sin(time / 70) * 0.2
@@ -250,8 +250,8 @@ export function drawSquidWhipStrike(ctx: CanvasRenderingContext2D, x: number, y:
     drawBossFxLane(ctx, BOSS_FX.aim, targetX - warningSize * .5, targetY, targetX + warningSize * .5, targetY, 3, .8)
   }
 
-  const c1x = x + side * reachSize * 0.42
-  const c1y = y + reachSize * 0.18
+  const c1x = landscape ? x + reachSize * 0.18 : x + side * reachSize * 0.42
+  const c1y = landscape ? y - side * reachSize * 0.42 : y + reachSize * 0.18
   const c2x = tipX - side * reachSize * 0.2
   const c2y = y + (targetY - y) * 0.7
   const pointAt = (t: number) => {
