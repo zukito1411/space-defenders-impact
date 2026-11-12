@@ -30,7 +30,7 @@ import { useRaidFlightView } from './flightView'
 import { FlightViewControls } from '../../ui/FlightViewControls'
 import { GameDialog } from '../../ui/GameDialog'
 import type { CSSProperties } from 'react'
-import { RAID_DEVIL_MASTER_PROJECTILE_FILTER, RAID_DEVIL_MASTER_PROJECTILE_GLOW_STOPS, RAID_PLAYER_LASER_HEAD_STOPS, RAID_SNAKE_FANG_GLOW_STOPS, RAID_SQUID_BUBBLE_STOPS, RAID_SQUID_INK_STOPS, RAID_VENOM_SPIT_STOPS, drawCanvasSpriteContain, getEnemyCanvasSize, getDerelictWreckVariantData, getDevilMasterProjectileCanvasSprite, getRaidSideShipCanvasSprite } from './assets'
+import { RAID_DEVIL_MASTER_PROJECTILE_FILTER, RAID_DEVIL_MASTER_PROJECTILE_GLOW_STOPS, RAID_OTHER_ASSET_PATHS, RAID_PLAYER_LASER_HEAD_STOPS, RAID_SNAKE_FANG_GLOW_STOPS, RAID_SQUID_BUBBLE_STOPS, RAID_SQUID_INK_STOPS, RAID_VENOM_SPIT_STOPS, drawCanvasSpriteContain, getEnemyCanvasSize, getDerelictWreckVariantData, getDevilMasterProjectileCanvasSprite, getRaidSideShipCanvasSprite } from './assets'
 import type { CanvasSpriteEntry } from './assets'
 import { playCommandBossCharge, playCoreLanderPhysicalAttackSound, playPickupVoiceLine, warmPickupVoiceSamples } from './audio'
 import { DEFAULT_RAID_PALETTE, PixiRaidBackground, RAID_BOSS_BACKGROUND_THEME_FINAL, RAID_BOSS_BACKGROUND_THEME_SNAKE, RAID_BOSS_BACKGROUND_THEME_SQUID, drawVolcanicWorldForegroundClouds, drawWateryWorldForegroundClouds, getRaidCameraShakeOffset, isVolcanicWorldTheme, isWateryWorldTheme } from './background'
@@ -7561,14 +7561,23 @@ export function GradiusRaid({
         <button
           className="raid__nuke-quick"
           type="button"
-          onPointerDown={(event) => event.stopPropagation()}
+          onPointerDown={(event) => {
+            event.stopPropagation()
+            if (event.button !== 0) return
+            event.preventDefault()
+            activateNuke()
+          }}
           onPointerMove={(event) => event.stopPropagation()}
           onPointerUp={(event) => event.stopPropagation()}
           onPointerCancel={(event) => event.stopPropagation()}
-          onClick={() => activateNuke()}
+          onClick={(event) => {
+            // Pointer activation already happened on pointerdown. Keep keyboard and assistive clicks.
+            if (event.detail === 0) activateNuke()
+          }}
           aria-label={specialLaunchLabel}
+          title={specialLaunchLabel}
         >
-          <span className="raid__nuke-quick-text">{specialLabel}</span>
+          <img className="raid__nuke-quick-icon" src={getPublicAssetUrl(RAID_OTHER_ASSET_PATHS.nukeMissile)} alt="" aria-hidden="true" draggable={false} />
         </button>
       )}
 
