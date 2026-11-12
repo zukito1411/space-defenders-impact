@@ -297,3 +297,128 @@
   #root .start-screen__content { gap: 3px; }
   #root .start-screen__command-panel { gap: 4px; }
 }
+
+
+/* Portrait flight deck: the backdrop fills the screen; controls respect cutouts. */
+@media (orientation: portrait) {
+  #root .start-screen::after {
+    background: linear-gradient(180deg, #02091355 0%, #020b18a8 35%, #020812d9 100%);
+  }
+  #root .start-screen .start-screen__topbar {
+    top: max(10px, env(safe-area-inset-top, 0px));
+    left: max(16px, env(safe-area-inset-left, 0px));
+    right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  #root .start-screen__content {
+    display: grid;
+    grid-template-areas: 'brand' 'title' 'actions' 'pilot' 'deck' 'footer';
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto minmax(0, 1fr) auto auto auto;
+    align-content: stretch;
+    justify-content: stretch;
+    align-items: center;
+    gap: clamp(5px, 1dvh, 10px);
+    padding-top: max(66px, calc(env(safe-area-inset-top, 0px) + 54px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-bottom: max(10px, env(safe-area-inset-bottom, 0px));
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+  }
+  #root .start-screen__command-panel { display: contents; }
+  #root .start-screen__brand {
+    grid-area: brand;
+    justify-content: center;
+    grid-template-columns: auto auto;
+    color: #95b8c9;
+    font-size: .5rem;
+    letter-spacing: .15em;
+  }
+  #root .start-screen__title-lockup {
+    grid-area: title;
+    justify-items: center;
+    text-align: center;
+    gap: 5px;
+  }
+  #root .start-screen__eyebrow { font-size: .58rem; letter-spacing: .18em; }
+  #root .start-screen h1 {
+    max-width: 13ch;
+    font-size: clamp(1.8rem, min(9vw, 5.1dvh), 3rem);
+    line-height: .94;
+    letter-spacing: -.035em;
+    text-wrap: balance;
+    text-shadow: 0 3px 0 #1e4054, 0 0 26px #62d9ee45, 0 8px 20px #000;
+  }
+  #root .start-screen__title-lockup p { max-width: 36ch; font-size: .68rem; line-height: 1.25; color: #b5cad8; }
+  #root .start-screen__actions {
+    grid-area: actions;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: clamp(6px, 1dvh, 10px);
+    min-height: 0;
+  }
+  #root .start-screen .game-menu-action {
+    flex: 1 1 0;
+    max-height: 76px;
+    min-height: 48px;
+    padding: 8px 16px 8px 19px;
+    border: 1px solid #4e8caa;
+    border-left: 3px solid #6be6f3;
+    border-radius: 5px;
+    border-image: none;
+    background: linear-gradient(105deg, #15364ae8, #071522ed 72%);
+    box-shadow: inset 0 1px #c9f7ff22, 0 5px 15px #0007;
+  }
+  #root .start-screen .game-menu-action--primary {
+    border-color: #e9b862;
+    border-left-color: #ffcb70;
+    background: linear-gradient(105deg, #67421be8, #15212aea 75%);
+    box-shadow: inset 0 1px #fff0c13b, 0 0 18px #e5a74c2b, 0 5px 15px #0007;
+  }
+  #root .start-screen .game-menu-action__copy strong { font-size: clamp(.85rem, 2dvh, 1.05rem); letter-spacing: .07em; }
+  #root .start-screen .game-menu-action__copy small { font-size: .64rem; color: #b7cbd7; }
+  #root .start-screen__pilot {
+    grid-area: pilot;
+    align-items: center;
+    padding: 6px 10px;
+    border: 1px solid #47718b80;
+    border-radius: 4px;
+    background: #061321b8;
+  }
+  #root .start-screen__pilot .game-button { min-height: 44px; }
+  #root .start-screen__command-deck {
+    grid-area: deck;
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 5px;
+  }
+  #root .start-screen__command-deck button,
+  #root .start-screen__command-deck button:first-child {
+    grid-column: span 2;
+    min-width: 0;
+    min-height: 44px;
+    padding: 5px 3px;
+    border-image: none;
+    border: 1px solid #45677c;
+    border-radius: 4px;
+    background: #0b1d2be8;
+    color: #d6eaf3;
+    font-size: .55rem;
+    line-height: 1.15;
+    letter-spacing: .01em;
+    overflow-wrap: anywhere;
+  }
+  #root .start-screen__command-deck button:first-child,
+  #root .start-screen__command-deck button:nth-child(2) { grid-column: span 3; }
+  #root .start-screen__footer {
+    grid-area: footer;
+    justify-content: center;
+    text-align: center;
+    color: #91aabb;
+    font-size: .48rem;
+  }
+}
+@media (orientation: portrait) and (max-height: 650px) {
+  #root .start-screen__content { gap: 4px; }
+  #root .start-screen h1 { font-size: clamp(1.5rem, 4.2dvh, 2rem); }
+  #root .start-screen__actions { gap: 4px; }
+}
