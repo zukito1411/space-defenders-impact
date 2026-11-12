@@ -277,7 +277,7 @@ const nukeHarness=await load(source+`
 const useCallback=f=>f;
 const phaseRef={current:'playing'},playerRef={current:{x:50,y:80,invuln:0,score:0}},remotePlayerRef={current:null};
 const scoreMultRef={current:1},stageRef={current:12},waveRef={current:12},highScoreRef={current:0},killsSincePowerRef={current:0},enemiesDestroyedRef={current:0};
-const nukeBlastOriginRef={current:null},nukeFlashRef={current:0};
+const nukeBlastOriginRef={current:null},nukeFlashRef={current:0},shipSizeRef={current:1.2},sameScreenCoopRef={current:false};
 const asteroidsRef={current:[]},meteorsRef={current:[]},ionStrikesRef={current:[]},wrecksRef={current:[]};
 export const enemiesRef={current:[]},enemyShotsRef={current:[]};
 const HEIGHT=100,NUKE_FLASH_SECONDS=1;
