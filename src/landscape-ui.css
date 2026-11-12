@@ -422,3 +422,41 @@
   #root .start-screen h1 { font-size: clamp(1.5rem, 4.2dvh, 2rem); }
   #root .start-screen__actions { gap: 4px; }
 }
+
+
+/* The ready special stays within thumb reach while the other finger steers. */
+@media (orientation: landscape) {
+  #root .raid--landscape .raid__nuke-quick {
+    position: absolute;
+    z-index: 24;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    left: auto;
+    right: max(12px, env(safe-area-inset-right, 0px));
+    bottom: max(12px, env(safe-area-inset-bottom, 0px));
+    min-width: 76px;
+    min-height: 52px;
+    padding: 8px 14px;
+    border: 1px solid #ffd98c;
+    border-image: none;
+    border-radius: 10px;
+    background: #321c0ee8;
+    color: #fff2c5;
+    font-size: .7rem;
+    letter-spacing: .06em;
+    opacity: .55;
+    transform: none;
+    pointer-events: auto;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #root .raid--landscape .raid__nuke-quick:active {
+    opacity: .9;
+    transform: scale(.97);
+    translate: 0 1px;
+  }
+  #root .raid--landscape .raid__connection {
+    bottom: calc(max(12px, env(safe-area-inset-bottom, 0px)) + 58px);
+  }
+}
