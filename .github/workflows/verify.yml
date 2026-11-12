@@ -27,6 +27,8 @@ jobs:
         run: node scripts/test-raid-muzzles.mjs
       - name: Test Devil Gundam landscape rendering
         run: node scripts/test-devil-landscape.mjs
+      - name: Test multitouch quick special
+        run: node scripts/test-raid-touch-special.mjs
       - name: Typecheck and build
         run: npm run build
 
