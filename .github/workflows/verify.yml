@@ -40,6 +40,7 @@ jobs:
           node scripts/test-raid-flight-effects.mjs
           node scripts/test-raid-stage-profiles.mjs
           node scripts/test-raid-launch.mjs
+          node scripts/test-carrier-launch.mjs
           node scripts/test-weapon-presentation.mjs
           node scripts/test-command-bosses.mjs
       - name: Typecheck and build

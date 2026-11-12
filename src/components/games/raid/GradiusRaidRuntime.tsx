@@ -1,3 +1,9 @@
+import { CARRIER_LAUNCH_SECONDS, sampleCarrierLaunch, drawCarrierClamps } from './carrierLaunch'
+import { useCarrierLaunchRequest } from './useCarrierLaunchRequest'
+import { preloadCarrierAssets } from './carrierAssets'
+import { RaidCarrierBriefing } from './RaidCarrierBriefing'
+import { getCarrierMission } from './carrierMission'
+import { getRaidPlayerHullSize } from './playerMuzzle'
 import { sampleLaunchFlight } from './raidLaunch'
 import { getWeaponIgnition } from './weaponPresentation'
 import { RaidLaunchSequence } from './RaidLaunchSequence'
@@ -40,7 +46,6 @@ import { DEFAULT_RAID_PALETTE, PixiRaidBackground, RAID_BOSS_BACKGROUND_THEME_FI
 import type { RaidPalette } from './background'
 import { forEachDevilBossBeamLane, forEachFinalBossBeamLane, getDevilBossBeamRadius, getDevilBossChargeDuration, getFinalBossBeamLaneCount, getFinalBossBeamRadius } from './bossAttacks'
 import { clearNormalEnemyRasters, drawRaidEnemy, getNormalEnemyFilter, pruneNormalEnemyRasters } from './bossRender'
-import { PickupPreviewCanvas, getBriefingPickupType } from './briefing'
 import { ALLY_PLAYER_COLOR, ASTEROID_CLUSTER_SPAWN_DELAY_SECONDS, ASTEROID_CLUSTER_WARNING_SECONDS, BOSS_COLORS, BOSS_ENTRANCE_SLAM_SECONDS, BOSS_ENTRANCE_SLOWMO_SCALE, BOSS_RESPAWN_SECONDS, BOSS_RUSH_ATTACK_COOLDOWN_SCALE, BOSS_RUSH_ENTRY_SPEED_SCALE, BOSS_RUSH_MOTION_SCALE, BOSS_RUSH_SPECIAL_RECHARGE_SCALE, BOSS_RUSH_STAGES, CORE_LANDER_AOE_RADIUS, DARK_ENEMY_COLORS, DEG, DEVIL_BOSS_MAX_STAGE_GAP, DEVIL_BOSS_MIN_STAGE_GAP, DIFFICULTY_CONFIGS, EMPTY_WEAPON_FLAGS, EMPTY_WEAPON_TIMERS, FINAL_BOSS_BEAM_CHARGE_SECONDS, FINAL_BOSS_BEAM_LIFE_SECONDS, FORCE_FIELD_ARMOR, GAMEPLAY_ALERT_SNAPSHOT_INTERVAL_MS, GAMEPLAY_SNAPSHOT_INTERVAL_MS, GOD_GUNDAM_BARRAGE_DURATION_SECONDS, GOD_GUNDAM_BARRAGE_HIT_INTERVAL_SECONDS, GOD_GUNDAM_DEFEAT_HOLD_SECONDS, GOD_GUNDAM_MELEE_DAMAGE_PER_SECOND, GOD_GUNDAM_MELEE_EXHAUST_COOLDOWN_SECONDS, GOD_GUNDAM_MELEE_EXHAUST_LIMIT_SECONDS, GOD_GUNDAM_MELEE_HEAT_RECOVERY_PER_SECOND, GOD_GUNDAM_MELEE_VISUAL_DURATION_SECONDS, GOD_GUNDAM_MELEE_VISUAL_INTERVAL_SECONDS, HEIGHT, HOMING_RETARGET_SECONDS, HOMING_RETARGET_STAGGER_SECONDS, IDLE_SNAPSHOT_INTERVAL_MS, MAX_ASTEROIDS, MAX_ION_STRIKES, MAX_METEORS, MAX_RAID_STAGE, MAX_WRECKS, MESIAH_DRONE_FIRE_INTERVAL_SECONDS, MESIAH_ROCKET_FIRE_INTERVAL_SECONDS, MINI_BOSS_COLORS, MULTIPLAYER_BOSS_HP_MULTIPLIER, MULTIPLAYER_CONNECTION_CHECK_MS, MULTIPLAYER_CORRECTION_DRAIN_RATE, MULTIPLAYER_ENTITY_MARGIN, MULTIPLAYER_GUEST_SNAP_DISTANCE_SQ, MULTIPLAYER_GUEST_STALE_MS, MULTIPLAYER_HEARTBEAT_INTERVAL_MS, MULTIPLAYER_HEARTBEAT_TIMEOUT_MS, MULTIPLAYER_INPUT_INTERVAL_MS, MULTIPLAYER_MAX_ASTEROIDS, MULTIPLAYER_MAX_BUFFERED_BYTES, MULTIPLAYER_MAX_ENEMIES, MULTIPLAYER_MAX_ENEMY_SHOTS, MULTIPLAYER_MAX_GUEST_CORRECTION, MULTIPLAYER_MAX_ION_STRIKES, MULTIPLAYER_MAX_METEORS, MULTIPLAYER_MAX_POWERUPS, MULTIPLAYER_MAX_RIPPLES, MULTIPLAYER_MAX_SHOTS, MULTIPLAYER_MAX_SPARKS, MULTIPLAYER_MAX_WRECKS, MULTIPLAYER_REMOTE_BUFFER_MAX, MULTIPLAYER_REMOTE_CORRECTION_BLEND, MULTIPLAYER_REMOTE_INPUT_BLEND, MULTIPLAYER_REMOTE_INPUT_SNAP_DISTANCE_SQ, MULTIPLAYER_STATE_INTERVAL_MS, MULTIPLAYER_STATE_LOST_MS, MULTIPLAYER_STATE_STALE_MS, NORMAL_POWER_DROP_COOLDOWN, NUKE_FLASH_SECONDS, NUKE_MISSILE_SECONDS, PLAYER_COLOR, PLAYER_MAX_RANK, POWER_PITY_KILLS, RAID_BACKGROUND_THEME_COUNT, RAID_BGM_STAGE_RATES, RAID_BOSS_APPROACH_SILENCE_SECONDS, RAID_BOSS_BGM_TRACK, RAID_BOSS_FINAL_BGM_TRACK, RAID_BOSS_SNAKE_BGM_TRACK, RAID_BOSS_SQUID_BGM_TRACK, RAID_CHECKPOINTS, RAID_DEFAULT_BGM_TRACK, RAID_ENDING_BGM_TRACK, RANDOM_EVENT_WARNING_SECONDS, SHIP_OPTIONS, SIDE_VALUES, SPACE_ET_PASSIVE_FORCE_FIELD_CHARGES, SPIEGEL_KUNAI_DAMAGE_MULTIPLIER, SPIEGEL_KUNAI_SPLASH_DAMAGE_MULTIPLIER, SPIEGEL_SHADOW_CLONE_OFFSET, STAGE_CLEAR_SECONDS, STAGE_ENTRY_SECONDS, VICTORY_BLACKOUT_SECONDS, WEAPON_FIRE_INTERVALS, WEAPON_KEYS, WEAPON_STACK_CAPS, WIDTH, getBossRushStage, getNextBossRushStage, getShipSpriteSize, pickEndlessBossKind, shouldForceLocalDerelictWreckTest, shouldForceLocalDevilBossTest } from './constants'
 import { drawAsteroidHazard, drawAsteroidWarning, drawDerelictWreck, drawDevilChargeWarnings, drawFinalChargeLines, drawGodGundamBarrage, drawGodGundamPassiveStrikes, drawIonStrike, drawMeteorHazard, drawNukeBlast, drawNukeMissile, drawHomingTargetLock, drawPowerUpCanvas, drawRandomEventOverlay, drawRandomEventWarning, getHomingMissileSprite, godBarrageDamageTargetsScratch } from './effectsRender'
 import { createAsteroidHazard, getAsteroidClusterInterval, getRandomEventDuration, getRandomEventInterval, getRaidAmbushLane, getRaidAmbushWaveSize, RAID_AMBUSH_WAVE_SPACING, pickNextRandomRaidEventKind, splitAsteroidHazard } from './events'
@@ -366,7 +371,7 @@ export function GradiusRaid({
       getRaidSideShipCanvasSprite('spaceEt')
     }
   }, [landscape, selectedShipKey])
-  const [briefingStep, setBriefingStep] = useDoorState(0)
+  const pendingCarrierLaunchRef = useRef<{ startStage: number; fullyBuffed: boolean; mode: RaidMode }>({ startStage: 1, fullyBuffed: false, mode: initialRaidMode })
   const [stagePickerOpen, setStagePickerOpen] = useDoorState(false)
   const { sequence: doorSequence } = useSpaceDoor()
   const [settingsOpen, setSettingsOpen] = useDoorState(false)
@@ -414,9 +419,9 @@ export function GradiusRaid({
 
   const preloadRaidAssetsForMenu = useCallback(async (showLoading = false) => {
     if (showLoading) setAssetPreload((state) => state.status === 'ready' ? state : { status: 'loading', loaded: state.loaded, total: Math.max(1, state.total) })
-    await preloadGradiusRaidAssets((loaded, total) => {
+    await Promise.all([preloadCarrierAssets(), preloadGradiusRaidAssets((loaded, total) => {
       setAssetPreload({ status: loaded >= total ? 'ready' : 'loading', loaded, total: Math.max(1, total) })
-    })
+    })])
     setAssetPreload((state) => ({ ...state, status: 'ready', loaded: state.total, total: Math.max(1, state.total) }))
   }, [])
 
@@ -592,6 +597,8 @@ export function GradiusRaid({
     stageClear: stageClearRef.current,
     journeyAge: journeyStageAgeRef.current,
     stageEntry: stageEntryRef.current,
+    carrierLaunch: initialLaunchRef.current,
+    raidMode: raidModeRef.current,
     unlockedStage: unlockedStageRef.current,
     nukeCooldown: playerRef.current.specialCooldown,
     nukeFlash: nukeFlashRef.current,
@@ -740,7 +747,8 @@ export function GradiusRaid({
     sparksRef.current = state.sparks.map((spark) => ({ ...spark }))
     ripplesRef.current = state.ripples.map((ripple) => ({ ...ripple }))
     const prevPhase = phaseRef.current
-    if (state.phase === 'playing' && prevPhase !== 'playing' && prevPhase !== 'paused') initialLaunchRef.current = true
+    if (typeof state.carrierLaunch === 'boolean') initialLaunchRef.current = state.carrierLaunch
+    if (state.raidMode) raidModeRef.current = state.raidMode
     const prevStageTheme = stageRef.current
     const prevBossMessage = bossMessageRef.current
     const prevStageClear = stageClearRef.current
@@ -1606,9 +1614,13 @@ export function GradiusRaid({
     const ownShipRef = isGuestView ? remotePlayerRef.current : playerRef.current
     const playing = phaseRef.current === 'playing'
     const reducedMotion = prefersRaidReducedMotion()
-    const launchProgress = 1 - stageEntryRef.current / getRaidStageEntrySeconds(stageRef.current, raidModeRef.current)
-    const launchOpacity = initialLaunchRef.current && stageEntryRef.current > 0 && !reducedMotion ? Math.max(0, Math.min(1, (1 - launchProgress) / .45)) : 0
-    root.style.setProperty('--raid-launch-opacity', String(launchOpacity))
+    const carrierActive = phaseRef.current === 'briefing' || initialLaunchRef.current
+    const carrierAge = phaseRef.current === 'briefing' ? 0 : CARRIER_LAUNCH_SECONDS - stageEntryRef.current
+    const carrier = sampleCarrierLaunch(carrierAge, landscapeRef.current, reducedMotion, cssHeight < 700)
+    root.dataset.carrierStage = carrierActive ? phaseRef.current === 'briefing' ? 'docked' : carrier.phase : 'flight'
+    root.style.setProperty('--raid-launch-opacity', String(carrierActive ? carrier.backdrop : 0))
+    root.style.setProperty('--carrier-shift-x', `${landscapeRef.current ? -carrier.shift * cssHeight : 0}px`)
+    root.style.setProperty('--carrier-shift-y', `${landscapeRef.current ? 0 : carrier.shift * cssHeight}px`)
     const toX = (value: number) => (value / WIDTH) * cssWidth
     const toY = (value: number) => (value / HEIGHT) * cssHeight
     // Actual viewport dimensions decide which sprites reach the renderer.
@@ -1719,15 +1731,38 @@ export function GradiusRaid({
       drawRipples: gfxProfile.drawRipples,
       maxRipples: gfxProfile.maxRipples,
       maxSparks: gfxProfile.maxSparks,
-      enemies: enemiesRef.current,
-      shots: shotsRef.current,
-      guestShots: guestLocalShotsRef.current,
-      enemyShots: enemyShotsRef.current,
-      sparks: sparksRef.current,
-      ripples: ripplesRef.current,
+      enemies: carrierActive ? [] : enemiesRef.current,
+      shots: carrierActive ? [] : shotsRef.current,
+      guestShots: carrierActive ? [] : guestLocalShotsRef.current,
+      enemyShots: carrierActive ? [] : enemyShotsRef.current,
+      sparks: carrierActive ? [] : sparksRef.current,
+      ripples: carrierActive ? [] : ripplesRef.current,
     }) ?? false
     costs.gpuSubmitMs = measured ? performance.now() - gpuStart : 0
     const canvasStart = measured ? performance.now() : 0
+    if (carrierActive) {
+      const docked = phaseRef.current === 'briefing'
+      const renderCarrierPilot = (pilot: Player | null, slot: number, color: string) => {
+        if (!pilot) return
+        const cx = carrier.x + slot * 12, cy = carrier.y + Math.abs(slot) * 3
+        const projectX = (value: number) => toX(value - pilot.x + cx)
+        const projectY = (value: number) => toY(value - pilot.y + cy)
+        const baseHull = getRaidPlayerHullSize(pilot.ship.key, cssWidth, landscapeRef.current, pilot.sizeScale)
+        const displayScale = Math.min(carrier.scale, Math.max(1, cssWidth * .34 / baseHull))
+        const hull = baseHull * displayScale
+        drawCarrierClamps(ctx, toX(cx), toY(cy), hull, docked ? 0 : reducedMotion ? Number(carrier.release > .5) : carrier.release, landscapeRef.current)
+        drawRaidPlayer(ctx, pilot, phaseRef.current, projectX, projectY, cssWidth, time, color,
+          getCachedEquippedCosmetics(pilot.ship.key), getRaidPlayerVisualShipKey(pilot, progressRef.current),
+          null, null, 0, 0, reducedMotion, landscapeRef.current,
+          { scale: displayScale, engine: docked ? 0 : carrier.engine, hideCombatFx: true })
+      }
+      renderCarrierPilot(ownShipRef, 0, PLAYER_COLOR)
+      renderCarrierPilot(isGuestView ? playerRef.current : remotePlayerRef.current, 1, ALLY_PLAYER_COLOR)
+      costs.canvasMs = measured ? performance.now() - canvasStart : 0
+      costs.bossMs = 0
+      return
+    }
+
 
     const drawTrail = (shot: Shot, color: string, length: number, widthPx: number) => {
       const x = toX(shot.x)
@@ -2941,13 +2976,34 @@ export function GradiusRaid({
     syncSnapshot()
   }, [addRipple, spawnSparks, syncSnapshot])
 
-  const resetGame = useDoorCallback(async (startStage: number = 1, fullyBuffed: boolean = false, mode: RaidMode = raidModeRef.current) => {
+  const resetGame = useCarrierLaunchRequest(phaseRef, async (startStage: number = 1, fullyBuffed: boolean = false, mode: RaidMode = raidModeRef.current) => {
     const session = multiplayerSessionRef.current
     const sameScreen = sameScreenCoopRef.current
     if (session && !session.isHost) return
     await preloadRaidAssetsForMenu(true)
     if (rendererPreparationRef.current) await rendererPreparationRef.current
     if (!rootRef.current?.isConnected) return
+    if (phaseRef.current !== 'briefing') {
+      pendingCarrierLaunchRef.current = { startStage, fullyBuffed, mode }
+      raidModeRef.current = mode
+      stageRef.current = mode === 'bossRush' ? getBossRushStage(startStage) : Math.max(1, startStage)
+      playerRef.current = getInitialPlayer(selectedShipRef.current, getDefaultPlayerVisualShipKey(selectedShipRef.current.key, progressRef.current))
+      playerRef.current.sizeScale = shipSizeRef.current
+      if (session?.isHost || sameScreen) {
+        const wingman = getShipByKey(sameScreen ? sameScreenGuestShipKeyRef.current : session?.players.find(p => !p.host)?.shipKey, SHIP_OPTIONS[1])
+        remotePlayerRef.current = getInitialPlayer(wingman, getDefaultPlayerVisualShipKey(wingman.key, progressRef.current))
+        remotePlayerRef.current.sizeScale = sameScreen ? shipSizeRef.current : 1
+      }
+      phaseRef.current = 'briefing'
+      initialLaunchRef.current = false
+      stopRaidBgm()
+      keysRef.current.clear()
+      pointerTargetRef.current = null
+      pointerVisualRef.current = null
+      syncSnapshot()
+      return
+    }
+    ;({ startStage, fullyBuffed, mode } = pendingCarrierLaunchRef.current)
     progressRef.current = loadProgress()
     shipCosmeticsCacheRef.current.clear()
 
@@ -3037,14 +3093,17 @@ export function GradiusRaid({
     bossMessageRef.current = null
     bossEntranceSlamRef.current = 0
     stageClearRef.current = 0
-    stageEntryRef.current = getRaidStageEntrySeconds(stage, mode)
+    stageEntryRef.current = CARRIER_LAUNCH_SECONDS
     initialLaunchRef.current = true
-    playRaidCue('launch')
+    playRaidCue('engineStart')
     if (stageEntryRef.current > 0) {
-      playerRef.current.y = 94
+      const dock = sampleCarrierLaunch(0, landscapeRef.current, prefersRaidReducedMotion())
+      playerRef.current.x = dock.x
+      playerRef.current.y = dock.y
       playerRef.current.invuln = Math.max(playerRef.current.invuln, stageEntryRef.current + 0.35)
       if (remotePlayerRef.current) {
-        remotePlayerRef.current.y = 96
+        remotePlayerRef.current.x = dock.x + 12
+        remotePlayerRef.current.y = dock.y + 3
         remotePlayerRef.current.invuln = Math.max(remotePlayerRef.current.invuln, stageEntryRef.current + 0.35)
       }
     }
@@ -3172,15 +3231,7 @@ export function GradiusRaid({
     devilAssistEntryRef.current = entryMode === 'directEntry' ? STAGE_ENTRY_SECONDS : 0
   }, [])
 
-  const openBriefing = useDoorCallback(() => {
-    const session = multiplayerSessionRef.current
-    if (session && !session.isHost) return
-    raidModeRef.current = 'campaign'
-    phaseRef.current = 'briefing'
-    setBriefingStep(0)
-    playGameSound('select')
-    syncSnapshot()
-  })
+  const openBriefing = () => resetGame(1, false, 'campaign')
 
   const chooseShip = useCallback((ship: ShipOption) => {
     const session = multiplayerSessionRef.current
@@ -4572,6 +4623,30 @@ export function GradiusRaid({
       stageEntryRef.current = Math.max(0, stageEntryRef.current - dt)
       const entryProgress = 1 - stageEntryRef.current / getRaidStageEntrySeconds(stageRef.current, raidModeRef.current)
       const easedEntry = sampleLaunchFlight(entryProgress, prefersRaidReducedMotion())
+      if (initialLaunchRef.current) {
+        const age = CARRIER_LAUNCH_SECONDS - stageEntryRef.current
+        const flight = sampleCarrierLaunch(age, landscapeRef.current, prefersRaidReducedMotion(), (viewportMetricsRef.current?.cssHeight ?? 800) < 700)
+        player.x = flight.x
+        player.y = flight.y
+        player.engineBoost = flight.engine * 1.2
+        player.invuln = Math.max(player.invuln, .4)
+        if (remotePlayerRef.current) {
+          remotePlayerRef.current.x = flight.x + 12 * (stageEntryRef.current / CARRIER_LAUNCH_SECONDS)
+          remotePlayerRef.current.y = flight.y + 2
+          remotePlayerRef.current.engineBoost = player.engineBoost
+          remotePlayerRef.current.invuln = Math.max(remotePlayerRef.current.invuln, .4)
+        }
+        if (age >= 1.6 && age - dt < 1.6) playRaidCue('launch')
+        if (stageEntryRef.current <= 0) {
+          initialLaunchRef.current = false
+          journeyStageAgeRef.current = 0
+        }
+        pointerTargetRef.current = null
+        pointerVisualRef.current = null
+        remotePointerTargetRef.current = null
+        remotePointerVisualRef.current = null
+        return
+      }
       player.engineBoost = Math.max(player.engineBoost ?? 0, .9)
       player.x += (50 - player.x) * Math.min(1, dt * 6.4)
       const entryStartY = initialLaunchRef.current ? 94 : HEIGHT + 12
@@ -7091,7 +7166,7 @@ export function GradiusRaid({
       }
       if (getJustPressed(p1Gamepad, p1Pressed, GAMEPAD_BUTTON_START)) {
         if (phaseRef.current === 'paused') resumeGame()
-        else if (phaseRef.current === 'briefing') resetGame()
+        else if (phaseRef.current === 'briefing') rootRef.current?.querySelector<HTMLButtonElement>('.raid__carrier-advance')?.click()
         else if (phaseRef.current !== 'victory') activateRaidFocusedControl()
       }
     }
@@ -7237,7 +7312,10 @@ export function GradiusRaid({
         return
       }
       if (key === 'enter' && phaseRef.current === 'paused') resumeGame()
-      else if (key === 'enter' && phaseRef.current === 'briefing') resetGame()
+      else if (key === 'enter' && phaseRef.current === 'briefing') {
+        event.preventDefault()
+        if (!event.repeat) rootRef.current?.querySelector<HTMLButtonElement>('.raid__carrier-advance')?.click()
+      }
       else if (key === 'enter' && phaseRef.current !== 'playing' && phaseRef.current !== 'victory') resetGame()
       if (key === 'p') {
         if (phaseRef.current === 'playing') pauseGame()
@@ -7343,11 +7421,9 @@ export function GradiusRaid({
   const raidText = getRaidText(language)
   const hudText = raidText.hud
   const menuText = raidText.menu
-  const briefingPanels = raidText.briefingPanels
   const hpPips = Array.from({ length: player.maxHp }, (_, index) => index < player.hp)
   const forcePips = Array.from({ length: Math.max(FORCE_FIELD_ARMOR, Math.ceil(player.forceField)) }, (_, index) => index < player.forceField)
   const weaponEntries = WEAPON_KEYS.filter((key) => player.weapons[key] > 0)
-  const briefing = briefingPanels[briefingStep] ?? briefingPanels[0]
   const stageClearProgress = snapshot.stageClear > 0 ? 1 - snapshot.stageClear / STAGE_CLEAR_SECONDS : 0
   const stageFlashOpacity =
     stageClearProgress > 0.66 && stageClearProgress < 0.9
@@ -7614,7 +7690,7 @@ export function GradiusRaid({
 
       <div className="raid__playfield">
         <div ref={pixiBackgroundHostRef} className="raid__pixi-background" aria-hidden="true" />
-        <RaidLaunchSequence />
+        <RaidLaunchSequence landscape={landscape} />
         <canvas ref={fxCanvasRef} className="raid__fx-canvas" />
         {showPerfHud && !landscape && <div ref={perfHudRef} className="raid__perf-hud" aria-hidden="true">Measuring FPS…</div>}
       </div>
@@ -7623,7 +7699,7 @@ export function GradiusRaid({
       <CosmosPresentation
         stageClear={snapshot.stageClear}
         stage={snapshot.stageTheme}
-        phase={snapshot.phase}
+        phase={initialLaunchRef.current ? 'briefing' : snapshot.phase}
         surfaceArenas={snapshot.raidMode !== 'endless'}
         bossActive={bossIncoming || snapshot.enemies.some((enemy) => enemy.isBoss)}
         encounterDetail={snapshot.raidMode !== 'bossRush' && snapshot.stageTheme <= MAX_RAID_STAGE
@@ -7819,85 +7895,17 @@ export function GradiusRaid({
       )}
 
       {snapshot.phase === 'briefing' && (
-        <div className="raid__overlay">
-          <div className="raid__panel raid__panel--briefing">
-            <div className="raid__kicker">{menuText.launchBriefing}</div>
-            <h2>{briefing.title}</h2>
-            <p className="raid__briefing-copy">{briefing.body}</p>
-            {'items' in briefing && (
-              <div className="raid__briefing-grid">
-                {briefing.items.map((item) => {
-                  const pickupType = getBriefingPickupType(item)
-                  const [label, ...descriptionParts] = item.split(':')
-                  const description = descriptionParts.join(':').trim()
-                  return (
-                    <div key={item} className={pickupType ? 'raid__briefing-card raid__briefing-card--pickup' : 'raid__briefing-card'}>
-                      {pickupType && <PickupPreviewCanvas type={pickupType} />}
-                      <span className="raid__briefing-card-copy">
-                        {pickupType ? (
-                          <>
-                            <b>{label}</b>
-                            <span>{description}</span>
-                          </>
-                        ) : item}
-                      </span>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-            {'bosses' in briefing && (
-              <div className="raid__boss-briefing-list">
-                {briefing.bosses.map((boss) => (
-                  <article key={boss.kind} className="raid__boss-briefing-card raid__boss-briefing-card--intel">
-                    <div className="raid__boss-briefing-copy">
-                      <span>{boss.stage}</span>
-                      <h3>{boss.name}</h3>
-                      {boss.behavior.map((line) => <p key={line}>{line}</p>)}
-                    </div>
-                  </article>
-                ))}
-              </div>
-            )}
-            <div className="raid__briefing-progress" aria-label={menuText.briefingProgress}>
-              {briefingPanels.map((panel, index) => (
-                <button
-                  key={panel.title}
-                  type="button"
-                  className={index === briefingStep ? 'raid__briefing-dot raid__briefing-dot--active' : 'raid__briefing-dot'}
-                  onClick={() => setBriefingStep(index)}
-                  aria-label={`${menuText.show} ${panel.title}`}
-                />
-              ))}
-            </div>
-            <div className="raid__pause-actions">
-              <button
-                type="button"
-                className="raid__menu-button"
-                onClick={() => {
-                  phaseRef.current = 'select'
-                  syncSnapshot()
-                }}
-              >
-                {menuText.back}
-              </button>
-              <button type="button" className="raid__menu-button" onClick={() => resetGame()}>{menuText.skip}</button>
-              <button
-                type="button"
-                className="raid__start"
-                onClick={() => {
-                  if (briefingStep < briefingPanels.length - 1) {
-                    setBriefingStep((step) => Math.min(briefingPanels.length - 1, step + 1))
-                    playGameSound('select')
-                  } else {
-                    resetGame()
-                  }
-                }}
-              >
-                {briefingStep < briefingPanels.length - 1 ? menuText.next : menuText.launch}
-              </button>
-            </div>
-          </div>
+        <RaidCarrierBriefing language={language} mode={snapshot.raidMode} stage={snapshot.stageTheme}
+          shipName={player.ship.name} canLaunch={canControlOverlay}
+          onLaunch={() => resetGame()} onBack={() => { if (!canControlOverlay) { exitRaid(); return }; phaseRef.current = 'select'; syncSnapshot() }} />
+      )}
+      {initialLaunchRef.current && (snapshot.phase === 'playing' || snapshot.phase === 'paused') && (
+        <div className="raid__carrier-flight-status">
+          <div><span className="raid__carrier-phase--ignition">{getCarrierMission(language, snapshot.raidMode).ignition}</span>
+            <span className="raid__carrier-phase--launch">{getCarrierMission(language, snapshot.raidMode).depart}</span>
+            <span className="raid__carrier-phase--clear">{getCarrierMission(language, snapshot.raidMode).clear}</span>
+            <i /></div>
+          {snapshot.phase === 'playing' && <button type="button" onClick={pauseGame} aria-label={hudText.pause}>Ⅱ</button>}
         </div>
       )}
 

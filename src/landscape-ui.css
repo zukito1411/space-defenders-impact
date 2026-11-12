@@ -711,11 +711,15 @@
   position: absolute; inset: 0; z-index: 3; pointer-events: none; overflow: hidden;
   opacity: var(--raid-launch-opacity, 0);
 }
-#root .raid__launch-sequence > div {
+#root .raid__launch-sequence > .raid__carrier-camera {
   position: absolute; inset: 0; background-position: center; background-size: cover;
 }
-#root .raid--landscape .raid__launch-sequence > div {
+#root .raid--landscape .raid__launch-sequence > .raid__carrier-camera {
   inset: auto; left: 50%; top: 50%; width: var(--raid-field-height); height: var(--raid-field-width);
   transform: translate(-50%, -50%) rotate(-90deg);
 }
-@media (prefers-reduced-motion: reduce) { #root .raid__launch-sequence { display: none; } }
+#root .raid__carrier-plate {
+  position: absolute; inset: 0; background-color: #07151f; background-size: cover; background-position: center;
+  transform: translate3d(var(--carrier-shift-x, 0px), var(--carrier-shift-y, 0px), 0);
+  will-change: transform;
+}
