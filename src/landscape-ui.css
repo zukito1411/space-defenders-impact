@@ -579,3 +579,75 @@
   #root :is(.start-screen__actions, .mode-screen__actions) .game-menu-action::before { left: 13px; width: 16px; height: 16px; }
   #root :is(.start-screen__actions, .mode-screen__actions) .game-menu-action::after { right: 10px; }
 }
+
+/* Let the hangar art breathe and give the game title the visual lead. */
+#root .start-screen::after {
+  background: linear-gradient(90deg, #02081199, #03101a66 52%, #02071155),
+    linear-gradient(0deg, #020711bb, transparent 40%);
+}
+#root .start-screen__title-lockup h1 {
+  animation: flightDeckTitleGlow 5s ease-in-out infinite;
+  text-shadow: 0 2px #183e52, 0 0 22px #58d9ef66, 0 5px 15px #000;
+}
+#root .start-screen__title-lockup::after {
+  content: '';
+  display: block;
+  width: min(112px, 28%);
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #8af4ff, #60dceb99, transparent);
+  box-shadow: 0 0 10px #7deeff8a;
+  transform-origin: left center;
+  animation: flightDeckSignal 5s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes flightDeckTitleGlow {
+  0%, 100% { text-shadow: 0 2px #183e52, 0 0 18px #58d9ef55, 0 5px 15px #000; }
+  50% { text-shadow: 0 2px #24536b, 0 0 30px #80efffa6, 0 5px 15px #000; }
+}
+@keyframes flightDeckSignal {
+  0%, 100% { opacity: .55; transform: scaleX(.72); }
+  50% { opacity: 1; transform: scaleX(1); }
+}
+#root .start-screen__actions .game-menu-action {
+  background: linear-gradient(110deg, #173d4ce3, #0a1b2be8 52%, #07121ee8);
+}
+#root .start-screen__actions .game-menu-action--primary {
+  background: linear-gradient(110deg, #62451fdf, #182934e8 54%, #0b1824ed);
+}
+@media (orientation: landscape) {
+  #root .start-screen h1 {
+    max-width: 14ch;
+    font-size: clamp(1.65rem, min(5.1vw, 10dvh), 4rem);
+    line-height: .95;
+  }
+  #root .start-screen__actions .game-menu-action {
+    flex: 0 1 68px;
+    min-height: 44px;
+    max-height: 68px;
+  }
+}
+@media (orientation: landscape) and (min-height: 601px) {
+  #root .start-screen__actions .game-menu-action { flex-basis: 88px; max-height: 88px; }
+}
+@media (orientation: portrait) {
+  #root .start-screen::after { background: linear-gradient(180deg, #020b1685, #03101a78 42%, #020811b5); }
+  #root .start-screen h1 {
+    max-width: 13ch;
+    font-size: clamp(1.65rem, min(10.5vw, 5.6dvh), 3.55rem);
+    line-height: .94;
+  }
+  #root .start-screen__title-lockup::after {
+    transform-origin: center;
+    background: linear-gradient(90deg, transparent, #8af4ff, transparent);
+  }
+  #root .start-screen__actions .game-menu-action {
+    flex: 0 1 64px;
+    min-height: 48px;
+    max-height: 64px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  #root .start-screen__title-lockup h1,
+  #root .start-screen__title-lockup::after { animation: none; }
+}
