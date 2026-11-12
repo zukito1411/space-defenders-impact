@@ -24,6 +24,7 @@ const names=['onPointerDown','onPointerMove','onPointerUp','onPointerCancel','on
 const buttonNames=['onPointerDown','onPointerMove','onPointerUp','onPointerCancel','onClick']
 const obj=(node, props)=>props.map(name=>name+':'+handler(node,name)).join(',')
 const harness = `
+const stageEntryRef={current:0};
 export const phaseRef={current:'playing'},sameScreenCoopRef={current:false},steeringPointerIdRef={current:null},moves=[],captures=[]
 export let clears=0, launches=0
 const isUiPointerTarget=target=>target==='button'

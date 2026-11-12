@@ -10,6 +10,7 @@ const code = ts.transpileModule([
   const WIDTH = 100, HEIGHT = 100
   const useCallback = callback => callback
   const clamp = (value, low, high) => Math.max(low, Math.min(high, value))
+  const activeShotOwnerRef={current:null};
   const playerRef = {}, remotePlayerRef = {}, devilAssistPlayerRef = {}, fireCaptureRef = {}, viewportMetricsRef = {}, landscapeRef = { current: false }
   const shots = [], colors = [], stageRef = { current: 1 }, progressRef = {}, enemiesRef = { current: [] }
   const PLAYER_COLOR = 'red', ALLY_PLAYER_COLOR = 'cyan'
@@ -21,7 +22,7 @@ const code = ts.transpileModule([
   const isCoreLanderBurning = () => false, getPlayerCoreLanderCombatModel = player => player.combatModel
   const isGodGundamBarragePilot = () => false, getCoreLanderFireInterval = () => .2
   const getPlayerBaseAttack = () => 8, getOptionSupportStacks = () => 0, normalizeMesiahDrones = () => []
-  const playGameSound = () => {}, getRaidFighter = variant => variant >= 8
+  const playRaidCue=()=>{}, playGameSound = () => {}, getRaidFighter = variant => variant >= 8
   const getRaidPlayerFlightBank = color => { colors.push(color); return bank }
   let shotId = 3, bank = 0
   const pushShot = shot => shots.push(shot)

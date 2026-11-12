@@ -125,6 +125,7 @@ export type Shot = Vec & {
 export type BossImpactKind = 'shield' | 'armor' | 'heavy' | 'core'
 
 export type Enemy = Vec & {
+  fighterAimX?: number
   id: number
   vx: number
   vy: number
