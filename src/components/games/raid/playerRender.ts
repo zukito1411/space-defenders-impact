@@ -1141,7 +1141,7 @@ export function drawRaidPlayer(
   const bank = updateFlightPose(pose, time, player.x)
   ctx.save()
   ctx.translate(x, y)
-  ctx.rotate(phase === 'playing' && player.hp > 0 && player.ship.key !== 'coreLander' ? bank : 0)
+  ctx.rotate(!presentation && phase === 'playing' && player.hp > 0 && player.ship.key !== 'coreLander' ? bank : 0)
   ctx.translate(-x, -y)
   try {
   const size = getRaidPlayerHullSize(player.ship.key, viewportWidth, landscape, player.sizeScale) * (presentation?.scale ?? 1)
@@ -1406,9 +1406,9 @@ export function drawRaidPlayer(
   if (sunSide && nozzles && player.ship.key !== 'coreLander' && !isDown && eclipse < .86) {
     drawSolarHullRim(ctx, sideSprite?.loaded ? sideSprite : sprite, x, y, renderSize, sunSide, .56 * Math.abs(sunlight) * (1 - eclipse), Boolean(sideSprite?.loaded))
   }
-  if (coreLanderCombatModel && !isDown) {
+  if (coreLanderCombatModel && !isDown && (presentation?.engine ?? 1) > 0) {
     ctx.save()
-    ctx.globalAlpha *= .7
+    ctx.globalAlpha *= .7 * (presentation?.engine ?? 1)
     if (landscape && sideSprite?.loaded) {
       if (coreLanderCombatModel === 'godGundam' && coreLanderBurningBlend > .01) {
         drawCrossfadeExhaust(ctx, x, y, renderSize, sideVisualKey, y, renderSize, 'godGundamBurning', coreLanderBurningBlend, time, engineBoost, trailColor, cosmeticShipKey, true)

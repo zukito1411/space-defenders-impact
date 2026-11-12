@@ -13,7 +13,7 @@ export function sampleCarrierLaunch(age: number, landscape: boolean, reducedMoti
   const dockY = landscape ? 44 : compact ? 55 : 65
   // Acceleration clears the aperture; the camera then catches up to combat framing.
   const forward = flight * flight
-  const flightY = dockY + (45 - dockY) * forward
+  const flightY = dockY + ((landscape ? 32 : 40) - dockY) * forward
   const exited = t >= 4.6
   return {
     x: dockX + (50 - dockX) * settle,
