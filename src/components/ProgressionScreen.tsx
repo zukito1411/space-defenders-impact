@@ -1,3 +1,4 @@
+import { getRaidSideShipNozzles, getRaidSideShipSpriteUrl } from './games/raid/sideArtwork'
 import { getDefaultPlayerVisualShipKey } from './games/raid/state'
 import { getRaidExhaustScale, getRaidShipBaseVisualKey, getRaidShipNozzles, usesRaidRemasteredHullArt } from './games/raid/shipArtwork'
 import { LEGACY_FIGHTER_COUNT, RAID_FIGHTER_DEBUT_STAGES } from './games/raid/stageEncounters'
@@ -36,7 +37,7 @@ import { getLanguageText, getRaidText, getReleaseText, type LanguageCode } from 
 import { BossBriefingCanvas } from './games/GradiusRaid'
 import type { BossKind } from './games/raid/types'
 import { CAMPAIGN_BOSS_ART, GENERIC_BOSS_KINDS, getGenericBossArt } from './games/raid/bossCatalog'
-import { getRaidAlienSpriteUrl, getRaidEliteSpriteUrl, getRaidShipSpriteUrl, RAID_ALIEN_SPRITE_COUNT, RAID_ELITE_SPRITE_COUNT, RAID_SHIP_SPRITE_PATHS } from './games/RaidShipSprite'
+import { getRaidAlienSpriteUrl, getRaidEliteSpriteUrl, getRaidMenuShipSpriteUrl, useLandscapeScreen, RAID_ALIEN_SPRITE_COUNT, RAID_ELITE_SPRITE_COUNT, RAID_SHIP_SPRITE_PATHS } from './games/RaidShipSprite'
 import { getPublicAssetUrl } from './games/sound'
 import './ProgressionScreen.css'
 
@@ -1202,6 +1203,8 @@ const UNLOCK_BADGE_TIERS: Partial<Record<AchievementId | CodexId, UnlockBadgeTie
 
 function UnlockBadge({ badge, unlocked }: { badge: UnlockBadgeDef; unlocked: boolean }) {
   const assetKind = badge.assetKind ?? 'small'
+  const landscape = useLandscapeScreen()
+  const shipKey = Object.keys(RAID_SHIP_SPRITE_PATHS).find((key) => RAID_SHIP_SPRITE_PATHS[key] === badge.asset)
   const tier = badge.tier ?? 'standard'
   return (
     <span className={`unlock-card__badge unlock-card__badge--${badge.tone} unlock-card__badge--tier-${tier}${unlocked ? ' unlock-card__badge--unlocked' : ''}`} aria-hidden="true">
@@ -1221,7 +1224,7 @@ function UnlockBadge({ badge, unlocked }: { badge: UnlockBadgeDef; unlocked: boo
         <>
           <img
             className={`unlock-card__badge-asset unlock-card__badge-asset--${assetKind}`}
-            src={getPublicAssetUrl(badge.asset)}
+            src={shipKey ? getRaidMenuShipSpriteUrl(shipKey, landscape) : getPublicAssetUrl(badge.asset)}
             alt=""
             aria-hidden="true"
             loading="lazy"
@@ -1287,6 +1290,7 @@ function copyRecoveryCode(recoveryCode: string) {
 
 function ShipCosmeticCanvasPreview({ shipKey, spriteKey, cosmetics, locked = false }: { shipKey: string; spriteKey?: string; cosmetics: Required<ShipCosmeticEquipState>; locked?: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
+  const landscape = useLandscapeScreen()
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -1315,18 +1319,19 @@ function ShipCosmeticCanvasPreview({ shipKey, spriteKey, cosmetics, locked = fal
       const x = SHIP_PREVIEW_CANVAS_WIDTH / 2
       const visualKey = spriteKey ?? shipKey
       const usesCombatModel = visualKey === 'godGundam' || visualKey === 'spiegel'
-      const y = usesCombatModel ? 46 : shipKey === 'coreLander' ? 43 : 40
+      const sideView = landscape && !!getRaidSideShipSpriteUrl(visualKey)
+      const y = sideView ? SHIP_PREVIEW_CANVAS_HEIGHT / 2 : usesCombatModel ? 46 : shipKey === 'coreLander' ? 43 : 40
       const previewSize = usesCombatModel ? 96 : shipKey === 'coreLander' ? 86 : SHIP_PREVIEW_SIZE
       const style = getShipPreviewVisualStyle(getRaidShipBaseVisualKey(visualKey))
       const drawTrailOverSprite = usesCombatModel
 
-      if (!locked && cosmetics.trail && !drawTrailOverSprite) drawPreviewMasteryTrail(ctx, x, y, previewSize, time, visualKey, style)
+      if (!locked && cosmetics.trail && !drawTrailOverSprite) drawPreviewMasteryTrail(ctx, x, y, previewSize, time, visualKey, style, sideView)
       if (!locked && cosmetics.aura && image.complete) drawPreviewMasteryAura(ctx, image, x, y, previewSize, time, style)
       drawPreviewShipSprite(ctx, image, x, y, previewSize, cosmetics.frame, locked, visualKey)
       if (!locked && cosmetics.trail && drawTrailOverSprite) {
         ctx.save()
         ctx.globalAlpha *= 0.72
-        drawPreviewMasteryTrail(ctx, x, y, previewSize, time, visualKey, style)
+        drawPreviewMasteryTrail(ctx, x, y, previewSize, time, visualKey, style, sideView)
         ctx.restore()
       }
 
@@ -1336,14 +1341,14 @@ function ShipCosmeticCanvasPreview({ shipKey, spriteKey, cosmetics, locked = fal
     image.onload = () => {
       if (!disposed) frameId = requestAnimationFrame(render)
     }
-    image.src = getRaidShipSpriteUrl(spriteKey ?? shipKey)
+    image.src = getRaidMenuShipSpriteUrl(spriteKey ?? shipKey, landscape)
     if (image.complete) frameId = requestAnimationFrame(render)
 
     return () => {
       disposed = true
       if (frameId) cancelAnimationFrame(frameId)
     }
-  }, [shipKey, spriteKey, cosmetics.trail, cosmetics.aura, cosmetics.frame, locked])
+  }, [shipKey, spriteKey, cosmetics.trail, cosmetics.aura, cosmetics.frame, locked, landscape])
 
   return (
     <canvas
@@ -1374,13 +1379,15 @@ function drawPreviewShipSprite(ctx: CanvasRenderingContext2D, image: HTMLImageEl
   ctx.restore()
 }
 
-function drawPreviewMasteryTrail(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, time: number, shipKey: string, style: ShipPreviewVisualStyle) {
+function drawPreviewMasteryTrail(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, time: number, shipKey: string, style: ShipPreviewVisualStyle, sideView = false) {
+  if (sideView) { ctx.save(); ctx.translate(x, y); ctx.rotate(Math.PI / 2); ctx.translate(-x, -y) }
   const pulse = 0.96 + Math.sin(time / 180) * 0.05
   const baseKey = getRaidShipBaseVisualKey(shipKey)
   const tailScale = baseKey === 'spaceEt' ? 1.18 : baseKey === 'dreadnought' ? 0.92 : 1
-  const nozzles = getRaidShipNozzles(shipKey)
+  const nozzles = sideView ? getRaidSideShipNozzles(shipKey) : getRaidShipNozzles(shipKey)
   if (!nozzles) {
     drawSinglePreviewMasteryTrail(ctx, x, y, size, pulse, tailScale, baseKey, style)
+    if (sideView) ctx.restore()
     return
   }
   const wakeSize = size * getRaidExhaustScale(shipKey, nozzles.length)
@@ -1388,6 +1395,7 @@ function drawPreviewMasteryTrail(ctx: CanvasRenderingContext2D, x: number, y: nu
     drawSinglePreviewMasteryTrail(ctx, x + size * offsetX, y + size * offsetY - .34 * wakeSize, wakeSize,
       pulse, tailScale, baseKey, style, size * aperture)
   }
+  if (sideView) ctx.restore()
 }
 
 function drawSinglePreviewMasteryTrail(ctx: CanvasRenderingContext2D, x: number, engineY: number, engineSize: number, pulse: number, tailScale: number, shipKey: string, style: ShipPreviewVisualStyle, nozzleWidth?: number) {
@@ -1482,3 +1490,4 @@ function formatTime(seconds: number) {
   const hours = Math.floor(minutes / 60)
   return `${hours}h ${minutes % 60}m`
 }
+

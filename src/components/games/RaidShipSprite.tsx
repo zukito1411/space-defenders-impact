@@ -1,3 +1,4 @@
+import { useSyncExternalStore } from 'react'
 import { RAID_ELITE_FRAME_PATHS } from './raid/shipArtwork'
 import { getRaidSideShipSpriteUrl } from './raid/sideArtwork'
 import { getPublicAssetUrl } from './sound'
@@ -42,6 +43,21 @@ export function getRaidShipSpriteUrl(shipKey: string) {
   return getPublicAssetUrl(RAID_SHIP_SPRITE_PATHS[shipKey] ?? RAID_SHIP_SPRITE_PATHS.rocket)
 }
 
+// The menu artwork follows the actual display orientation, including rotation while open.
+const orientationQuery = '(orientation: landscape)'
+function subscribeOrientation(listener: () => void) {
+  const query = window.matchMedia(orientationQuery)
+  query.addEventListener('change', listener)
+  return () => query.removeEventListener('change', listener)
+}
+function getLandscapeSnapshot() { return window.matchMedia(orientationQuery).matches }
+export function useLandscapeScreen() {
+  return useSyncExternalStore(subscribeOrientation, getLandscapeSnapshot, () => false)
+}
+export function getRaidMenuShipSpriteUrl(shipKey: string, landscape: boolean) {
+  return (landscape && getRaidSideShipSpriteUrl(shipKey)) || getRaidShipSpriteUrl(shipKey)
+}
+
 export function getRaidAlienSpriteUrl(variant: number) {
   const normalizedVariant = Number.isFinite(variant) ? Math.abs(Math.trunc(variant)) : 0
   const index = normalizedVariant % RAID_ALIEN_SPRITE_COUNT
@@ -54,11 +70,12 @@ export function getRaidEliteSpriteUrl(variant: number) {
   return getPublicAssetUrl(RAID_ELITE_ASSET_PATHS[index])
 }
 
-export function RaidShipSprite({ shipKey, size, className = 'raid__ship-sprite', sideView = false }: { shipKey: string; size: number; className?: string; sideView?: boolean }) {
+export function RaidShipSprite({ shipKey, size, className = 'raid__ship-sprite', sideView }: { shipKey: string; size: number; className?: string; sideView?: boolean }) {
+  const landscape = useLandscapeScreen()
   return (
     <img
       className={className}
-      src={(sideView && getRaidSideShipSpriteUrl(shipKey)) || getRaidShipSpriteUrl(shipKey)}
+      src={getRaidMenuShipSpriteUrl(shipKey, sideView ?? landscape)}
       alt=""
       aria-hidden="true"
       draggable={false}
@@ -66,3 +83,4 @@ export function RaidShipSprite({ shipKey, size, className = 'raid__ship-sprite',
     />
   )
 }
+

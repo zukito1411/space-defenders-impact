@@ -1,4 +1,4 @@
-import { getRaidShipSpriteUrl } from './games/RaidShipSprite'
+import { getRaidMenuShipSpriteUrl, useLandscapeScreen } from './games/RaidShipSprite'
 import { getLanguageText, getRaidText, getReleaseText, type LanguageCode } from '../i18n'
 import type { ProgressUpdate, RunResult } from '../progression'
 import { GameButton } from './ui/GameButton'
@@ -12,6 +12,7 @@ type RunResultsOverlayProps = {
 }
 
 export function RunResultsOverlay({ result, update, language, onClose }: RunResultsOverlayProps) {
+  const landscape = useLandscapeScreen()
   const text = getReleaseText(language)
   const modeText = getLanguageText(language).leaderboards.modes[result.mode]
   const raidText = getRaidText(language)
@@ -30,7 +31,7 @@ export function RunResultsOverlay({ result, update, language, onClose }: RunResu
     <GameDialog className={`result-overlay result-overlay--${result.status}`} aria-labelledby="result-title" onDismiss={onClose}>
       <div className="result-overlay__panel">
         <div className="result-overlay__hero">
-          <img className="result-overlay__ship" src={getRaidShipSpriteUrl(result.visualShipKey ?? result.shipKey ?? 'dreadnought')} alt="" aria-hidden="true" draggable={false} />
+          <img className="result-overlay__ship" src={getRaidMenuShipSpriteUrl(result.visualShipKey ?? result.shipKey ?? 'dreadnought', landscape)} alt="" aria-hidden="true" draggable={false} />
           <span>{modeText.title} {modeText.label}</span>
           <h2 id="result-title">{statusLabel}</h2>
           <p>{text.combatReport}</p>
@@ -112,3 +113,4 @@ function formatDifficulty(difficulty: RunResult['difficulty']) {
   if (!difficulty) return ''
   return difficulty.charAt(0).toUpperCase() + difficulty.slice(1)
 }
+
