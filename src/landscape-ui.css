@@ -192,7 +192,7 @@
   #root .result-overlay__panel > .game-button { grid-column: 1 / -1; min-height: 44px; margin-top: 0; }
 
   /* Respect the Raid layout's compact sizes after the shared material rules. */
-  #root .raid--landscape .raid__hud:not(.raid__hud--same-screen) { grid-template-columns: minmax(42px, 1fr) 28px minmax(65px, 1.2fr) minmax(42px, 1fr) minmax(56px, 1fr) 60px; padding-right: 44px; gap: 4px; }
+  #root .raid--landscape .raid__hud:not(.raid__hud--same-screen) { grid-template-columns: minmax(42px, 1fr) 48px minmax(65px, 1.2fr) minmax(42px, 1fr) minmax(56px, 1fr) 60px; padding-right: 44px; gap: 4px; }
   #root .raid--landscape .raid__stat span { font-size: 8px; }
   #root .raid--landscape .raid__pause { width: 44px; height: 44px; min-width: 44px; min-height: 44px; top: -3px; right: -3px; }
   #root .raid--landscape .raid__pause--center { position: relative; right: auto; }
