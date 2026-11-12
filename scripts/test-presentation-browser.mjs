@@ -57,6 +57,8 @@ try {
     assert.equal(await page.locator('.raid__launch-ship').count(),0,'no duplicated ship layer')
     await page.locator('.raid__carrier-skip').click()
     await page.waitForFunction(()=>document.querySelector('.raid')?.dataset.carrierStage==='ignition',{},{timeout:30000})
+    assert.ok(await page.locator('.space-door--idle').count(),'clearance to ignition must remain one continuous shot')
+    await page.waitForTimeout(400)
     await page.screenshot({path:`presentation-review/${name}-ignition.png`})
     await page.waitForFunction(()=>document.querySelector('.raid')?.dataset.carrierStage==='launch',{},{timeout:30000})
     if(!reduced){
@@ -64,12 +66,12 @@ try {
       await page.screenshot({path:`presentation-review/${name}-departure.png`})
       if(name==='landscape'){
         await page.locator('.raid__carrier-flight-status button').click()
-        await page.getByRole('button',{name:/resume/i}).waitFor()
+        await page.locator('.raid__panel--pause .raid__start[data-dialog-dismiss]').waitFor()
         const before=await page.locator('.raid').evaluate(el=>[el.style.getPropertyValue('--carrier-shift-x'),el.style.getPropertyValue('--carrier-shift-y')])
         await page.waitForTimeout(900)
         const after=await page.locator('.raid').evaluate(el=>[el.style.getPropertyValue('--carrier-shift-x'),el.style.getPropertyValue('--carrier-shift-y')])
         assert.deepEqual(after,before,'pause must freeze carrier departure')
-        await page.getByRole('button',{name:/resume/i}).click()
+        await page.locator('.raid__panel--pause .raid__start[data-dialog-dismiss]').click()
       }
     }
     await page.waitForFunction(()=>document.querySelector('.raid')?.dataset.carrierStage==='flight',{},{timeout:45000})

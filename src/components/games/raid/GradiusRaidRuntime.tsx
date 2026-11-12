@@ -1,4 +1,5 @@
 import { CARRIER_LAUNCH_SECONDS, sampleCarrierLaunch, drawCarrierClamps } from './carrierLaunch'
+import { useCarrierLaunchRequest } from './useCarrierLaunchRequest'
 import { preloadCarrierAssets } from './carrierAssets'
 import { RaidCarrierBriefing } from './RaidCarrierBriefing'
 import { getCarrierMission } from './carrierMission'
@@ -2975,7 +2976,7 @@ export function GradiusRaid({
     syncSnapshot()
   }, [addRipple, spawnSparks, syncSnapshot])
 
-  const resetGame = useDoorCallback(async (startStage: number = 1, fullyBuffed: boolean = false, mode: RaidMode = raidModeRef.current) => {
+  const resetGame = useCarrierLaunchRequest(phaseRef, async (startStage: number = 1, fullyBuffed: boolean = false, mode: RaidMode = raidModeRef.current) => {
     const session = multiplayerSessionRef.current
     const sameScreen = sameScreenCoopRef.current
     if (session && !session.isHost) return
