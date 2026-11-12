@@ -10,9 +10,17 @@ const code = ts.transpileModule([
   read('flightEffects.ts'), read('combatFeel.ts'),
   'let sparkId = 0; export const sparkPool = [];', utils.slice(sparkStart, sparkEnd),
 ].join('\n'), { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText
-const { sampleCapitalFlyby, sampleOrbitalShadow, orbitalShadowCoverage, updateFlightPose, getHullImpactDirection, acquireSpark, sparkPool } =
+const { sampleCapitalFlyby, sampleDistantBattle, muzzleFlashProgress, sampleOrbitalShadow, orbitalShadowCoverage, updateFlightPose, getHullImpactDirection, acquireSpark, sparkPool } =
   await import('data:text/javascript;base64,' + Buffer.from(code).toString('base64'))
 
+assert.equal(sampleDistantBattle(0, 0), -1)
+assert.equal(sampleDistantBattle(18.5, 0), .5)
+assert.equal(sampleDistantBattle(21, 0), -1)
+assert.equal(sampleDistantBattle(NaN, 1), -1)
+assert.equal(muzzleFlashProgress(1000, 1000), 0)
+assert.equal(muzzleFlashProgress(1055, 1000), .5)
+assert.equal(muzzleFlashProgress(1110, 1000), -1)
+assert.equal(muzzleFlashProgress(900, 1000), -1)
 assert.equal(sampleCapitalFlyby(0, 3), -1)
 assert.equal(sampleCapitalFlyby(11, 3), .5)
 assert.equal(sampleCapitalFlyby(22, 3), -1)
@@ -52,3 +60,4 @@ assert.equal(normal, chip)
 assert.equal(normal.fragment, undefined)
 assert.equal(normal.maxLife, .9)
 console.log('Flight effects: bounded flybys, eclipse coverage, responsive side jets, directional impact and spark reuse passed')
+

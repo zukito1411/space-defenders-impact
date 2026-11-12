@@ -39,3 +39,17 @@ export function orbitalShadowCoverage(shadow: OrbitalShadow, x: number, y: numbe
 export function getHullImpactDirection(dx: number, dy: number, vx: number, vy: number) {
   return Math.hypot(dx, dy) > .25 ? Math.atan2(dy, dx) : Math.atan2(-vy, -vx)
 }
+
+
+/** Short, bounded background activity, independent of enemy spawns and orientation. */
+export function sampleDistantBattle(age: number, stage: number) {
+  if (!Number.isFinite(age) || !Number.isFinite(stage) || age < 0) return -1
+  const clock = (age + Math.abs(Math.trunc(stage) % 5) * 3) % 38
+  return clock >= 16 && clock < 21 ? (clock - 16) / 5 : -1
+}
+
+/** Age of a cosmetic muzzle flash; negative means it is no longer visible. */
+export function muzzleFlashProgress(now: number, startedAt: number) {
+  const age = now - startedAt
+  return Number.isFinite(age) && age >= 0 && age < 110 ? age / 110 : -1
+}

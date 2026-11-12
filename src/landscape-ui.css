@@ -686,3 +686,20 @@
     touch-action: none;
   }
 }
+
+
+/* Short responsive menu and rank cues; never interfere with input or layout. */
+@media (prefers-reduced-motion: no-preference) {
+  #root :is(.start-screen__actions, .mode-screen__actions) .game-menu-action {
+    animation: flight-deck-action-enter .3s ease-out both;
+  }
+  #root .raid__stat--level b { animation: raid-rank-signal .75s ease-out; }
+}
+@keyframes flight-deck-action-enter {
+  from { opacity: .55; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes raid-rank-signal {
+  0% { color: #fff6c9; text-shadow: 0 0 14px #ffc76b; }
+  100% { text-shadow: none; }
+}

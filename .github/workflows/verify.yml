@@ -34,6 +34,11 @@ jobs:
           node scripts/test-raid-ship-size.mjs
           node scripts/test-engine-presentation.mjs
           node scripts/test-raid-travel.mjs
+      - name: Test flight presentation and boss feedback
+        run: |
+          node scripts/test-combat-feel.mjs
+          node scripts/test-raid-flight-effects.mjs
+          node scripts/test-command-bosses.mjs
       - name: Typecheck and build
         run: npm run build
 
@@ -103,3 +108,4 @@ jobs:
           APK="android/app/build/outputs/apk/release/SpaceImpactDefender-release.apk"
           test -s "$APK"
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose "$APK"
+
