@@ -460,3 +460,8 @@
     bottom: calc(max(12px, env(safe-area-inset-bottom, 0px)) + 58px);
   }
 }
+
+
+@media (orientation: landscape) {
+  #root .raid-hangar__attack { left: 88%; top: 50%; transform: translate(-50%, -50%) rotate(90deg); }
+}
