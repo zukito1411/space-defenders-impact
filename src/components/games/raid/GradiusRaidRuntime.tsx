@@ -1,7 +1,7 @@
 import { sampleLaunchFlight } from './raidLaunch'
 import { getWeaponIgnition } from './weaponPresentation'
 import { RaidLaunchSequence } from './RaidLaunchSequence'
-import { getHullImpactDirection, sampleDistantBattle } from './flightEffects'
+import { getHullImpactDirection, raidStereoPan, sampleDistantBattle } from './flightEffects'
 import { registerSquidBubbleHit } from './bubbleRecoil'
 import { createRaidMainShotEmitter } from './playerMuzzle'
 import { clampRaidShipSize, getRaidPlayerHitRadius, useRaidShipSize } from './shipSize'
@@ -822,7 +822,7 @@ export function GradiusRaid({
         }
         const impact = command.bossImpact
         if (impact && (command.bossImpactTime ?? 0) > 0 && impact.kind !== 'armor' && impact.shotId !== previous?.bossImpact?.shotId) {
-          playRaidCue(impact.kind, (command.x + impact.x - 50) / 50)
+          playRaidCue(impact.kind, raidStereoPan(command.x + impact.x, command.y + impact.y, landscapeRef.current))
         }
       }
       if (state.bossMessage === 'clear' && prevBossMessage !== 'clear') {
@@ -3038,6 +3038,7 @@ export function GradiusRaid({
     stageClearRef.current = 0
     stageEntryRef.current = getRaidStageEntrySeconds(stage, mode)
     initialLaunchRef.current = true
+    playRaidCue('launch')
     if (stageEntryRef.current > 0) {
       playerRef.current.y = HEIGHT + 12
       playerRef.current.invuln = Math.max(playerRef.current.invuln, stageEntryRef.current + 0.35)
@@ -3868,7 +3869,7 @@ export function GradiusRaid({
       ? coreLanderFireInterval
       : Math.max(minFireCooldown, (tunedBaseInterval - Math.min(0.045, totalStacks * 0.006)) / player.ship.fireRate)
     playGameSound(stacks.laser > 0 || shipKey === 'laser' || shipKey === 'xwing' ? 'laser' : 'shoot')
-    if (shipKey === 'dreadnought') playRaidCue('heavy', (player.x - 50) / 50)
+    if (shipKey === 'dreadnought') playRaidCue('heavy', raidStereoPan(player.x, player.y, landscapeRef.current))
   }, [pushShot])
   // Keep the stable ref current so predictGuestPlayer can call firePlayer without a forward-reference issue
   firePlayerRef.current = firePlayer
@@ -4207,7 +4208,7 @@ export function GradiusRaid({
       spawnSparks(player.x, player.y, '#22d3ee', 24, 7)
       addRipple(player.x, player.y, '#22d3ee', player.forceField > 0 ? 12 : 17)
       if (player.forceField <= 0) triggerScreenShake(1.2, 150)
-      if (player.forceField > 0) playRaidCue('shield', (player.x - 50) / 50)
+      if (player.forceField > 0) playRaidCue('shield', raidStereoPan(player.x, player.y, landscapeRef.current))
       else playGameSound('explosion')
       return
     }
@@ -4216,11 +4217,13 @@ export function GradiusRaid({
       player.invuln = 0.35
       spawnSparks(player.x, player.y, '#fcd34d', 20, 6)
       addRipple(player.x, player.y, '#fcd34d', 9)
-      playRaidCue('shield', (player.x - 50) / 50)
+      playRaidCue('shield', raidStereoPan(player.x, player.y, landscapeRef.current))
       return
     }
     triggerScreenShake(player.hp <= scaledAmount ? 2.4 : 0.85, player.hp <= scaledAmount ? 230 : 100)
+    const wasCritical = needsRepair(player)
     player.hp -= scaledAmount
+    if (!wasCritical && needsRepair(player)) playRaidCue('alarm')
     player.invuln = 1.05
     spawnSparks(player.x, player.y, '#fca5a5', 22, 6)
     addRipple(player.x, player.y, '#ef4444', 10)
@@ -6484,7 +6487,7 @@ export function GradiusRaid({
         ) {
           const bossShielded = (enemy.isBoss && (enemy.shieldTime > 0 || enemy.y < 15)) || (enemy.isMiniBoss && (enemy.shieldTime > 0 || enemy.y < 8))
           const impact = recordBossImpact(enemy, shot, bossShielded)
-          if (impact && impact !== 'armor') playRaidCue(impact, (shot.x - 50) / 50)
+          if (impact && impact !== 'armor') playRaidCue(impact, raidStereoPan(shot.x, shot.y, landscapeRef.current))
           if (!bossShielded) {
             enemy.hp -= shot.damage
             playBossCriticalStinger(enemy)
@@ -7681,7 +7684,7 @@ export function GradiusRaid({
             <i aria-hidden="true" />
           </div>
           <div className="raid__boss-warning-stripes" aria-hidden="true" />
-          <small>{hudText.bossVectorIncoming}</small>
+          <small>{getGenericBossArt(snapshot.enemies.find(enemy => enemy.isBoss)?.bossKind ?? null, snapshot.stageTheme)?.name ?? hudText.bossVectorIncoming}</small>
         </div>
       )}
 
