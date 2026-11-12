@@ -465,3 +465,117 @@
 @media (orientation: landscape) {
   #root .raid-hangar__attack { left: 88%; top: 50%; transform: translate(-50%, -50%) rotate(90deg); }
 }
+
+/* Flight-deck menu styling: readable touch targets over the hangar artwork. */
+#root .start-screen::after {
+  background: linear-gradient(90deg, #020811d9, #03101aa8 52%, #02071199),
+    linear-gradient(0deg, #020711e8, transparent 38%);
+}
+#root .start-screen__title-lockup h1 {
+  color: #f1faff;
+  text-shadow: 0 2px #183e52, 0 0 28px #58d9ef50, 0 6px 18px #000d;
+}
+#root .start-screen__eyebrow { color: #82eff7; text-shadow: 0 0 12px #60d9ef88; }
+#root :is(.start-screen__actions, .mode-screen__actions) .game-menu-action {
+  --mission-accent: #65dfe9;
+  position: relative;
+  isolation: isolate;
+  padding-left: 50px;
+  padding-right: 32px;
+  border: 1px solid #467d92;
+  border-left: 3px solid var(--mission-accent);
+  border-image: none;
+  border-radius: 5px;
+  background: linear-gradient(110deg, #1b4554ed 0%, #0a1b2bec 48%, #07121eee 100%);
+  box-shadow: inset 0 1px #c9faff2b, inset 0 -1px #0009, 0 4px 15px #0008;
+}
+#root :is(.start-screen__actions, .mode-screen__actions) .game-menu-action--primary {
+  --mission-accent: #ffc66a;
+  border-color: #bb9257;
+  border-left-color: var(--mission-accent);
+  background: linear-gradient(110deg, #62451fec 0%, #182934f2 51%, #0b1824f2 100%);
+  box-shadow: inset 0 1px #ffedc03d, 0 0 20px #eab2591e, 0 4px 15px #0009;
+}
+#root :is(.start-screen__actions, .mode-screen__actions) .game-menu-action::before {
+  content: '';
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  width: 20px;
+  height: 20px;
+  transform: translateY(-50%) rotate(45deg);
+  border: 1px solid var(--mission-accent);
+  border-radius: 3px;
+  background: linear-gradient(135deg, #ffffff29 0 15%, transparent 15% 42%, #ffffff30 42% 48%, transparent 48%);
+  box-shadow: inset 0 0 8px #7ee9f52b, 0 0 10px #68dce527;
+  pointer-events: none;
+}
+#root :is(.start-screen__actions, .mode-screen__actions) .game-menu-action::after {
+  content: '';
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  width: 7px;
+  height: 7px;
+  border-top: 1.5px solid var(--mission-accent);
+  border-right: 1.5px solid var(--mission-accent);
+  transform: translateY(-50%) rotate(45deg);
+  pointer-events: none;
+}
+#root :is(.start-screen__actions, .mode-screen__actions) .game-menu-action:enabled:hover {
+  border-color: var(--mission-accent);
+  box-shadow: inset 0 1px #fff4, 0 0 18px #7de7f636, 0 5px 18px #000a;
+}
+#root :is(.start-screen__actions, .mode-screen__actions) .game-menu-action:enabled:active {
+  box-shadow: inset 0 2px 8px #0009, 0 0 10px #7de7f62a;
+}
+#root :is(.start-screen__actions, .mode-screen__actions) .game-menu-action__copy strong {
+  color: #f0faff;
+  letter-spacing: .07em;
+}
+#root :is(.start-screen__actions, .mode-screen__actions) .game-menu-action--primary .game-menu-action__copy strong { color: #ffdc9a; }
+#root :is(.start-screen__actions, .mode-screen__actions) .game-menu-action__copy small { color: #bcd2dc; opacity: .86; }
+#root .start-screen__pilot {
+  padding: 6px 10px;
+  border: 1px solid #3b718488;
+  border-left: 2px solid #68dce5;
+  border-radius: 4px;
+  background: linear-gradient(100deg, #112e3cdc, #081724dc);
+  box-shadow: inset 0 1px #c8f6ff15, 0 4px 12px #0006;
+}
+#root .start-screen__pilot-identity > span { color: #8ec9d6; }
+#root .start-screen__pilot strong { color: #f2fbff; }
+#root .start-screen__command-deck button,
+#root .start-screen__topbar .start-screen__settings {
+  border: 1px solid #426b7b;
+  border-image: none;
+  border-radius: 4px;
+  background: linear-gradient(155deg, #163446ee, #091721f2);
+  color: #d7edf4;
+  box-shadow: inset 0 1px #c3f4ff20, 0 3px 9px #0008;
+}
+#root .start-screen__command-deck button:enabled:hover,
+#root .start-screen__topbar .start-screen__settings:enabled:hover { border-color: #85eaf1; color: #fff; }
+#root .start-screen__topbar .language-picker select {
+  min-height: 40px;
+  border: 1px solid #426b7b;
+  border-radius: 4px;
+  background-color: #0a1a27ed;
+  color: #e2f5fa;
+}
+#root :is(.mode-screen__panel, .progress-panel, .raid-hangar__panel, .leaderboards-screen__shell) {
+  border-top-color: #73e5eeb3;
+  box-shadow: inset 0 1px #c5f8ff26, 0 18px 55px #000a;
+}
+@media (orientation: portrait) {
+  #root .start-screen::after { background: linear-gradient(180deg, #020b16a8, #03101bbd 42%, #020811e8); }
+  #root .start-screen__actions .game-menu-action { padding-left: 50px; padding-right: 32px; }
+}
+@media (orientation: landscape) and (max-height: 360px) {
+  #root .start-screen__pilot { padding: 4px 8px; }
+}
+@media (max-width: 340px) {
+  #root :is(.start-screen__actions, .mode-screen__actions) .game-menu-action { padding-left: 42px; padding-right: 22px; }
+  #root :is(.start-screen__actions, .mode-screen__actions) .game-menu-action::before { left: 13px; width: 16px; height: 16px; }
+  #root :is(.start-screen__actions, .mode-screen__actions) .game-menu-action::after { right: 10px; }
+}

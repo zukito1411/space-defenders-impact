@@ -1371,11 +1371,19 @@ function getPreviewShipFrameFilter(shipKey: string) {
   return 'brightness(1.28) contrast(1.42) saturate(2.25)'
 }
 
+function drawPreviewImageContained(ctx: CanvasRenderingContext2D, image: HTMLImageElement, x: number, y: number, size: number) {
+  if (!image.naturalWidth || !image.naturalHeight) return
+  const scale = size / Math.max(image.naturalWidth, image.naturalHeight)
+  const width = image.naturalWidth * scale
+  const height = image.naturalHeight * scale
+  ctx.drawImage(image, x - width / 2, y - height / 2, width, height)
+}
+
 function drawPreviewShipSprite(ctx: CanvasRenderingContext2D, image: HTMLImageElement, x: number, y: number, size: number, framed: boolean, locked = false, shipKey = '') {
   if (!image.complete) return
   ctx.save()
   ctx.filter = locked ? 'brightness(0) contrast(1.18) drop-shadow(0 0 14px rgba(0,0,0,0.88))' : usesRaidRemasteredHullArt(shipKey) ? 'none' : framed ? getPreviewShipFrameFilter(shipKey) : 'brightness(1.12) contrast(1.14) saturate(1.26)'
-  ctx.drawImage(image, x - size / 2, y - size / 2, size, size)
+  drawPreviewImageContained(ctx, image, x, y, size)
   ctx.restore()
 }
 
@@ -1442,10 +1450,10 @@ function drawPreviewMasteryAura(ctx: CanvasRenderingContext2D, image: HTMLImageE
   ctx.globalCompositeOperation = 'lighter'
   ctx.globalAlpha = 0.24 * pulse
   ctx.filter = `blur(${Math.max(5.5, size * 0.07)}px) brightness(1.55) saturate(1.75)`
-  ctx.drawImage(image, x - (size * 1.18) / 2, y - (size * 1.18) / 2, size * 1.18, size * 1.18)
+  drawPreviewImageContained(ctx, image, x, y, size * 1.18)
   ctx.globalAlpha = 0.28 * pulse
   ctx.filter = `blur(${Math.max(2.2, size * 0.032)}px) brightness(1.55) saturate(1.8)`
-  ctx.drawImage(image, x - (size * 1.08) / 2, y - (size * 1.08) / 2, size * 1.08, size * 1.08)
+  drawPreviewImageContained(ctx, image, x, y, size * 1.08)
   ctx.filter = 'none'
   ctx.globalAlpha = 0.26 * pulse
   ctx.fillStyle = style.soft
@@ -1490,4 +1498,5 @@ function formatTime(seconds: number) {
   const hours = Math.floor(minutes / 60)
   return `${hours}h ${minutes % 60}m`
 }
+
 

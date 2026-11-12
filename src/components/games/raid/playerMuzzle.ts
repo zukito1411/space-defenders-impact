@@ -28,7 +28,8 @@ export function createRaidMainShotEmitter(
   const sy = size * HEIGHT / viewportHeight
   const sin = Math.sin(bank)
   const cos = Math.cos(bank)
-  const nose = combatModel ? -.13 : shipKey === 'coreLander' ? -.40 : -.448
+  // Combat models fire from the head, ahead of the torso in both flight views.
+  const nose = combatModel ? -.34 : shipKey === 'coreLander' ? -.40 : -.448
 
   return (shot: PlayerShot, wingCannon = false) => {
     const spread = shot.x - ship.x
@@ -39,7 +40,7 @@ export function createRaidMainShotEmitter(
     if (wingCannon && shipKey === 'xwing') {
       x = side * .28
       y = -.335
-    } else if ((shot.kind === 'rocket' || shot.kind === 'homing') && side !== 0) {
+    } else if (!combatModel && (shot.kind === 'rocket' || shot.kind === 'homing') && side !== 0) {
       // Multi-missile launches stay on the hull's paired hardpoints.
       x = side * Math.min(.18, .07 + Math.abs(spread) * .015)
       y = shot.y > ship.y ? .015 : -.12
@@ -50,3 +51,4 @@ export function createRaidMainShotEmitter(
     emit(shot)
   }
 }
+
