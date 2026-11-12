@@ -815,7 +815,7 @@ export function GradiusRaid({
       if (command && state.phase === 'playing') {
         const previous = prevEnemiesForAudio.find((enemy) => enemy.id === command.id)
         if (previous && command.bossAttackSerial !== previous.bossAttackSerial) {
-          playCommandBossCharge(command, (command.bossCombatPhase ?? 0) > (previous.bossCombatPhase ?? 0))
+          playCommandBossCharge(command, (command.bossCombatPhase ?? 0) > (previous.bossCombatPhase ?? 0), landscapeRef.current)
         }
         if (command.bossLastVolleyAge !== undefined && command.bossLastVolleyAge !== previous?.bossLastVolleyAge) {
           playGameSound(isCommandBeam(command.bossAttackPattern) ? 'laser' : 'rocket')
@@ -1029,7 +1029,7 @@ export function GradiusRaid({
       shot.y += shot.vy * dt
       if (ownPilot && ownPilot.hp > 0 && ownPilot.invuln <= .1 && nearMissCooldownRef.current <= 0 && passesNearPilot(shot, ownPilot, dt)) {
         nearMissCooldownRef.current = .65
-        playRaidCue('flyby', (shot.x - ownPilot.x) / 8)
+        playRaidCue('flyby', (landscapeRef.current ? ownPilot.y - shot.y : shot.x - ownPilot.x) / 8)
       }
     }
     keepNetworkVisibleInPlace(enemyShotsRef.current)
@@ -5684,7 +5684,7 @@ export function GradiusRaid({
       if (commandProfile) {
         const event = advanceCommandBoss(enemy, dt, livingPlayersThisTick, raidDifficultyRef.current,
           Math.max(0, COMMAND_SHOT_LIMIT - enemyShotsRef.current.length), emitCommandBossShot)
-        if (event & COMMAND_WARNING) playCommandBossCharge(enemy, Boolean(event & COMMAND_PHASE))
+        if (event & COMMAND_WARNING) playCommandBossCharge(enemy, Boolean(event & COMMAND_PHASE), landscapeRef.current)
         if (event & COMMAND_FIRED) playGameSound(isCommandBeam(enemy.bossAttackPattern) ? 'laser' : 'rocket')
       }
       const nextFire = fireCooldown - dt * (enemy.isBoss ? bossFireDrain : 1)
@@ -6692,7 +6692,7 @@ export function GradiusRaid({
           : null
         if (pilot) {
           nearMissCooldownRef.current = .65
-          playRaidCue('flyby', (enemyShot.x - pilot.x) / 8)
+          playRaidCue('flyby', (landscapeRef.current ? pilot.y - enemyShot.y : enemyShot.x - pilot.x) / 8)
         }
       }
       for (const targetPlayer of livingPlayersThisTick) {
