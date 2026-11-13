@@ -11,10 +11,44 @@
     <link rel="icon" type="image/png" sizes="192x192" href="./pwa-192x192.png" />
     <link rel="icon" type="image/png" sizes="512x512" href="./pwa-512x512.png" />
     <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+    <link rel="preload" as="image" href="./assets/brand/zuki-logo-v1.png" />
     <title>Space Impact Defender</title>
+    <style>
+      html, body { background: #000; }
+      #startup-splash { position: fixed; inset: 0; z-index: 10000; display: grid; place-items: center; margin: 0; padding: 24px; background: #000; opacity: 1; transition: opacity 450ms ease-in-out; }
+      #startup-splash img { display: block; width: min(76vw,68vh,calc(100dvh - 110px),520px); height: auto; object-fit: contain; opacity: 0; }
+      #startup-splash.is-ready img { animation: startup-logo-in 650ms ease-out both; }
+      #startup-splash .startup-rights { position: absolute; left: max(24px,env(safe-area-inset-left)); right: max(24px,env(safe-area-inset-right)); bottom: max(24px,calc(env(safe-area-inset-bottom) + 16px)); margin: 0; color: #a9a39a; font: 12px/1.5 Georgia,serif; text-align: center; }
+      #startup-splash.is-complete { opacity: 0; }
+      #startup-splash .startup-error { position: absolute; bottom: max(64px,calc(env(safe-area-inset-bottom) + 56px)); left: 24px; right: 24px; color: #d8e4e8; text-align: center; font: 14px/1.5 sans-serif; }
+      #startup-splash .startup-error button { display: block; margin: 10px auto 0; padding: 8px 18px; border: 1px solid #8b9ba3; border-radius: 4px; background: #111c25; color: #fff; }
+      @keyframes startup-logo-in { from { opacity: 0; } to { opacity: 1; } }
+      @media (prefers-reduced-motion: reduce) { #startup-splash { transition: none; } #startup-splash.is-ready img { animation: none; opacity: 1; } }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <div id="startup-splash" role="status" aria-label="Starting Space Impact Defender">
+      <img src="./assets/brand/zuki-logo-v1.png" alt="ZUKI" fetchpriority="high" decoding="async" draggable="false" />
+      <p class="startup-rights">All rights reserved 2026</p>
+      <noscript><p class="startup-error">Enable JavaScript to open the game.</p></noscript>
+    </div>
+    <div id="root" inert></div>
+    <script>
+      (() => {
+        const splash = document.getElementById('startup-splash');
+        const logo = splash.querySelector('img');
+        const ready = () => { splash.dataset.logoReadyAt = String(performance.now()); splash.classList.add('is-ready'); };
+        if (logo.complete && logo.naturalWidth) ready();
+        else logo.addEventListener('load', ready, {once:true});
+        window.addEventListener('error', event => {
+          if (!(event.target instanceof HTMLScriptElement) || event.target.type !== 'module' || !splash.isConnected) return;
+          const box = document.createElement('div'); box.className = 'startup-error';
+          const text = document.createElement('p'); text.textContent = 'The game could not finish loading.';
+          const retry = document.createElement('button'); retry.textContent = 'Retry opening'; retry.onclick = () => location.reload();
+          box.append(text,retry); splash.append(box);
+        }, true);
+      })();
+    </script>
+    <script id="app-entry" type="module" src="/src/main.tsx"></script>
   </body>
 </html>

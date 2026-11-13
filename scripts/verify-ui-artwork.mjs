@@ -5,6 +5,7 @@ import { join } from 'node:path'
 // if the shared menu artwork was not copied from public/ into dist/.
 const campaignBossAssets = JSON.parse(readFileSync('docs/campaign-boss-art-manifest.json', 'utf8')).assets
 const required = [
+  'assets/brand/zuki-logo-v1.png',
   'assets/ships/sideview/god-gundam-launch-v1.webp',
   'assets/ships/sideview/spiegel-launch-v1.webp',
   'assets/ships/sideview/god-gundam-burning-flight-v3.webp',
