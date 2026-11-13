@@ -102,7 +102,9 @@ try {
         await page.locator('.raid__panel--pause .raid__start[data-dialog-dismiss]').click()
       }
     }
-    await page.waitForFunction(()=>document.querySelector('.raid')?.dataset.carrierStage==='flight',{},{timeout:45000})
+    // Reduced motion cuts directly to space at departure, retaining the shared
+    // simulation clock. SwiftShader needs a larger budget for that entire hold.
+    await page.waitForFunction(()=>document.querySelector('.raid')?.dataset.carrierStage==='flight',{},{timeout:reduced?75000:45000})
     await page.waitForTimeout(1000)
     await page.screenshot({path:`presentation-review/${name}-flight.png`})
     assert.deepEqual(errors,[])

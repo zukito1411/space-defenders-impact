@@ -43,7 +43,7 @@ actual maintenance decks. The rotors cover only the existing fan discs, retainin
 housing artwork. Two small inset service fans on the portrait maintenance decks remain visible when tall-phone cropping hides the outer rotors. Lamp glow textures are baked once and reused, with no per-frame blur filters. Lamps follow the orientation of the existing light strips.
 
 The deck canvas rides on its own unmasked layer with the same carrier transform. Authored paths stay outside the aperture, so crew cannot float in space. Keeping the moving canvas separate preserves the cached static doorway mask; rotors and lamp textures are also baked once. Pause freezes the deck clock.
-Reduced motion keeps static crew/rotors and uses discrete boarding/clearance cuts.
+Reduced motion keeps static crew/rotors and uses discrete boarding/clearance cuts; unchanged deck frames are retained, and hidden decks stop drawing.
 Low detail omits background patrols while preserving the pilot and marshal.
 
 Tests sample boarding clearance before ignition at 30/60/120 Hz, check alpha and

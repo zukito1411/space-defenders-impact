@@ -1762,7 +1762,7 @@ export function GradiusRaid({
           : 1
         const displayScale = Math.min(carrier.scale, Math.max(1, cssWidth * .34 / baseHull)) * deckSize
         const hull = baseHull * displayScale
-        if (slot === 0 && !underway && carrierDeckCanvasRef.current) {
+        if (slot === 0 && !underway && carrier.backdrop > 0 && carrierDeckCanvasRef.current) {
           drawCarrierDeck(carrierDeckCanvasRef.current, {
             width: landscapeRef.current ? cssHeight : cssWidth,
             height: landscapeRef.current ? cssWidth : cssHeight, dpr,

@@ -112,16 +112,22 @@ export type CarrierDeckFrame = {
   shipX: number; shipY: number; hullSize: number
 }
 
+const staticDeckFrames = new WeakMap<HTMLCanvasElement, string>()
 export function drawCarrierDeck(canvas: HTMLCanvasElement, frame: CarrierDeckFrame) {
   const {width,height,landscape,launchAge,briefing,reducedMotion,ambientAge,decorative}=frame
   const dpr=Math.min(1.5,frame.dpr), cover=carrierCover(width,height,landscape)
   const pw=Math.round(width*dpr),ph=Math.round(height*dpr)
   if(canvas.width!==pw||canvas.height!==ph){canvas.width=pw;canvas.height=ph}
+  const crew=sampleCarrierCrew(launchAge,briefing,reducedMotion)
+  // Static accessibility frames only change on a boarding/clearance cut or resize.
+  // Avoid repeatedly rasterizing and uploading a full-screen unchanged canvas.
+  const staticKey=reducedMotion?[width,height,dpr,landscape,decorative,frame.shipX,frame.shipY,frame.hullSize,crew.pilotState,crew.marshalState,crew.retreat].join(':'):null
+  if(staticKey&&staticDeckFrames.get(canvas)===staticKey)return
   const ctx=canvas.getContext('2d');if(!ctx)return
+  if(staticKey)staticDeckFrames.set(canvas,staticKey);else staticDeckFrames.delete(canvas)
   ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,width,height)
   ctx.translate(cover.x,cover.y);ctx.scale(cover.scale,cover.scale)
   const time=reducedMotion?0:ambientAge
-  const crew=sampleCarrierCrew(launchAge,briefing,reducedMotion)
   canvas.dataset.pilotState=crew.pilotState;canvas.dataset.marshalState=crew.marshalState
   canvas.dataset.crewCount=String(decorative?6:2)
   canvas.dataset.fanAngle=String(decorative?time*.85:0)
