@@ -1,4 +1,4 @@
-import { getDefaultPlayerVisualShipKey } from './games/raid/state'
+import { getDefaultPlayerVisualShipKey, getRaidGundamName } from './games/raid/state'
 import { GameButton } from './ui/GameButton'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { RaidShipSprite } from './games/RaidShipSprite'
@@ -127,7 +127,7 @@ const SHIP_OPTIONS = [
   { key: 'xwing', name: 'Crosswing Nova' },
   { key: 'spaceEt', name: 'Space Jet' },
   { key: 'mesiah', name: 'Mesiah' },
-  { key: 'coreLander', name: 'Core Lander' },
+  { key: 'coreLander', name: 'God Gundam' },
 ]
 
 const getShipName = (shipKey: string) => SHIP_OPTIONS.find((ship) => ship.key === shipKey)?.name ?? 'Black Comet'
@@ -152,7 +152,9 @@ const getMultiplayerShipOptions = (progress: ReturnType<typeof loadProgress>) =>
 export function RaidMultiplayerLobby({ playerName, language, connectionMode, onBack, onStart }: RaidMultiplayerLobbyProps) {
   const text = getLanguageText(language).lobby
   const raidText = getRaidText(language)
-  const getLocalizedShipName = (shipKey: string) => raidText.ships[shipKey as keyof typeof raidText.ships]?.name ?? getShipName(shipKey)
+  const getLocalizedShipName = (shipKey: string, visualKey?: string) => shipKey === 'coreLander'
+    ? getRaidGundamName(visualKey ?? getDefaultPlayerVisualShipKey(shipKey, progress))
+    : raidText.ships[shipKey as keyof typeof raidText.ships]?.name ?? getShipName(shipKey)
   const progress = useMemo(() => loadProgress(), [])
   const availableShipOptions = useMemo(() => getMultiplayerShipOptions(progress), [progress])
   const socketRef = useRef<WebSocket | null>(null)
@@ -533,7 +535,7 @@ export function RaidMultiplayerLobby({ playerName, language, connectionMode, onB
                 <div className="raid-lobby__player" key={player.id}>
                   <span>{player.name}</span>
                   <strong>
-                    {player.host ? text.host : text.guest} - {getLocalizedShipName(player.shipKey)} - {player.ready ? text.ready : text.waiting}
+                    {player.host ? text.host : text.guest} - {getLocalizedShipName(player.shipKey, player.visualShipKey)} - {player.ready ? text.ready : text.waiting}
                   </strong>
                 </div>
               ))}

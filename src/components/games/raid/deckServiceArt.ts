@@ -87,11 +87,11 @@ export function drawDeckServices(ctx: CanvasRenderingContext2D, time: number, la
   const { cart, welder, bot, cargo, inspector, tug } = CARRIER_DECK_LAYOUTS[landscape ? 'landscape' : 'portrait'].services
   const pose = sampleDeckServicePoses(time)
   drawDeckProp(ctx, 2, cart, 33)
-  if (reducedMotion || pose.welder === null) drawDeckPose(ctx, 'workers', 4, welder[0], welder[1], 24, -1)
-  else drawDeckPose(ctx, 'repair', pose.welder, welder[0], welder[1], 24, -1)
+  if (reducedMotion || pose.welder === null) drawDeckPose(ctx, 'workers', 4, welder[0], welder[1], 30, -1)
+  else drawDeckPose(ctx, 'repair', pose.welder, welder[0], welder[1], 30, -1)
   drawDeckProp(ctx, 1, cargo, 38)
-  drawDeckPose(ctx, 'repair', reducedMotion ? 0 : pose.bot, bot[0], bot[1], 25, 1, 8)
-  drawDeckPose(ctx, 'workers', reducedMotion ? 8 : pose.inspector, inspector[0], inspector[1], 22, -1)
+  drawDeckPose(ctx, 'repair', reducedMotion ? 0 : pose.bot, bot[0], bot[1], 29, 1, 8)
+  drawDeckPose(ctx, 'workers', reducedMotion ? 8 : pose.inspector, inspector[0], inspector[1], 27, -1)
   const run = sampleCrewPatrol(time, tug[0], tug[1], 20)
   drawDeckProp(ctx, 0, [run.x, tug[2]], 20, run.facing)
 }

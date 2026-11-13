@@ -41,7 +41,7 @@ for(const trail of [false,true]) {
  assert.equal(ctx.gradients,trail?count*2:0,'unexpected procedural exhaust work')
  assert.equal(ctx.depth,0,'ship draw leaked its bank transform')
 }
-const hullKeys=['rocket','fast','gatling','laser','dreadnought','xwing','spaceEt','mesiahBlack','mesiahWhite','coreLander']
+const hullKeys=['rocket','fast','gatling','laser','dreadnought','xwing','spaceEt','mesiahBlack','mesiahWhite']
 const combatKeys=['godGundam','spiegel']
 const assertAtlasMount = ([,x,centerY,length,width],[offsetX,offsetY,aperture],size,y) => {
  assert.ok(Math.abs(x-width*(.5-.452)-(500+size*offsetX))<1e-9,'wake shifted horizontally')
@@ -89,13 +89,13 @@ for(const sizeScale of [1,1.2,1.5]) {
   assert.ok(Math.abs(width*.12-scoutSize*.05)<1e-9)
  }
 }
-for(const [baseKey,burningKey] of [['coreLander','coreLanderBurning'],['coreLanderElite','coreLanderBurningElite'],['godGundam','godGundamBurning']]) {
+{
+ const baseKey='godGundam',burningKey='godGundamBurning'
  const ctx=context()
  const blend=.025
- const gundam=baseKey==='godGundam'
- const baseSize=getRaidPlayerHullSize('coreLander',420)*(gundam?1.08:1)
- const burnSize=baseSize*(gundam?1.09:1+.06*blend)
- const burnY=gundam?350-baseSize*.064:350
+ const baseSize=getRaidPlayerHullSize('coreLander',420)*1.08
+ const burnSize=baseSize*1.09
+ const burnY=350-baseSize*.064
  drawRaidPlayer(ctx,{...player,ship:{key:'coreLander'},burningBlend:blend},'playing',v=>v*10,v=>v*5,420,1100,'#ef233c',regularCosmetics,baseKey)
  const baseNozzles=getRaidShipNozzles(baseKey)
  const burnNozzles=getRaidShipNozzles(burningKey)

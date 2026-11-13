@@ -132,7 +132,7 @@ export const SHIP_OPTIONS: ShipOption[] = [
   { key: 'xwing', name: 'Crosswing Nova', role: 'Four-cannon S-foil ace', speed: 1.14, hp: 5, fireRate: 1.18 },
   { key: 'spaceEt', name: 'Space Jet', role: 'Comet-tail microfighter', speed: 1.24, hp: 3, fireRate: 1.28 },
   { key: 'mesiah', name: 'Mesiah', role: 'Post-clear command battleship', speed: 1.08, hp: 7, fireRate: 1.16 },
-  { key: 'coreLander', name: 'Core Lander', role: 'AOE comet striker. Burning awakens at low HP.', speed: 0.94, hp: 6, fireRate: 1 },
+  { key: 'coreLander', name: 'God Gundam', role: 'AOE comet striker. Burning awakens at low HP.', speed: 0.94, hp: 6, fireRate: 1 },
 ]
 
 export const BRIEFING_PICKUP_TYPES: Record<string, PowerKind> = {

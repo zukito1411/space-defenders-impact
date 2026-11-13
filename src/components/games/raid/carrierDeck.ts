@@ -111,7 +111,7 @@ export function drawCarrierBoardingForeground(ctx: CanvasRenderingContext2D, fra
     const x = g.startX + (g.footX - g.startX) * crew.walk + (g.topX - g.footX) * climb + (g.cockpitX - g.topX) * stepIn
     const y = g.floorY + (g.topY - g.floorY) * climb + (g.cockpitY - g.topY) * stepIn
     ctx.globalAlpha *= 1 - Math.min(1, stepIn * 1.2)
-    const h = frame.landscape ? 21 : 23
+    const h = frame.landscape ? 26 : 28
     const walkDistance = (g.footX - g.startX) * crew.walk
     const pose = frame.briefing || frame.reducedMotion ? 1 : stepIn > 0 ? 6
       : crew.climb > 0 ? 4 + Math.floor(climb * 6) % 2 : Math.floor(walkDistance / 10) % 4
@@ -180,7 +180,7 @@ export function drawCarrierDeck(canvas: HTMLCanvasElement, frame: CarrierDeckFra
   const [marshalX, safeX, marshalY] = marshal
   if(crew.retreat<1){
     ctx.save();ctx.globalAlpha=1-Math.max(0,(crew.retreat-.8)*5)
-    const h = landscape ? 23 : 24
+    const h = landscape ? 28 : 30
     const distance = (safeX - marshalX) * crew.retreat
     const pose = reducedMotion ? 9 : crew.retreat > 0 ? 10 + Math.floor(distance / 10) % 2 : 8 + Math.floor(time * 2) % 2
     drawDeckCrew(ctx, pose, marshalX + distance, marshalY, h)

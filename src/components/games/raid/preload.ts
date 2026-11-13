@@ -52,13 +52,12 @@ export function warmRaidCanvasAssets() {
   for (const model of RAID_CORE_LANDER_COMBAT_MODELS) {
     for (const pose of Object.keys(RAID_CORE_LANDER_BARRAGE_ASSET_PATHS[model]) as GodGundamBarragePose[]) entries.push(getGodGundamBarrageCanvasSprite(model, pose))
   }
-  for (const ship of SHIP_OPTIONS) entries.push(getShipCanvasSprite(ship.key))
-  for (const key of RAID_ELITE_FRAME_KEYS) entries.push(getShipCanvasSprite(key))
+  for (const ship of SHIP_OPTIONS) if (ship.key !== 'coreLander') entries.push(getShipCanvasSprite(ship.key))
+  for (const key of RAID_ELITE_FRAME_KEYS) if (!key.startsWith('coreLander')) entries.push(getShipCanvasSprite(key))
   entries.push(getShipCanvasSprite('mesiahBlack'))
   entries.push(getShipCanvasSprite('mesiahWhite'))
   entries.push(getShipCanvasSprite('mesiahRaptorBlack'))
   entries.push(getShipCanvasSprite('mesiahRaptorWhite'))
-  entries.push(getShipCanvasSprite('coreLanderBurning'))
   entries.push(getShipCanvasSprite('godGundam'))
   entries.push(getShipCanvasSprite('godGundamBurning'))
   entries.push(getShipCanvasSprite('spiegel'))
@@ -82,13 +81,12 @@ export function getRaidPersistentImageUrls() {
   for (const model of RAID_CORE_LANDER_COMBAT_MODELS) {
     for (const pose of Object.keys(RAID_CORE_LANDER_BARRAGE_ASSET_PATHS[model]) as GodGundamBarragePose[]) urls.add(getPublicAssetUrl(RAID_CORE_LANDER_BARRAGE_ASSET_PATHS[model][pose]))
   }
-  for (const ship of SHIP_OPTIONS) urls.add(getRaidShipSpriteUrl(ship.key))
-  for (const key of RAID_ELITE_FRAME_KEYS) urls.add(getRaidShipSpriteUrl(key))
+  for (const ship of SHIP_OPTIONS) if (ship.key !== 'coreLander') urls.add(getRaidShipSpriteUrl(ship.key))
+  for (const key of RAID_ELITE_FRAME_KEYS) if (!key.startsWith('coreLander')) urls.add(getRaidShipSpriteUrl(key))
   urls.add(getRaidShipSpriteUrl('mesiahBlack'))
   urls.add(getRaidShipSpriteUrl('mesiahWhite'))
   urls.add(getRaidShipSpriteUrl('mesiahRaptorBlack'))
   urls.add(getRaidShipSpriteUrl('mesiahRaptorWhite'))
-  urls.add(getRaidShipSpriteUrl('coreLanderBurning'))
   urls.add(getRaidShipSpriteUrl('godGundam'))
   urls.add(getRaidShipSpriteUrl('godGundamBurning'))
   urls.add(getRaidShipSpriteUrl('spiegel'))

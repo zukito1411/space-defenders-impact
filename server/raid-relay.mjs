@@ -1090,8 +1090,7 @@ function cleanVisualShipKey(value, shipKey) {
       ? visualShipKey : 'mesiah'
   }
   if (shipKey === 'coreLander') {
-    return ['coreLander', 'coreLanderBurning', 'coreLanderElite', 'coreLanderBurningElite', 'godGundam', 'godGundamBurning', 'spiegel'].includes(visualShipKey)
-      ? visualShipKey : 'coreLander'
+    return visualShipKey === 'spiegel' ? 'spiegel' : 'godGundam'
   }
   return visualShipKey === `${shipKey}Elite` ? visualShipKey : shipKey
 }

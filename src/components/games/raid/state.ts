@@ -1,5 +1,5 @@
 import { getRaidPlayerHullSize } from './playerMuzzle'
-import { getRaidShipBaseVisualKey, getRaidShipFrameKey, isRaidEliteFrameKey } from './shipArtwork'
+import { getRaidShipBaseVisualKey, getRaidShipFrameKey } from './shipArtwork'
 import { getCoreLanderModel, getEquippedShipCosmetics, getMesiahShipColor, loadProgress } from '../../../progression'
 import { RAID_CORE_LANDER_BARRAGE_POSE_SCALES, RAID_CORE_LANDER_BARRAGE_SEQUENCES, RAID_GOD_GUNDAM_BARRAGE_FILTER, RAID_GOD_GUNDAM_BARRAGE_IMPACT_STOPS, RAID_GOD_GUNDAM_BARRAGE_SEQUENCE, RAID_GOD_GUNDAM_BURNING_BARRAGE_FILTER, RAID_GOD_GUNDAM_BURNING_BARRAGE_IMPACT_STOPS, RAID_SPIEGEL_BARRAGE_FILTER, RAID_SPIEGEL_BARRAGE_IMPACT_STOPS } from './assets'
 import type { GodGundamBarragePose } from './assets'
@@ -92,17 +92,16 @@ export function sanitizePlayerVisualShipKey(shipKey: string, visualShipKey?: str
       : 'mesiahBlack'
   }
   if (shipKey === 'coreLander') {
-    return baseKey === 'godGundam' || baseKey === 'godGundamBurning' || baseKey === 'spiegel' || baseKey === 'coreLanderBurning' || baseKey === 'coreLander'
-      ? visualKey
-      : 'coreLander'
+    return baseKey === 'spiegel' ? 'spiegel' : 'godGundam'
   }
   return baseKey === shipKey ? visualKey : shipKey
 }
 
 export function getDefaultPlayerVisualShipKey(shipKey: string, progress: ReturnType<typeof loadProgress>, framePreview?: boolean) {
+  if (shipKey === 'coreLander') return getCoreLanderModel(progress)
   const baseKey = shipKey === 'mesiah'
     ? getMesiahShipColor(progress) === 'white' ? 'mesiahWhite' : 'mesiahBlack'
-    : shipKey === 'coreLander' ? getCoreLanderModel(progress) : shipKey
+    : shipKey
   return getRaidShipFrameKey(baseKey, framePreview ?? getEquippedShipCosmetics(progress, shipKey).frame)
 }
 
@@ -222,10 +221,11 @@ export function getRaidPlayerVisualShipKey(player: Player, progress: ReturnType<
   )
   const coreModel = getCoreLanderCombatModelFromVisualShipKey(visualShipKey)
   if (player.ship.key === 'coreLander' && coreModel) return coreModel
-  if (player.ship.key === 'coreLander' && (player.burningBlend ?? 0) >= 0.98) {
-    return getRaidShipFrameKey('coreLanderBurning', isRaidEliteFrameKey(visualShipKey))
-  }
   return visualShipKey
+}
+
+export function getRaidGundamName(visualKey: string) {
+  return visualKey === 'spiegel' ? 'Gundam Spiegel' : 'God Gundam'
 }
 
 export function getCoreLanderCombatModelFromVisualShipKey(visualShipKey?: string | null): CoreLanderCombatModel | null {
