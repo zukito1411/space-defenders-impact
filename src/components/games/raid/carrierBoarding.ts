@@ -3,6 +3,7 @@ import { getCanvasSpriteDimensions, getRaidSideShipCanvasSprite, getShipCanvasSp
 import { getMechDockAtlas } from './mechDock'
 import { drawDeckCockpitInterior, drawDeckCrew } from './deckServiceArt'
 import { CARRIER_BOARDING_SECONDS, CARRIER_IGNITION_START } from './carrierLaunch'
+import { LANDSCAPE_BOARDING_FLOOR_Y, PORTRAIT_BOARDING_WALK_START_X } from './carrierDeckLayout'
 
 const boardingUnit = (v: number) => Math.max(0, Math.min(1, v))
 const boardingEase = (v: number) => { const t = boardingUnit(v); return t * t * (3 - 2 * t) }
@@ -35,9 +36,12 @@ export function getCarrierBoardingGeometry(shipX: number, shipY: number, hull: n
   const cockpitX = shipX + hull * mount.x, cockpitY = shipY + hull * mount.y
   // The ladder meets the near lip of the cockpit instead of stopping at the hull center.
   const topX = cockpitX - hull * mount.w * .7, topY = cockpitY + hull * mount.h
-  const floorY = landscape ? Math.max(topY + 40 * sourceScale, 608 * sourceScale) : groundedMech ? shipY + hull * .30 : topY + 95 * sourceScale
+  const floorY = landscape ? LANDSCAPE_BOARDING_FLOOR_Y * sourceScale
+    : groundedMech ? shipY + hull * .30 : topY + 95 * sourceScale
   const footX = topX - 36 * sourceScale
-  return { mount, cockpitX, cockpitY, topX, topY, floorY, footX, startX: footX - 130 * sourceScale }
+  const walkStart = footX - 130 * sourceScale
+  const startX = landscape ? walkStart : Math.min(footX, Math.max(walkStart, PORTRAIT_BOARDING_WALK_START_X * sourceScale))
+  return { mount, cockpitX, cockpitY, topX, topY, floorY, footX, startX }
 }
 
 export function drawBoardingLadder(ctx: CanvasRenderingContext2D, footX: number, floorY: number, topX: number, topY: number, extension: number, sourceScale = 1) {

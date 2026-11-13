@@ -3,7 +3,7 @@ import {readFileSync} from 'node:fs'
 import ts from 'typescript'
 const read=p=>readFileSync(new URL('../src/components/games/raid/'+p,import.meta.url),'utf8')
 const strip=s=>s.replace(/^import .*\n/gm,'')
-const code=strip(read('carrierLaunch.ts'))+'\n'+strip(read('carrierCanopyProfiles.ts'))+'\n'+strip(read('carrierBoarding.ts'))+'\n'+strip(read('mechAttack.ts'))+'\n'+strip(read('deckServiceArt.ts'))
+const code=['carrierLaunch.ts','carrierDeckLayout.ts','carrierCanopyProfiles.ts','carrierBoarding.ts','mechAttack.ts','deckServiceArt.ts'].map(p=>strip(read(p))).join('\n')
 const stubs=`
 const getPublicAssetUrl=p=>p;
 const makeImageCanvasSprite=(id)=>({loaded:true,image:{id}});
