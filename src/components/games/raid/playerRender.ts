@@ -2,7 +2,7 @@ import { getRaidPlayerHullSize } from './playerMuzzle'
 import { drawMechAction, getMechActionAtlas, sampleMechAttack } from './mechAttack'
 import { drawMechDockPose, getMechDockAtlas, getMechDockNozzles, sampleMechDock } from './mechDock'
 import { getRaidSideShipNozzles } from './sideArtwork'
-import { getRaidExhaustScale, getRaidShipBaseVisualKey, getRaidShipFrameKey, getRaidShipNozzles, isRaidEliteFrameKey, usesRaidRemasteredHullArt } from './shipArtwork'
+import { getRaidExhaustScale, getRaidShipBaseVisualKey, getRaidShipNozzles, usesRaidRemasteredHullArt } from './shipArtwork'
 import { updateFlightPose, type FlightPose } from './combatFeel'
 import { COMBAT_TILE, drawRaidCombatTexture, getRaidCombatFrame } from './combatArt'
 import type { ShipCosmeticEquipState } from '../../../progression'
@@ -1153,28 +1153,28 @@ export function drawRaidPlayer(
   const alpha = isDown ? 0.3 : 1
   const engineBoost = clamp(player.engineBoost ?? 0, 0, 1.35)
   const coreLanderBurning = isCoreLanderBurning(player)
-  const coreLanderCombatModel: CoreLanderCombatModel | null = player.ship.key === 'coreLander' && (visualShipKey === 'godGundam' || visualShipKey === 'spiegel') ? visualShipKey : null
-  const eliteFrame = isRaidEliteFrameKey(visualShipKey)
-  const sideVisualKey = coreLanderCombatModel ?? (player.ship.key === 'coreLander' ? getRaidShipFrameKey('coreLander', eliteFrame) : visualShipKey)
+  const coreLanderCombatModel: CoreLanderCombatModel | null = player.ship.key === 'coreLander'
+    ? visualShipKey === 'spiegel' ? 'spiegel' : 'godGundam'
+    : null
+  const sideVisualKey = coreLanderCombatModel ?? visualShipKey
   const sideSprite = landscape ? getRaidSideShipCanvasSprite(sideVisualKey) : null
   const renderSize = coreLanderCombatModel ? size * 1.08 : size
   const dockPose=coreLanderCombatModel&&presentation?.carrierAge!==undefined?sampleMechDock(presentation.carrierAge,landscape,reducedMotion):null
   const dockReady=Boolean(dockPose&&coreLanderCombatModel&&getMechDockAtlas(coreLanderCombatModel).loaded)
   const cosmeticShipKey = coreLanderCombatModel ?? player.ship.key
-  const remasteredHull = usesRaidRemasteredHullArt(visualShipKey)
-  const nozzles = (landscape ? getRaidSideShipNozzles(sideVisualKey) : undefined) ?? getRaidShipNozzles(visualShipKey)
+  const remasteredHull = usesRaidRemasteredHullArt(sideVisualKey)
+  const nozzles = (landscape ? getRaidSideShipNozzles(sideVisualKey) : undefined) ?? getRaidShipNozzles(sideVisualKey)
   const masteryPaintColor = cosmetics.frame && !remasteredHull ? getMasteryPaintColor(cosmeticShipKey, color) : color
   const coreLanderBurningBlend = player.ship.key === 'coreLander'
     ? clamp(player.burningBlend ?? (coreLanderBurning ? 1 : 0), 0, 1)
     : 0
   const coreLanderBurningRage = player.ship.key === 'coreLander' ? getCoreLanderBurningRage(player) : 0
-  const crossfadeCoreLander = player.ship.key === 'coreLander' && !coreLanderCombatModel && coreLanderBurningBlend > .01
   const trailColor = cosmetics.trail ? color : undefined
-  const sideBurningKey = coreLanderCombatModel === 'godGundam' ? 'godGundamBurning' : !coreLanderCombatModel ? getRaidShipFrameKey('coreLanderBurning', eliteFrame) : null
+  const sideBurningKey = coreLanderCombatModel === 'godGundam' ? 'godGundamBurning' : null
   const sideBurningSprite = landscape && player.ship.key === 'coreLander' && sideBurningKey && coreLanderBurningBlend > .01
     ? getRaidSideShipCanvasSprite(sideBurningKey) : null
 
-  if (!isDown && !coreLanderCombatModel && !crossfadeCoreLander && (presentation?.engine ?? 1) > 0) {
+  if (!isDown && !coreLanderCombatModel && (presentation?.engine ?? 1) > 0) {
     ctx.save()
     ctx.globalAlpha *= presentation?.engine ?? 1
     drawHullExhaust(ctx, x, y, renderSize, time, engineBoost, visualShipKey, undefined, trailColor, cosmeticShipKey, landscape && Boolean(sideSprite?.loaded))
@@ -1266,10 +1266,7 @@ export function drawRaidPlayer(
     : 'brightness(1.12) contrast(1.14) saturate(1.26)'
   const eclipseFilter = eclipse > .65 ? 'brightness(.76)' : eclipse > .29 ? 'brightness(.88)' : eclipse > .10 ? 'brightness(.95)' : ''
   const normalSpriteFilter = eclipseFilter ? (normalFilter === 'none' ? eclipseFilter : `${normalFilter} ${eclipseFilter}`) : normalFilter
-  const burningSpriteFilter = eliteFrame ? 'none' : cosmetics.frame
-    ? 'brightness(1.34) contrast(1.36) saturate(1.68)'
-    : 'brightness(1.2) contrast(1.18) saturate(1.36)'
-  const sprite = getShipCanvasSprite(visualShipKey)
+  const sprite = getShipCanvasSprite(sideVisualKey)
   const spriteGlow = presentation?.hideCombatFx ? null : coreLanderBurning
     ? coreLanderCombatModel
       ? coreLanderCombatModel === 'spiegel'
@@ -1298,12 +1295,12 @@ export function drawRaidPlayer(
     // The playfield turns clockwise; rotate the right-facing art into its
     // logical upward flight direction before the camera transform.
     const attackActive = !presentation?.hideCombatFx && !isDown && (phase === 'playing' || phase === 'paused') && (player.godMeleeCloak ?? 0) <= 0
-    const attackPose = coreLanderCombatModel && (coreLanderCombatModel !== 'godGundam' || attackActive)
+    const attackPose = coreLanderCombatModel && attackActive
       ? sampleMechAttack(player.fireCooldown, getCoreLanderFireInterval(player), attackActive, reducedMotion) : null
     // Pick one form and one registered pose. Alpha crossfades between displaced arms
     // would draw a ghost arm, and would not correspond to the actual release point.
-    const attackFrame = reducedMotion && coreLanderCombatModel === 'godGundam' ? 2 : attackPose?.frame
-    const actionDrawn = coreLanderCombatModel && attackFrame !== undefined && drawMechAction(ctx, coreLanderCombatModel, coreLanderBurning, attackFrame, x, y, renderSize, alpha, rotation, scale)
+    const attackFrame = attackPose && (reducedMotion ? 2 : attackPose.frame)
+    const actionDrawn = coreLanderCombatModel && attackFrame !== null && drawMechAction(ctx, coreLanderCombatModel, coreLanderBurning, attackFrame, x, y, renderSize, alpha, rotation, scale)
     if (actionDrawn && attackPose && ctx.canvas?.dataset) {
       ctx.canvas.dataset.mechActionModel = coreLanderCombatModel ?? ''
       ctx.canvas.dataset.mechActionStage = attackPose.stage
@@ -1316,44 +1313,6 @@ export function drawRaidPlayer(
         drawCanvasSpriteContain(ctx, sideBurningSprite, x, y, renderSize, 'none', alpha * burningBlend, rotation - Math.PI / 2, scale, masteryPaintColor)
       }
     }
-    if (crossfadeCoreLander && !isDown) drawCrossfadeExhaust(ctx, x, y, renderSize, sideVisualKey, y, renderSize, sideBurningKey ?? 'coreLanderBurning', coreLanderBurningBlend, time, engineBoost, trailColor, cosmeticShipKey, true)
-  } else if (crossfadeCoreLander) {
-    const baseKey = getRaidShipFrameKey('coreLander', eliteFrame)
-    const burningKey = getRaidShipFrameKey('coreLanderBurning', eliteFrame)
-    const baseSprite = getShipCanvasSprite(baseKey)
-    const burningSprite = getShipCanvasSprite(burningKey)
-    const burningRenderSize = renderSize * (1 + .06 * coreLanderBurningBlend)
-    if (!isDown) {
-      drawCrossfadeExhaust(ctx, x, y, renderSize, baseKey, y, burningRenderSize, burningKey,
-        coreLanderBurningBlend, time, engineBoost, trailColor, cosmeticShipKey)
-    }
-    if (coreLanderBurningBlend < 0.99) {
-      drawCanvasSprite(
-        ctx,
-        baseSprite,
-        x,
-        y,
-        renderSize,
-        normalSpriteFilter,
-        alpha * (1 - coreLanderBurningBlend),
-        rotation,
-        scale,
-        masteryPaintColor,
-      )
-    }
-    drawCanvasSprite(
-      ctx,
-      burningSprite,
-      x,
-      y,
-      burningRenderSize,
-      burningSpriteFilter,
-      alpha * coreLanderBurningBlend,
-      rotation,
-      scale,
-      masteryPaintColor,
-    )
-    return
   } else if (coreLanderCombatModel && coreLanderBurningBlend > 0.01) {
     const baseSprite = getShipCanvasSprite(coreLanderCombatModel)
     if (coreLanderCombatModel === 'spiegel') {
@@ -1440,11 +1399,11 @@ export function drawRaidPlayer(
         drawCrossfadeExhaust(ctx, x, y, renderSize, sideVisualKey, y, renderSize, 'godGundamBurning', coreLanderBurningBlend, time, engineBoost, trailColor, cosmeticShipKey, true)
       } else drawHullExhaust(ctx, x, y, renderSize, time, engineBoost, sideVisualKey, undefined, trailColor, cosmeticShipKey, true)
     } else if (coreLanderCombatModel === 'godGundam' && coreLanderBurningBlend > .01) {
-      drawCrossfadeExhaust(ctx, x, y, renderSize, visualShipKey,
+      drawCrossfadeExhaust(ctx, x, y, renderSize, sideVisualKey,
         y + renderSize * GOD_GUNDAM_BURNING_BODY_Y_OFFSET, renderSize * GOD_GUNDAM_BURNING_BODY_SCALE, 'godGundamBurning',
         coreLanderBurningBlend, time, engineBoost, trailColor, cosmeticShipKey)
     } else {
-      drawHullExhaust(ctx, x, y, renderSize, time, engineBoost, visualShipKey, undefined, trailColor, cosmeticShipKey)
+      drawHullExhaust(ctx, x, y, renderSize, time, engineBoost, sideVisualKey, undefined, trailColor, cosmeticShipKey)
     }
     ctx.restore()
   }

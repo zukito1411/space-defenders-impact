@@ -6,7 +6,7 @@ import { GOD_GUNDAM_PALMS } from './mechFlight'
 export const MECH_ACTION_PATHS = {
   godGundam: 'assets/ships/sideview/god-gundam-actions-v2.webp',
   godGundamBurning: 'assets/ships/sideview/god-gundam-burning-actions-v3.webp',
-  spiegel: 'assets/ships/sideview/spiegel-actions-v1.webp',
+  spiegel: 'assets/ships/sideview/spiegel-actions-v2.webp',
 } as const
 
 /** The cooldown is authoritative simulation time: no wall-clock loop or added shot delay. */

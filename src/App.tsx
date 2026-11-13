@@ -1,6 +1,6 @@
 import { getRaidSideShipNozzles, getRaidSideShipSpriteUrl } from './components/games/raid/sideArtwork'
 import { getRaidExhaustScale, getRaidShipNozzles } from './components/games/raid/shipArtwork'
-import { getDefaultPlayerVisualShipKey } from './components/games/raid/state'
+import { getDefaultPlayerVisualShipKey, getRaidGundamName } from './components/games/raid/state'
 import { useDoorState } from './components/ui/SpaceDoor'
 import { startStudioSplash } from './startupSplash'
 import './App.css'
@@ -28,7 +28,7 @@ import {
   type LanguageCode,
 } from './i18n'
 import { getStoredPlayerName, getStoredRecoveryCode, hasStoredPlayerName, isCreatorPlayerName, registerPlayerName, restorePlayerName, saveStoredPlayerName, uploadPlayerProgress, type PlayerNameRegistrationResult } from './leaderboards'
-import { CORE_LANDER_GOD_GUNDAM_UNLOCK_SCORE, CORE_LANDER_UNLOCK_GRADIUS_ENDLESS_SCORE, getEquippedShipCosmetics, getStoredTowerDefenseEndlessUnlock, isCoreLanderUnlocked, isGradiusRaidEndlessUnlocked, isShipCosmeticUnlocked, loadProgress, normalizeProgress, mergeProgressForSync, markProgressSyncPending, getPendingProgressSyncToken, clearPendingProgressSyncToken, recordRunResult, resetProgressForNewAccount, saveProgress, SHIP_COSMETIC_SINGLE_RUN_SCORE, SHIP_COSMETIC_TOTAL_SCORE, type ProgressState, type ProgressUpdate, type RunResult } from './progression'
+import { CORE_LANDER_GOD_GUNDAM_UNLOCK_SCORE, CORE_LANDER_UNLOCK_GRADIUS_ENDLESS_SCORE, getEquippedShipCosmetics, getStoredTowerDefenseEndlessUnlock, isCoreLanderGodGundamUnlocked, isCoreLanderUnlocked, isGradiusRaidEndlessUnlocked, isShipCosmeticUnlocked, loadProgress, normalizeProgress, mergeProgressForSync, markProgressSyncPending, getPendingProgressSyncToken, clearPendingProgressSyncToken, recordRunResult, resetProgressForNewAccount, saveProgress, setCoreLanderModel, SHIP_COSMETIC_SINGLE_RUN_SCORE, SHIP_COSMETIC_TOTAL_SCORE, type ProgressState, type ProgressUpdate, type RunResult } from './progression'
 import { useEffect, useMemo, useState, useRef, type CSSProperties } from 'react'
 
 // Placeholder coins (not displayed - kept for prop compatibility)
@@ -75,7 +75,7 @@ const RAID_COOP_SHIP_OPTIONS = [
   { key: 'xwing', name: 'Crosswing Nova' },
   { key: 'spaceEt', name: 'Space Jet' },
   { key: 'mesiah', name: 'Mesiah' },
-  { key: 'coreLander', name: 'Core Lander' },
+  { key: 'coreLander', name: 'God Gundam' },
 ] as const
 
 const RAID_STORY_SCENE_DURATION_MS = 6200
@@ -1402,11 +1402,11 @@ function App() {
                 <div className={isSelectedUnlocked ? 'raid-hangar__display' : 'raid-hangar__display raid-hangar__display--locked'}>
                   <div className={selectedCosmetics.aura ? 'raid-hangar__aura raid-hangar__aura--active' : 'raid-hangar__aura'} />
                   <div className={selectedCosmetics.frame ? 'raid-hangar__frame raid-hangar__frame--active' : 'raid-hangar__frame'} />
-                  {previewTrailOverHull && <RaidShipSprite shipKey={selectedSpriteKey} size={previewSize} />}
+                  {previewTrailOverHull && <RaidShipSprite shipKey={selectedSpriteKey} size={previewSize} sideView={previewSide} />}
                   {previewNozzles ? previewNozzles.map(([x, y, width]) => (
                     <div
                       className={`${trailClass} raid-hangar__trail--nozzle`}
-                      key={x}
+                      key={`${x}:${y}`}
                       style={{
                         left: `calc(50% + ${(previewSide ? -y : x) * previewSize}px)`,
                         top: `calc(50% + ${(previewSide ? x : y) * previewSize}px)`,
@@ -1430,7 +1430,7 @@ function App() {
                 <span className={isSelectedUnlocked ? 'raid-hangar__status raid-hangar__status--ready' : 'raid-hangar__status'}>
                   {unlockCopy}
                 </span>
-                <h2>{selectedShipCopy.name}</h2>
+                <h2>{selectedShip.key === 'coreLander' ? getRaidGundamName(selectedSpriteKey) : selectedShipCopy.name}</h2>
                 <p>{selectedShipCopy.role}</p>
 
                 <div className="raid-hangar__stats">
@@ -1481,10 +1481,26 @@ function App() {
                   })}
                 </div>
 
-                {selectedShip.key === 'coreLander' ? (
-                  <p className="raid-hangar__model-note">
-                    {text.raidHangar.coreModelUnlock.replace('{score}', CORE_LANDER_GOD_GUNDAM_UNLOCK_SCORE.toLocaleString())}
-                  </p>
+                {selectedShip.key === 'coreLander' && isSelectedUnlocked ? (
+                  <div className="progress-ship-color" aria-label={releaseText.coreLanderModel}>
+                    {(['godGundam', 'spiegel'] as const).map((model) => (
+                      <button
+                        key={model}
+                        type="button"
+                        className={selectedSpriteKey === model ? 'progress-ship-color__button progress-ship-color__button--active' : 'progress-ship-color__button'}
+                        aria-pressed={selectedSpriteKey === model}
+                        disabled={model === 'spiegel' && !isCoreLanderGodGundamUnlocked(progress)}
+                        onClick={() => setProgress(setCoreLanderModel(model))}
+                      >
+                        {getRaidGundamName(model)}
+                      </button>
+                    ))}
+                    {!isCoreLanderGodGundamUnlocked(progress) && (
+                      <p className="raid-hangar__model-note">
+                        {text.raidHangar.coreModelUnlock.replace('{score}', CORE_LANDER_GOD_GUNDAM_UNLOCK_SCORE.toLocaleString())}
+                      </p>
+                    )}
+                  </div>
                 ) : null}
               </div>
             </div>
@@ -1509,7 +1525,7 @@ function App() {
                     <span className={unlocked ? 'raid-hangar__ship-thumb' : 'raid-hangar__ship-thumb raid-hangar__ship-thumb--locked'}>
                       <RaidShipSprite shipKey={spriteKey} size={ship.key === 'mesiah' || ship.key === 'coreLander' ? 48 : 40} />
                     </span>
-                    <b>{shipCopy.name}</b>
+                    <b>{ship.key === 'coreLander' ? getRaidGundamName(spriteKey) : shipCopy.name}</b>
                   </button>
                 )
               })}
@@ -1634,7 +1650,7 @@ function App() {
                     onClick={() => setSameScreenGuestShipKey(ship.key)}
                   >
                     <RaidShipSprite shipKey={spriteKey} size={ship.key === 'mesiah' || ship.key === 'coreLander' ? 50 : 42} />
-                    <strong>{shipCopy.name}</strong>
+                    <strong>{ship.key === 'coreLander' ? getRaidGundamName(spriteKey) : shipCopy.name}</strong>
                   </button>
                 )
               })}

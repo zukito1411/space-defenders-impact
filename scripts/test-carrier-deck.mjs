@@ -37,10 +37,11 @@ const onFloor=([x,y],[left,right,back,front],label,margin=0)=>{
 }
 for(const [view,layout] of Object.entries(deck.CARRIER_DECK_LAYOUTS)){
  const {catwalks,flightDeck}=walkable[view]
- for (const [index,[start,end,y]] of layout.patrols.entries()){
+ for (const [index,[start,end,y,height]] of layout.patrols.entries()){
   for(let t=0;t<40;t+=.25){
    const {x}=deck.sampleCrewPatrol(t,start,end,22,index*3.7)
-   onFloor([x,y],catwalks[index],`${view} patrol ${index}`,5)
+   // The widest walking frame extends 38 source pixels either side of its foot anchor.
+   onFloor([x,y],catwalks[index],`${view} patrol ${index}`,Math.ceil(height*38/107))
   }
  }
  const {tug,...stations}=layout.services

@@ -15,11 +15,9 @@ const SIDE_PATHS: Record<string, string> = {
   mesiahWhite: 'mesiah-white-v1.png?art=d59a75ff125d',
   mesiahRaptorBlack: 'mesiah-raptor-black-v1.png?art=eb641ff455b5',
   mesiahRaptorWhite: 'mesiah-raptor-white-v1.png?art=8dae3f321d42',
-  coreLander: 'core-lander-v1.png?art=2806e948e9e0',
-  coreLanderBurning: 'core-lander-burning-v2.webp',
   godGundam: 'god-gundam-flight-v3.webp',
   godGundamBurning: 'god-gundam-burning-flight-v4.webp',
-  spiegel: 'spiegel-flight-v2.webp',
+  spiegel: 'spiegel-flight-v3.webp',
   rocketElite: 'black-comet-elite-v1.png?art=ef5def01b05d',
   fastElite: 'red-wraith-elite-v1.png?art=59dd2a6cb3a7',
   gatlingElite: 'crimson-saw-elite-v1.png?art=012984b9c016',
@@ -29,8 +27,6 @@ const SIDE_PATHS: Record<string, string> = {
   spaceEtElite: 'space-jet-elite-v1.png?art=8d2d1702f93e',
   mesiahBlackElite: 'mesiah-elite-v1.png?art=eeb846760888',
   mesiahWhiteElite: 'mesiah-white-elite-v1.png?art=256938ba06ea',
-  coreLanderElite: 'core-lander-elite-v1.png?art=a096bfa18bf2',
-  coreLanderBurningElite: 'core-lander-burning-elite-v2.webp',
 }
 
 function sideKey(shipKey: string) {
@@ -56,8 +52,6 @@ const SIDE_NOZZLES: Record<string, readonly (readonly [number, number, number])[
   mesiah: [outlet(-.46, -.068, .044), outlet(-.48, .005, .055), outlet(-.46, .073, .044)],
   mesiahRaptorBlack: [outlet(-.43, .005, .055)],
   mesiahRaptorWhite: [outlet(-.455, .005, .055)],
-  coreLander: [outlet(-.205, -.022, .024), outlet(-.205, .022, .024)],
-  coreLanderBurning: [outlet(-.205, -.022, .024), outlet(-.205, .022, .024)],
   godGundam: getMechFlightNozzles('godGundam'),
   godGundamBurning: getMechFlightNozzles('godGundam'),
   spiegel: getMechFlightNozzles('spiegel'),

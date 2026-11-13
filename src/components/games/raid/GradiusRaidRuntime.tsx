@@ -14,7 +14,7 @@ import { registerSquidBubbleHit } from './bubbleRecoil'
 import { createRaidMainShotEmitter } from './playerMuzzle'
 import { clampRaidShipSize, getRaidPlayerHitRadius, useRaidShipSize } from './shipSize'
 import { ShipSizeControls } from '../../ui/ShipSizeControls'
-import { getRaidShipBaseVisualKey, isRaidEliteFrameKey } from './shipArtwork'
+import { getRaidShipBaseVisualKey } from './shipArtwork'
 import { commitRaidFighterManeuver, getRaidFighterSpeedScale, fireRaidFighter, getRaidFighter, getRaidFighterPathX, getRaidReserveVariant, getRaidStageEncounter, getRaidWingSize, getRaidWingSlot, LEGACY_FIGHTER_COUNT, RAID_STAGE_ENEMY_LIMIT } from './stageEncounters'
 import { BOSS_BREAKUP_DELAYS, drawBossImpact, getBossBreakupPoint, recordBossImpact } from './bossDamageFx'
 import { prefersRaidReducedMotion } from './commandBossRender'
@@ -64,7 +64,7 @@ import { acquireHomingTarget, animateStageClearPlayer, applyRiftPullToPlayer, ap
 import { clampNetworkVelocity, cloneAsteroid, cloneDerelictWreck, cloneEnemy, cloneIonStrike, cloneMeteor, cloneRaidRandomEvent, cloneVec, compactPlayer, compactVec, getBufferedAsteroidVisuals, getBufferedEnemyVisuals, getBufferedPlayerVisual, getConnectionLabel, getGuestShotTtlMs, getOwnCorrectionBlend, getPlayerPickupAudioKind, getRemoteInterpolationDelayMs, hasClearedRaidInProgress, isNetworkVisible, keepNetworkVisibleInPlace, reconcilePlayerVisual, updateDerelictWreckMotion } from './network'
 import { drawRaidOptions, drawRaidPlayer, getCoreBlastSprite, getRaidPlayerFlightBank, warmRaidSideCosmetics } from './playerRender'
 import { getRaidAssetPreloadInitialState, preloadGradiusRaidAssets, warmRaidGeneratedEffectSprites } from './preload'
-import { clonePlayer, getCheckpointStage, getDefaultPlayerVisualShipKey, getGodGundamGameplayRenderSize, getHighScore, getInitialPlayer, getOptionSupportStacks, getPlayerCoreLanderCombatModel, getRaidPlayerVisualShipKey, getShipByKey, getUnlockedStage, isCoreLanderAoeShot, isGodGundamBarragePilot, normalizeMesiahDrones, normalizeMesiahScoutDrones, powerColor, sanitizePlayerVisualShipKey, saveCheckpointStage, saveHighScore, saveUnlockedStage } from './state'
+import { clonePlayer, getCheckpointStage, getDefaultPlayerVisualShipKey, getGodGundamGameplayRenderSize, getHighScore, getInitialPlayer, getOptionSupportStacks, getPlayerCoreLanderCombatModel, getRaidGundamName, getRaidPlayerVisualShipKey, getShipByKey, getUnlockedStage, isCoreLanderAoeShot, isGodGundamBarragePilot, normalizeMesiahDrones, normalizeMesiahScoutDrones, powerColor, sanitizePlayerVisualShipKey, saveCheckpointStage, saveHighScore, saveUnlockedStage } from './state'
 import type { AsteroidHazard, BossDefeatExplosionEvent, BossKind, BossMessage, CameraShakeState, CoreLanderCombatModel, DerelictWreck, Enemy, EnemySpawnProfile, GamePhase, GodGundamBarrage, GodGundamPassiveStrike, IonStrike, MeteorHazard, MiniBossKind, MirageBossKind, MultiplayerAsteroidSnapshot, MultiplayerConnectionQuality, MultiplayerEnemySnapshot, MultiplayerHostState, MultiplayerInput, MultiplayerPlayerSnapshot, NukeStrike, Player, PowerKind, PowerUp, RaidAssetPreloadState, RaidBgmMode, RaidDifficulty, RaidMode, RaidMultiplayerSession, RaidRandomEvent, RaidRandomEventKind, RelayGameMessage, Ripple, ShipOption, Shot, Snapshot, Spark, Vec, WeaponKey } from './types'
 import { acquireRipple, acquireSpark, buildEnemyCollisionBuckets, clamp, collectShotCollisionCandidates, compactInPlace, createEnemyCollisionBuckets, distSq, drawRadialEllipse, getCachedProjectileOrbSprite, getCachedProjectileTrailSprite, getEliteEnemyChance, getMaxActiveEliteEnemies, pickEliteEnemyKind, readRaidPalette, recycleRipple, recycleRippleList, recycleSpark, recycleSparkList, takeLastFilteredMapped, updateRipplesInPlace, updateSparksInPlace } from './utils'
 import type { EnemyCollisionBuckets } from './utils'
@@ -371,7 +371,6 @@ export function GradiusRaid({
     warmRaidSideCosmetics(visualKey, aura)
     if (selectedShipKey === 'coreLander') {
       if (visualKey === 'godGundam') warmRaidSideCosmetics('godGundamBurning', aura)
-      else if (visualKey !== 'spiegel') warmRaidSideCosmetics(isRaidEliteFrameKey(visualKey) ? 'coreLanderBurningElite' : 'coreLanderBurning', aura)
     } else if (selectedShipKey === 'mesiah') {
       getRaidSideShipCanvasSprite(getRaidShipBaseVisualKey(visualKey) === 'mesiahWhite' ? 'mesiahRaptorWhite' : 'mesiahRaptorBlack')
     } else if (selectedShipKey === 'dreadnought') {
@@ -7747,7 +7746,7 @@ export function GradiusRaid({
       <div className={`raid__pilot-panel raid__pilot-panel--${pilotKey}`}>
         <div className="raid__pilot-tag">
           <b>{pilotLabel}</b>
-          <span>{hudPlayer.ship.name}</span>
+          <span>{hudPlayer.ship.key === 'coreLander' ? getRaidGundamName(hudPlayer.visualShipKey ?? '') : hudPlayer.ship.name}</span>
         </div>
         <div className="raid__stat">
           <span>{hudText.score}</span>
@@ -8078,7 +8077,7 @@ export function GradiusRaid({
 
       {snapshot.phase === 'briefing' && (
         <RaidCarrierBriefing language={language} mode={snapshot.raidMode} stage={carrierStop?.targetStage ?? snapshot.stageTheme}
-          recoveryBoss={carrierStop?.boss} shipName={player.ship.name} underway={mesiahUnderway} canLaunch={canControlOverlay}
+          recoveryBoss={carrierStop?.boss} shipName={player.ship.key === 'coreLander' ? getRaidGundamName(playerVisualShipKey) : player.ship.name} underway={mesiahUnderway} canLaunch={canControlOverlay}
           onLaunch={() => resetGame()} onBack={carrierStop ? undefined : () => { if (!canControlOverlay) { exitRaid(); return }; phaseRef.current = 'select'; syncSnapshot() }} />
       )}
       {(initialLaunchRef.current || carrierStop?.remaining) && (snapshot.phase === 'playing' || snapshot.phase === 'paused') && (
@@ -8257,7 +8256,7 @@ export function GradiusRaid({
                       }}
                     >
                       <RaidShipSprite shipKey={shipSpriteKey} size={getShipSpriteSize(ship.key, 'picker')} sideView={landscape} />
-                      <span>{shipCopy.name}</span>
+                      <span>{ship.key === 'coreLander' ? getRaidGundamName(shipSpriteKey) : shipCopy.name}</span>
                       <small>{locked ? lockedCopy : shipCopy.role}</small>
                     </button>
                   )

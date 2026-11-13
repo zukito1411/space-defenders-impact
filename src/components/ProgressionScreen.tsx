@@ -1,5 +1,5 @@
 import { getRaidSideShipNozzles, getRaidSideShipSpriteUrl } from './games/raid/sideArtwork'
-import { getDefaultPlayerVisualShipKey } from './games/raid/state'
+import { getDefaultPlayerVisualShipKey, getRaidGundamName } from './games/raid/state'
 import { getRaidExhaustScale, getRaidShipBaseVisualKey, getRaidShipNozzles, usesRaidRemasteredHullArt } from './games/raid/shipArtwork'
 import { LEGACY_FIGHTER_COUNT, RAID_FIGHTER_DEBUT_STAGES } from './games/raid/stageEncounters'
 import { GameButton } from './ui/GameButton'
@@ -422,7 +422,7 @@ export function ProgressionScreen({
                         </div>
                       </button>
                       <div className="progress-ship-info">
-                        <b>{ship.name}</b>
+                        <b>{shipKey === 'coreLander' ? getRaidGundamName(coreLanderModel) : ship.name}</b>
                         <span>{text.masteryLevel} {level}</span>
                         <small>{text.masteryXp}: {(mastery?.xp ?? 0).toLocaleString()} · {text.masteryRuns}: {mastery?.runs ?? 0}</small>
                         <small>{text.bestScores}: {(mastery?.bestScore ?? 0).toLocaleString()} · {text.victories}: {mastery?.victories ?? 0} · {text.totalScore}: {(mastery?.totalScore ?? 0).toLocaleString()}</small>
@@ -447,8 +447,8 @@ export function ProgressionScreen({
                         {shipKey === 'coreLander' ? (
                           <div className="progress-ship-color" aria-label={text.coreLanderModel}>
                             <span>{text.coreLanderModel}</span>
-                            {(['coreLander', 'godGundam', 'spiegel'] as CoreLanderModel[]).map((model) => {
-                              const lockedModel = model !== 'coreLander' && !coreLanderGodUnlocked
+                            {(['godGundam', 'spiegel'] as CoreLanderModel[]).map((model) => {
+                              const lockedModel = model === 'spiegel' && !coreLanderGodUnlocked
                               return (
                                 <button
                                   key={model}
@@ -458,7 +458,7 @@ export function ProgressionScreen({
                                   onClick={() => onProgressChange(setCoreLanderModel(model))}
                                 >
                                   <i className={`progress-ship-color__swatch progress-ship-color__swatch--${model}`} />
-                                  {model === 'godGundam' ? text.coreLanderGodGundam : model === 'spiegel' ? text.coreLanderSpiegel : text.coreLanderDefault}
+                                  {model === 'godGundam' ? text.coreLanderGodGundam : text.coreLanderSpiegel}
                                   {lockedModel ? <small>{text.cosmeticLocked}: {CORE_LANDER_GOD_GUNDAM_UNLOCK_SCORE.toLocaleString()} {text.coreLanderScore}</small> : null}
                                 </button>
                               )

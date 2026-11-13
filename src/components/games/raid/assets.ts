@@ -1111,10 +1111,11 @@ export function warmRaidCanvasFilterVariants() {
   }
 
   for (const ship of SHIP_OPTIONS) {
+    if (ship.key === 'coreLander') continue
     const sprite = getShipCanvasSprite(ship.key)
     for (const filter of RAID_SHIP_STATIC_FILTERS) enqueue(sprite, filter)
   }
-  for (const spriteKey of ['mesiahBlack', 'mesiahWhite', 'mesiahRaptorBlack', 'mesiahRaptorWhite', 'coreLanderBurning', 'godGundam', 'godGundamBurning', 'spiegel']) {
+  for (const spriteKey of ['mesiahBlack', 'mesiahWhite', 'mesiahRaptorBlack', 'mesiahRaptorWhite', 'godGundam', 'godGundamBurning', 'spiegel']) {
     const sprite = getShipCanvasSprite(spriteKey)
     for (const filter of RAID_SHIP_STATIC_FILTERS) enqueue(sprite, filter)
   }

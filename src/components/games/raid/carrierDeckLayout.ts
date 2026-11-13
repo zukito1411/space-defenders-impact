@@ -19,8 +19,8 @@ type DeckLayout = {
 export const CARRIER_DECK_LAYOUTS = {
   landscape: {
     patrols: [
-      [705, 875, 229, 19], [1040, 1260, 229, 18], // Upper catwalk
-      [227, 382, 795, 18], [940, 1055, 795, 17], // Separate catwalks below the flight deck
+      [710, 870, 229, 24], [1040, 1260, 229, 23], // Upper catwalk
+      [227, 382, 795, 23], [940, 1055, 795, 22], // Separate catwalks below the flight deck
     ],
     marshal: [1080, 1145, 617],
     services: {
@@ -31,10 +31,10 @@ export const CARRIER_DECK_LAYOUTS = {
   },
   portrait: {
     patrols: [
-      [104, 234, 445, 22], [793, 924, 445, 22], // Upper landings
-      [103, 236, 798, 21], [783, 919, 798, 21], // Lower landings
+      [104, 234, 445, 27], [793, 924, 445, 27], // Upper landings
+      [103, 234, 798, 26], [785, 919, 798, 26], // Lower landings
     ],
-    marshal: [600, 655, 1028],
+    marshal: [600, 652, 1028],
     services: {
       cart: [370, 1090], welder: [406, 1090],
       bot: [575, 1115], cargo: [613, 1115], inspector: [647, 1115],
