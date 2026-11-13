@@ -10,7 +10,8 @@ export function RaidLaunchSequence({ landscape, deckRef }: { landscape: boolean;
       <div className="raid__carrier-plate" style={{
         backgroundImage: `url("${getPublicAssetUrl(CARRIER_ASSET_PATHS[view])}")`,
         maskImage: `url("${getPublicAssetUrl(CARRIER_DOOR_MASK_PATHS[view])}")`,
-      }}><canvas ref={deckRef} className="raid__carrier-deck" /></div>
+      }} />
+      <canvas ref={deckRef} className="raid__carrier-deck" />
     </div>
   </div>
 }

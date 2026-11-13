@@ -42,8 +42,7 @@ One shared cover/crop transform aligns the decoration with each orientation's
 actual maintenance decks. The rotors cover only the existing fan discs, retaining
 housing artwork. Two small inset service fans on the portrait maintenance decks remain visible when tall-phone cropping hides the outer rotors. Lamp glow textures are baked once and reused, with no per-frame blur filters. Lamps follow the orientation of the existing light strips.
 
-The deck canvas rides inside the masked carrier plate, so crew cannot float in
-space and all decoration leaves with the carrier. Pause freezes the deck clock.
+The deck canvas rides on its own unmasked layer with the same carrier transform. Authored paths stay outside the aperture, so crew cannot float in space. Keeping the moving canvas separate preserves the cached static doorway mask; rotors and lamp textures are also baked once. Pause freezes the deck clock.
 Reduced motion keeps static crew/rotors and uses discrete boarding/clearance cuts.
 Low detail omits background patrols while preserving the pilot and marshal.
 

@@ -83,7 +83,7 @@
   .raid__carrier-signal i, .raid__carrier-cursor { animation: none; }
 }
 
-.raid__carrier-deck { position:absolute;inset:0;width:100%;height:100%;pointer-events:none; }
+.raid__carrier-deck { position:absolute;inset:0;width:100%;height:100%;pointer-events:none;transform:translate3d(var(--carrier-shift-x,0px),var(--carrier-shift-y,0px),0);will-change:transform; }
 .raid[data-carrier-stage="boarding"] .raid__carrier-phase--boarding,
 .raid[data-carrier-stage="clearing"] .raid__carrier-phase--clearing { display:block; }
 .raid[data-carrier-stage="boarding"] > .raid__hud,

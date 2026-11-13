@@ -53,24 +53,30 @@ function person(ctx: CanvasRenderingContext2D, x: number, y: number, height: num
   ctx.restore()
 }
 
-/** Replaces only the dark rotor disc; the photographed housing/rim stays intact. */
+const fanRotors = new Map<number, HTMLCanvasElement>()
+function fanRotor(r: number) {
+  const old=fanRotors.get(r);if(old)return old
+  const bitmap=document.createElement('canvas');bitmap.width=bitmap.height=Math.ceil(r*2+4)
+  const bake=bitmap.getContext('2d')!;bake.translate(bitmap.width/2,bitmap.height/2)
+  bake.fillStyle='#0b1720';bake.beginPath();bake.arc(0,0,r,0,Math.PI*2);bake.fill()
+  bake.strokeStyle='#55727e';bake.lineWidth=1.3;bake.stroke()
+  for(let i=0;i<6;i++){
+    bake.rotate(Math.PI/3);bake.fillStyle=i%2?'#304753':'#3c5661'
+    bake.beginPath();bake.moveTo(r*.12,-r*.1);bake.quadraticCurveTo(r*.7,-r*.7,r*.88,-r*.1);bake.quadraticCurveTo(r*.66,r*.22,r*.2,r*.15);bake.closePath();bake.fill()
+  }
+  bake.fillStyle='#182c38';bake.beginPath();bake.arc(0,0,r*.23,0,Math.PI*2);bake.fill();bake.strokeStyle='#66818c';bake.stroke()
+  if(fanRotors.size>=8)fanRotors.delete(fanRotors.keys().next().value!)
+  fanRotors.set(r,bitmap);return bitmap
+}
+/** Only the rotor bitmap turns; housings and the static background retain their own layer. */
 function fan(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, angle: number, service = false) {
-  ctx.save(); ctx.translate(x,y)
+  ctx.save();ctx.translate(x,y)
   if(service){
     ctx.fillStyle='#172e38';ctx.strokeStyle='#526b73';ctx.lineWidth=2
     ctx.fillRect(-r-5,-r-5,(r+5)*2,(r+5)*2);ctx.strokeRect(-r-5,-r-5,(r+5)*2,(r+5)*2)
     ctx.fillStyle='#9ca78c';for(const a of[-1,1])for(const b of[-1,1])ctx.fillRect(a*(r+2)-1,b*(r+2)-1,2,2)
   }
-  ctx.fillStyle = '#0b1720'; ctx.beginPath(); ctx.arc(0,0,r,0,Math.PI*2); ctx.fill()
-  ctx.strokeStyle = '#55727e'; ctx.lineWidth = 1.3; ctx.stroke()
-  ctx.rotate(angle)
-  for(let i=0;i<6;i++) {
-    ctx.rotate(Math.PI/3)
-    ctx.fillStyle = i%2 ? '#304753' : '#3c5661'
-    ctx.beginPath(); ctx.moveTo(r*.12,-r*.1); ctx.quadraticCurveTo(r*.7,-r*.7,r*.88,-r*.1); ctx.quadraticCurveTo(r*.66,r*.22,r*.2,r*.15); ctx.closePath(); ctx.fill()
-  }
-  ctx.fillStyle='#182c38'; ctx.beginPath(); ctx.arc(0,0,r*.23,0,Math.PI*2); ctx.fill()
-  ctx.strokeStyle='#66818c'; ctx.stroke(); ctx.restore()
+  const rotor=fanRotor(r);ctx.rotate(angle);ctx.drawImage(rotor,-rotor.width/2,-rotor.height/2);ctx.restore()
 }
 
 const lampTextures = new Map<string, HTMLCanvasElement>()
