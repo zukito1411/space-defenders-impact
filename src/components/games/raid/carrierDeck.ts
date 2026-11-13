@@ -1,4 +1,4 @@
-import { drawDockClamps, type DockMount } from './carrierClamps'
+import { drawDockClamps, getDockClampAtlas, type DockMount } from './carrierClamps'
 import { CARRIER_IGNITION_START } from './carrierLaunch'
 import { drawDeckPerson as person } from './crewPeople'
 import { sampleCrewPatrol } from './crewMotion'
@@ -123,9 +123,10 @@ export function drawCarrierDeck(canvas: HTMLCanvasElement, frame: CarrierDeckFra
   const kit=sampleCarrierBoarding(launchAge,briefing,reducedMotion,ambientAge)
   const release=briefing?0:unit((launchAge-CARRIER_IGNITION_START-.8)/.8)
   const clampRelease=reducedMotion?Number(release>.5):release
+  const clampLoaded=getDockClampAtlas().loaded
   // Static accessibility frames only change on a boarding/clearance cut or resize.
   // Avoid repeatedly rasterizing and uploading a full-screen unchanged canvas.
-  const staticKey=reducedMotion?[width,height,dpr,landscape,decorative,frame.shipX,frame.shipY,frame.hullSize,frame.visualKey,crew.pilotState,crew.marshalState,crew.retreat,kit.ladder,kit.canopy,clampRelease].join(':'):null
+  const staticKey=reducedMotion?[width,height,dpr,landscape,decorative,frame.shipX,frame.shipY,frame.hullSize,frame.visualKey,crew.pilotState,crew.marshalState,crew.retreat,kit.ladder,kit.canopy,clampRelease,clampLoaded].join(':'):null
   if(staticKey&&staticDeckFrames.get(canvas)===staticKey)return
   const ctx=canvas.getContext('2d');if(!ctx)return
   if(staticKey)staticDeckFrames.set(canvas,staticKey);else staticDeckFrames.delete(canvas)
@@ -138,7 +139,8 @@ export function drawCarrierDeck(canvas: HTMLCanvasElement, frame: CarrierDeckFra
     dockMounts.set(canvas,dock)
   }
   drawDockClamps(ctx,dock,clampRelease)
-  canvas.dataset.dockClampRenderer='procedural'
+  canvas.dataset.dockClampRenderer='atlas'
+  canvas.dataset.dockClampLoaded=String(clampLoaded)
   canvas.dataset.dockClampRelease=String(clampRelease)
   const time=reducedMotion?0:ambientAge
   canvas.dataset.pilotState=crew.pilotState;canvas.dataset.marshalState=crew.marshalState
