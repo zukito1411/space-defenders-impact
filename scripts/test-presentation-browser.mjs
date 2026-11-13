@@ -136,4 +136,26 @@ try {
     console.log(name,'passed')
     await context.close()
   }
+  const recovery = await browser.newPage({ viewport: { width: 844, height: 390 } })
+  try {
+    await recovery.addInitScript(() => localStorage.setItem('raid-flight-view', 'landscape'))
+    await recovery.goto('http://127.0.0.1:5173/scripts/presentation-fixture.html?mode=endless')
+    await recovery.locator('button.raid__start').first().click({ timeout: 120000 })
+    const briefing = recovery.locator('.raid__carrier-briefing')
+    await briefing.locator('.raid__carrier-skip').click()
+    const raid = recovery.locator('.raid')
+    await recovery.waitForFunction(() => document.querySelector('.raid')?.getAttribute('data-carrier-stage') === 'approach', {}, { timeout: 75000 })
+    await recovery.screenshot({ path: 'presentation-review/mesiah-recovery-approach.png' })
+    await briefing.getByRole('heading', { name: 'Intercept Devil Gundam' }).waitFor({ timeout: 60000 })
+    assert.equal(await raid.getAttribute('data-carrier-stage'), 'docked')
+    assert.equal(await raid.locator('.raid__carrier-deck').getAttribute('data-dock-clamp-release'), '0')
+    assert.equal(await briefing.locator('.raid__carrier-back').count(), 0)
+    await recovery.screenshot({ path: 'presentation-review/mesiah-recovery-briefing.png' })
+    await briefing.locator('.raid__carrier-skip').click()
+    await recovery.locator('.raid__boss-warning').waitFor({ timeout: 75000 })
+    assert.equal(await briefing.count(), 0)
+    console.log('Endless approaches Mesiah, docks before Devil Gundam and resumes the same encounter')
+  } finally {
+    await recovery.close()
+  }
 }finally{await browser?.close();server.kill()}

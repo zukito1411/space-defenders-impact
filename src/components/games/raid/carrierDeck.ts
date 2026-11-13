@@ -85,7 +85,7 @@ export type CarrierDeckFrame = {
   width: number; height: number; dpr: number; landscape: boolean; ambientAge: number
   launchAge: number; briefing: boolean; reducedMotion: boolean; decorative: boolean
   /** Physical-screen pilot/cockpit position, using the very same hull renderer scale. */
-  shipX: number; shipY: number; hullSize: number; visualKey: string; groundedMech?: boolean
+  shipX: number; shipY: number; hullSize: number; visualKey: string; groundedMech?: boolean; landingRelease?: number
 }
 
 /** Shared ladder/pilot/cockpit mount; source coordinates retain cover/crop alignment. */
@@ -121,7 +121,7 @@ export function drawCarrierDeck(canvas: HTMLCanvasElement, frame: CarrierDeckFra
   if(canvas.width!==pw||canvas.height!==ph){canvas.width=pw;canvas.height=ph}
   const crew=sampleCarrierCrew(launchAge,briefing,reducedMotion)
   const kit=sampleCarrierBoarding(launchAge,briefing,reducedMotion,ambientAge)
-  const release=briefing?0:unit((launchAge-CARRIER_IGNITION_START-.8)/.8)
+  const release=frame.landingRelease ?? (briefing?0:unit((launchAge-CARRIER_IGNITION_START-.8)/.8))
   const clampRelease=reducedMotion?Number(release>.5):release
   const clampLoaded=getDockClampAtlas().loaded
   // Static accessibility frames only change on a boarding/clearance cut or resize.

@@ -3,6 +3,7 @@ import type { RaidMode } from './types'
 
 const COPY = {
   en: {
+    approach: 'MESIAH · FINAL APPROACH', bridgeHold: 'BRIDGE · ENGINES COLD',
     boarding: 'PILOT BOARDING', clearing: 'FLIGHT DECK · CLEARING',
     underway: 'IN FLIGHT', engaged: 'ON COURSE · WEAPONS LIVE', underwayBeat: ['Bridge', 'You are cleared to engage.', 'Mesiah is on course. Take the helm and bring the fleet through, Commander.'],
     channel: 'CARRIER COMMAND', secure: 'SECURE UPLINK', docked: 'FLIGHT DECK · DOCKED',
@@ -37,6 +38,7 @@ const COPY = {
     },
   },
   zh: {
+    approach: 'MESIAH · 最后进近', bridgeHold: '舰桥 · 引擎关闭',
     boarding: '驾驶员登机', clearing: '飞行甲板 · 清场',
     underway: '航行中', engaged: '航向确认 · 武器上线', underwayBeat: ['舰桥', '批准交战。', 'Mesiah 已进入预定航线。指挥官，请接管舰船，带领舰队突围。'],
     channel: '航母指挥部', secure: '加密通讯', docked: '飞行甲板 · 已停靠', next: '继续通讯', launch: '批准出击', skip: '立即出击', back: '返回机库', standby: '等待队长命令', ignition: '引擎点火', depart: '锁具释放 · 正在出击', clear: '已离舰 · 武器上线',
@@ -45,6 +47,7 @@ const COPY = {
     bossRush: { operation: '矛尖', objective: '三个指挥信号，一次决定性打击。', goals: ['猎杀指挥舰', '突破攻击阵型', '击沉旗舰'], beats: [['指挥部', '斩断敌军首脑。', '敌方指挥信号已锁定。这就是机会。消灭它们，敌军舰队就会失去控制。'], ['战术官', '三场决战，无路可退。', '武装已就绪。看清攻击航道，抓住破绽，把重火力留给致命一击。'], ['飞行甲板', '矛尖行动，开始。', '航道已清空，全功率交给你。指挥官，击沉那些指挥舰。']] },
   },
   ja: {
+    approach: 'MESIAH · 最終進入', bridgeHold: '艦橋 · エンジン停止',
     boarding: 'パイロット搭乗中', clearing: '飛行甲板 · 退避中',
     underway: '航行中', engaged: '進路確認 · 武装作動', underwayBeat: ['艦橋', '交戦を許可する。', 'Mesiah は進路に入った。操艦を引き継ぎ、艦隊を突破させろ、司令官。'],
     channel: '母艦司令部', secure: '暗号通信', docked: '飛行甲板 · 係留中', next: '通信を続ける', launch: '発進を承認', skip: '直ちに発進', back: '格納庫へ戻る', standby: '隊長の命令待ち', ignition: 'エンジン点火', depart: '拘束解除 · 発進中', clear: '母艦離脱 · 武装作動',
@@ -53,6 +56,7 @@ const COPY = {
     bossRush: { operation: 'スピアポイント', objective: '三つの指揮信号。一撃で戦局を変えろ。', goals: ['指揮艦を追撃', '攻撃パターンを突破', '旗艦を撃破'], beats: [['司令部', '敵の頭を断て。', '指揮艦の信号を捉えた。今が好機だ。司令官を倒せば、敵艦隊の支配は崩れる。'], ['戦術管制', '三つの決戦。退路はない。', '武装は戦闘準備完了。攻撃航路を読み、隙を突け。重火器はとどめのために取っておけ。'], ['飛行甲板', 'スピアポイント、出撃。', '発進航路クリア。全出力を託す。司令官、指揮艦を沈めてこい。']] },
   },
   ko: {
+    approach: 'MESIAH · 최종 접근', bridgeHold: '함교 · 엔진 정지',
     boarding: '파일럿 탑승 중', clearing: '비행 갑판 · 대피 중',
     underway: '항해 중', engaged: '항로 확인 · 무장 가동', underwayBeat: ['함교', '교전을 허가한다.', 'Mesiah가 항로에 진입했다. 지휘관, 조타를 맡아 함대를 이끌어라.'],
     channel: '모함 사령부', secure: '보안 통신', docked: '비행 갑판 · 정박 중', next: '통신 계속', launch: '출격 승인', skip: '즉시 출격', back: '격납고로 복귀', standby: '편대장 명령 대기', ignition: '엔진 점화', depart: '고정 장치 해제 · 출격', clear: '모함 이탈 · 무장 가동',

@@ -1,3 +1,4 @@
+import type { CarrierStop } from './carrierRecovery'
 import type { CommandPattern } from './commandBoss'
 import type { CoreLanderModel } from '../../../progression'
 import type { GodGundamBarragePose } from './assets'
@@ -387,6 +388,8 @@ export type MultiplayerHostState = {
   journeyAge?: number
   stageEntry?: number
   carrierLaunch?: boolean
+  carrierStop?: CarrierStop | null
+  recoveryPending?: boolean
   raidMode?: RaidMode
   stageClear: number
   unlockedStage: number

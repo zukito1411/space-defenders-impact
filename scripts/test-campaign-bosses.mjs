@@ -33,7 +33,7 @@ let enemyId=1,endlessKind='carrier';
 const fullyBuffRaidPlayer=()=>{},spawnDevilEncounterAssist=()=>{},triggerScreenShake=()=>{},startRaidBgm=()=>{},playGameSound=()=>{};
 const pickEndlessBossKind=()=>endlessKind;
 `+spawn+`
-export function spawnAt(stage,mode='campaign',kind='carrier',rank=1){playerRef.current.rank=rank;stageRef.current=stage;raidModeRef.current=mode;endlessKind=kind;spawnBoss();return enemiesRef.current.pop()}
+export function spawnAt(stage,mode='campaign',kind='carrier',rank=1){playerRef.current.rank=rank;stageRef.current=stage;raidModeRef.current=mode;endlessKind=kind;spawnBoss(resolveBossKind());return enemiesRef.current.pop()}
 `)
 for(let stage=1;stage<=16;stage++) {
  const enemy=spawning.spawnAt(stage)

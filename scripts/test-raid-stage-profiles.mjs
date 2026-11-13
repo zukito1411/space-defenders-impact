@@ -13,7 +13,7 @@ const section = (start, end) => {
   return runtime.slice(first, last)
 }
 const spawnSource = section('  const spawnEnemyAt = useCallback', '  const spawnBoss = useCallback')
-const fireSource = section('  const fireEnemy = useCallback', '  const updateGame = useCallback')
+const fireSource = section('  const fireEnemy = useCallback', '  const beginCarrierRecovery = useCallback')
 const harness = `
 const useCallback = fn => fn
 let enemyId = 0, shotId = 0
