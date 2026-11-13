@@ -6,7 +6,7 @@ const palmPoint = (x: number, y: number): Point => [(x - 384) / 768, (y - 256) /
 // Palm centers on the 768x512 charge and release cells. Coordinates are in
 // right-facing hull-width units around the center of the sprite.
 export const GOD_GUNDAM_PALMS = {
-  folded: { charge: palmPoint(439, 100), release: palmPoint(703, 153) },
+  folded: { charge: palmPoint(471, 100), release: palmPoint(703, 153) },
   burning: { charge: palmPoint(475, 128), release: palmPoint(680, 189) },
 } as const
 
