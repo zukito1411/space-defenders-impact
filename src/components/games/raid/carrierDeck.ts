@@ -1,3 +1,5 @@
+import { drawDeckPerson as person } from './crewPeople'
+import { sampleCrewPatrol } from './crewMotion'
 import { CARRIER_BOARDING_SECONDS, CARRIER_CLEAR_SECONDS } from './carrierLaunch'
 import { drawBoardingLadder, drawCarrierCockpit, getCarrierBoardingGeometry, sampleCarrierBoarding } from './carrierBoarding'
 
@@ -13,45 +15,16 @@ export function sampleCarrierCrew(age: number, briefing: boolean, reducedMotion:
   const t = briefing ? 0 : Math.max(0, age)
   const walk = briefing ? 0 : unit(t / (CARRIER_BOARDING_SECONDS * .76))
   const climb = briefing ? 0 : unit((t - CARRIER_BOARDING_SECONDS * .76) / (CARRIER_BOARDING_SECONDS * .24))
-  const retreat = briefing ? 0 : unit((t - CARRIER_BOARDING_SECONDS - .25) / (CARRIER_CLEAR_SECONDS - .25))
+  const retreat = briefing ? 0 : unit((t - CARRIER_BOARDING_SECONDS) / CARRIER_CLEAR_SECONDS)
   return {
     walk: reducedMotion ? 0 : walk,
     climb: reducedMotion ? 0 : climb,
     retreat: reducedMotion ? Number(retreat > 0) : retreat,
     pilotVisible: t < CARRIER_BOARDING_SECONDS,
     pilotState: briefing ? 'waiting' : t < CARRIER_BOARDING_SECONDS * .76 ? 'walking' : t < CARRIER_BOARDING_SECONDS ? 'boarding' : 'aboard',
-    marshalState: t < CARRIER_BOARDING_SECONDS + .25 ? 'signal' : retreat < 1 ? 'clearing' : 'safe',
+    marshalState: t < CARRIER_BOARDING_SECONDS ? 'signal' : retreat < 1 ? 'clearing' : 'safe',
     clear: t >= CARRIER_BOARDING_SECONDS + CARRIER_CLEAR_SECONDS,
   } as const
-}
-
-/** Tiny helmeted deck workers: articulated limbs stay readable at 8–12 screen pixels. */
-function person(ctx: CanvasRenderingContext2D, x: number, y: number, height: number, cycle: number, suit: string, facing: number, moving: boolean, wands = false, signalling = false) {
-  ctx.save(); ctx.translate(x, y); ctx.scale(facing * height / 22, height / 22)
-  const stride = moving ? Math.sin(cycle) * 3 : 0
-  ctx.lineCap = 'round'; ctx.lineJoin = 'round'
-  ctx.strokeStyle = '#07121b'; ctx.lineWidth = 2.4
-  ctx.beginPath(); ctx.moveTo(-1, -8); ctx.lineTo(-2 - stride, -4); ctx.lineTo(-2 + stride * .7, -1)
-  ctx.moveTo(2, -8); ctx.lineTo(3 + stride, -4); ctx.lineTo(3 - stride * .7, -1); ctx.stroke()
-  ctx.fillStyle = '#14232c'; ctx.fillRect(-3 + stride * .7, -1.5, 3.5, 1.5); ctx.fillRect(2 - stride * .7, -1.5, 3.5, 1.5)
-  ctx.fillStyle = suit; ctx.beginPath(); ctx.moveTo(-3,-16); ctx.lineTo(3,-16); ctx.lineTo(4,-8); ctx.lineTo(-3,-8); ctx.closePath(); ctx.fill()
-  ctx.fillStyle = '#dbe5d8'; ctx.fillRect(-2.5,-12,5,1)
-  ctx.fillStyle = '#dfdfc6'; ctx.beginPath(); ctx.arc(0,-19,3.2,Math.PI,Math.PI*2); ctx.lineTo(3.2,-17); ctx.lineTo(-3.2,-17); ctx.closePath(); ctx.fill()
-  ctx.fillStyle = '#52a0aa'; ctx.fillRect(.3,-19,3,-1.4)
-  for (const side of [-1,1]) {
-    const arm = signalling ? -20 + Math.sin(cycle * .4) * 1.5 : -10 + side * stride * .7
-    const handX = side * (signalling ? 6 : 5)
-    ctx.strokeStyle = suit; ctx.lineWidth = 2
-    ctx.beginPath(); ctx.moveTo(side * 3,-15); ctx.lineTo(handX,arm); ctx.stroke()
-    ctx.fillStyle = '#c7d4d1'; ctx.fillRect(handX-1,arm-1,2,2)
-    if (wands) {
-      ctx.strokeStyle = '#11202b'; ctx.lineWidth = 2.7; ctx.beginPath(); ctx.moveTo(handX,arm); ctx.lineTo(handX + side * 1.7,arm-6.7); ctx.stroke()
-      ctx.save(); ctx.globalAlpha*=.25; ctx.strokeStyle='#98ffbe';ctx.lineWidth=4
-      ctx.beginPath(); ctx.moveTo(handX+side*.4,arm-1.5); ctx.lineTo(handX+side*1.7,arm-6.7); ctx.stroke();ctx.restore()
-      ctx.strokeStyle = '#c7ffd0'; ctx.lineWidth = 1.7;ctx.stroke()
-    }
-  }
-  ctx.restore()
 }
 
 const fanRotors = new Map<number, HTMLCanvasElement>()
@@ -110,14 +83,14 @@ export type CarrierDeckFrame = {
   width: number; height: number; dpr: number; landscape: boolean; ambientAge: number
   launchAge: number; briefing: boolean; reducedMotion: boolean; decorative: boolean
   /** Physical-screen pilot/cockpit position, using the very same hull renderer scale. */
-  shipX: number; shipY: number; hullSize: number; visualKey: string
+  shipX: number; shipY: number; hullSize: number; visualKey: string; groundedMech?: boolean
 }
 
 /** Shared ladder/pilot/cockpit mount; source coordinates retain cover/crop alignment. */
 function boardingGeometry(frame: CarrierDeckFrame) {
   const cover=carrierCover(frame.width,frame.height,frame.landscape)
   const shipX=(frame.shipX-cover.x)/cover.scale,shipY=(frame.shipY-cover.y)/cover.scale,hull=frame.hullSize/cover.scale
-  return {cover,shipX,shipY,hull,...getCarrierBoardingGeometry(shipX,shipY,hull,frame.visualKey,frame.landscape,1)}
+  return {cover,shipX,shipY,hull,...getCarrierBoardingGeometry(shipX,shipY,hull,frame.visualKey,frame.landscape,1,frame.groundedMech)}
 }
 
 /** Foreground pass after the one gameplay hull: pilot climbs visible rungs into the well. */
@@ -126,12 +99,13 @@ export function drawCarrierBoardingForeground(ctx: CanvasRenderingContext2D, fra
   const kit=sampleCarrierBoarding(frame.launchAge,frame.briefing,frame.reducedMotion,frame.ambientAge)
   ctx.save();ctx.translate(g.cover.x,g.cover.y);ctx.scale(g.cover.scale,g.cover.scale)
   drawBoardingLadder(ctx,g.footX,g.floorY,g.topX,g.topY,kit.ladder)
-  drawCarrierCockpit(ctx,g.shipX,g.shipY,g.hull,frame.visualKey,frame.landscape,kit.canopy)
+  drawCarrierCockpit(ctx,g.shipX,g.shipY,g.hull,frame.visualKey,frame.landscape,kit.canopy,frame.groundedMech)
   if(crew.pilotVisible){
     const x=g.startX+(g.footX-g.startX)*crew.walk+(g.topX-g.footX)*crew.climb
     const y=g.floorY+(g.topY-g.floorY)*crew.climb
     ctx.globalAlpha*=1-Math.max(0,(crew.climb-.72)/.28)
-    person(ctx,x,y,frame.landscape?21:23,frame.reducedMotion?0:frame.ambientAge*10,'#d3dbe0',1,!frame.briefing&&!frame.reducedMotion,false,crew.climb>0)
+    const h=frame.landscape?21:23,walkDistance=(g.footX-g.startX)*crew.walk+Math.hypot(g.topX-g.footX,g.topY-g.floorY)*crew.climb
+    person(ctx,x,y,h,walkDistance*22/h,'#d3dbe0',1,!frame.briefing&&!frame.reducedMotion,false,false,false,crew.climb>0)
   }
   ctx.restore()
 }
@@ -169,18 +143,18 @@ export function drawCarrierDeck(canvas: HTMLCanvasElement, frame: CarrierDeckFra
   if(decorative){
     const patrols=landscape?[[500,850,239,19],[1080,1260,239,18],[550,730,791,18],[1170,1400,791,17]]:[[210,282,449,22],[752,814,449,22],[198,270,810,21],[760,820,810,21]]
     for(let i=0;i<patrols.length;i++){
-      const [a,b,y,h]=patrols[i],phase=(time*.035+i*.23)%2,forward=phase<1
-      const p=forward?phase:2-phase
-      person(ctx,a+(b-a)*p,y,h,time*7+i*2,i%2?'#3f8292':'#c38d4d',forward?1:-1,!reducedMotion)
+      const [a,b,y,h]=patrols[i],p=sampleCrewPatrol(time,a,b,22,i*3.7)
+      person(ctx,p.x,y,h,p.distance*22/h,i%2?'#3f8292':'#c38d4d',p.facing,p.moving&&!reducedMotion)
     }
   }
   const g=boardingGeometry(frame)
   const marshalX=landscape?g.shipX+190:g.shipX+145,marshalY=landscape?608:g.topY+70
-  const safeX=marshalX+95
+  const safeX=marshalX+65
   // Once the lane is clear, stay behind the service equipment until the carrier leaves.
   if(crew.retreat<1){
     ctx.save();ctx.globalAlpha=1-Math.max(0,(crew.retreat-.8)*5)
-    person(ctx,marshalX+(safeX-marshalX)*crew.retreat,marshalY,landscape?23:24,time*13,'#dba349',1,crew.retreat>0&&!reducedMotion,true,crew.marshalState==='signal')
+    const h=landscape?23:24,distance=crew.retreat>0?(safeX-marshalX)*crew.retreat*22/h:time
+    person(ctx,marshalX+(safeX-marshalX)*crew.retreat,marshalY,h,distance,'#dba349',1,crew.retreat>0&&!reducedMotion,true,crew.marshalState==='signal',true)
     ctx.restore()
   }
 }

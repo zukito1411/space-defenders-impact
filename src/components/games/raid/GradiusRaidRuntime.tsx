@@ -1770,13 +1770,15 @@ export function GradiusRaid({
             shipX: landscapeRef.current ? cssHeight - toY(cy) : toX(cx),
             shipY: landscapeRef.current ? toX(cx) : toY(cy), hullSize: hull * (pilot.ship.key === 'coreLander' && (getRaidPlayerVisualShipKey(pilot, progressRef.current) === 'godGundam' || getRaidPlayerVisualShipKey(pilot, progressRef.current) === 'spiegel') ? 1.08 : 1),
             visualKey: getRaidPlayerVisualShipKey(pilot, progressRef.current),
+            groundedMech: pilot.ship.key==='coreLander'&&(getRaidPlayerVisualShipKey(pilot,progressRef.current)==='godGundam'||getRaidPlayerVisualShipKey(pilot,progressRef.current)==='spiegel')&&carrierAge<CARRIER_IGNITION_START,
           } : null
+        if(boardingFrame?.groundedMech)boardingFrame.shipY-=boardingFrame.hullSize*.025
         if (boardingFrame && carrierDeckCanvasRef.current) drawCarrierDeck(carrierDeckCanvasRef.current, boardingFrame)
         if (!underway) drawCarrierClamps(ctx, toX(cx), toY(cy), hull, docked ? 0 : reducedMotion ? Number(carrier.release > .5) : carrier.release, landscapeRef.current)
         drawRaidPlayer(ctx, pilot, phaseRef.current, projectX, projectY, cssWidth, time, color,
           getCachedEquippedCosmetics(pilot.ship.key), getRaidPlayerVisualShipKey(pilot, progressRef.current),
           null, null, 0, 0, reducedMotion, landscapeRef.current,
-          { scale: displayScale, engine: docked ? 0 : carrier.engine, hideCombatFx: true })
+          { scale: displayScale, engine: docked ? 0 : carrier.engine, hideCombatFx: true, carrierAge:briefing?0:carrierAge })
         if (boardingFrame) {
           ctx.save()
           if (landscapeRef.current) { ctx.translate(0, cssHeight); ctx.rotate(-Math.PI / 2) }

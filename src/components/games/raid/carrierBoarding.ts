@@ -17,7 +17,8 @@ export function sampleCarrierBoarding(age: number, briefing: boolean, reduced: b
 
 type Mount = { x: number; y: number; w: number; h: number; hatch?: boolean }
 /** Physical-screen offsets in the same aspect-preserving hull units as the artwork. */
-export function getCarrierCockpitMount(key: string, landscape: boolean): Mount {
+export function getCarrierCockpitMount(key: string, landscape: boolean, groundedMech = false): Mount {
+  if(groundedMech)return{x:key==='spiegel'?.025:.05,y:.025,w:.045,h:.045,hatch:true}
   if (key === 'godGundam' || key === 'godGundamBurning' || key === 'spiegel') {
     return landscape
       ? { x: key === 'spiegel' ? .19 : .22, y: key === 'spiegel' ? -.015 : .05, w: .045, h: .045, hatch: true }
@@ -30,12 +31,12 @@ export function getCarrierCockpitMount(key: string, landscape: boolean): Mount {
   return { x: key.startsWith('fast') ? .085 : key.startsWith('xwing') ? .055 : .09, y: -.035, w: .085, h: .024 }
 }
 
-export function getCarrierBoardingGeometry(shipX: number, shipY: number, hull: number, visualKey: string, landscape: boolean, sourceScale: number) {
-  const mount = getCarrierCockpitMount(visualKey, landscape)
+export function getCarrierBoardingGeometry(shipX: number, shipY: number, hull: number, visualKey: string, landscape: boolean, sourceScale: number, groundedMech=false) {
+  const mount = getCarrierCockpitMount(visualKey, landscape,groundedMech)
   const cockpitX = shipX + hull * mount.x, cockpitY = shipY + hull * mount.y
   // The ladder meets the near lip of the cockpit instead of stopping at the hull center.
   const topX = cockpitX - hull * mount.w * .7, topY = cockpitY + hull * mount.h
-  const floorY = landscape ? 608 * sourceScale : topY + 95 * sourceScale
+  const floorY = landscape ? 608 * sourceScale : groundedMech?shipY+hull*.30:topY + 95 * sourceScale
   const footX = topX - 36 * sourceScale
   return { mount, cockpitX, cockpitY, topX, topY, floorY, footX, startX: footX - 130 * sourceScale }
 }
@@ -57,9 +58,9 @@ export function drawBoardingLadder(ctx: CanvasRenderingContext2D, footX: number,
 }
 
 /** Draw over the actual hull in physical screen axes, in either orientation. */
-export function drawCarrierCockpit(ctx: CanvasRenderingContext2D, x: number, y: number, hull: number, key: string, landscape: boolean, open: number) {
+export function drawCarrierCockpit(ctx: CanvasRenderingContext2D, x: number, y: number, hull: number, key: string, landscape: boolean, open: number,groundedMech=false) {
   if (open <= .001) return
-  const m = getCarrierCockpitMount(key, landscape)
+  const m = getCarrierCockpitMount(key, landscape,groundedMech)
   ctx.save();ctx.translate(x,y)
   ctx.translate(hull*m.x,hull*m.y)
   const w=hull*m.w,h=hull*m.h

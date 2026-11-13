@@ -1,5 +1,6 @@
 import { getRaidPlayerHullSize } from './playerMuzzle'
 import { drawMechAction, getMechActionAtlas, sampleMechAttack } from './mechAttack'
+import { drawMechDockPose, getMechDockAtlas, getMechDockNozzles, sampleMechDock } from './mechDock'
 import { getRaidSideShipNozzles } from './sideArtwork'
 import { getRaidExhaustScale, getRaidShipBaseVisualKey, getRaidShipFrameKey, getRaidShipNozzles, isRaidEliteFrameKey, usesRaidRemasteredHullArt } from './shipArtwork'
 import { updateFlightPose, type FlightPose } from './combatFeel'
@@ -1129,7 +1130,7 @@ export function drawRaidPlayer(
   sunlight = 0,
   reducedMotion = false,
   landscape = false,
-  presentation?: { scale: number; engine: number; hideCombatFx: boolean },
+  presentation?: { scale: number; engine: number; hideCombatFx: boolean; carrierAge?: number },
 ) {
   const x = toX(player.x)
   const y = toY(player.y)
@@ -1157,6 +1158,8 @@ export function drawRaidPlayer(
   const sideVisualKey = coreLanderCombatModel ?? (player.ship.key === 'coreLander' ? getRaidShipFrameKey('coreLander', eliteFrame) : visualShipKey)
   const sideSprite = landscape ? getRaidSideShipCanvasSprite(sideVisualKey) : null
   const renderSize = coreLanderCombatModel ? size * 1.08 : size
+  const dockPose=coreLanderCombatModel&&presentation?.carrierAge!==undefined?sampleMechDock(presentation.carrierAge,landscape,reducedMotion):null
+  const dockReady=Boolean(dockPose&&coreLanderCombatModel&&getMechDockAtlas(coreLanderCombatModel).loaded)
   const cosmeticShipKey = coreLanderCombatModel ?? player.ship.key
   const remasteredHull = usesRaidRemasteredHullArt(visualShipKey)
   const nozzles = (landscape ? getRaidSideShipNozzles(sideVisualKey) : undefined) ?? getRaidShipNozzles(visualShipKey)
@@ -1201,7 +1204,7 @@ export function drawRaidPlayer(
     ])
     ctx.restore()
   }
-  if (!isDown && cosmetics.aura) {
+  if (!isDown && !presentation?.hideCombatFx && cosmetics.aura) {
     if (sideSprite?.loaded) {
       const blend = sideBurningSprite?.loaded ? coreLanderBurningBlend : 0
       ctx.save()
@@ -1283,7 +1286,15 @@ export function drawRaidPlayer(
   }
   if (spriteGlow) drawSpriteGlow(ctx, x, y, renderSize, spriteGlow, 0.68)
   else if (!isDown && !landscape) drawSpriteGlow(ctx, x, y, renderSize, environmentRim ?? hexToRgba(color, 0.09), 0.55)
-  if (sideSprite?.loaded) {
+  if(dockReady&&dockPose&&coreLanderCombatModel){
+    if((presentation?.engine??0)>0){
+      const nozzle=getMechDockNozzles(coreLanderCombatModel,dockPose.frame),wake=renderSize*.55
+      ctx.save();ctx.translate(x,y);ctx.rotate(dockPose.angle);ctx.translate(0,dockPose.offsetY*renderSize);ctx.globalAlpha*=.7*(presentation?.engine??0)
+      for(const [nx,ny,aperture]of nozzle.roots){ctx.save();ctx.translate(nx*renderSize,ny*renderSize);ctx.rotate(nozzle.angle);drawPlayerEngine(ctx,0,-wake*.34,wake,time,engineBoost,renderSize*aperture);ctx.restore()}
+      ctx.restore()
+    }
+    drawMechDockPose(ctx,coreLanderCombatModel,dockPose,x,y,renderSize,alpha)
+  } else if (sideSprite?.loaded) {
     // The playfield turns clockwise; rotate the right-facing art into its
     // logical upward flight direction before the camera transform.
     const attackPose = coreLanderCombatModel ? sampleMechAttack(player.fireCooldown, getCoreLanderFireInterval(player), !presentation?.hideCombatFx && !isDown && (phase === 'playing' || phase === 'paused') && (player.godMeleeCloak ?? 0) <= 0, reducedMotion) : null
@@ -1418,7 +1429,7 @@ export function drawRaidPlayer(
   if (sunSide && nozzles && player.ship.key !== 'coreLander' && !isDown && eclipse < .86) {
     drawSolarHullRim(ctx, sideSprite?.loaded ? sideSprite : sprite, x, y, renderSize, sunSide, .56 * Math.abs(sunlight) * (1 - eclipse), Boolean(sideSprite?.loaded))
   }
-  if (coreLanderCombatModel && !isDown && (presentation?.engine ?? 1) > 0) {
+  if (coreLanderCombatModel && !dockReady && !isDown && (presentation?.engine ?? 1) > 0) {
     ctx.save()
     ctx.globalAlpha *= .7 * (presentation?.engine ?? 1)
     if (landscape && sideSprite?.loaded) {

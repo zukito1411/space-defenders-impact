@@ -43,6 +43,7 @@ jobs:
           node scripts/test-carrier-launch.mjs
           node scripts/test-carrier-deck.mjs
           node scripts/test-boarding-actions.mjs
+          node scripts/test-crew-and-mech-dock.mjs
           node scripts/test-mech-flight.mjs
           node scripts/test-weapon-presentation.mjs
           node scripts/test-command-bosses.mjs

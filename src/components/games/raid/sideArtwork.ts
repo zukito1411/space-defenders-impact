@@ -18,7 +18,7 @@ const SIDE_PATHS: Record<string, string> = {
   coreLander: 'core-lander-v1.png?art=2806e948e9e0',
   coreLanderBurning: 'core-lander-burning-v1.png?art=32c847766c23',
   godGundam: 'god-gundam-flight-v2.webp',
-  godGundamBurning: 'god-gundam-burning-flight-v2.webp',
+  godGundamBurning: 'god-gundam-burning-flight-v3.webp',
   spiegel: 'spiegel-flight-v2.webp',
   rocketElite: 'black-comet-elite-v1.png?art=ef5def01b05d',
   fastElite: 'red-wraith-elite-v1.png?art=59dd2a6cb3a7',
