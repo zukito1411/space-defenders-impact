@@ -53,8 +53,13 @@ function person(ctx: CanvasRenderingContext2D, x: number, y: number, height: num
 }
 
 /** Replaces only the dark rotor disc; the photographed housing/rim stays intact. */
-function fan(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, angle: number) {
+function fan(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, angle: number, service = false) {
   ctx.save(); ctx.translate(x,y)
+  if(service){
+    ctx.fillStyle='#172e38';ctx.strokeStyle='#526b73';ctx.lineWidth=2
+    ctx.fillRect(-r-5,-r-5,(r+5)*2,(r+5)*2);ctx.strokeRect(-r-5,-r-5,(r+5)*2,(r+5)*2)
+    ctx.fillStyle='#9ca78c';for(const a of[-1,1])for(const b of[-1,1])ctx.fillRect(a*(r+2)-1,b*(r+2)-1,2,2)
+  }
   ctx.fillStyle = '#0b1720'; ctx.beginPath(); ctx.arc(0,0,r,0,Math.PI*2); ctx.fill()
   ctx.strokeStyle = '#55727e'; ctx.lineWidth = 1.3; ctx.stroke()
   ctx.rotate(angle)
@@ -93,8 +98,8 @@ export function drawCarrierDeck(canvas: HTMLCanvasElement, frame: CarrierDeckFra
   canvas.dataset.pilotState=crew.pilotState;canvas.dataset.marshalState=crew.marshalState
   canvas.dataset.crewCount=String(decorative?6:2)
   canvas.dataset.fanAngle=String(decorative?time*.85:0)
-  const fanSites=landscape?[[260,135,51],[395,135,51]]:[[126,383,30],[898,383,30],[126,885,31],[898,885,31]]
-  for(let i=0;i<fanSites.length;i++){const [x,y,r]=fanSites[i];fan(ctx,x,y,r,decorative?time*(i%2?-.8:.85):0)}
+  const fanSites=landscape?[[260,135,51],[395,135,51]]:[[126,383,30],[898,383,30],[126,885,31],[898,885,31],[286,569,20],[738,569,20]]
+  for(let i=0;i<fanSites.length;i++){const [x,y,r]=fanSites[i];fan(ctx,x,y,r,decorative?time*(i%2?-.8:.85):0,!landscape&&i>=4)}
   const lights=landscape?[[407,316,31],[802,318,30],[1192,318,29],[1340,402,22],[1340,487,20],[1474,267,26],[287,604,23],[505,604,24],[709,604,23],[912,604,23],[1158,604,24]]
     :[[370,286,15],[657,287,15],[370,512,14],[659,511,14],[370,659,14],[659,659,14],[356,808,14],[670,808,14],[370,1126,15],[658,1126,15],[128,335,21],[897,335,21],[125,840,21],[897,841,21]]
   for(let i=0;i<lights.length;i++){
