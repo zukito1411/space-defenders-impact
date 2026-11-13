@@ -35,6 +35,9 @@ try {
     await page.waitForTimeout(1200)
     const deck=page.locator('.raid__carrier-deck')
     await page.waitForFunction(()=>Number(document.querySelector('.raid__carrier-deck')?.getAttribute('data-canopy-open'))>.98,{},{timeout:20000})
+    assert.equal(await deck.getAttribute('data-dock-clamp-renderer'),'atlas','docking clamps must use the supplied atlas')
+    assert.equal(await deck.getAttribute('data-dock-clamp-loaded'),'true','docking clamp atlas must load')
+    assert.equal(await deck.getAttribute('data-dock-clamp-release'),'0','clamps grip the vehicle during briefing')
     assert.equal(await deck.getAttribute('data-ladder-extension'),'1','boarding ladder must be deployed')
     await page.screenshot({path:`presentation-review/${name}-docked.png`})
     if(item.model)assert.equal(await page.locator('.raid__fx-canvas').getAttribute('data-mech-dock-frame'),'1','Gundam must hold the reference crouch on the deck')
@@ -93,6 +96,7 @@ try {
     console.log(name,'ignition: pilot aboard, marshal safe')
     if(item.model)assert.equal(await page.locator('.raid__fx-canvas').getAttribute('data-mech-dock-frame'),'1','ignition must not change the crouch')
     await page.waitForFunction(()=>document.querySelector('.raid')?.dataset.carrierStage==='launch',{},{timeout:30000})
+    assert.equal(await deck.getAttribute('data-dock-clamp-release'),'1','clamps must clear the vehicle before departure')
     if(!reduced){
       await page.waitForFunction(()=>Math.abs(parseFloat(document.querySelector('.raid').style.getPropertyValue('--carrier-shift-x')))+Math.abs(parseFloat(document.querySelector('.raid').style.getPropertyValue('--carrier-shift-y')))>100,{},{timeout:30000})
       if(item.model)assert.equal(await page.locator('.raid__fx-canvas').getAttribute('data-mech-dock-frame'),'1','departing through the bay must keep the crouch')

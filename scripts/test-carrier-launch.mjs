@@ -34,11 +34,6 @@ for (const landscape of [false, true]) for (const age of [0, mesiahDuration / 2,
  assert.equal(flight.done, age === mesiahDuration)
  if (flight.done) assert.deepEqual([flight.x, flight.y, flight.scale], [50, 82, 1])
 }
-const calls=[]
-const ctx=new Proxy({globalAlpha:1},{get:(o,k)=>k in o?o[k]:(...args)=>calls.push([k,...args]),set:(o,k,v)=>(o[k]=v,true)})
-const {drawCarrierClamps}=await module('src/components/games/raid/carrierLaunch.ts')
-drawCarrierClamps(ctx,10,20,100,1);assert.equal(calls.length,0,'released clamps disappear')
-drawCarrierClamps(ctx,10,20,100,0);assert.equal(calls.filter(c=>c[0]==='fillRect').length,4)
 const {getCarrierMission}=await module('src/components/games/raid/carrierMission.ts')
 for(const language of ['en','zh','ja','ko'])for(const mode of ['campaign','endless','bossRush']){
  const m=getCarrierMission(language,mode)
