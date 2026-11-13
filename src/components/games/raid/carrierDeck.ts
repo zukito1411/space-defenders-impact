@@ -45,8 +45,9 @@ function person(ctx: CanvasRenderingContext2D, x: number, y: number, height: num
     ctx.fillStyle = '#c7d4d1'; ctx.fillRect(handX-1,arm-1,2,2)
     if (wands) {
       ctx.strokeStyle = '#11202b'; ctx.lineWidth = 2.7; ctx.beginPath(); ctx.moveTo(handX,arm); ctx.lineTo(handX + side * 1.7,arm-6.7); ctx.stroke()
-      ctx.save(); ctx.shadowColor = '#98ffbe'; ctx.shadowBlur = 6; ctx.strokeStyle = '#b5ffbc'; ctx.lineWidth = 1.7
-      ctx.beginPath(); ctx.moveTo(handX+side*.4,arm-1.5); ctx.lineTo(handX+side*1.7,arm-6.7); ctx.stroke(); ctx.restore()
+      ctx.save(); ctx.globalAlpha*=.25; ctx.strokeStyle='#98ffbe';ctx.lineWidth=4
+      ctx.beginPath(); ctx.moveTo(handX+side*.4,arm-1.5); ctx.lineTo(handX+side*1.7,arm-6.7); ctx.stroke();ctx.restore()
+      ctx.strokeStyle = '#c7ffd0'; ctx.lineWidth = 1.7;ctx.stroke()
     }
   }
   ctx.restore()
@@ -72,10 +73,30 @@ function fan(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, ang
   ctx.strokeStyle='#66818c'; ctx.stroke(); ctx.restore()
 }
 
+const lampTextures = new Map<string, HTMLCanvasElement>()
+function lampTexture(color: string, width: number) {
+  const key = color + ':' + width
+  const old = lampTextures.get(key)
+  if (old) return old
+  const bitmap = document.createElement('canvas')
+  bitmap.width = Math.ceil(width + 40); bitmap.height = 40
+  const bake = bitmap.getContext('2d')!
+  const x=bitmap.width/2,y=20,r=(width+34)/2
+  bake.save();bake.translate(x,y);bake.scale(1,.43)
+  const gradient=bake.createRadialGradient(0,0,0,0,0,r)
+  gradient.addColorStop(0,color+'b0');gradient.addColorStop(.35,color+'38');gradient.addColorStop(1,color+'00')
+  bake.fillStyle=gradient;bake.fillRect(-r,-r,r*2,r*2);bake.restore()
+  bake.fillStyle=color;bake.fillRect(x-width/2,y-1.5,width,3)
+  if(lampTextures.size>=24)lampTextures.delete(lampTextures.keys().next().value!)
+  lampTextures.set(key,bitmap)
+  return bitmap
+}
 function lamp(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, color: string, power: number, vertical = false) {
-  ctx.save(); ctx.globalCompositeOperation='lighter'; ctx.globalAlpha=power
-  ctx.shadowColor=color; ctx.shadowBlur=13; ctx.fillStyle=color; if(vertical)ctx.fillRect(x-1.5,y-w/2,3,w);else ctx.fillRect(x-w/2,y-1.5,w,3)
-  ctx.globalAlpha=power*.16; ctx.shadowBlur=24; if(vertical)ctx.fillRect(x-5,y-w*.7,10,w*1.4);else ctx.fillRect(x-w*.7,y+2,w*1.4,7); ctx.restore()
+  const texture=lampTexture(color,w)
+  ctx.save();ctx.translate(x,y);if(vertical)ctx.rotate(Math.PI/2)
+  ctx.globalCompositeOperation='lighter';ctx.globalAlpha=power
+  ctx.drawImage(texture,-texture.width/2,-texture.height/2)
+  ctx.restore()
 }
 
 export type CarrierDeckFrame = {

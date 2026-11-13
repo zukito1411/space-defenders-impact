@@ -24,4 +24,5 @@ for(const age of[0,1,2,3.2,3.8]){
  const c=deck.sampleCarrierCrew(age,false,true)
  assert.equal(c.walk,0);assert.equal(c.climb,0);assert.ok(c.retreat===0||c.retreat===1)
 }
+assert.doesNotMatch(read('carrierDeck.ts'),/shadowBlur/,'frame rendering must not run live blur filters')
 console.log('Deck: boarding and marshal retreat finish before ignition, safe lane before launch, cover/crop alignment, reduced-motion cuts and 30/60/120Hz sequencing passed')

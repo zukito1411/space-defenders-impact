@@ -76,6 +76,7 @@ try {
     await page.waitForFunction(()=>document.querySelector('.raid')?.dataset.carrierStage==='boarding',{},{timeout:30000})
     await page.waitForTimeout(700)
     await page.screenshot({path:`presentation-review/${name}-boarding.png`})
+    console.log(name,'boarding')
     await page.waitForFunction(()=>document.querySelector('.raid')?.dataset.carrierStage==='clearing',{},{timeout:30000})
     await page.screenshot({path:`presentation-review/${name}-marshal.png`})
     await page.waitForFunction(()=>document.querySelector('.raid')?.dataset.carrierStage==='ignition',{},{timeout:30000})
@@ -84,6 +85,7 @@ try {
     assert.ok(await page.locator('.space-door--idle').count(),'clearance to ignition must remain one continuous shot')
     await page.waitForTimeout(400)
     await page.screenshot({path:`presentation-review/${name}-ignition.png`})
+    console.log(name,'ignition: pilot aboard, marshal safe')
     await page.waitForFunction(()=>document.querySelector('.raid')?.dataset.carrierStage==='launch',{},{timeout:30000})
     if(!reduced){
       await page.waitForFunction(()=>Math.abs(parseFloat(document.querySelector('.raid').style.getPropertyValue('--carrier-shift-x')))+Math.abs(parseFloat(document.querySelector('.raid').style.getPropertyValue('--carrier-shift-y')))>100,{},{timeout:30000})
@@ -105,6 +107,7 @@ try {
     await page.screenshot({path:`presentation-review/${name}-flight.png`})
     assert.deepEqual(errors,[])
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth||document.documentElement.scrollHeight>innerHeight),false)
+    console.log(name,'passed')
     await context.close()
   }
 }finally{await browser?.close();server.kill()}

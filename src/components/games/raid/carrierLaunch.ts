@@ -38,7 +38,7 @@ export function sampleCarrierLaunch(age: number, landscape: boolean, reducedMoti
     engine: smooth(ignition),
     release: smooth((t - CARRIER_IGNITION_START - .8) / .8),
     // Move the opaque carrier out of frame. Never dissolve planets over its walls.
-    backdrop: reducedMotion ? (t < 1.6 ? 1 : 0) : (exited ? 0 : 1),
+    backdrop: reducedMotion ? (t < CARRIER_DEPARTURE_START ? 1 : 0) : (exited ? 0 : 1),
     shift: reducedMotion ? 0 : 1.3 * forward,
     phase: t < CARRIER_BOARDING_SECONDS ? 'boarding' : t < CARRIER_IGNITION_START ? 'clearing' : t < CARRIER_DEPARTURE_START ? 'ignition' : t < CARRIER_DEPARTURE_START + 3 ? 'launch' : t < CARRIER_LAUNCH_SECONDS ? 'clear' : 'flight',
     done: t >= CARRIER_LAUNCH_SECONDS,

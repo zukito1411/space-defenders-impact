@@ -40,7 +40,7 @@ Personnel are procedural micro-sprites, intentionally around 8–12 CSS pixels t
 Their paths and lamp/fan locations are authored in background-image coordinates.
 One shared cover/crop transform aligns the decoration with each orientation's
 actual maintenance decks. The rotors cover only the existing fan discs, retaining
-housing artwork. Two small inset service fans on the portrait maintenance decks remain visible when tall-phone cropping hides the outer rotors. Lamps follow the orientation of the existing light strips.
+housing artwork. Two small inset service fans on the portrait maintenance decks remain visible when tall-phone cropping hides the outer rotors. Lamp glow textures are baked once and reused, with no per-frame blur filters. Lamps follow the orientation of the existing light strips.
 
 The deck canvas rides inside the masked carrier plate, so crew cannot float in
 space and all decoration leaves with the carrier. Pause freezes the deck clock.
