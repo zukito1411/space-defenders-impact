@@ -1817,7 +1817,7 @@ export function GradiusRaid({
             shipX: landscapeRef.current ? cssHeight - toY(cy) : toX(cx),
             shipY: landscapeRef.current ? toX(cx) : toY(cy), hullSize: hull * (pilot.ship.key === 'coreLander' && (getRaidPlayerVisualShipKey(pilot, progressRef.current) === 'godGundam' || getRaidPlayerVisualShipKey(pilot, progressRef.current) === 'spiegel') ? 1.08 : 1),
             visualKey: getRaidPlayerVisualShipKey(pilot, progressRef.current),
-            groundedMech: pilot.ship.key==='coreLander'&&(getRaidPlayerVisualShipKey(pilot,progressRef.current)==='godGundam'||getRaidPlayerVisualShipKey(pilot,progressRef.current)==='spiegel')&&(recovery ? recovery.release < .5 : carrierAge<CARRIER_IGNITION_START),
+            groundedMech: pilot.ship.key==='coreLander'&&(getRaidPlayerVisualShipKey(pilot,progressRef.current)==='godGundam'||getRaidPlayerVisualShipKey(pilot,progressRef.current)==='spiegel')&&(recovery ? recovery.release < .5 : carrier.backdrop > 0),
           } : null
         if(boardingFrame?.groundedMech)boardingFrame.shipY-=boardingFrame.hullSize*.025
         if (boardingFrame && carrierDeckCanvasRef.current) drawCarrierDeck(carrierDeckCanvasRef.current, boardingFrame)

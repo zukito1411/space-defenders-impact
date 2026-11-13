@@ -37,6 +37,8 @@ try {
     await page.waitForFunction(()=>Number(document.querySelector('.raid__carrier-deck')?.getAttribute('data-canopy-open'))>.98,{},{timeout:20000})
     assert.equal(await deck.getAttribute('data-dock-clamp-renderer'),'atlas','docking clamps must use the supplied atlas')
     assert.equal(await deck.getAttribute('data-dock-clamp-loaded'),'true','docking clamp atlas must load')
+    assert.equal(await deck.getAttribute('data-crew-atlas-loaded'), 'true', 'textured pilot and marshal must load')
+    assert.equal(await deck.getAttribute('data-deck-services'), 'true', 'textured deck service crew must load')
     assert.equal(await deck.getAttribute('data-dock-clamp-release'),'0','clamps grip the vehicle during briefing')
     assert.equal(await deck.getAttribute('data-ladder-extension'),'1','boarding ladder must be deployed')
     await page.screenshot({path:`presentation-review/${name}-docked.png`})

@@ -3,7 +3,7 @@ import {readFileSync} from 'node:fs'
 import ts from 'typescript'
 const read=p=>readFileSync(new URL('../src/components/games/raid/'+p,import.meta.url),'utf8')
 const strip=s=>s.replace(/^import .*\n/gm,'')
-const code=strip(read('carrierLaunch.ts'))+'\n'+strip(read('carrierBoarding.ts'))+'\n'+strip(read('mechAttack.ts'))
+const code=strip(read('carrierLaunch.ts'))+'\n'+strip(read('carrierCanopyProfiles.ts'))+'\n'+strip(read('carrierBoarding.ts'))+'\n'+strip(read('mechAttack.ts'))
 const stubs=`const getPublicAssetUrl=p=>p;const makeImageCanvasSprite=()=>({loaded:true});const getCanvasSpriteDimensions=()=>({source:{},width:1536,height:1024});\n`
 const lib=await import('data:text/javascript;base64,'+Buffer.from(ts.transpileModule(stubs+code,{compilerOptions:{module:ts.ModuleKind.ESNext}}).outputText).toString('base64'))
 for(const hz of[30,60,120])for(const reduced of[false,true]){
@@ -19,9 +19,12 @@ for(const hz of[30,60,120])for(const reduced of[false,true]){
 }
 assert.equal(lib.sampleCarrierBoarding(0,true,false,0).canopy,0)
 assert.equal(lib.sampleCarrierBoarding(0,true,false,1).canopy,1)
-for(const landscape of[false,true])for(const key of['rocket','fast','gatling','laser','dreadnought','xwing','spaceEt','coreLander','godGundam','spiegel'])for(const size of[70,120,180]){
- const g=lib.getCarrierBoardingGeometry(800,500,size,key,landscape,1)
- const m=lib.getCarrierCockpitMount(key,landscape)
+for(const landscape of[false,true])for(const key of['rocket','fast','gatling','laser','dreadnought','xwing','spaceEt','coreLander','coreLanderBurning','coreLanderElite','coreLanderBurningElite','rocketElite','fastElite','gatlingElite','laserElite','dreadnoughtElite','xwingElite','spaceEtElite','godGundam','spiegel'])for(const size of[70,120,180]){
+ const mech = key === 'godGundam' || key === 'spiegel'
+ const profile = lib.getCarrierCanopyProfile(key, landscape, mech)
+ assert.ok(profile.outline.length >= 6, key + ' needs a trace of the real artwork')
+ const g=lib.getCarrierBoardingGeometry(800,500,size,key,landscape,1,mech)
+ const m=lib.getCarrierCockpitMount(key,landscape,mech)
  assert.equal(g.topY,g.cockpitY+size*m.h)
  assert.ok(g.footX<g.topX&&g.floorY>g.topY,'ladder must rise from deck to cockpit lip')
  assert.ok(Math.abs(g.cockpitX-(800+size*m.x))<1e-8)

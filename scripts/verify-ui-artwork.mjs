@@ -6,6 +6,9 @@ import { join } from 'node:path'
 const campaignBossAssets = JSON.parse(readFileSync('docs/campaign-boss-art-manifest.json', 'utf8')).assets
 const required = [
   'assets/carrier/dock-clamp-atlas-v2.png',
+  'assets/carrier/deck-cockpit-v1.webp',
+  'assets/carrier/deck-service-v1.webp',
+  'assets/carrier/deck-crew-motion-v1.webp',
   'assets/brand/zuki-logo-v1.png',
   'assets/ships/sideview/god-gundam-launch-v1.webp',
   'assets/ships/sideview/spiegel-launch-v1.webp',
