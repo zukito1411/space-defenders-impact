@@ -70,7 +70,7 @@ const seededNoise=(i,s)=>((i*37+s*19)%100)/100;
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 export let sprites=0;
 class Sprite {
- constructor(){sprites++;this.visible=false;this.texture=frame;this.zIndex=0;this.scaleX=this.scaleY=1;this.anchor={set(){}};this.scale={set:(x,y=x)=>{this.scaleX=x;this.scaleY=y}};this.position={set:(x,y)=>{this.x=x;this.y=y}}}
+ constructor(){sprites++;this.visible=false;this.texture=frame;this.zIndex=0;this.scaleX=this.scaleY=1;this.anchor={set(){}};this.scale={x:1,set:(x,y=x)=>{this.scale.x=x;this.scaleX=x;this.scaleY=y}};this.position={set:(x,y)=>{this.x=x;this.y=y}}}
  get width(){return this.texture.width*this.scaleX} set width(v){this.scaleX=v/this.texture.width}
  get height(){return this.texture.height*this.scaleY} set height(v){this.scaleY=v/this.texture.height}
 }
@@ -231,9 +231,36 @@ const frozen=JSON.stringify(scene.journey)
 assert.equal(travelFrame(6,6,0,0,1.18),true);assert.equal(JSON.stringify(scene.journey),frozen,'frozen game time advanced the journey')
 assert.equal(background.sprites,wreckSpriteCount,'journey render allocated additional sprites')
 scene.fillRadial=()=>{};scene.drawFinalBattleWeaponProfile=()=>{};scene.drawFinalBattleCruiserTrail=()=>{}
-scene.finalBattleTextures.get=()=>({width:128,height:128})
+delete scene.updateFinalBattleLayer
+const portraitHull={width:128,height:128}
+const sideHull={width:192,height:72}
+scene.finalBattleTextures.get=()=>portraitHull
+for(const key of ['dreadnought','mesiah','rocket','laser','xwing','spaceEt']) scene.backgroundSideShipTextures.set(key,sideHull)
 scene.updateFinalBattleLayer(1000,500,10,9103,'high',.68)
+const portraitRotation=scene.finalBattleCruiserSprites[0].rotation
+const allyRotation=scene.finalBattleSprites[0].rotation
+const enemyRotation=scene.finalBattleSprites[4].rotation
+assert.equal(scene.finalBattleCruiserSprites[0].texture,portraitHull)
+scene.updateFinalBattleLayer(1000,500,10,9103,'high',.68,true)
 for(const sprite of [...scene.finalBattleSprites,...scene.finalBattleCruiserSprites].filter(s=>s.visible))assert.equal(sprite.alpha,1,'background battle hull became transparent')
+assert.equal(scene.finalBattleCruiserSprites[0].texture,sideHull)
+assert.equal(scene.finalBattleCruiserSprites[0].rotation,portraitRotation-Math.PI/2)
+assert.equal(scene.finalBattleSprites[0].texture,sideHull)
+assert.equal(scene.finalBattleSprites[0].rotation,allyRotation-Math.PI/2)
+assert.equal(scene.finalBattleSprites[4].texture,portraitHull)
+assert.equal(scene.finalBattleSprites[4].rotation,enemyRotation)
+scene.updateOrbitalEffects(390,844,3,11,0,0,false,false,false)
+assert.ok(scene.capitalFlyby.visible)
+assert.equal(scene.capitalFlyby.texture,portraitHull)
+const flybyRotation=scene.capitalFlyby.rotation
+const flybyPosition=[scene.capitalFlyby.x,scene.capitalFlyby.y]
+scene.updateOrbitalEffects(390,844,3,11,0,0,false,false,false,true)
+assert.equal(scene.capitalFlyby.texture,sideHull)
+assert.ok(Math.abs(scene.capitalFlyby.rotation-(flybyRotation-Math.PI*1.5))<1e-10)
+assert.deepEqual([scene.capitalFlyby.x,scene.capitalFlyby.y],flybyPosition)
+assert.ok(scene.capitalFlyby.scale.x<0,'side art must face the direction of the pass')
+scene.updateOrbitalEffects(390,844,3,11,0,0,false,false,false)
+assert.equal(scene.capitalFlyby.texture,portraitHull,'switching back to portrait kept the side hull')
 // Exercise the actual ground render methods and UV assignments in both orientations.
 const ground=new background.PixiRaidBackground()
 globalThis.__surfaceTestTexture=new RealTexture({source:new TextureSource({width:512,height:512})})
