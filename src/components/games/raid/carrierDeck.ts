@@ -4,6 +4,7 @@ import { sampleCrewPatrol } from './crewMotion'
 import { drawDeckCrew, drawDeckServices, drawDeckPatroller, getDeckAtlas } from './deckServiceArt'
 import { CARRIER_BOARDING_SECONDS, CARRIER_CLEAR_SECONDS } from './carrierLaunch'
 import { drawBoardingLadder, drawCarrierCockpit, getCarrierBoardingGeometry, sampleCarrierBoarding } from './carrierBoarding'
+import { CARRIER_DECK_LAYOUTS } from './carrierDeckLayout'
 
 const unit = (n: number) => Math.max(0, Math.min(1, n))
 export function carrierCover(width: number, height: number, landscape: boolean) {
@@ -167,19 +168,16 @@ export function drawCarrierDeck(canvas: HTMLCanvasElement, frame: CarrierDeckFra
     const [x,y,w]=lights[i], cycle=reducedMotion?0:Math.sin(time*1.4+i*.65)
     lamp(ctx,x,y,w,landscape&&i>=6?'#ffc469':'#68e5f4',.42+cycle*.06,landscape?(i===3||i===4):i<10)
   }
+  const { patrols, marshal } = CARRIER_DECK_LAYOUTS[landscape ? 'landscape' : 'portrait']
   if(decorative){
     if (servicesLoaded) drawDeckServices(ctx, time, landscape, reducedMotion)
-    const patrols=landscape?[[500,850,239,19],[1080,1260,239,18],[550,730,791,18],[1170,1400,791,17]]:[[210,282,449,22],[752,814,449,22],[198,270,810,21],[760,820,810,21]]
     for (let i = 0; i < patrols.length; i += 1) {
       const [a, b, y, h] = patrols[i]
       const patrol = sampleCrewPatrol(time, a, b, 22, i * 3.7)
       drawDeckPatroller(ctx, patrol.x, y, h, patrol.facing, i % 2 === 0, patrol.distance, !reducedMotion && patrol.moving)
     }
   }
-  const g=boardingGeometry(frame)
-  const marshalX=landscape?g.shipX+190:g.shipX+145,marshalY=landscape?608:g.topY+70
-  const safeX=marshalX+65
-  // Once the lane is clear, stay behind the service equipment until the carrier leaves.
+  const [marshalX, safeX, marshalY] = marshal
   if(crew.retreat<1){
     ctx.save();ctx.globalAlpha=1-Math.max(0,(crew.retreat-.8)*5)
     const h = landscape ? 23 : 24

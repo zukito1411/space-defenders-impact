@@ -1,6 +1,7 @@
 import { getPublicAssetUrl } from '../sound'
 import { makeImageCanvasSprite } from './assets'
 import { sampleCrewPatrol } from './crewMotion'
+import { CARRIER_DECK_LAYOUTS } from './carrierDeckLayout'
 
 const DECK_ATLASES = {
   props: 'assets/carrier/deck-props-v1.webp',
@@ -69,19 +70,6 @@ export function drawDeckPatroller(ctx: CanvasRenderingContext2D, x: number, y: n
   drawDeckPose(ctx, 'workers', sampleDeckPatrolPose(distance, moving, blue), x, y, height, facing)
 }
 
-type View = {
-  cart: Point
-  welder: Point
-  bot: Point
-  cargo: Point
-  inspector: Point
-  tug: readonly [number, number, number]
-}
-const serviceSites: Record<'side' | 'top', View> = {
-  side: { cart:[495,791], welder:[536,791], bot:[1136,791], cargo:[1233,791], inspector:[1261,791], tug:[590,870,791] },
-  top: { cart:[330,1112], welder:[366,1112], bot:[647,1095], cargo:[695,1110], inspector:[718,1110], tug:[652,689,1202] },
-}
-
 export function sampleDeckServicePoses(time: number) {
   const weld = time % 5.2
   const reach = (time + .9) % 5.9
@@ -96,7 +84,7 @@ export function sampleDeckServicePoses(time: number) {
 
 /** Crew jobs stay on service platforms as the launch lane clears. */
 export function drawDeckServices(ctx: CanvasRenderingContext2D, time: number, landscape: boolean, reducedMotion: boolean) {
-  const { cart, welder, bot, cargo, inspector, tug } = serviceSites[landscape ? 'side' : 'top']
+  const { cart, welder, bot, cargo, inspector, tug } = CARRIER_DECK_LAYOUTS[landscape ? 'landscape' : 'portrait'].services
   const pose = sampleDeckServicePoses(time)
   drawDeckProp(ctx, 2, cart, 33)
   if (reducedMotion || pose.welder === null) drawDeckPose(ctx, 'workers', 4, welder[0], welder[1], 24, -1)
@@ -104,6 +92,6 @@ export function drawDeckServices(ctx: CanvasRenderingContext2D, time: number, la
   drawDeckProp(ctx, 1, cargo, 38)
   drawDeckPose(ctx, 'repair', reducedMotion ? 0 : pose.bot, bot[0], bot[1], 25, 1, 8)
   drawDeckPose(ctx, 'workers', reducedMotion ? 8 : pose.inspector, inspector[0], inspector[1], 22, -1)
-  const run = sampleCrewPatrol(time, tug[0], tug[1], landscape ? 20 : 7)
+  const run = sampleCrewPatrol(time, tug[0], tug[1], 20)
   drawDeckProp(ctx, 0, [run.x, tug[2]], 20, run.facing)
 }
