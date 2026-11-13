@@ -15,9 +15,14 @@ for(const running of[false,true])for(const leg of[0,1]){
 }
 for(let t=0;t<70;t+=1/60){const p=lib.sampleCrewPatrol(t,500,850,22,0);assert.ok(p.x>=500&&p.x<=850);const n=lib.sampleCrewPatrol(t+.001,500,850,22,0);assert.ok(n.distance>=p.distance);if(!p.moving&&!n.moving)assert.equal(p.x,n.x)}
 for(const landscape of[false,true]){
- for(const [age,frame]of[[0,0],[2.8,0],[3.8,1],[4.5,2],[5.2,3]])assert.equal(lib.sampleMechDock(age,landscape).frame,frame)
- assert.equal(lib.sampleMechDock(6.2,landscape),null)
+ for(const [age,frame]of[[0,1],[2.8,1],[3.8,1],[4.5,1],[5.2,1],[6.2,1],[8.399,1],[8.4,2],[8.81,3]])assert.equal(lib.sampleMechDock(age,landscape).frame,frame)
+ assert.equal(lib.sampleMechDock(lib.CARRIER_EXIT_SECONDS+.8,landscape),null)
  assert.equal(lib.sampleMechDock(5.4,landscape,true),null)
+ for(const reduced of[false,true])for(const hz of[30,60,120])for(let i=0;i<lib.CARRIER_LAUNCH_SECONDS*hz;i++){
+  const age=i/hz,ship=lib.sampleCarrierLaunch(age,landscape,reduced),pose=lib.sampleMechDock(age,landscape,reduced)
+  if(ship.backdrop>0)assert.equal(pose?.frame,1,'Gundam changes its crouched pose while still inside the dock')
+  if(pose&&pose.frame!==1)assert.equal(ship.backdrop,0,'flight transition must begin only outside')
+ }
 }
 for(const model of['godGundam','spiegel'])for(let frame=0;frame<4;frame++)for(const [x,y,a]of lib.getMechDockNozzles(model,frame).roots){assert.ok(Number.isFinite(x)&&Number.isFinite(y));assert.ok(a>0&&a<.04)}
 for(const file of['god-gundam-launch-v1.webp','spiegel-launch-v1.webp','god-gundam-burning-flight-v3.webp','god-gundam-burning-actions-v2.webp']){

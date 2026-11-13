@@ -2,13 +2,16 @@ import type { CoreLanderCombatModel } from './types'
 import { getPublicAssetUrl } from '../sound'
 import { getCanvasSpriteDimensions, makeImageCanvasSprite } from './assets'
 import { MECH_FLIGHT_ANCHORS } from './mechFlight'
-import { CARRIER_IGNITION_START, CARRIER_DEPARTURE_START } from './carrierLaunch'
+import { CARRIER_EXIT_SECONDS, CARRIER_DEPARTURE_START } from './carrierLaunch'
 
 export const MECH_DOCK_PATHS={godGundam:'assets/ships/sideview/god-gundam-launch-v1.webp',spiegel:'assets/ships/sideview/spiegel-launch-v1.webp'} as const
 export function getMechDockAtlas(model:CoreLanderCombatModel){const path=MECH_DOCK_PATHS[model];return makeImageCanvasSprite('mech-dock:'+path,getPublicAssetUrl(path))}
 export function sampleMechDock(age:number,landscape:boolean,reduced=false){
-  if(age>=6.2||(reduced&&age>=CARRIER_DEPARTURE_START))return null
-  const frame=reduced||age<CARRIER_IGNITION_START?0:age<4.45?1:age<5.1?2:3
+  const exitAge=reduced?CARRIER_DEPARTURE_START:CARRIER_EXIT_SECONDS
+  if(age>=exitAge+.8||(reduced&&age>=exitAge))return null
+  // Remain in the reference crouch until the carrier aperture is completely clear.
+  // Only then tuck the legs and pitch into the flight pose, on the same hull.
+  const frame=age<exitAge?1:age<exitAge+.4?2:3
   return{frame,offsetY:frame<2?-.025:frame===2?-.08:0,angle:landscape||frame===3?-Math.PI/2:frame===2?-Math.PI/6:0}
 }
 export function getMechDockNozzles(model:CoreLanderCombatModel,frame:number){

@@ -7,11 +7,13 @@ and decelerate into a brief turn. The pilot uses the same walk cycle and reaches
 up while climbing. The marshal runs a shorter clearance path over the full one
 second before ignition. Personnel remain intentionally tiny.
 
-Both Gundams use new grounded ready/crouch/lift/fly atlases in the carrier scene.
-They retain one gameplay hull and transition to flight without a second ship.
-Cockpit and ladder mounts follow the upright torso during boarding. Takeoff jets
-use per-pose feet/backpack coordinates and exhaust direction. Reduced motion
-holds the ready stance, then cuts to flight. Existing attack timing is unchanged.
+Both Gundams hold the supplied crouched ready pose throughout boarding, ignition
+and departure inside the carrier. The shared carrier-exit boundary at 8.4 seconds
+starts a 0.8-second tuck/pitch transition into flight only after the bay is clear.
+They retain one gameplay hull without a second ship. Cockpit and ladder mounts
+follow the crouched torso during boarding. Jets use per-pose feet/backpack mounts
+and exhaust direction. Reduced motion holds the same crouch until its outside-space
+cut. Existing attack timing and launch duration are unchanged.
 
 Burning God Gundam now opens six mechanical fins into a wide radial wing fan,
 with three fins on each side of the back hub, instead of parallel trailing blades.

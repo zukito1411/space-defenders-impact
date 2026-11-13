@@ -37,7 +37,7 @@ try {
     await page.waitForFunction(()=>Number(document.querySelector('.raid__carrier-deck')?.getAttribute('data-canopy-open'))>.98,{},{timeout:20000})
     assert.equal(await deck.getAttribute('data-ladder-extension'),'1','boarding ladder must be deployed')
     await page.screenshot({path:`presentation-review/${name}-docked.png`})
-    if(item.model)assert.equal(await page.locator('.raid__fx-canvas').getAttribute('data-mech-dock-frame'),'0','Gundam must stand ready on the deck')
+    if(item.model)assert.equal(await page.locator('.raid__fx-canvas').getAttribute('data-mech-dock-frame'),'1','Gundam must hold the reference crouch on the deck')
     const angle=await deck.getAttribute('data-fan-angle')
     if(reduced){
       await page.waitForTimeout(500)
@@ -91,13 +91,11 @@ try {
     await page.waitForTimeout(400)
     await page.screenshot({path:`presentation-review/${name}-ignition.png`})
     console.log(name,'ignition: pilot aboard, marshal safe')
-    if(item.model&&!reduced){
-      await page.waitForFunction(()=>document.querySelector('.raid__fx-canvas')?.getAttribute('data-mech-dock-frame')==='2',{},{timeout:30000})
-      await page.screenshot({path:`presentation-review/${name}-lift.png`})
-    }
+    if(item.model)assert.equal(await page.locator('.raid__fx-canvas').getAttribute('data-mech-dock-frame'),'1','ignition must not change the crouch')
     await page.waitForFunction(()=>document.querySelector('.raid')?.dataset.carrierStage==='launch',{},{timeout:30000})
     if(!reduced){
       await page.waitForFunction(()=>Math.abs(parseFloat(document.querySelector('.raid').style.getPropertyValue('--carrier-shift-x')))+Math.abs(parseFloat(document.querySelector('.raid').style.getPropertyValue('--carrier-shift-y')))>100,{},{timeout:30000})
+      if(item.model)assert.equal(await page.locator('.raid__fx-canvas').getAttribute('data-mech-dock-frame'),'1','departing through the bay must keep the crouch')
       await page.screenshot({path:`presentation-review/${name}-departure.png`})
       if(name==='landscape'){
         await page.locator('.raid__carrier-flight-status button').click()
@@ -110,6 +108,12 @@ try {
         assert.equal(await page.locator('.raid__carrier-deck').getAttribute('data-fan-angle'),fanBefore,'pause freezes deck fans and crew')
         await page.locator('.raid__panel--pause .raid__start[data-dialog-dismiss]').click()
       }
+    }
+    if(item.model&&!reduced){
+      await page.waitForFunction(()=>document.querySelector('.raid__fx-canvas')?.getAttribute('data-mech-dock-frame')==='2',{},{timeout:30000})
+      assert.equal(await page.locator('.raid').getAttribute('data-carrier-stage'),'clear','changing pose must happen outside the bay')
+      assert.equal(await page.locator('.raid').evaluate(el=>Number(el.style.getPropertyValue('--raid-launch-opacity'))),0)
+      await page.screenshot({path:`presentation-review/${name}-outside-pose-change.png`})
     }
     // Reduced motion cuts directly to space at departure, retaining the shared
     // simulation clock. SwiftShader needs a larger budget for that entire hold.
