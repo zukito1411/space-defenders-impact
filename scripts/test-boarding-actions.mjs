@@ -97,3 +97,42 @@ for(const file of Object.values(lib.MECH_ACTION_PATHS)){
  assert.equal(b.readUIntLE(24,3)+1,1536);assert.equal(b.readUIntLE(27,3)+1,1024)
 }
 console.log('Boarding: cockpit/ladder close before ignition; measured mounts; four attack phases follow shot cooldown; one undistorted frame with alpha passed')
+
+// Run the actual barrage completion callback with simulated host and guest pilots.
+const raidRuntime = read('GradiusRaidRuntime.tsx')
+const barrageSource = raidRuntime.slice(raidRuntime.indexOf('  const finishBarrage ='), raidRuntime.indexOf('  const destroyPlayerByBossCollision'))
+const testBarrageSource = `
+  const useCallback = fn => fn
+  const clamp = (n, low, high) => Math.min(high, Math.max(low, n))
+  const progressRef = {}
+  const isGodGundamBarragePilot = pilot => pilot.model === 'godGundam' || pilot.model === 'spiegel'
+  export function finish(host, guest, barrage, dt) {
+    const playerRef = { current: host }
+    const remotePlayerRef = { current: guest }
+    const godBarrageRef = { current: barrage }
+    ${barrageSource}
+    finishBarrage(dt)
+    finishBarrage(dt)
+    return godBarrageRef.current
+  }
+`
+const { finish } = await import('data:text/javascript;base64,' + Buffer.from(ts.transpileModule(testBarrageSource, { compilerOptions: { module: ts.ModuleKind.ESNext } }).outputText).toString('base64'))
+for (const casterIsGuest of [false, true]) {
+  for (const elapsed of [0, 1 / 30, 1 / 60, 1 / 120]) {
+    const host = { model: 'godGundam', hp: 1, x: 25, y: 118, invuln: 0 }
+    const guest = { model: 'spiegel', hp: 2, x: 75, y: 118, invuln: 7 }
+    assert.equal(finish(host, guest, { startX: 40, casterIsGuest }, elapsed), null)
+    assert.equal(host.x, casterIsGuest ? 25 : 40)
+    assert.equal(guest.x, casterIsGuest ? 40 : 75)
+    assert.equal(host.y, 82)
+    assert.equal(guest.y, 84)
+    assert.equal(host.invuln - elapsed, 5)
+    assert.equal(host.barrageRecovery - elapsed, 5)
+    assert.equal(guest.barrageRecovery - elapsed, 5)
+    assert.equal(guest.invuln, 7)
+  }
+}
+const otherPilot = { model: 'rocket', hp: 2, x: 42, y: 75, invuln: 0 }
+finish(otherPilot, null, { startX: 40 }, 0)
+assert.deepEqual(otherPilot, { model: 'rocket', hp: 2, x: 42, y: 75, invuln: 0 })
+console.log('Barrage: five seconds on return, early completion, host and guest placement, longer protection preserved')

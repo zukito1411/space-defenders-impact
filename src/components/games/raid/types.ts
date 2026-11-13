@@ -68,6 +68,7 @@ export type Player = Vec & {
   hp: number
   maxHp: number
   invuln: number
+  barrageRecovery?: number
   shield: number
   forceField: number
   passiveForceFieldRegen: number
@@ -244,6 +245,7 @@ export type BossDefeatExplosionEvent = {
 }
 
 export type GodGundamBarrage = {
+  casterIsGuest?: boolean
   model?: CoreLanderCombatModel
   targetId: number
   startX: number

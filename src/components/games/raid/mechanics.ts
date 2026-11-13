@@ -305,6 +305,7 @@ export function updatePlayerTimers(player: Player, dt: number, enemies: Enemy[],
   updateMesiahDrones(player, enemies, dt, isSmallViewport)
   updateMesiahScoutDrones(player, enemies, dt, isSmallViewport)
   player.invuln = Math.max(0, player.invuln - dt)
+  if (player.barrageRecovery) player.barrageRecovery = Math.max(0, player.barrageRecovery - dt)
   player.shield = Math.max(0, player.shield - dt * 0.16)
 
   if (player.ship.key === 'spaceEt' && player.hp > 0 && player.forceField < SPACE_ET_PASSIVE_FORCE_FIELD_CHARGES) {

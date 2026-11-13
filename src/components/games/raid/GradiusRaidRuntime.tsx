@@ -2989,9 +2989,10 @@ export function GradiusRaid({
       if (godBarrageRef.current) return
       const barrageModel = getPlayerCoreLanderCombatModel(player, progressRef.current) ?? 'godGundam'
       player.specialCooldown = getNukeCooldownSeconds(stageRef.current)
-      player.invuln = Math.max(player.invuln, GOD_GUNDAM_BARRAGE_DURATION_SECONDS + 0.75)
+      player.invuln = Math.max(player.invuln, 0.16)
       godBarrageRef.current = {
         model: barrageModel,
+        casterIsGuest: player === remotePlayerRef.current,
         targetId: barrageTarget.id,
         startX: player.x,
         startY: player.y,
@@ -4409,6 +4410,22 @@ export function GradiusRaid({
     }
   }, [addRipple, reportRaidRunComplete, spawnSparks, stopRaidBgm, submitRaidLeaderboardScore, triggerScreenShake])
 
+  const finishBarrage = useCallback((elapsedBeforeCollision = 0) => {
+    const barrage = godBarrageRef.current
+    if (!barrage) return
+    godBarrageRef.current = null
+    const protectPilot = (pilot: Player | null, guest: boolean) => {
+      if (!pilot || pilot.hp <= 0 || !isGodGundamBarragePilot(pilot, progressRef.current)) return
+      if (Boolean(barrage.casterIsGuest) === guest) pilot.x = clamp(barrage.startX, 8, 92)
+      pilot.y = Math.min(pilot.y, guest ? 84 : 82)
+      const recovery = 5 + elapsedBeforeCollision
+      pilot.barrageRecovery = recovery
+      pilot.invuln = Math.max(pilot.invuln, recovery)
+    }
+    protectPilot(playerRef.current, false)
+    protectPilot(remotePlayerRef.current, true)
+  }, [])
+
   const destroyPlayerByBossCollision = useCallback((targetPlayer: Player) => {
     const player = targetPlayer
     if (player.hp <= 0) return
@@ -4641,22 +4658,11 @@ export function GradiusRaid({
         detonateNuke(strike.targetX, strike.targetY)
       }
     }
-    if (godBarrageRef.current) {
-      const barrage = godBarrageRef.current
-      barrage.age = Math.min(barrage.duration, barrage.age + dt)
-      if (barrage.age >= barrage.duration) {
-        godBarrageRef.current = null
-        if (isGodGundamBarragePilot(player, progressRef.current)) {
-          player.x = clamp(barrage.startX, 8, 92)
-          player.y = Math.min(player.y, 82)
-          player.invuln = Math.max(player.invuln, 0.6)
-        }
-        const remotePlayer = remotePlayerRef.current
-        if (remotePlayer && isGodGundamBarragePilot(remotePlayer, progressRef.current)) {
-          remotePlayer.y = Math.min(remotePlayer.y, 84)
-          remotePlayer.invuln = Math.max(remotePlayer.invuln, 0.6)
-        }
-      }
+    const activeBarrage = godBarrageRef.current
+    if (activeBarrage) {
+      activeBarrage.age = Math.min(activeBarrage.duration, activeBarrage.age + dt)
+      // Player timers run later in this tick, before collision checks.
+      if (activeBarrage.age >= activeBarrage.duration) finishBarrage(dt)
     }
     if (godMeleeStrikesRef.current.length > 0) {
       for (const strike of godMeleeStrikesRef.current) strike.age += dt
@@ -6601,7 +6607,7 @@ export function GradiusRaid({
         }
       }
       if (barrageTargets.length === 0 && !hasBarrageUtilityTarget) {
-        godBarrageRef.current = null
+        finishBarrage()
       } else {
         godBarrage.hitTimer -= dt
         const playerPowerScore = isGodGundamBarragePilot(player, progressRef.current) ? Math.max(0, player.rank - 1) : getPowerScore(player)
@@ -6637,7 +6643,7 @@ export function GradiusRaid({
             if (target.hp <= 0) {
               markEnemyDefeatedByBarrage(target)
               if (target.isBoss) {
-                godBarrageRef.current = null
+                finishBarrage()
                 break
               }
             }
@@ -6677,7 +6683,7 @@ export function GradiusRaid({
               if (cloneTarget.hp <= 0) {
                 markEnemyDefeatedByBarrage(cloneTarget)
                 if (cloneTarget.isBoss) {
-                  godBarrageRef.current = null
+                  finishBarrage()
                   break
                 }
               }
@@ -6719,7 +6725,7 @@ export function GradiusRaid({
             }
           }
           if (hitAnyTarget) playCoreLanderPhysicalAttackSound(godBarrage.hitIndex + (godBarrage.seed % 9))
-          if (!hitAnyTarget) godBarrageRef.current = null
+          if (!hitAnyTarget) finishBarrage()
         }
       }
     }
@@ -6866,7 +6872,7 @@ export function GradiusRaid({
       if (completedRun) {
         shotsRef.current = []
         enemyShotsRef.current = []
-        godBarrageRef.current = null
+        finishBarrage()
         enemiesRef.current = defeatedBoss ? [defeatedBoss] : []
         asteroidsRef.current = []
         meteorsRef.current = []
@@ -6917,7 +6923,7 @@ export function GradiusRaid({
       spawnLockRef.current = STAGE_CLEAR_SECONDS + 1.2
       shotsRef.current = []
       enemyShotsRef.current = []
-      godBarrageRef.current = null
+      finishBarrage()
       enemiesRef.current = enemiesRef.current.filter((enemy) => enemy.isBoss && enemy.hp <= 0)
       asteroidsRef.current = []
       meteorsRef.current = []
@@ -6948,7 +6954,7 @@ export function GradiusRaid({
         }
       }
       for (const targetPlayer of livingPlayersThisTick) {
-        if (targetPlayer.hp <= 0) continue
+        if (targetPlayer.hp <= 0 || (targetPlayer.barrageRecovery ?? 0) > 0) continue
         const hitRange = enemyShot.radius + getRaidPlayerHitRadius(targetPlayer)
         if (enemyShot.kind === 'beam' && enemyShot.life !== undefined) {
           const beamHitRange = enemyShot.radius * 0.82 + getRaidPlayerHitRadius(targetPlayer) * 0.72
@@ -6984,7 +6990,7 @@ export function GradiusRaid({
 
     for (const enemy of enemiesRef.current) {
       for (const targetPlayer of livingPlayersThisTick) {
-        if (targetPlayer.hp <= 0) continue
+        if (targetPlayer.hp <= 0 || (targetPlayer.barrageRecovery ?? 0) > 0) continue
         const hitRange = enemy.radius + getRaidPlayerHitRadius(targetPlayer)
         if (
           Math.abs(enemy.x - targetPlayer.x) <= hitRange &&
@@ -7153,7 +7159,7 @@ export function GradiusRaid({
     if (remotePlayerRef.current && remotePlayerRef.current.score > highScoreRef.current) {
       highScoreRef.current = remotePlayerRef.current.score
     }
-  }, [activateNuke, addRipple, beginCarrierRecovery, emitCommandBossShot, damagePlayer, destroyPlayerByBossCollision, detonateNuke, fireEnemy, firePlayer, getLivingPlayers, getNearestLivingPlayer, reportRaidRunComplete, spawnAsteroidCluster, spawnBoss, spawnEnemyAt, spawnFormation, spawnPowerUp, spawnLevelUpPowerUp, spawnSparks, startRaidBgm, startRandomRaidEvent, stopRaidBgm, submitRaidLeaderboardScore, syncSnapshot, resolveBossKind, triggerScreenShake])
+  }, [activateNuke, addRipple, beginCarrierRecovery, emitCommandBossShot, damagePlayer, destroyPlayerByBossCollision, detonateNuke, finishBarrage, fireEnemy, firePlayer, getLivingPlayers, getNearestLivingPlayer, reportRaidRunComplete, spawnAsteroidCluster, spawnBoss, spawnEnemyAt, spawnFormation, spawnPowerUp, spawnLevelUpPowerUp, spawnSparks, startRaidBgm, startRandomRaidEvent, stopRaidBgm, submitRaidLeaderboardScore, syncSnapshot, resolveBossKind, triggerScreenShake])
 
   const getRaidFocusableControls = useCallback(() => {
     const root = rootRef.current
