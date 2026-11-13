@@ -15,7 +15,7 @@ import { getPublicAssetUrl } from '../sound'
 import type { GraphicsQuality } from '../sound'
 import { getRaidAlienSpriteUrl, getRaidEliteSpriteUrl, getRaidShipSpriteUrl } from '../RaidShipSprite'
 import { Application, Assets, Container, FillGradient, Graphics, Sprite, Texture, TilingSprite } from 'pixi.js'
-import { RAID_OTHER_ASSET_PATHS, drawCanvasImageContain, getRaidOtherCanvasSprite } from './assets'
+import { RAID_OTHER_ASSET_PATHS, drawCanvasImageContain, getRaidOtherCanvasSprite, getRaidSideShipCanvasSprite } from './assets'
 import type { RaidOtherAssetKey } from './assets'
 import { COMET_ASSET_HEAD_ANGLE, DEG } from './constants'
 import type { CameraShakeState } from './types'
@@ -904,6 +904,8 @@ export class PixiRaidBackground {
   private readonly explosionGraphics = new Graphics()
   private readonly assetTextures = new Map<PixiRaidAssetKey, Texture>()
   private readonly finalBattleTextures = new Map<string, Texture>()
+  private readonly backgroundSideShipTextures = new Map<string, Texture>()
+  private backgroundSideShipsRequested = false
   private readonly gradientCache = new Map<string, FillGradient>()
   private baseKey = ''
   private readonly travel = new RaidTravelMotion()
@@ -1055,6 +1057,8 @@ export class PixiRaidBackground {
     this.gradientCache.clear()
     this.gpuForeground.destroy()
     this.app?.destroy({ removeView: true }, { children: true })
+    for (const texture of this.backgroundSideShipTextures.values()) texture.destroy(true)
+    this.backgroundSideShipTextures.clear()
     this.eclipseTexture?.destroy(true)
     this.eclipseTexture = null
     this.depthStarTexture?.destroy(true)
@@ -1069,6 +1073,7 @@ export class PixiRaidBackground {
     try {
       const { width, height, dpr, palette, quality, time, stageRush, bossIntensity, devilCorruption, finalBattleIntensity = 0 } = frame
       const seconds = time / 1000
+      if (frame.landscape && !this.backgroundSideShipsRequested) this.preloadBackgroundSideShips()
       if (this.journeyRun !== (frame.runToken ?? 0)) {
         this.wreckSeed = wreckRunSeed(frame.runToken ?? 0)
         this.journeyRun = frame.runToken ?? 0
@@ -1156,7 +1161,7 @@ export class PixiRaidBackground {
         this.updateAmbientGlows(width, height, isLow, isMedium, palette, stageTheme)
         this.updateSurface(width, height, seconds, palette, quality, groundTheme, Boolean(frame.landscape))
         this.updateFinalBattleBackdrop(width, height, seconds, stageTheme, quality, finalBattleIntensity)
-        this.updateFinalBattleLayer(width, height, seconds, stageTheme, quality, finalBattleIntensity)
+        this.updateFinalBattleLayer(width, height, seconds, stageTheme, quality, finalBattleIntensity, frame.landscape)
         this.updateAmbientExplosions(width, height, seconds, isLow, isMedium, stageTheme)
       }
 
@@ -1199,7 +1204,7 @@ export class PixiRaidBackground {
       // follow the player's steering. Island/terrain parallax remains intact.
       this.updateJourneyWorld(width, height, groundTheme, Boolean(frame.landscape), seconds)
       this.updateOrbitalEffects(width, height, frame.stageNumber ?? 1, frame.stageAge ?? 0, frame.stageRush,
-        bossIntensity, isLow, isMedium, !space)
+        bossIntensity, isLow, isMedium, !space, frame.landscape)
       // Present with the foreground once per rAF, not twice. Geometry,
       // scenery and textures are updated here on their existing cadence.
       return true
@@ -1330,6 +1335,34 @@ export class PixiRaidBackground {
         this.finalBattleTextures.delete(key)
       }
     }))
+  }
+
+  private preloadBackgroundSideShips() {
+    this.backgroundSideShipsRequested = true
+    const keys = new Set<string>(FINAL_BATTLE_CRUISERS.map(({ asset }) => asset))
+    for (const fighter of FINAL_BATTLE_FIGHTERS) {
+      if (fighter.assetKind === 'ship') keys.add(fighter.asset)
+    }
+    for (const key of keys) {
+      const sprite = getRaidSideShipCanvasSprite(key)
+      if (!sprite) continue
+      void sprite.ready.then(() => {
+        if (this.destroyed || !sprite.loaded || !sprite.image.naturalWidth) return
+        // Share the decoded player artwork, but keep the scenery GPU copy small.
+        const image = sprite.image
+        const scale = Math.min(1, 384 / Math.max(image.naturalWidth, image.naturalHeight))
+        const canvas = document.createElement('canvas')
+        canvas.width = Math.max(1, Math.round(image.naturalWidth * scale))
+        canvas.height = Math.max(1, Math.round(image.naturalHeight * scale))
+        const ctx = canvas.getContext('2d')
+        if (!ctx) return
+        ctx.imageSmoothingQuality = 'high'
+        ctx.drawImage(image, 0, 0, canvas.width, canvas.height)
+        this.backgroundSideShipTextures.set(key, Texture.from(canvas))
+      }).catch(() => {
+        // The existing portrait texture remains available if side art fails to load.
+      })
+    }
   }
 
   private getGradient(key: string, options: object) {
@@ -2213,7 +2246,7 @@ export class PixiRaidBackground {
   }
 
   private updateOrbitalEffects(width: number, height: number, stage: number, age: number, rush: number, boss: number,
-    low: boolean, medium: boolean, surface: boolean) {
+    low: boolean, medium: boolean, surface: boolean, landscape = false) {
     const planet = this.planetSprites[0]
     const shadow = this.orbitalShadow
     shadow.strength = 0
@@ -2233,13 +2266,17 @@ export class PixiRaidBackground {
 
     const pass = sampleCapitalFlyby(age, stage)
     const cruiser = FINAL_BATTLE_CRUISERS[stage % 2]
-    const hull = this.finalBattleTextures.get(getFinalBattleCruiserTextureKey(cruiser))
+    const sideHull = landscape ? this.backgroundSideShipTextures.get(cruiser.asset) : undefined
+    const hull = sideHull ?? this.finalBattleTextures.get(getFinalBattleCruiserTextureKey(cruiser))
     this.capitalFlyby.visible = Boolean(hull && pass >= 0 && !surface && !low && !this.reducedMotion && boss < .35)
     if (this.capitalFlyby.visible && hull) {
       const side = stage % 2 === 0 ? -1 : 1
       const edge = Math.min(width, height) * (.22 + pass * .28)
       setPixiSpriteContain(this.capitalFlyby, hull, width * (.5 + side * (.54 - pass * .11)),
-        height * (-.26 + pass * 1.5), edge, edge, Math.min(1, pass * 8, (1 - pass) * 8) * .92, side * .28 + Math.PI)
+        height * (-.26 + pass * 1.5), edge, edge, Math.min(1, pass * 8, (1 - pass) * 8) * .92, side * .28 + (sideHull ? -Math.PI / 2 : Math.PI))
+      // Landscape turns the field clockwise. Mirror the side art to face
+      // left along this pass while keeping the deck above the engines.
+      if (sideHull) this.capitalFlyby.scale.x *= -1
       this.capitalFlyby.tint = stage <= 5 ? 0xb7d4f0 : 0xc5bbc9
     }
 
@@ -2367,7 +2404,7 @@ export class PixiRaidBackground {
     }
   }
 
-  private updateFinalBattleLayer(width: number, height: number, seconds: number, stageTheme: number, quality: GraphicsQuality, intensity: number) {
+  private updateFinalBattleLayer(width: number, height: number, seconds: number, stageTheme: number, quality: GraphicsQuality, intensity: number, landscape = false) {
     const graphics = this.finalBattleGraphics
     graphics.clear()
     const isFinalTheme = Math.floor(stageTheme) === RAID_BOSS_BACKGROUND_THEME_FINAL
@@ -2403,7 +2440,8 @@ export class PixiRaidBackground {
     for (let index = 0; index < fighterLimit; index += 1) {
       const fighter = FINAL_BATTLE_FIGHTERS[index]
       const sprite = this.finalBattleSprites[index]
-      const texture = this.finalBattleTextures.get(getFinalBattleTextureKey(fighter))
+      const sideHull = landscape && fighter.assetKind === 'ship' ? this.backgroundSideShipTextures.get(fighter.asset) : undefined
+      const texture = sideHull ?? this.finalBattleTextures.get(getFinalBattleTextureKey(fighter))
       const progress = (seconds * fighter.speed + fighter.ySeed) % 1
       const laneDrift = Math.sin(fighter.phase) * fighter.drift * 0.52
       const y = fighter.side === 'ally'
@@ -2416,7 +2454,8 @@ export class PixiRaidBackground {
       const shipTint = sceneryTint(0xffffff, 0.42 + alpha * 0.18)
       if (texture) {
         const drawSize = fighter.assetKind === 'ship' ? size : size * 1.08
-        setPixiSpriteContain(sprite, texture, x, y, drawSize, drawSize, 1, fighter.side === 'ally' ? angle : angle - Math.PI)
+        const rotation = angle - (sideHull ? Math.PI / 2 : fighter.side === 'enemy' ? Math.PI : 0)
+        setPixiSpriteContain(sprite, texture, x, y, drawSize, drawSize, 1, rotation)
         sprite.tint = shipTint
       } else {
         sprite.visible = false
@@ -2435,7 +2474,8 @@ export class PixiRaidBackground {
     for (let index = 0; index < cruiserLimit; index += 1) {
       const cruiser = FINAL_BATTLE_CRUISERS[index]
       const sprite = this.finalBattleCruiserSprites[index]
-      const texture = this.finalBattleTextures.get(getFinalBattleCruiserTextureKey(cruiser))
+      const sideHull = landscape ? this.backgroundSideShipTextures.get(cruiser.asset) : undefined
+      const texture = sideHull ?? this.finalBattleTextures.get(getFinalBattleCruiserTextureKey(cruiser))
       const progress = (seconds * cruiser.speed + cruiser.ySeed) % 1
       const y = height * (1.16 - progress * 1.34)
       const laneDrift = cruiser.drift * (0.65 + Math.sin(cruiser.phase) * 0.18)
@@ -2446,7 +2486,7 @@ export class PixiRaidBackground {
       const cruiserAlpha = alpha * cruiser.alpha * edgeFade
       if (texture) {
         this.drawFinalBattleCruiserTrail(graphics, x, y, size, angle, cruiserAlpha)
-        setPixiSpriteContain(sprite, texture, x, y, size, size, 1, angle)
+        setPixiSpriteContain(sprite, texture, x, y, size, size, 1, angle - (sideHull ? Math.PI / 2 : 0))
         sprite.tint = sceneryTint(0xffffff, 0.42 + cruiser.alpha * 0.25)
       } else {
         sprite.visible = false
