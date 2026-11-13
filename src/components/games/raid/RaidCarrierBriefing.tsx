@@ -4,9 +4,9 @@ import type { RaidMode } from './types'
 import { getCarrierMission } from './carrierMission'
 import './carrier.css'
 
-export function RaidCarrierBriefing({ language, mode, stage, shipName, canLaunch, onLaunch, onBack }: {
+export function RaidCarrierBriefing({ language, mode, stage, shipName, underway, canLaunch, onLaunch, onBack }: {
   language: LanguageCode; mode: RaidMode; stage: number; shipName: string
-  canLaunch: boolean; onLaunch: () => void; onBack: () => void
+  underway: boolean; canLaunch: boolean; onLaunch: () => void; onBack: () => void
 }) {
   const mission = getCarrierMission(language, mode)
   const [beat, setBeat] = useState(0)
@@ -16,7 +16,7 @@ export function RaidCarrierBriefing({ language, mode, stage, shipName, canLaunch
   const onLaunchRef = useRef(onLaunch)
   onLaunchRef.current = onLaunch
   const reduced = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches
-  const [speaker, title, body] = mission.beats[beat]
+  const [speaker, title, body] = underway && beat === 2 ? mission.underwayBeat : mission.beats[beat]
   const revealSeconds = reduced ? 0 : Array.from(body).length / (language === 'en' ? 48 : 23)
   const visible = reduced ? body : Array.from(body).slice(0, Math.floor(elapsed * (language === 'en' ? 48 : 23))).join('')
   const launch = () => {
@@ -47,14 +47,14 @@ export function RaidCarrierBriefing({ language, mode, stage, shipName, canLaunch
   }, [auto, reduced, elapsed, revealSeconds, beat, canLaunch, mission.beats.length])
   return <section className="raid__carrier-briefing" role="dialog" aria-modal="true" aria-labelledby="carrier-mission-title">
     <header className="raid__carrier-masthead">
-      <span><i />{mission.channel}</span><span>{mission.secure}</span>
+      <span><i />Mesiah · {mission.channel}</span><span>{mission.secure}</span>
     </header>
     <div className="raid__carrier-mission">
       <small>OPERATION // {mission.operation} <span>SECTOR {String(stage).padStart(2, '0')}</span></small>
       <h2 id="carrier-mission-title">{mission.objective}</h2>
       <div className="raid__carrier-goals">{mission.goals.map((goal, index) => <span key={goal}><b>0{index + 1}</b>{goal}</span>)}</div>
     </div>
-    <div className="raid__carrier-vessel"><span>{mission.docked}</span><strong>{shipName}</strong><i /></div>
+    <div className="raid__carrier-vessel"><span>{underway ? mission.underway : mission.docked}</span><strong>{shipName}</strong><i /></div>
     <div className="raid__carrier-comms">
       <div className="raid__carrier-speaker"><div aria-hidden="true" className="raid__carrier-signal">{[0,1,2,3,4].map(i=><i key={i} style={{animationDelay:`${i * -.13}s`}} />)}</div><span>{speaker}</span><small>0{beat + 1} / 03</small></div>
       <h3>{title}</h3>

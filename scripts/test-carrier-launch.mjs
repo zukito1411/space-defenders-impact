@@ -7,7 +7,7 @@ const module=async path=>{
  const js=ts.transpileModule(text,{compilerOptions:{module:ts.ModuleKind.ESNext}}).outputText
  return import('data:text/javascript;base64,'+Buffer.from(js).toString('base64'))
 }
-const {sampleCarrierLaunch:sample,CARRIER_LAUNCH_SECONDS:duration}=await module('src/components/games/raid/carrierLaunch.ts')
+const {sampleCarrierLaunch:sample,CARRIER_LAUNCH_SECONDS:duration,MESIAH_ENTRY_SECONDS:mesiahDuration}=await module('src/components/games/raid/carrierLaunch.ts')
 for(const landscape of [false,true])for(const compact of [false,true]){
  const dock=sample(0,landscape,false,compact)
  assert.equal(dock.engine,0);assert.equal(dock.release,0);assert.equal(dock.backdrop,1)
@@ -26,6 +26,14 @@ for(const landscape of [false,true])for(const compact of [false,true]){
  }
  for(const age of [0,1,2,4,6.4])assert.equal(sample(age,landscape,true,compact).shift,0,'reduced motion has no carrier pan')
 }
+for (const landscape of [false, true]) for (const age of [0, mesiahDuration / 2, mesiahDuration]) {
+ const flight = sample(age, landscape, false, false, true)
+ assert.equal(flight.backdrop, 0)
+ assert.equal(flight.engine, 1)
+ assert.equal(flight.release, 1)
+ assert.equal(flight.done, age === mesiahDuration)
+ if (flight.done) assert.deepEqual([flight.x, flight.y, flight.scale], [50, 82, 1])
+}
 const calls=[]
 const ctx=new Proxy({globalAlpha:1},{get:(o,k)=>k in o?o[k]:(...args)=>calls.push([k,...args]),set:(o,k,v)=>(o[k]=v,true)})
 const {drawCarrierClamps}=await module('src/components/games/raid/carrierLaunch.ts')
@@ -38,7 +46,7 @@ for(const language of ['en','zh','ja','ko'])for(const mode of ['campaign','endle
  assert.ok(m.beats.every(b=>b.length===3&&b[2].length>0))
 }
 const runtime=read('src/components/games/raid/GradiusRaidRuntime.tsx')
-assert.match(runtime,/stageEntryRef.current = CARRIER_LAUNCH_SECONDS/)
+assert.match(runtime,/stageEntryRef.current = underway \? MESIAH_ENTRY_SECONDS : CARRIER_LAUNCH_SECONDS/)
 assert.match(runtime,/carrierLaunch: initialLaunchRef.current/)
 assert.match(runtime,/if \(carrierActive\) \{[\s\S]*?renderCarrierPilot\(ownShipRef[\s\S]*?return/)
 const assets=read('src/components/games/raid/carrierAssets.ts')

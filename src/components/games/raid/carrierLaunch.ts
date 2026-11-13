@@ -1,11 +1,23 @@
 /** All launch choreography is sampled from simulation time, never a DOM timer. */
 export const CARRIER_LAUNCH_SECONDS = 6.4
 export const CARRIER_IGNITION_SECONDS = 1.6
+export const MESIAH_ENTRY_SECONDS = 2.4
 const unit = (n: number) => Math.max(0, Math.min(1, n))
 const smooth = (n: number) => { const p = unit(n); return p * p * (3 - 2 * p) }
 
-export function sampleCarrierLaunch(age: number, landscape: boolean, reducedMotion = false, compact = false) {
+export function sampleCarrierLaunch(age: number, landscape: boolean, reducedMotion = false, compact = false, underway = false) {
   const t = Math.max(0, Number.isFinite(age) ? age : 0)
+  if (underway) {
+    const entry = smooth(t / MESIAH_ENTRY_SECONDS)
+    const cruiseY = landscape ? 40 : compact ? 53 : 60
+    return {
+      x: landscape ? 58 - 8 * entry : 50,
+      y: cruiseY + (82 - cruiseY) * entry,
+      scale: 1, engine: 1, release: 1, backdrop: 0, shift: 0,
+      phase: t < MESIAH_ENTRY_SECONDS ? 'clear' : 'flight',
+      done: t >= MESIAH_ENTRY_SECONDS,
+    } as const
+  }
   const ignition = unit(t / CARRIER_IGNITION_SECONDS)
   const flight = unit((t - CARRIER_IGNITION_SECONDS) / 3)
   const settle = smooth((t - 4.6) / 1.8)
