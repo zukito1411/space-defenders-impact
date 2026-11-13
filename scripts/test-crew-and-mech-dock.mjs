@@ -18,7 +18,7 @@ for(const landscape of[false,true]){
 }
 for(const model of['godGundam','spiegel'])for(let frame=0;frame<4;frame++)for(const [x,y,a]of lib.getMechDockNozzles(model,frame).roots){assert.ok(Number.isFinite(x)&&Number.isFinite(y));assert.ok(a>0&&a<.04)}
 for(const [file,height] of [
- ['god-gundam-launch-v2.webp',1024], ['spiegel-launch-v2.webp',1024],
+ ['god-gundam-launch-v2.webp',1024], ['spiegel-launch-v1.webp',1024],
  ['god-gundam-flight-v3.webp',1024], ['god-gundam-actions-v2.webp',1024],
  ['god-gundam-burning-flight-v4.webp',1024], ['god-gundam-burning-actions-v3.webp',1024],
 ]){
