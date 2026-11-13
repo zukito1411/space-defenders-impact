@@ -4,7 +4,7 @@ type Point = readonly [number, number]
 /** Measured on the 1536x1024 v2 art, in physical right-facing hull-size units. */
 export const MECH_FLIGHT_ANCHORS = {
   godGundam: {
-    head: [.335, -.105], hand: [.468, -.026],
+    head: [.335, -.105], hand: [.468, -.04],
     shoulders: [[.176, -.144], [.376, -.074]],
     nozzles: [[.078, -.094, .018], [-.370, .068, .016], [-.279, .167, .016]],
   },

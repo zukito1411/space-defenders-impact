@@ -1,4 +1,5 @@
 import { CARRIER_BOARDING_SECONDS, CARRIER_CLEAR_SECONDS } from './carrierLaunch'
+import { drawBoardingLadder, drawCarrierCockpit, getCarrierBoardingGeometry, sampleCarrierBoarding } from './carrierBoarding'
 
 const unit = (n: number) => Math.max(0, Math.min(1, n))
 export function carrierCover(width: number, height: number, landscape: boolean) {
@@ -109,7 +110,30 @@ export type CarrierDeckFrame = {
   width: number; height: number; dpr: number; landscape: boolean; ambientAge: number
   launchAge: number; briefing: boolean; reducedMotion: boolean; decorative: boolean
   /** Physical-screen pilot/cockpit position, using the very same hull renderer scale. */
-  shipX: number; shipY: number; hullSize: number
+  shipX: number; shipY: number; hullSize: number; visualKey: string
+}
+
+/** Shared ladder/pilot/cockpit mount; source coordinates retain cover/crop alignment. */
+function boardingGeometry(frame: CarrierDeckFrame) {
+  const cover=carrierCover(frame.width,frame.height,frame.landscape)
+  const shipX=(frame.shipX-cover.x)/cover.scale,shipY=(frame.shipY-cover.y)/cover.scale,hull=frame.hullSize/cover.scale
+  return {cover,shipX,shipY,hull,...getCarrierBoardingGeometry(shipX,shipY,hull,frame.visualKey,frame.landscape,1)}
+}
+
+/** Foreground pass after the one gameplay hull: pilot climbs visible rungs into the well. */
+export function drawCarrierBoardingForeground(ctx: CanvasRenderingContext2D, frame: CarrierDeckFrame) {
+  const g=boardingGeometry(frame),crew=sampleCarrierCrew(frame.launchAge,frame.briefing,frame.reducedMotion)
+  const kit=sampleCarrierBoarding(frame.launchAge,frame.briefing,frame.reducedMotion,frame.ambientAge)
+  ctx.save();ctx.translate(g.cover.x,g.cover.y);ctx.scale(g.cover.scale,g.cover.scale)
+  drawBoardingLadder(ctx,g.footX,g.floorY,g.topX,g.topY,kit.ladder)
+  drawCarrierCockpit(ctx,g.shipX,g.shipY,g.hull,frame.visualKey,frame.landscape,kit.canopy)
+  if(crew.pilotVisible){
+    const x=g.startX+(g.footX-g.startX)*crew.walk+(g.topX-g.footX)*crew.climb
+    const y=g.floorY+(g.topY-g.floorY)*crew.climb
+    ctx.globalAlpha*=1-Math.max(0,(crew.climb-.72)/.28)
+    person(ctx,x,y,frame.landscape?21:23,frame.reducedMotion?0:frame.ambientAge*10,'#d3dbe0',1,!frame.briefing&&!frame.reducedMotion,false,crew.climb>0)
+  }
+  ctx.restore()
 }
 
 const staticDeckFrames = new WeakMap<HTMLCanvasElement, string>()
@@ -119,9 +143,10 @@ export function drawCarrierDeck(canvas: HTMLCanvasElement, frame: CarrierDeckFra
   const pw=Math.round(width*dpr),ph=Math.round(height*dpr)
   if(canvas.width!==pw||canvas.height!==ph){canvas.width=pw;canvas.height=ph}
   const crew=sampleCarrierCrew(launchAge,briefing,reducedMotion)
+  const kit=sampleCarrierBoarding(launchAge,briefing,reducedMotion,ambientAge)
   // Static accessibility frames only change on a boarding/clearance cut or resize.
   // Avoid repeatedly rasterizing and uploading a full-screen unchanged canvas.
-  const staticKey=reducedMotion?[width,height,dpr,landscape,decorative,frame.shipX,frame.shipY,frame.hullSize,crew.pilotState,crew.marshalState,crew.retreat].join(':'):null
+  const staticKey=reducedMotion?[width,height,dpr,landscape,decorative,frame.shipX,frame.shipY,frame.hullSize,frame.visualKey,crew.pilotState,crew.marshalState,crew.retreat,kit.ladder,kit.canopy].join(':'):null
   if(staticKey&&staticDeckFrames.get(canvas)===staticKey)return
   const ctx=canvas.getContext('2d');if(!ctx)return
   if(staticKey)staticDeckFrames.set(canvas,staticKey);else staticDeckFrames.delete(canvas)
@@ -131,6 +156,8 @@ export function drawCarrierDeck(canvas: HTMLCanvasElement, frame: CarrierDeckFra
   canvas.dataset.pilotState=crew.pilotState;canvas.dataset.marshalState=crew.marshalState
   canvas.dataset.crewCount=String(decorative?6:2)
   canvas.dataset.fanAngle=String(decorative?time*.85:0)
+  canvas.dataset.canopyOpen=String(kit.canopy);canvas.dataset.ladderExtension=String(kit.ladder)
+  canvas.dataset.cockpitSealed=String(kit.sealed)
   const fanSites=landscape?[[260,135,51],[395,135,51]]:[[126,383,30],[898,383,30],[126,885,31],[898,885,31],[286,569,20],[738,569,20]]
   for(let i=0;i<fanSites.length;i++){const [x,y,r]=fanSites[i];fan(ctx,x,y,r,decorative?time*(i%2?-.8:.85):0,!landscape&&i>=4)}
   const lights=landscape?[[407,316,31],[802,318,30],[1192,318,29],[1340,402,22],[1340,487,20],[1474,267,26],[287,604,23],[505,604,24],[709,604,23],[912,604,23],[1158,604,24]]
@@ -147,20 +174,8 @@ export function drawCarrierDeck(canvas: HTMLCanvasElement, frame: CarrierDeckFra
       person(ctx,a+(b-a)*p,y,h,time*7+i*2,i%2?'#3f8292':'#c38d4d',forward?1:-1,!reducedMotion)
     }
   }
-  const shipX=(frame.shipX-cover.x)/cover.scale, shipY=(frame.shipY-cover.y)/cover.scale
-  const hull=frame.hullSize/cover.scale
-  const boardX=landscape?shipX+hull*.09:shipX+hull*.06
-  const boardY=landscape?shipY-hull*.04:shipY-hull*.18
-  const floorY=landscape?608:boardY+110
-  const startX=boardX-(landscape?150:170), walkEndX=boardX-25
-  if(crew.pilotVisible){
-    const x=startX+(walkEndX-startX)*crew.walk+(boardX-walkEndX)*crew.climb
-    const y=floorY+(boardY-floorY)*crew.climb
-    ctx.save();ctx.globalAlpha=1-crew.climb*.8
-    person(ctx,x,y,landscape?21:23,time*10,'#d3dbe0',1,!briefing&&!reducedMotion)
-    ctx.restore()
-  }
-  const marshalX=landscape?shipX+190:shipX+145,marshalY=landscape?608:boardY+85
+  const g=boardingGeometry(frame)
+  const marshalX=landscape?g.shipX+190:g.shipX+145,marshalY=landscape?608:g.topY+70
   const safeX=marshalX+95
   // Once the lane is clear, stay behind the service equipment until the carrier leaves.
   if(crew.retreat<1){

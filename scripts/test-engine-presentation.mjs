@@ -11,6 +11,7 @@ const updateFlightPose=(pose)=>{pose.maneuverJet=globalThis.testManeuverJet??0;r
 const GOD_GUNDAM_BURNING_BODY_SCALE=1.09,GOD_GUNDAM_BURNING_BODY_Y_OFFSET=-.064;
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const isCoreLanderBurning=()=>false, getCoreLanderBurningRage=()=>0;
+const getCoreLanderFireInterval=()=>.5,sampleMechAttack=()=>({frame:3,stage:'idle'}),drawMechAction=()=>false,getMechActionAtlas=()=>({});
 const getShipCanvasSprite=()=>({});
 const getRaidSideShipCanvasSprite=()=>({loaded:true}),getRaidSideShipNozzles=()=>[[.10,.22,.05]],drawCanvasSpriteContain=(ctx,sprite,x,y,size)=>ctx.hulls.push(size);
 const getOptionSupportStacks=()=>1,getShipSpriteSize=()=>30;
