@@ -4,7 +4,7 @@ import { getCanvasSpriteDimensions, makeImageCanvasSprite } from './assets'
 import { MECH_FLIGHT_ANCHORS } from './mechFlight'
 import { CARRIER_EXIT_SECONDS, CARRIER_DEPARTURE_START } from './carrierLaunch'
 
-export const MECH_DOCK_PATHS={godGundam:'assets/ships/sideview/god-gundam-launch-v1.webp',spiegel:'assets/ships/sideview/spiegel-launch-v1.webp'} as const
+export const MECH_DOCK_PATHS={godGundam:'assets/ships/sideview/god-gundam-launch-v2.webp',spiegel:'assets/ships/sideview/spiegel-launch-v1.webp'} as const
 export function getMechDockAtlas(model:CoreLanderCombatModel){const path=MECH_DOCK_PATHS[model];return makeImageCanvasSprite('mech-dock:'+path,getPublicAssetUrl(path))}
 export function sampleMechDock(age:number,landscape:boolean,reduced=false){
   const exitAge=reduced?CARRIER_DEPARTURE_START:CARRIER_EXIT_SECONDS
@@ -15,7 +15,10 @@ export function sampleMechDock(age:number,landscape:boolean,reduced=false){
   return{frame,offsetY:frame<2?-.025:frame===2?-.08:0,angle:landscape||frame===3?-Math.PI/2:frame===2?-Math.PI/6:0}
 }
 export function getMechDockNozzles(model:CoreLanderCombatModel,frame:number){
-  if(frame===3)return {roots:MECH_FLIGHT_ANCHORS[model].nozzles,angle:Math.PI/2}
+  if(frame===3)return {
+    roots:model==='godGundam'?[[.078,-.094,.018],[-.370,.068,.016],[-.279,.167,.016]] as const:MECH_FLIGHT_ANCHORS[model].nozzles,
+    angle:Math.PI/2,
+  }
   const roots:readonly(readonly[number,number,number])[]=frame<2
     ?model==='godGundam'?[[-.17,.29,.018],[.20,.29,.018]]:[[-.20,.29,.018],[.18,.29,.018]]
     :model==='godGundam'?[[-.20,.23,.018],[-.045,.26,.018]]:[[-.23,.22,.018],[-.10,.25,.018]]

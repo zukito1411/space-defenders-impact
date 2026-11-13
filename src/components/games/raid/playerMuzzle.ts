@@ -38,7 +38,7 @@ export function createRaidMainShotEmitter(
     const side = Math.sign(spread)
     let x = Math.max(-.055, Math.min(.055, spread * .016))
     let y = nose
-    if (combatModel && model) { [x, y] = getMechShotAnchor(model, shot.kind, spread, landscape) }
+    if (combatModel && model) { [x, y] = getMechShotAnchor(model, shot.kind, spread, landscape, shot.burning) }
 
     if (wingCannon && shipKey === 'xwing') {
       x = side * .28

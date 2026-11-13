@@ -1297,14 +1297,17 @@ export function drawRaidPlayer(
   } else if (sideSprite?.loaded) {
     // The playfield turns clockwise; rotate the right-facing art into its
     // logical upward flight direction before the camera transform.
-    const attackPose = coreLanderCombatModel ? sampleMechAttack(player.fireCooldown, getCoreLanderFireInterval(player), !presentation?.hideCombatFx && !isDown && (phase === 'playing' || phase === 'paused') && (player.godMeleeCloak ?? 0) <= 0, reducedMotion) : null
+    const attackActive = !presentation?.hideCombatFx && !isDown && (phase === 'playing' || phase === 'paused') && (player.godMeleeCloak ?? 0) <= 0
+    const attackPose = coreLanderCombatModel && (coreLanderCombatModel !== 'godGundam' || attackActive)
+      ? sampleMechAttack(player.fireCooldown, getCoreLanderFireInterval(player), attackActive, reducedMotion) : null
     // Pick one form and one registered pose. Alpha crossfades between displaced arms
     // would draw a ghost arm, and would not correspond to the actual release point.
-    const actionDrawn = coreLanderCombatModel && attackPose && drawMechAction(ctx, coreLanderCombatModel, coreLanderBurningBlend >= .5, attackPose.frame, x, y, renderSize, alpha, rotation, scale)
+    const attackFrame = reducedMotion && coreLanderCombatModel === 'godGundam' ? 2 : attackPose?.frame
+    const actionDrawn = coreLanderCombatModel && attackFrame !== undefined && drawMechAction(ctx, coreLanderCombatModel, coreLanderBurning, attackFrame, x, y, renderSize, alpha, rotation, scale)
     if (actionDrawn && attackPose && ctx.canvas?.dataset) {
       ctx.canvas.dataset.mechActionModel = coreLanderCombatModel ?? ''
       ctx.canvas.dataset.mechActionStage = attackPose.stage
-      ctx.canvas.dataset.mechActionFrame = String(attackPose.frame)
+      ctx.canvas.dataset.mechActionFrame = String(attackFrame)
     }
     if (!actionDrawn) {
       const burningBlend = sideBurningSprite?.loaded ? coreLanderBurningBlend : 0
