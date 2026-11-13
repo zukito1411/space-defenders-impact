@@ -33,8 +33,10 @@ try {
     await page.locator('button.raid__start').first().click({timeout:120000})
     await page.locator('.raid__carrier-briefing').waitFor({timeout:30000})
     await page.waitForTimeout(1200)
-    await page.screenshot({path:`presentation-review/${name}-docked.png`})
     const deck=page.locator('.raid__carrier-deck')
+    await page.waitForFunction(()=>Number(document.querySelector('.raid__carrier-deck')?.getAttribute('data-canopy-open'))>.98,{},{timeout:20000})
+    assert.equal(await deck.getAttribute('data-ladder-extension'),'1','boarding ladder must be deployed')
+    await page.screenshot({path:`presentation-review/${name}-docked.png`})
     const angle=await deck.getAttribute('data-fan-angle')
     if(reduced){
       await page.waitForTimeout(500)
@@ -82,6 +84,8 @@ try {
     await page.waitForFunction(()=>document.querySelector('.raid')?.dataset.carrierStage==='ignition',{},{timeout:30000})
     assert.equal(await page.locator('.raid__carrier-deck').getAttribute('data-pilot-state'),'aboard')
     assert.equal(await page.locator('.raid__carrier-deck').getAttribute('data-marshal-state'),'safe')
+    assert.equal(await deck.getAttribute('data-cockpit-sealed'),'true','cockpit must seal before ignition')
+    assert.equal(await deck.getAttribute('data-ladder-extension'),'0','ladder must retract before ignition')
     assert.ok(await page.locator('.space-door--idle').count(),'clearance to ignition must remain one continuous shot')
     await page.waitForTimeout(400)
     await page.screenshot({path:`presentation-review/${name}-ignition.png`})
@@ -107,6 +111,13 @@ try {
     await page.waitForFunction(()=>document.querySelector('.raid')?.dataset.carrierStage==='flight',{},{timeout:reduced?75000:45000})
     await page.waitForTimeout(1000)
     await page.screenshot({path:`presentation-review/${name}-flight.png`})
+    if(item.model){
+      for(const stage of ['windup','charge','release','recover']){
+        await page.waitForFunction(expected=>document.querySelector('.raid__fx-canvas')?.getAttribute('data-mech-action-stage')===expected,stage,{timeout:30000})
+        assert.equal(await page.locator('.raid__fx-canvas').getAttribute('data-mech-action-model'),item.model)
+        await page.screenshot({path:`presentation-review/${name}-attack-${stage}.png`})
+      }
+    }
     assert.deepEqual(errors,[])
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth||document.documentElement.scrollHeight>innerHeight),false)
     console.log(name,'passed')

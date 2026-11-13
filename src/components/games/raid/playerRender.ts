@@ -1,4 +1,5 @@
 import { getRaidPlayerHullSize } from './playerMuzzle'
+import { drawMechAction, getMechActionAtlas, sampleMechAttack } from './mechAttack'
 import { getRaidSideShipNozzles } from './sideArtwork'
 import { getRaidExhaustScale, getRaidShipBaseVisualKey, getRaidShipFrameKey, getRaidShipNozzles, isRaidEliteFrameKey, usesRaidRemasteredHullArt } from './shipArtwork'
 import { updateFlightPose, type FlightPose } from './combatFeel'
@@ -10,7 +11,7 @@ import { hexToRgba } from './bossRender'
 import { ALLY_PLAYER_COLOR, FORCE_FIELD_ARMOR, GOD_GUNDAM_BURNING_BODY_SCALE, GOD_GUNDAM_BURNING_BODY_Y_OFFSET, GOD_GUNDAM_BURNING_HALO_SCALE, GOD_GUNDAM_BURNING_HALO_Y_OFFSET, MESIAH_DRONE_HOME_OFFSET, MESIAH_DRONE_MAX_FIRE_RANGE, MESIAH_DRONE_MIN_FIRE_RANGE, MESIAH_DRONE_MOBILE_HOME_OFFSET, PLAYER_COLOR, SPACE_ET_PASSIVE_FORCE_FIELD_CHARGES, SPIEGEL_AFTERIMAGE_CAP, getShipSpriteSize } from './constants'
 import { coreBlastSpriteCache } from './effectsRender'
 import { DEG } from './constants'
-import { getCoreLanderBurningRage, isCoreLanderBurning } from './mechanics'
+import { getCoreLanderBurningRage, getCoreLanderFireInterval, isCoreLanderBurning } from './mechanics'
 import { getCoreLanderCombatModelFromVisualShipKey, getOptionSupportStacks, normalizeMesiahDrones, normalizeMesiahScoutDrones } from './state'
 import type { CoreLanderCombatModel, Enemy, GamePhase, MesiahDroneUnit, MesiahScoutUnit, Player, PowerKind, SpiegelAfterimage, Vec } from './types'
 import { clamp, distSq, drawRadialEllipse } from './utils'
@@ -1285,10 +1286,21 @@ export function drawRaidPlayer(
   if (sideSprite?.loaded) {
     // The playfield turns clockwise; rotate the right-facing art into its
     // logical upward flight direction before the camera transform.
-    const burningBlend = sideBurningSprite?.loaded ? coreLanderBurningBlend : 0
-    if (burningBlend < .99) drawCanvasSpriteContain(ctx, sideSprite, x, y, renderSize, 'none', alpha * (1 - burningBlend), rotation - Math.PI / 2, scale, masteryPaintColor)
-    if (sideBurningSprite?.loaded && burningBlend > 0) {
-      drawCanvasSpriteContain(ctx, sideBurningSprite, x, y, renderSize, 'none', alpha * burningBlend, rotation - Math.PI / 2, scale, masteryPaintColor)
+    const attackPose = coreLanderCombatModel ? sampleMechAttack(player.fireCooldown, getCoreLanderFireInterval(player), !presentation?.hideCombatFx && !isDown && (phase === 'playing' || phase === 'paused') && (player.godMeleeCloak ?? 0) <= 0, reducedMotion) : null
+    // Pick one form and one registered pose. Alpha crossfades between displaced arms
+    // would draw a ghost arm, and would not correspond to the actual release point.
+    const actionDrawn = coreLanderCombatModel && attackPose && drawMechAction(ctx, coreLanderCombatModel, coreLanderBurningBlend >= .5, attackPose.frame, x, y, renderSize, alpha, rotation, scale)
+    if (actionDrawn && attackPose && ctx.canvas?.dataset) {
+      ctx.canvas.dataset.mechActionModel = coreLanderCombatModel ?? ''
+      ctx.canvas.dataset.mechActionStage = attackPose.stage
+      ctx.canvas.dataset.mechActionFrame = String(attackPose.frame)
+    }
+    if (!actionDrawn) {
+      const burningBlend = sideBurningSprite?.loaded ? coreLanderBurningBlend : 0
+      if (burningBlend < .99) drawCanvasSpriteContain(ctx, sideSprite, x, y, renderSize, 'none', alpha * (1 - burningBlend), rotation - Math.PI / 2, scale, masteryPaintColor)
+      if (sideBurningSprite?.loaded && burningBlend > 0) {
+        drawCanvasSpriteContain(ctx, sideBurningSprite, x, y, renderSize, 'none', alpha * burningBlend, rotation - Math.PI / 2, scale, masteryPaintColor)
+      }
     }
     if (crossfadeCoreLander && !isDown) drawCrossfadeExhaust(ctx, x, y, renderSize, sideVisualKey, y, renderSize, sideBurningKey ?? 'coreLanderBurning', coreLanderBurningBlend, time, engineBoost, trailColor, cosmeticShipKey, true)
   } else if (crossfadeCoreLander) {
@@ -1723,6 +1735,10 @@ function getSideAuraSprite(sprite: CanvasSpriteEntry) {
 }
 
 export function warmRaidSideCosmetics(visualShipKey: string, aura = true) {
+  if (visualShipKey === 'godGundam' || visualShipKey === 'spiegel') {
+    getMechActionAtlas(visualShipKey)
+    if (visualShipKey === 'godGundam') getMechActionAtlas(visualShipKey, true)
+  }
   const sprite = getRaidSideShipCanvasSprite(visualShipKey)
   if (sprite && aura) void sprite.ready.then(() => { getSideAuraSprite(sprite) })
 }

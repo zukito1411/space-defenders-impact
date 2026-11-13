@@ -1,4 +1,4 @@
-import { drawCarrierDeck } from './carrierDeck'
+import { drawCarrierBoardingForeground, drawCarrierDeck, type CarrierDeckFrame } from './carrierDeck'
 import { CARRIER_IGNITION_START, CARRIER_DEPARTURE_START, CARRIER_LAUNCH_SECONDS, MESIAH_ENTRY_SECONDS, sampleCarrierLaunch, drawCarrierClamps } from './carrierLaunch'
 import { useCarrierLaunchRequest } from './useCarrierLaunchRequest'
 import { preloadCarrierAssets } from './carrierAssets'
@@ -1762,21 +1762,27 @@ export function GradiusRaid({
           : 1
         const displayScale = Math.min(carrier.scale, Math.max(1, cssWidth * .34 / baseHull)) * deckSize
         const hull = baseHull * displayScale
-        if (slot === 0 && !underway && carrier.backdrop > 0 && carrierDeckCanvasRef.current) {
-          drawCarrierDeck(carrierDeckCanvasRef.current, {
+        const boardingFrame: CarrierDeckFrame | null = slot === 0 && !underway && carrier.backdrop > 0 ? {
             width: landscapeRef.current ? cssHeight : cssWidth,
             height: landscapeRef.current ? cssWidth : cssHeight, dpr,
             landscape: landscapeRef.current, ambientAge: carrierDeckAgeRef.current,
             launchAge: carrierAge, briefing, reducedMotion, decorative: gfxProfile.drawDecorativeOverlays,
             shipX: landscapeRef.current ? cssHeight - toY(cy) : toX(cx),
-            shipY: landscapeRef.current ? toX(cx) : toY(cy), hullSize: hull,
-          })
-        }
+            shipY: landscapeRef.current ? toX(cx) : toY(cy), hullSize: hull * (pilot.ship.key === 'coreLander' && (getRaidPlayerVisualShipKey(pilot, progressRef.current) === 'godGundam' || getRaidPlayerVisualShipKey(pilot, progressRef.current) === 'spiegel') ? 1.08 : 1),
+            visualKey: getRaidPlayerVisualShipKey(pilot, progressRef.current),
+          } : null
+        if (boardingFrame && carrierDeckCanvasRef.current) drawCarrierDeck(carrierDeckCanvasRef.current, boardingFrame)
         if (!underway) drawCarrierClamps(ctx, toX(cx), toY(cy), hull, docked ? 0 : reducedMotion ? Number(carrier.release > .5) : carrier.release, landscapeRef.current)
         drawRaidPlayer(ctx, pilot, phaseRef.current, projectX, projectY, cssWidth, time, color,
           getCachedEquippedCosmetics(pilot.ship.key), getRaidPlayerVisualShipKey(pilot, progressRef.current),
           null, null, 0, 0, reducedMotion, landscapeRef.current,
           { scale: displayScale, engine: docked ? 0 : carrier.engine, hideCombatFx: true })
+        if (boardingFrame) {
+          ctx.save()
+          if (landscapeRef.current) { ctx.translate(0, cssHeight); ctx.rotate(-Math.PI / 2) }
+          drawCarrierBoardingForeground(ctx, boardingFrame)
+          ctx.restore()
+        }
       }
       renderCarrierPilot(ownShipRef, 0, PLAYER_COLOR)
       renderCarrierPilot(isGuestView ? playerRef.current : remotePlayerRef.current, 1, ALLY_PLAYER_COLOR)

@@ -5,6 +5,9 @@ import { join } from 'node:path'
 // if the shared menu artwork was not copied from public/ into dist/.
 const campaignBossAssets = JSON.parse(readFileSync('docs/campaign-boss-art-manifest.json', 'utf8')).assets
 const required = [
+  'assets/ships/sideview/god-gundam-actions-v1.webp',
+  'assets/ships/sideview/god-gundam-burning-actions-v1.webp',
+  'assets/ships/sideview/spiegel-actions-v1.webp',
   'assets/ships/sideview/god-gundam-flight-v2.webp',
   'assets/ships/sideview/god-gundam-burning-flight-v2.webp',
   'assets/ships/sideview/spiegel-flight-v2.webp',
