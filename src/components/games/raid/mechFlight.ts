@@ -18,9 +18,9 @@ export const MECH_FLIGHT_ANCHORS = {
     nozzles: [[.018, -.11, .018], [-.386, .173, .016], [-.005, .186, .016]],
   },
   spiegel: {
-    head: palmPoint(556, 136), hand: palmPoint(665, 161),
-    shoulders: [palmPoint(423, 96), palmPoint(565, 158)],
-    nozzles: [[-.112, -.222, .018], [-.112, -.164, .018]],
+    head: [.215, -.09], hand: [.467, -.045],
+    shoulders: [[.02, -.145], [.255, -.04]],
+    nozzles: [[-.128, -.147, .018], [-.128, -.092, .018]],
   },
 } as const
 

@@ -17,7 +17,7 @@ const SIDE_PATHS: Record<string, string> = {
   mesiahRaptorWhite: 'mesiah-raptor-white-v1.png?art=8dae3f321d42',
   godGundam: 'god-gundam-flight-v3.webp',
   godGundamBurning: 'god-gundam-burning-flight-v4.webp',
-  spiegel: 'spiegel-flight-v3.webp',
+  spiegel: 'spiegel-flight-v2.webp',
   rocketElite: 'black-comet-elite-v1.png?art=ef5def01b05d',
   fastElite: 'red-wraith-elite-v1.png?art=59dd2a6cb3a7',
   gatlingElite: 'crimson-saw-elite-v1.png?art=012984b9c016',
