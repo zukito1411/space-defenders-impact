@@ -13,12 +13,12 @@ orientation and correctly mounted engines.
    Japanese and Korean. The actual selected pilot is held in a service cradle,
    with no thrust or combat shields. Text reveals progressively; continue reveals
    the rest or advances, and launch now skips the dialogue but retains ignition.
-2. The host starts a 6.4 second simulation clock. The first 1.6 seconds warm the
+2. The host starts a 10.2 second simulation clock. The first 2.8 seconds board the pilot, the next second clears the marshal, and the next 1.6 seconds warm the
    engines and retract the four service contacts. Position remains fixed.
 3. The actual pilot accelerates while the opaque hangar moves behind the camera.
    There is no crossfade of planets through walls and no duplicate ship sprite.
-4. The carrier clears at 4.6 seconds. Camera framing settles into the normal
-   playable position and normal ship size at 6.4 seconds. Spawn/fire/input remain
+4. The carrier clears at 8.4 seconds. Camera framing settles into the normal
+   playable position and normal ship size at 10.2 seconds. Spawn/fire/input remain
    locked until that moment; scouts join afterward.
 
 Pause freezes the departure. Co-op sync sends carrierLaunch and stageEntry so a

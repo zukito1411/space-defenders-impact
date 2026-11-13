@@ -1,4 +1,5 @@
-import { CARRIER_LAUNCH_SECONDS, MESIAH_ENTRY_SECONDS, sampleCarrierLaunch, drawCarrierClamps } from './carrierLaunch'
+import { drawCarrierDeck } from './carrierDeck'
+import { CARRIER_IGNITION_START, CARRIER_DEPARTURE_START, CARRIER_LAUNCH_SECONDS, MESIAH_ENTRY_SECONDS, sampleCarrierLaunch, drawCarrierClamps } from './carrierLaunch'
 import { useCarrierLaunchRequest } from './useCarrierLaunchRequest'
 import { preloadCarrierAssets } from './carrierAssets'
 import { RaidCarrierBriefing } from './RaidCarrierBriefing'
@@ -174,6 +175,8 @@ export function GradiusRaid({
   const pixiBackgroundRef = useRef<PixiRaidBackground | null>(null)
   const rendererPreparationRef = useRef<Promise<boolean> | null>(null)
   const fxCanvasRef = useRef<HTMLCanvasElement | null>(null)
+  const carrierDeckCanvasRef = useRef<HTMLCanvasElement | null>(null)
+  const carrierDeckAgeRef = useRef(0)
   const fxCanvasContextRef = useRef<CanvasRenderingContext2D | null>(null)
   const perfHudRef = useRef<HTMLDivElement | null>(null)
   const [showPerfHud, setShowPerfHud] = useState(() => {
@@ -748,7 +751,7 @@ export function GradiusRaid({
     sparksRef.current = state.sparks.map((spark) => ({ ...spark }))
     ripplesRef.current = state.ripples.map((ripple) => ({ ...ripple }))
     const prevPhase = phaseRef.current
-    if (state.phase === 'briefing' && prevPhase !== 'briefing') sceneryRunTokenRef.current = performance.now()
+    if (state.phase === 'briefing' && prevPhase !== 'briefing') { sceneryRunTokenRef.current = performance.now(); carrierDeckAgeRef.current = 0 }
     if (typeof state.carrierLaunch === 'boolean') initialLaunchRef.current = state.carrierLaunch
     if (state.raidMode) raidModeRef.current = state.raidMode
     const prevStageTheme = stageRef.current
@@ -1759,6 +1762,16 @@ export function GradiusRaid({
           : 1
         const displayScale = Math.min(carrier.scale, Math.max(1, cssWidth * .34 / baseHull)) * deckSize
         const hull = baseHull * displayScale
+        if (slot === 0 && !underway && carrier.backdrop > 0 && carrierDeckCanvasRef.current) {
+          drawCarrierDeck(carrierDeckCanvasRef.current, {
+            width: landscapeRef.current ? cssHeight : cssWidth,
+            height: landscapeRef.current ? cssWidth : cssHeight, dpr,
+            landscape: landscapeRef.current, ambientAge: carrierDeckAgeRef.current,
+            launchAge: carrierAge, briefing, reducedMotion, decorative: gfxProfile.drawDecorativeOverlays,
+            shipX: landscapeRef.current ? cssHeight - toY(cy) : toX(cx),
+            shipY: landscapeRef.current ? toX(cx) : toY(cy), hullSize: hull,
+          })
+        }
         if (!underway) drawCarrierClamps(ctx, toX(cx), toY(cy), hull, docked ? 0 : reducedMotion ? Number(carrier.release > .5) : carrier.release, landscapeRef.current)
         drawRaidPlayer(ctx, pilot, phaseRef.current, projectX, projectY, cssWidth, time, color,
           getCachedEquippedCosmetics(pilot.ship.key), getRaidPlayerVisualShipKey(pilot, progressRef.current),
@@ -3006,6 +3019,7 @@ export function GradiusRaid({
         remotePlayerRef.current = null
       }
       sceneryRunTokenRef.current = performance.now()
+      carrierDeckAgeRef.current = 0
       phaseRef.current = 'briefing'
       initialLaunchRef.current = false
       stopRaidBgm()
@@ -3108,7 +3122,7 @@ export function GradiusRaid({
     const underway = playerRef.current.ship.key === 'mesiah' || remotePlayerRef.current?.ship.key === 'mesiah'
     stageEntryRef.current = underway ? MESIAH_ENTRY_SECONDS : CARRIER_LAUNCH_SECONDS
     initialLaunchRef.current = true
-    if (!underway) playRaidCue('engineStart')
+    if (!underway) playRaidCue('ready')
     if (stageEntryRef.current > 0) {
       const dock = sampleCarrierLaunch(0, landscapeRef.current, prefersRaidReducedMotion(), (viewportMetricsRef.current?.cssHeight ?? 800) < 700, underway)
       playerRef.current.x = dock.x
@@ -3327,7 +3341,7 @@ export function GradiusRaid({
     const pilotColor = player === devilAssistPlayerRef.current ? '#facc15' : ownPilot ? PLAYER_COLOR : ALLY_PLAYER_COLOR
     const emitMainShot = canFireMain && viewport
       ? createRaidMainShotEmitter(pushShot, player, shipKey, Boolean(coreLanderCombatModel),
-        viewport.cssWidth, viewport.cssHeight, shipKey === 'coreLander' ? 0 : getRaidPlayerFlightBank(pilotColor, player.x), landscapeRef.current, player.sizeScale)
+        viewport.cssWidth, viewport.cssHeight, shipKey === 'coreLander' ? 0 : getRaidPlayerFlightBank(pilotColor, player.x), landscapeRef.current, player.sizeScale, coreLanderCombatModel)
       : pushShot
     const defaultScoutOffset = isArk
       ? (isSmallViewport ? 14 : 7.4)
@@ -4651,7 +4665,8 @@ export function GradiusRaid({
           remotePlayerRef.current.engineBoost = player.engineBoost
           remotePlayerRef.current.invuln = Math.max(remotePlayerRef.current.invuln, .4)
         }
-        if (!underway && age >= 1.6 && age - dt < 1.6) playRaidCue('launch')
+        if (!underway && age >= CARRIER_IGNITION_START && age - dt < CARRIER_IGNITION_START) playRaidCue('engineStart')
+        if (!underway && age >= CARRIER_DEPARTURE_START && age - dt < CARRIER_DEPARTURE_START) playRaidCue('launch')
         if (stageEntryRef.current <= 0) {
           initialLaunchRef.current = false
           journeyStageAgeRef.current = 0
@@ -7205,6 +7220,7 @@ export function GradiusRaid({
         bossEntranceSlamRef.current = Math.max(0, bossEntranceSlamRef.current - dt)
       }
       const gameplayDt = entranceSlamActive ? dt * BOSS_ENTRANCE_SLOWMO_SCALE : dt
+      if (!doorSequence?.busy && !document.hidden && (phaseRef.current === 'briefing' || (phaseRef.current === 'playing' && initialLaunchRef.current))) carrierDeckAgeRef.current += dt
       const session = multiplayerSessionRef.current
       if ((!session || session.isHost) && (session || !doorSequence?.busy)) updateGame(gameplayDt)
       // Tick the victory blackout on every client (host sets it in updateGame, guest in applyMultiplayerState)
@@ -7706,7 +7722,7 @@ export function GradiusRaid({
 
       <div className="raid__playfield">
         <div ref={pixiBackgroundHostRef} className="raid__pixi-background" aria-hidden="true" />
-        <RaidLaunchSequence landscape={landscape} />
+        <RaidLaunchSequence landscape={landscape} deckRef={carrierDeckCanvasRef} />
         <canvas ref={fxCanvasRef} className="raid__fx-canvas" />
         {showPerfHud && !landscape && <div ref={perfHudRef} className="raid__perf-hud" aria-hidden="true">Measuring FPS…</div>}
       </div>
@@ -7917,7 +7933,9 @@ export function GradiusRaid({
       )}
       {initialLaunchRef.current && (snapshot.phase === 'playing' || snapshot.phase === 'paused') && (
         <div className="raid__carrier-flight-status">
-          <div><span className="raid__carrier-phase--ignition">{getCarrierMission(language, snapshot.raidMode).ignition}</span>
+          <div><span className="raid__carrier-phase--boarding">{getCarrierMission(language, snapshot.raidMode).boarding}</span>
+            <span className="raid__carrier-phase--clearing">{getCarrierMission(language, snapshot.raidMode).clearing}</span>
+            <span className="raid__carrier-phase--ignition">{getCarrierMission(language, snapshot.raidMode).ignition}</span>
             <span className="raid__carrier-phase--launch">{getCarrierMission(language, snapshot.raidMode).depart}</span>
             <span className="raid__carrier-phase--clear">{mesiahUnderway ? getCarrierMission(language, snapshot.raidMode).engaged : getCarrierMission(language, snapshot.raidMode).clear}</span>
             <i /></div>

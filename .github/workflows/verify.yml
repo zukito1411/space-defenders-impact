@@ -41,6 +41,8 @@ jobs:
           node scripts/test-raid-stage-profiles.mjs
           node scripts/test-raid-launch.mjs
           node scripts/test-carrier-launch.mjs
+          node scripts/test-carrier-deck.mjs
+          node scripts/test-mech-flight.mjs
           node scripts/test-weapon-presentation.mjs
           node scripts/test-command-bosses.mjs
       - name: Typecheck and build
@@ -117,7 +119,7 @@ jobs:
 
   presentation-browser:
     runs-on: ubuntu-24.04
-    timeout-minutes: 12
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

@@ -1225,8 +1225,8 @@ export function drawRaidPlayer(
       if (sideSprite?.loaded) drawSideBurningWake(ctx, x, y, renderSize, time, coreLanderBurningBlend, sideBurningKey ?? sideVisualKey, cosmeticShipKey, engineBoost)
       else drawCoreLanderBurningCometWake(ctx, x, y, renderSize, time, coreLanderBurningBlend, Boolean(coreLanderCombatModel))
       const sideCombatHalo = Boolean(sideSprite?.loaded && coreLanderCombatModel)
-      const haloX = sideCombatHalo ? x - renderSize * .12 : x
-      const haloY = sideCombatHalo ? y + renderSize * .13 : coreLanderCombatModel ? y + renderSize * GOD_GUNDAM_BURNING_HALO_Y_OFFSET : y
+      const haloX = sideCombatHalo ? x + renderSize * (nozzles?.[0]?.[0] ?? -.09) : x
+      const haloY = sideCombatHalo ? y + renderSize * (nozzles?.[0]?.[1] ?? -.03) : coreLanderCombatModel ? y + renderSize * GOD_GUNDAM_BURNING_HALO_Y_OFFSET : y
       const haloSize = coreLanderCombatModel ? renderSize * GOD_GUNDAM_BURNING_HALO_SCALE : renderSize
       if (sideCombatHalo) {
         ctx.save()
