@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import {readFile, mkdir} from 'node:fs/promises'
+import {readFile, writeFile, mkdir} from 'node:fs/promises'
 import {createHash} from 'node:crypto'
 import {spawn} from 'node:child_process'
 import {once} from 'node:events'
@@ -12,6 +12,13 @@ const server=spawn(process.execPath,['node_modules/vite/bin/vite.js','--host','1
 const exited=once(server,'exit')
 let browser
 const gate=()=>{let open;const promise=new Promise(resolve=>{open=resolve});return{promise,open}}
+async function captureBeforeApp(page,path){
+ // The entry module is deliberately held here. FontFaceSet.ready waits for
+ // document loading, so capture the already-painted native-font/logo surface.
+ const session=await page.context().newCDPSession(page)
+ try{const {data}=await session.send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});await writeFile(path,Buffer.from(data,'base64'))}
+ finally{await session.detach()}
+}
 try{
  for(let i=0;i<120;i++){try{if((await fetch(base)).ok)break}catch{}await new Promise(r=>setTimeout(r,250))}
  browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH,args:['--enable-unsafe-swiftshader','--use-angle=swiftshader']})
@@ -56,7 +63,7 @@ try{
      assert.ok(Math.abs(layout.ratio-1)<.01,'logo must retain its square image aspect')
      assert.ok(layout.left>=0&&layout.top>=0&&layout.right<=w&&layout.bottom<layout.rightsTop)
      assert.equal(layout.overflow,false);assert.equal(layout.inert,true)
-     await page.screenshot({path:`presentation-review/startup-${name}.png`})
+     await captureBeforeApp(page,`presentation-review/startup-${name}.png`)
     }
     entry.open()
    }
