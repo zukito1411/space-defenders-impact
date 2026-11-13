@@ -2,6 +2,7 @@ import { getRaidSideShipNozzles, getRaidSideShipSpriteUrl } from './components/g
 import { getRaidExhaustScale, getRaidShipNozzles } from './components/games/raid/shipArtwork'
 import { getDefaultPlayerVisualShipKey } from './components/games/raid/state'
 import { useDoorState } from './components/ui/SpaceDoor'
+import { startStudioSplash } from './startupSplash'
 import './App.css'
 import { GameButton, GameMenuAction } from './components/ui/GameButton'
 import { GameDialog } from './components/ui/GameDialog'
@@ -168,6 +169,8 @@ function getHangarAttackClass(shipKey: string) {
 }
 
 function App() {
+  const [startupReady, setStartupReady] = useState(() => !document.getElementById('startup-splash'))
+  useEffect(() => startStudioSplash(() => setStartupReady(true)), [])
   const landscapeScreen = useLandscapeScreen()
   const [screen, setScreen] = useDoorState<ScreenState>('title')
   const [language, setLanguage] = useState<LanguageCode>(getInitialLanguage)
@@ -524,6 +527,7 @@ function App() {
 
   // detect first interaction (required by browser)
   useEffect(() => {
+    if (!startupReady) return
     const unlockAudio = () => {
       hasInteractedRef.current = true
 
@@ -543,24 +547,24 @@ function App() {
       window.removeEventListener('click', unlockAudio)
       window.removeEventListener('keydown', unlockAudio)
     }
-  }, [screen])
+  }, [screen, startupReady])
 
   // control music when switching screens
   useEffect(() => {
     const bgm = bgmRef.current
     if (!bgm) return
 
-    if (isMenuBgmScreen(screen)) {
+    if (startupReady && isMenuBgmScreen(screen)) {
       if (hasInteractedRef.current) {
         bgm.play().catch(() => {})
       }
     } else {
       bgm.pause()
     }
-  }, [screen])
+  }, [screen, startupReady])
 
   useEffect(() => {
-    if (screen === 'game') return
+    if (!startupReady || screen === 'game') return
     const focusableSelector = 'button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])'
     const isTypingTarget = (target: Element | null) => target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement
     const getMenuScope = (): HTMLElement | Document => {
@@ -658,7 +662,7 @@ function App() {
         : null
       if (gamepad) {
         const pressed = getPressedButtons(gamepad)
-        const previous = menuGamepadButtonsRef.current.get(gamepad.index) ?? new Set<number>()
+        const previous = menuGamepadButtonsRef.current.get(gamepad.index) ?? pressed
         const justPressed = (button: number) => pressed.has(button) && !previous.has(button)
         const axisX = gamepad.axes[0] ?? 0
         const axisY = gamepad.axes[1] ?? 0
@@ -683,7 +687,7 @@ function App() {
       window.cancelAnimationFrame(focusFrame)
       window.removeEventListener('keydown', handleKeydown)
     }
-  }, [screen])
+  }, [screen, startupReady])
   // =========================
   // CUTSCENE TIMER LOGIC
   // =========================
@@ -908,7 +912,7 @@ function App() {
     if (!result.offline) syncCloudProgress(loadProgress())
   }
 
-  const playerNamePrompt = showPlayerNamePrompt ? (
+  const playerNamePrompt = startupReady && showPlayerNamePrompt ? (
     <GameDialog className="player-name-modal" aria-labelledby="player-name-title" onDismiss={hasStoredPlayerName() ? () => setShowPlayerNamePrompt(false) : undefined}>
       <form
         className="player-name-modal__panel"
