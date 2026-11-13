@@ -41,6 +41,7 @@ jobs:
           node scripts/test-raid-stage-profiles.mjs
           node scripts/test-raid-launch.mjs
           node scripts/test-carrier-launch.mjs
+          node scripts/test-dock-clamps.mjs
           node scripts/test-carrier-deck.mjs
           node scripts/test-boarding-actions.mjs
           node scripts/test-crew-and-mech-dock.mjs

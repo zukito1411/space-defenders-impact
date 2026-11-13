@@ -1,3 +1,5 @@
+import { drawDockClamps, type DockMount } from './carrierClamps'
+import { CARRIER_IGNITION_START } from './carrierLaunch'
 import { drawDeckPerson as person } from './crewPeople'
 import { sampleCrewPatrol } from './crewMotion'
 import { CARRIER_BOARDING_SECONDS, CARRIER_CLEAR_SECONDS } from './carrierLaunch'
@@ -110,6 +112,7 @@ export function drawCarrierBoardingForeground(ctx: CanvasRenderingContext2D, fra
   ctx.restore()
 }
 
+const dockMounts = new WeakMap<HTMLCanvasElement, DockMount & { viewport: string }>()
 const staticDeckFrames = new WeakMap<HTMLCanvasElement, string>()
 export function drawCarrierDeck(canvas: HTMLCanvasElement, frame: CarrierDeckFrame) {
   const {width,height,landscape,launchAge,briefing,reducedMotion,ambientAge,decorative}=frame
@@ -118,14 +121,25 @@ export function drawCarrierDeck(canvas: HTMLCanvasElement, frame: CarrierDeckFra
   if(canvas.width!==pw||canvas.height!==ph){canvas.width=pw;canvas.height=ph}
   const crew=sampleCarrierCrew(launchAge,briefing,reducedMotion)
   const kit=sampleCarrierBoarding(launchAge,briefing,reducedMotion,ambientAge)
+  const release=briefing?0:unit((launchAge-CARRIER_IGNITION_START-.8)/.8)
+  const clampRelease=reducedMotion?Number(release>.5):release
   // Static accessibility frames only change on a boarding/clearance cut or resize.
   // Avoid repeatedly rasterizing and uploading a full-screen unchanged canvas.
-  const staticKey=reducedMotion?[width,height,dpr,landscape,decorative,frame.shipX,frame.shipY,frame.hullSize,frame.visualKey,crew.pilotState,crew.marshalState,crew.retreat,kit.ladder,kit.canopy].join(':'):null
+  const staticKey=reducedMotion?[width,height,dpr,landscape,decorative,frame.shipX,frame.shipY,frame.hullSize,frame.visualKey,crew.pilotState,crew.marshalState,crew.retreat,kit.ladder,kit.canopy,clampRelease].join(':'):null
   if(staticKey&&staticDeckFrames.get(canvas)===staticKey)return
   const ctx=canvas.getContext('2d');if(!ctx)return
   if(staticKey)staticDeckFrames.set(canvas,staticKey);else staticDeckFrames.delete(canvas)
   ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,width,height)
   ctx.translate(cover.x,cover.y);ctx.scale(cover.scale,cover.scale)
+  let dock=dockMounts.get(canvas)
+  if(!dock||dock.viewport!==`${width}:${height}:${landscape}`||briefing||launchAge<CARRIER_IGNITION_START){
+    dock={viewport:`${width}:${height}:${landscape}`,x:(frame.shipX-cover.x)/cover.scale,y:(frame.shipY-cover.y)/cover.scale,hull:frame.hullSize/cover.scale,
+      floor:landscape?608:1126,ceiling:landscape?270:808,mech:frame.groundedMech??false}
+    dockMounts.set(canvas,dock)
+  }
+  drawDockClamps(ctx,dock,clampRelease)
+  canvas.dataset.dockClampRenderer='procedural'
+  canvas.dataset.dockClampRelease=String(clampRelease)
   const time=reducedMotion?0:ambientAge
   canvas.dataset.pilotState=crew.pilotState;canvas.dataset.marshalState=crew.marshalState
   canvas.dataset.crewCount=String(decorative?6:2)

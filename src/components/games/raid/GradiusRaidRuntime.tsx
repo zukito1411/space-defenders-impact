@@ -1,5 +1,5 @@
 import { drawCarrierBoardingForeground, drawCarrierDeck, type CarrierDeckFrame } from './carrierDeck'
-import { CARRIER_IGNITION_START, CARRIER_DEPARTURE_START, CARRIER_LAUNCH_SECONDS, MESIAH_ENTRY_SECONDS, sampleCarrierLaunch, drawCarrierClamps } from './carrierLaunch'
+import { CARRIER_IGNITION_START, CARRIER_DEPARTURE_START, CARRIER_LAUNCH_SECONDS, MESIAH_ENTRY_SECONDS, sampleCarrierLaunch } from './carrierLaunch'
 import { useCarrierLaunchRequest } from './useCarrierLaunchRequest'
 import { preloadCarrierAssets } from './carrierAssets'
 import { RaidCarrierBriefing } from './RaidCarrierBriefing'
@@ -1774,7 +1774,6 @@ export function GradiusRaid({
           } : null
         if(boardingFrame?.groundedMech)boardingFrame.shipY-=boardingFrame.hullSize*.025
         if (boardingFrame && carrierDeckCanvasRef.current) drawCarrierDeck(carrierDeckCanvasRef.current, boardingFrame)
-        if (!underway) drawCarrierClamps(ctx, toX(cx), toY(cy), hull, docked ? 0 : reducedMotion ? Number(carrier.release > .5) : carrier.release, landscapeRef.current)
         drawRaidPlayer(ctx, pilot, phaseRef.current, projectX, projectY, cssWidth, time, color,
           getCachedEquippedCosmetics(pilot.ship.key), getRaidPlayerVisualShipKey(pilot, progressRef.current),
           null, null, 0, 0, reducedMotion, landscapeRef.current,

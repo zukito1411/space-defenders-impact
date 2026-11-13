@@ -45,20 +45,3 @@ export function sampleCarrierLaunch(age: number, landscape: boolean, reducedMoti
     done: t >= CARRIER_LAUNCH_SECONDS,
   } as const
 }
-
-/** Four articulated service contacts. These are equipment, not a second hull. */
-export function drawCarrierClamps(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, release: number, landscape = false) {
-  if (release >= 1) return
-  ctx.save()
-  ctx.globalAlpha *= 1 - release
-  ctx.lineCap = 'square'
-  for (const side of [-1, 1]) for (const end of [-1, 1]) {
-    const sx = x + side * size * ((landscape ? .08 : .24) + release * .28)
-    const sy = y + end * size * (landscape ? .28 : .24)
-    ctx.strokeStyle = '#0c1c27'; ctx.lineWidth = Math.max(5, size * .065)
-    ctx.beginPath(); ctx.moveTo(sx + side * size * .28, sy + end * size * .1); ctx.lineTo(sx, sy); ctx.lineTo(sx - side * size * .08, sy); ctx.stroke()
-    ctx.strokeStyle = '#77929b'; ctx.lineWidth = Math.max(1, size * .018); ctx.stroke()
-    ctx.fillStyle = '#ffc16c'; ctx.fillRect(sx - size * .025, sy - size * .025, size * .05, size * .05)
-  }
-  ctx.restore()
-}
