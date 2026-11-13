@@ -27,6 +27,7 @@ const code = ts.transpileModule([
   let shotId = 3, bank = 0
   const pushShot = shot => shots.push(shot)
   `,
+  read('mechFlight.ts').replace(/^import .*\n/gm, ''),
   read('playerMuzzle.ts').replace(/^import .*\n/gm, ''),
   section(read('assets.ts'), 'export function getEnemyCanvasSize'),
   section(runtime, '  const firePlayer = useCallback', '  // Keep the stable ref'),

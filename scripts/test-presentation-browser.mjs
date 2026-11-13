@@ -6,13 +6,13 @@ const server=spawn(process.execPath,['node_modules/vite/bin/vite.js','--host','1
 let browser
 try {
   for(let i=0;i<120;i++){try{if((await fetch('http://127.0.0.1:5173/scripts/presentation-fixture.html')).ok)break}catch{}await new Promise(r=>setTimeout(r,250))}
-  browser=await chromium.launch({args:['--enable-unsafe-swiftshader','--use-angle=swiftshader']})
+  browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH,args:['--enable-unsafe-swiftshader','--use-angle=swiftshader']})
   await mkdir('presentation-review',{recursive:true})
   const cases=[
     {name:'portrait',width:393,height:852,landscape:false},
-    {name:'landscape',width:844,height:390,landscape:true},
+    {name:'landscape',width:844,height:390,landscape:true,model:'godGundam'},
     {name:'portrait-compact',width:360,height:640,landscape:false},
-    {name:'landscape-compact',width:640,height:320,landscape:true},
+    {name:'landscape-compact',width:640,height:320,landscape:true,model:'spiegel'},
     {name:'reduced-motion',width:393,height:852,landscape:false,reduced:true},
   ]
   for(const item of cases){
@@ -21,11 +21,17 @@ try {
     await context.addInitScript(value=>localStorage.setItem('raid-flight-view',value?'landscape':'vertical'),landscape)
     const page=await context.newPage(),errors=[]
     page.on('pageerror',e=>errors.push(e.message))
-    await page.goto('http://127.0.0.1:5173/scripts/presentation-fixture.html')
+    await page.goto('http://127.0.0.1:5173/scripts/presentation-fixture.html'+(item.model?'?model='+item.model:''))
     await page.locator('button.raid__start').first().click({timeout:120000})
     await page.locator('.raid__carrier-briefing').waitFor({timeout:30000})
     await page.waitForTimeout(1200)
     await page.screenshot({path:`presentation-review/${name}-docked.png`})
+    const deck=page.locator('.raid__carrier-deck')
+    const angle=await deck.getAttribute('data-fan-angle')
+    await page.waitForTimeout(250)
+    const moved=await deck.getAttribute('data-fan-angle')
+    assert.equal(angle===moved,reduced,`${name}: fans obey reduced motion`)
+    assert.equal(await deck.getAttribute('data-pilot-state'),'waiting')
     assert.equal(await page.locator('.raid__carrier-goals > span').count(),3)
     assert.ok(await page.locator('.raid__fx-canvas').evaluate(canvas=>{
       const d=canvas.getContext('2d').getImageData(0,0,canvas.width,canvas.height).data
@@ -56,7 +62,14 @@ try {
     if(reduced)await page.waitForTimeout(1000)
     assert.equal(await page.locator('.raid__launch-ship').count(),0,'no duplicated ship layer')
     await page.locator('.raid__carrier-skip').click()
+    await page.waitForFunction(()=>document.querySelector('.raid')?.dataset.carrierStage==='boarding',{},{timeout:30000})
+    await page.waitForTimeout(700)
+    await page.screenshot({path:`presentation-review/${name}-boarding.png`})
+    await page.waitForFunction(()=>document.querySelector('.raid')?.dataset.carrierStage==='clearing',{},{timeout:30000})
+    await page.screenshot({path:`presentation-review/${name}-marshal.png`})
     await page.waitForFunction(()=>document.querySelector('.raid')?.dataset.carrierStage==='ignition',{},{timeout:30000})
+    assert.equal(await page.locator('.raid__carrier-deck').getAttribute('data-pilot-state'),'aboard')
+    assert.equal(await page.locator('.raid__carrier-deck').getAttribute('data-marshal-state'),'safe')
     assert.ok(await page.locator('.space-door--idle').count(),'clearance to ignition must remain one continuous shot')
     await page.waitForTimeout(400)
     await page.screenshot({path:`presentation-review/${name}-ignition.png`})
@@ -67,10 +80,12 @@ try {
       if(name==='landscape'){
         await page.locator('.raid__carrier-flight-status button').click()
         await page.locator('.raid__panel--pause .raid__start[data-dialog-dismiss]').waitFor()
+        const fanBefore=await page.locator('.raid__carrier-deck').getAttribute('data-fan-angle')
         const before=await page.locator('.raid').evaluate(el=>[el.style.getPropertyValue('--carrier-shift-x'),el.style.getPropertyValue('--carrier-shift-y')])
         await page.waitForTimeout(900)
         const after=await page.locator('.raid').evaluate(el=>[el.style.getPropertyValue('--carrier-shift-x'),el.style.getPropertyValue('--carrier-shift-y')])
         assert.deepEqual(after,before,'pause must freeze carrier departure')
+        assert.equal(await page.locator('.raid__carrier-deck').getAttribute('data-fan-angle'),fanBefore,'pause freezes deck fans and crew')
         await page.locator('.raid__panel--pause .raid__start[data-dialog-dismiss]').click()
       }
     }

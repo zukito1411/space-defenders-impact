@@ -3,6 +3,7 @@ import type { RaidMode } from './types'
 
 const COPY = {
   en: {
+    boarding: 'PILOT BOARDING', clearing: 'FLIGHT DECK · CLEARING',
     underway: 'IN FLIGHT', engaged: 'ON COURSE · WEAPONS LIVE', underwayBeat: ['Bridge', 'You are cleared to engage.', 'Mesiah is on course. Take the helm and bring the fleet through, Commander.'],
     channel: 'CARRIER COMMAND', secure: 'SECURE UPLINK', docked: 'FLIGHT DECK · DOCKED',
     next: 'Continue transmission', launch: 'Authorize launch', skip: 'Launch now', back: 'Return to hangar', standby: 'Awaiting squadron lead',
@@ -36,6 +37,7 @@ const COPY = {
     },
   },
   zh: {
+    boarding: '驾驶员登机', clearing: '飞行甲板 · 清场',
     underway: '航行中', engaged: '航向确认 · 武器上线', underwayBeat: ['舰桥', '批准交战。', 'Mesiah 已进入预定航线。指挥官，请接管舰船，带领舰队突围。'],
     channel: '航母指挥部', secure: '加密通讯', docked: '飞行甲板 · 已停靠', next: '继续通讯', launch: '批准出击', skip: '立即出击', back: '返回机库', standby: '等待队长命令', ignition: '引擎点火', depart: '锁具释放 · 正在出击', clear: '已离舰 · 武器上线',
     campaign: { operation: '重返地球', objective: '突破封锁，夺回我们的天空。', goals: ['突破敌方星域', '回收敌军武装', '摧毁指挥舰队'], beats: [['指挥部', '防线正在崩溃。', '地球就在身后，敌舰就在前方。航母会守住这条航道，但只有你能打通它。'], ['战术官', '杀出一条归途。', '突破敌方星域，夺取他们的武器。在敌军指挥舰抵达地球防线前，将它们击沉。'], ['飞行甲板', '批准出击。', '座舰已就绪。只等你的命令，我们就松开锁具。每一发炮火都至关重要，指挥官。地球在等你。']] },
@@ -43,6 +45,7 @@ const COPY = {
     bossRush: { operation: '矛尖', objective: '三个指挥信号，一次决定性打击。', goals: ['猎杀指挥舰', '突破攻击阵型', '击沉旗舰'], beats: [['指挥部', '斩断敌军首脑。', '敌方指挥信号已锁定。这就是机会。消灭它们，敌军舰队就会失去控制。'], ['战术官', '三场决战，无路可退。', '武装已就绪。看清攻击航道，抓住破绽，把重火力留给致命一击。'], ['飞行甲板', '矛尖行动，开始。', '航道已清空，全功率交给你。指挥官，击沉那些指挥舰。']] },
   },
   ja: {
+    boarding: 'パイロット搭乗中', clearing: '飛行甲板 · 退避中',
     underway: '航行中', engaged: '進路確認 · 武装作動', underwayBeat: ['艦橋', '交戦を許可する。', 'Mesiah は進路に入った。操艦を引き継ぎ、艦隊を突破させろ、司令官。'],
     channel: '母艦司令部', secure: '暗号通信', docked: '飛行甲板 · 係留中', next: '通信を続ける', launch: '発進を承認', skip: '直ちに発進', back: '格納庫へ戻る', standby: '隊長の命令待ち', ignition: 'エンジン点火', depart: '拘束解除 · 発進中', clear: '母艦離脱 · 武装作動',
     campaign: { operation: 'アースワード', objective: '封鎖を突破し、空を取り戻せ。', goals: ['敵宙域を突破', '敵の武装を回収', '指揮艦隊を撃破'], beats: [['司令部', '防衛線が崩れ始めている。', '背後には地球、前方には敵艦隊。この母艦は航路を守る。だが、道を開けるのは君だけだ。'], ['戦術管制', '帰還の道を切り開け。', '敵宙域を突破し、武装を奪え。指揮艦が地球の防衛線へ到達する前に撃沈するんだ。'], ['飛行甲板', '発進を許可する。', '機体の準備は完了。君の合図で拘束を解除する。一発も無駄にするな、司令官。地球が待っている。']] },
@@ -50,6 +53,7 @@ const COPY = {
     bossRush: { operation: 'スピアポイント', objective: '三つの指揮信号。一撃で戦局を変えろ。', goals: ['指揮艦を追撃', '攻撃パターンを突破', '旗艦を撃破'], beats: [['司令部', '敵の頭を断て。', '指揮艦の信号を捉えた。今が好機だ。司令官を倒せば、敵艦隊の支配は崩れる。'], ['戦術管制', '三つの決戦。退路はない。', '武装は戦闘準備完了。攻撃航路を読み、隙を突け。重火器はとどめのために取っておけ。'], ['飛行甲板', 'スピアポイント、出撃。', '発進航路クリア。全出力を託す。司令官、指揮艦を沈めてこい。']] },
   },
   ko: {
+    boarding: '파일럿 탑승 중', clearing: '비행 갑판 · 대피 중',
     underway: '항해 중', engaged: '항로 확인 · 무장 가동', underwayBeat: ['함교', '교전을 허가한다.', 'Mesiah가 항로에 진입했다. 지휘관, 조타를 맡아 함대를 이끌어라.'],
     channel: '모함 사령부', secure: '보안 통신', docked: '비행 갑판 · 정박 중', next: '통신 계속', launch: '출격 승인', skip: '즉시 출격', back: '격납고로 복귀', standby: '편대장 명령 대기', ignition: '엔진 점화', depart: '고정 장치 해제 · 출격', clear: '모함 이탈 · 무장 가동',
     campaign: { operation: '어스워드', objective: '봉쇄를 뚫고 우리의 하늘을 되찾아라.', goals: ['적 섹터 돌파', '적 무장 회수', '지휘 함대 격파'], beats: [['사령부', '방어선이 무너지고 있다.', '뒤에는 지구가, 앞에는 적 함대가 있다. 모함은 항로를 지킨다. 하지만 길을 열 수 있는 건 너뿐이다.'], ['전술 관제', '귀환할 길을 열어라.', '적 섹터를 돌파하고 무장을 빼앗아라. 적 지휘함이 지구 방어선에 닿기 전에 격침시켜라.'], ['비행 갑판', '출격을 허가한다.', '기체 준비 완료. 신호만 주면 고정을 해제한다. 한 발도 낭비하지 마라, 사령관. 지구가 널 기다린다.']] },

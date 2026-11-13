@@ -1,5 +1,6 @@
+import { getMechShotAnchor } from './mechFlight'
 import { HEIGHT, WIDTH } from './constants'
-import type { Shot, Vec } from './types'
+import type { CoreLanderCombatModel, Shot, Vec } from './types'
 
 type PlayerShot = Omit<Shot, 'id'>
 
@@ -22,6 +23,7 @@ export function createRaidMainShotEmitter(
   bank: number,
   landscape = false,
   sizeScale = 1,
+  model: CoreLanderCombatModel | null = null,
 ) {
   const size = getRaidPlayerHullSize(shipKey, viewportWidth, landscape, sizeScale) * (combatModel ? 1.08 : 1)
   const sx = size * WIDTH / viewportWidth
@@ -36,6 +38,7 @@ export function createRaidMainShotEmitter(
     const side = Math.sign(spread)
     let x = Math.max(-.055, Math.min(.055, spread * .016))
     let y = nose
+    if (combatModel && model) { [x, y] = getMechShotAnchor(model, shot.kind, spread, landscape) }
 
     if (wingCannon && shipKey === 'xwing') {
       x = side * .28

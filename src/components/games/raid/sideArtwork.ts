@@ -1,3 +1,4 @@
+import { getMechFlightNozzles } from './mechFlight'
 import { getPublicAssetUrl } from '../sound'
 import { getRaidShipBaseVisualKey } from './shipArtwork'
 
@@ -16,9 +17,9 @@ const SIDE_PATHS: Record<string, string> = {
   mesiahRaptorWhite: 'mesiah-raptor-white-v1.png?art=8dae3f321d42',
   coreLander: 'core-lander-v1.png?art=2806e948e9e0',
   coreLanderBurning: 'core-lander-burning-v1.png?art=32c847766c23',
-  godGundam: 'god-gundam-v1.png?art=b071c2faffaf',
-  godGundamBurning: 'god-gundam-burning-v1.png?art=6d4915d5010f',
-  spiegel: 'spiegel-v1.png?art=6899695804c8',
+  godGundam: 'god-gundam-flight-v2.webp',
+  godGundamBurning: 'god-gundam-burning-flight-v2.webp',
+  spiegel: 'spiegel-flight-v2.webp',
   rocketElite: 'black-comet-elite-v1.png?art=ef5def01b05d',
   fastElite: 'red-wraith-elite-v1.png?art=59dd2a6cb3a7',
   gatlingElite: 'crimson-saw-elite-v1.png?art=012984b9c016',
@@ -57,9 +58,9 @@ const SIDE_NOZZLES: Record<string, readonly (readonly [number, number, number])[
   mesiahRaptorWhite: [outlet(-.455, .005, .055)],
   coreLander: [outlet(-.205, -.022, .024), outlet(-.205, .022, .024)],
   coreLanderBurning: [outlet(-.205, -.022, .024), outlet(-.205, .022, .024)],
-  godGundam: [outlet(-.105, -.13, .023)],
-  godGundamBurning: [outlet(-.105, -.13, .023)],
-  spiegel: [outlet(-.12, -.07, .018)],
+  godGundam: getMechFlightNozzles('godGundam'),
+  godGundamBurning: getMechFlightNozzles('godGundam'),
+  spiegel: getMechFlightNozzles('spiegel'),
 }
 SIDE_NOZZLES.mesiahWhite = SIDE_NOZZLES.mesiah
 

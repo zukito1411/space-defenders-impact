@@ -1,5 +1,9 @@
 /** All launch choreography is sampled from simulation time, never a DOM timer. */
-export const CARRIER_LAUNCH_SECONDS = 6.4
+export const CARRIER_BOARDING_SECONDS = 2.8
+export const CARRIER_CLEAR_SECONDS = 1
+export const CARRIER_IGNITION_START = CARRIER_BOARDING_SECONDS + CARRIER_CLEAR_SECONDS
+export const CARRIER_DEPARTURE_START = CARRIER_IGNITION_START + 1.6
+export const CARRIER_LAUNCH_SECONDS = CARRIER_DEPARTURE_START + 4.8
 export const CARRIER_IGNITION_SECONDS = 1.6
 export const MESIAH_ENTRY_SECONDS = 2.4
 const unit = (n: number) => Math.max(0, Math.min(1, n))
@@ -18,25 +22,25 @@ export function sampleCarrierLaunch(age: number, landscape: boolean, reducedMoti
       done: t >= MESIAH_ENTRY_SECONDS,
     } as const
   }
-  const ignition = unit(t / CARRIER_IGNITION_SECONDS)
-  const flight = unit((t - CARRIER_IGNITION_SECONDS) / 3)
-  const settle = smooth((t - 4.6) / 1.8)
+  const ignition = unit((t - CARRIER_IGNITION_START) / CARRIER_IGNITION_SECONDS)
+  const flight = unit((t - CARRIER_DEPARTURE_START) / 3)
+  const settle = smooth((t - CARRIER_DEPARTURE_START - 3) / 1.8)
   const dockX = landscape ? 58 : 50
   const dockY = landscape ? 44 : compact ? 55 : 65
   // Acceleration clears the aperture; the camera then catches up to combat framing.
   const forward = flight * flight
   const flightY = dockY + ((landscape ? 32 : 40) - dockY) * forward
-  const exited = t >= 4.6
+  const exited = t >= CARRIER_DEPARTURE_START + 3
   return {
     x: dockX + (50 - dockX) * settle,
-    y: reducedMotion ? (t < 1.6 ? dockY : 82) : flightY + (82 - flightY) * settle,
-    scale: reducedMotion ? (t < 1.6 ? 1.65 : 1) : 1.65 + (1 - 1.65) * smooth((t - 3.2) / 3.2),
+    y: reducedMotion ? (t < CARRIER_DEPARTURE_START ? dockY : 82) : flightY + (82 - flightY) * settle,
+    scale: reducedMotion ? (t < CARRIER_DEPARTURE_START ? 1.65 : 1) : 1.65 + (1 - 1.65) * smooth((t - CARRIER_DEPARTURE_START - 1.6) / 3.2),
     engine: smooth(ignition),
-    release: smooth((t - .8) / .8),
+    release: smooth((t - CARRIER_IGNITION_START - .8) / .8),
     // Move the opaque carrier out of frame. Never dissolve planets over its walls.
     backdrop: reducedMotion ? (t < 1.6 ? 1 : 0) : (exited ? 0 : 1),
     shift: reducedMotion ? 0 : 1.3 * forward,
-    phase: t < 1.6 ? 'ignition' : t < 4.6 ? 'launch' : t < CARRIER_LAUNCH_SECONDS ? 'clear' : 'flight',
+    phase: t < CARRIER_BOARDING_SECONDS ? 'boarding' : t < CARRIER_IGNITION_START ? 'clearing' : t < CARRIER_DEPARTURE_START ? 'ignition' : t < CARRIER_DEPARTURE_START + 3 ? 'launch' : t < CARRIER_LAUNCH_SECONDS ? 'clear' : 'flight',
     done: t >= CARRIER_LAUNCH_SECONDS,
   } as const
 }
