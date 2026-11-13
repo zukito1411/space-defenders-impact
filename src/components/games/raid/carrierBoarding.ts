@@ -1,3 +1,7 @@
+import { getCarrierCanopyProfile } from './carrierCanopyProfiles'
+import { getCanvasSpriteDimensions, getRaidSideShipCanvasSprite, getShipCanvasSprite } from './assets'
+import { getMechDockAtlas } from './mechDock'
+import { drawDeckCockpitInterior, drawDeckCrew } from './deckServiceArt'
 import { CARRIER_BOARDING_SECONDS, CARRIER_IGNITION_START } from './carrierLaunch'
 
 const boardingUnit = (v: number) => Math.max(0, Math.min(1, v))
@@ -5,8 +9,10 @@ const boardingEase = (v: number) => { const t = boardingUnit(v); return t * t * 
 
 /** Open during clearance; seal the cockpit, then stow the ladder before ignition. */
 export function sampleCarrierBoarding(age: number, briefing: boolean, reduced: boolean, ambientAge = 1) {
-  const canopy = briefing ? boardingEase(ambientAge / .65) : 1 - boardingEase((age - CARRIER_BOARDING_SECONDS) / .65)
-  const ladder = briefing ? 1 : 1 - boardingEase((age - 3.1) / .65)
+  const canopy = briefing ? boardingEase(ambientAge / .65)
+    : Math.min(boardingEase((ambientAge + age) / .65), 1 - boardingEase((age - CARRIER_BOARDING_SECONDS) / .65))
+  const ladder = briefing ? boardingEase((ambientAge - .12) / .42)
+    : Math.min(boardingEase((ambientAge + age - .12) / .42), 1 - boardingEase((age - 3.1) / .65))
   return {
     canopy: reduced ? Number(canopy > .5) : canopy,
     ladder: reduced ? Number(ladder > .5) : ladder,
@@ -15,20 +21,13 @@ export function sampleCarrierBoarding(age: number, briefing: boolean, reduced: b
   }
 }
 
-type Mount = { x: number; y: number; w: number; h: number; hatch?: boolean }
-/** Physical-screen offsets in the same aspect-preserving hull units as the artwork. */
-export function getCarrierCockpitMount(key: string, landscape: boolean, groundedMech = false): Mount {
-  if(groundedMech)return{x:key==='spiegel'?.025:.02,y:key==='spiegel'?.04:.055,w:.04,h:.035,hatch:true}
-  if (key === 'godGundam' || key === 'godGundamBurning' || key === 'spiegel') {
-    return landscape
-      ? { x: key === 'spiegel' ? .19 : .22, y: key === 'spiegel' ? -.015 : .05, w: .045, h: .045, hatch: true }
-      : { x: 0, y: -.10, w: .055, h: .055, hatch: true }
-  }
-  if (!landscape) return { x: 0, y: -.20, w: .043, h: .075 }
-  if (key.startsWith('dreadnought')) return { x: -.04, y: -.055, w: .061, h: .019 }
-  if (key.startsWith('coreLander')) return { x: .22, y: -.026, w: .058, h: .019 }
-  if (key.startsWith('laser')) return { x: .11, y: -.024, w: .096, h: .028 }
-  return { x: key.startsWith('fast') ? .085 : key.startsWith('xwing') ? .055 : .09, y: -.035, w: .085, h: .024 }
+/** Physical-screen offsets in the same hull units as the artwork. */
+export function getCarrierCockpitMount(key: string, landscape: boolean, groundedMech = false) {
+  const profile = getCarrierCanopyProfile(key, landscape, groundedMech)
+  if (!profile) return { x: 0, y: -.1, w: .02, h: .025, hatch: true }
+  const [left, top, right, bottom] = profile.bounds
+  return { x: (left + right - 240) / 480, y: (top + bottom - 240) / 480,
+    w: (right - left) / 480, h: (bottom - top) / 480, hatch: profile.hatch }
 }
 
 export function getCarrierBoardingGeometry(shipX: number, shipY: number, hull: number, visualKey: string, landscape: boolean, sourceScale: number, groundedMech=false) {
@@ -36,7 +35,7 @@ export function getCarrierBoardingGeometry(shipX: number, shipY: number, hull: n
   const cockpitX = shipX + hull * mount.x, cockpitY = shipY + hull * mount.y
   // The ladder meets the near lip of the cockpit instead of stopping at the hull center.
   const topX = cockpitX - hull * mount.w * .7, topY = cockpitY + hull * mount.h
-  const floorY = landscape ? 608 * sourceScale : groundedMech?shipY+hull*.30:topY + 95 * sourceScale
+  const floorY = landscape ? Math.max(topY + 40 * sourceScale, 608 * sourceScale) : groundedMech ? shipY + hull * .30 : topY + 95 * sourceScale
   const footX = topX - 36 * sourceScale
   return { mount, cockpitX, cockpitY, topX, topY, floorY, footX, startX: footX - 130 * sourceScale }
 }
@@ -57,23 +56,75 @@ export function drawBoardingLadder(ctx: CanvasRenderingContext2D, footX: number,
   ctx.restore()
 }
 
-/** Draw over the actual hull in physical screen axes, in either orientation. */
-export function drawCarrierCockpit(ctx: CanvasRenderingContext2D, x: number, y: number, hull: number, key: string, landscape: boolean, open: number,groundedMech=false) {
+/** Reveal the seat well and lift a cutout of the original glass on its hinge. */
+export function drawCarrierCockpit(ctx: CanvasRenderingContext2D, x: number, y: number, hull: number, key: string, landscape: boolean, open: number, groundedMech = false, seated = 0) {
   if (open <= .001) return
-  const m = getCarrierCockpitMount(key, landscape,groundedMech)
-  ctx.save();ctx.translate(x,y)
-  ctx.translate(hull*m.x,hull*m.y)
-  const w=hull*m.w,h=hull*m.h
-  const outline=()=>{ctx.beginPath();if(m.hatch)ctx.roundRect(-w,-h,w*2,h*2,Math.min(w,h)*.2);else ctx.ellipse(0,0,w,h,0,0,Math.PI*2)}
-  // The seat well occludes the closed glass while the physical panel swings upward.
-  ctx.globalAlpha*=Math.min(1,open*4);outline();ctx.fillStyle='#020b12';ctx.fill();ctx.strokeStyle='#7a949f';ctx.lineWidth=Math.max(.65,hull*.005);ctx.stroke()
-  ctx.fillStyle='#29404c';ctx.fillRect(-w*.38,-h*.6,w*.65,h*1.2)
-  ctx.fillStyle='#75dfd7';ctx.fillRect(w*.35,-h*.35,w*.22,h*.2)
-  if(m.hatch){ctx.translate(0,h);ctx.rotate(open*.65);ctx.scale(1,Math.max(.3,1-open*.7));ctx.translate(0,-h)}
-  else if(landscape){ctx.translate(-w,0);ctx.rotate(-open*.8);ctx.translate(w,0)}
-  else{ctx.translate(0,h);ctx.rotate(-open*.65);ctx.translate(0,-h)}
-  outline();const glass=ctx.createLinearGradient(-w,-h,w,h);glass.addColorStop(0,m.hatch?'#617883':'#4bafcc');glass.addColorStop(.5,m.hatch?'#223746':'#122c3b');glass.addColorStop(1,'#0a1822')
-  ctx.fillStyle=glass;ctx.fill();ctx.strokeStyle='#acc8ce';ctx.lineWidth=Math.max(.7,hull*.005);ctx.stroke()
-  if(!m.hatch){ctx.beginPath();ctx.moveTo(-w*.65,-h*.4);ctx.lineTo(w*.55,-h*.1);ctx.strokeStyle='#a6f2fca0';ctx.stroke()}
+  const profile = getCarrierCanopyProfile(key, landscape, groundedMech)
+  if (!profile) return
+  const side = landscape || groundedMech
+  const sprite = groundedMech ? getMechDockAtlas(key === 'spiegel' ? 'spiegel' : 'godGundam')
+    : landscape ? getRaidSideShipCanvasSprite(key) : getShipCanvasSprite(key)
+  if (!sprite?.loaded) return
+  const { source, width, height } = getCanvasSpriteDimensions(sprite)
+  if (!width || !height) return
+  const frameWidth = groundedMech ? width / 2 : width
+  const frameHeight = groundedMech ? height / 2 : height
+  const fittedHeight = side ? hull * frameHeight / frameWidth : hull
+  const mount = getCarrierCockpitMount(key, landscape, groundedMech)
+  const outline = () => {
+    ctx.beginPath()
+    const [[firstX, firstY]] = profile.outline
+    ctx.moveTo((firstX / 240 - .5) * hull, (firstY / 240 - .5) * hull)
+    for (let index = 1; index < profile.outline.length; index += 1) {
+      const [px, py] = profile.outline[index]
+      ctx.lineTo((px / 240 - .5) * hull, (py / 240 - .5) * hull)
+    }
+    ctx.closePath()
+  }
+  const left = hull * (mount.x - mount.w), top = hull * (mount.y - mount.h)
+  const openingWidth = hull * mount.w * 2, openingHeight = hull * mount.h * 2
+  ctx.save()
+  ctx.translate(x, y)
+  ctx.save()
+  outline()
+  ctx.clip()
+  ctx.fillStyle = '#0a141d'
+  ctx.fillRect(left, top, openingWidth, openingHeight)
+  drawDeckCockpitInterior(ctx, (profile.hatch ? 2 : 0) + Number(side),
+    hull * mount.x, hull * mount.y, openingWidth * 1.06, openingHeight * 1.06)
+  if (seated > 0) {
+    ctx.globalAlpha *= seated
+    const seatX = hull * mount.x - (side ? openingWidth * .22 : 0)
+    const seatY = hull * mount.y + openingHeight * .37
+    drawDeckCrew(ctx, 7, seatX, seatY, Math.min(openingHeight * 1.45, openingWidth * 1.35))
+  }
   ctx.restore()
+
+  const hx = (profile.hinge[0] / 240 - .5) * hull, hy = (profile.hinge[1] / 240 - .5) * hull
+  const { shiftX, shiftY, rotation, scaleY } = sampleCanopyHinge(open, openingWidth, openingHeight, side)
+  ctx.translate(hx + shiftX, hy + shiftY)
+  ctx.rotate(rotation)
+  ctx.scale(1, scaleY)
+  ctx.translate(-hx, -hy)
+  outline()
+  ctx.clip()
+
+  // Read only the traced region from the exact art drawn by the hull pass.
+  const sourceScaleX = frameWidth / hull, sourceScaleY = frameHeight / fittedHeight
+  ctx.drawImage(source, (groundedMech ? frameWidth : 0) + (left + hull / 2) * sourceScaleX,
+    (top + fittedHeight / 2) * sourceScaleY, openingWidth * sourceScaleX, openingHeight * sourceScaleY,
+    left, top, openingWidth, openingHeight)
+  ctx.restore()
+}
+
+export function sampleCanopyHinge(open: number, width: number, height: number, side: boolean) {
+  const travel = boardingUnit(open)
+  // The rear hinge remains the pivot. A small lift in the side projection
+  // and foreshortening in the overhead projection read as depth.
+  return {
+    shiftX: side ? 0 : -width * .15 * travel,
+    shiftY: side ? -height * .22 * travel : height * .12 * travel,
+    rotation: -travel * (side ? 1.16 : .98),
+    scaleY: 1 - travel * (side ? .14 : .43),
+  }
 }

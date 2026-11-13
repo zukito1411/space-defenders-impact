@@ -1,3 +1,4 @@
+import { getDeckAtlas } from './deckServiceArt'
 import { getDockClampAtlas } from './carrierClamps'
 import { getPublicAssetUrl } from '../sound'
 import { getMechDockAtlas } from './mechDock'
@@ -11,7 +12,7 @@ export const CARRIER_DOOR_MASK_PATHS = {
 } as const
 let ready: Promise<void> | undefined
 export function preloadCarrierAssets() {
-  return ready ??= Promise.all([getDockClampAtlas().ready,getMechDockAtlas('godGundam').ready,getMechDockAtlas('spiegel').ready,...[...Object.values(CARRIER_ASSET_PATHS), ...Object.values(CARRIER_DOOR_MASK_PATHS)].map(path => new Promise<void>(resolve => {
+  return ready ??= Promise.all([getDeckAtlas('props').ready,getDeckAtlas('cockpit').ready,getDeckAtlas('crew').ready,getDeckAtlas('workers').ready,getDeckAtlas('repair').ready,getDockClampAtlas().ready,getMechDockAtlas('godGundam').ready,getMechDockAtlas('spiegel').ready,...[...Object.values(CARRIER_ASSET_PATHS), ...Object.values(CARRIER_DOOR_MASK_PATHS)].map(path => new Promise<void>(resolve => {
     const image = new Image()
     image.onload = () => { void image.decode().catch(() => {}).then(resolve) }
     image.onerror = () => resolve() // The steel CSS backing remains usable offline on a failed asset.

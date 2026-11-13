@@ -1,7 +1,7 @@
 import { drawDockClamps, getDockClampAtlas, type DockMount } from './carrierClamps'
 import { CARRIER_IGNITION_START } from './carrierLaunch'
-import { drawDeckPerson as person } from './crewPeople'
 import { sampleCrewPatrol } from './crewMotion'
+import { drawDeckCrew, drawDeckServices, drawDeckPatroller, getDeckAtlas } from './deckServiceArt'
 import { CARRIER_BOARDING_SECONDS, CARRIER_CLEAR_SECONDS } from './carrierLaunch'
 import { drawBoardingLadder, drawCarrierCockpit, getCarrierBoardingGeometry, sampleCarrierBoarding } from './carrierBoarding'
 
@@ -98,16 +98,23 @@ function boardingGeometry(frame: CarrierDeckFrame) {
 /** Foreground pass after the one gameplay hull: pilot climbs visible rungs into the well. */
 export function drawCarrierBoardingForeground(ctx: CanvasRenderingContext2D, frame: CarrierDeckFrame) {
   const g=boardingGeometry(frame),crew=sampleCarrierCrew(frame.launchAge,frame.briefing,frame.reducedMotion)
-  const kit=sampleCarrierBoarding(frame.launchAge,frame.briefing,frame.reducedMotion,frame.ambientAge)
+  const kit = sampleCarrierBoarding(frame.launchAge, frame.briefing, frame.reducedMotion,
+    frame.ambientAge - (frame.briefing ? 0 : frame.launchAge))
   ctx.save();ctx.translate(g.cover.x,g.cover.y);ctx.scale(g.cover.scale,g.cover.scale)
   drawBoardingLadder(ctx,g.footX,g.floorY,g.topX,g.topY,kit.ladder)
-  drawCarrierCockpit(ctx,g.shipX,g.shipY,g.hull,frame.visualKey,frame.landscape,kit.canopy,frame.groundedMech)
+  const climb = Math.min(1, crew.climb / .76)
+  const stepIn = Math.max(0, (crew.climb - .76) / .24)
+  const seated = crew.pilotVisible ? stepIn : 1
+  drawCarrierCockpit(ctx,g.shipX,g.shipY,g.hull,frame.visualKey,frame.landscape,kit.canopy,frame.groundedMech,seated)
   if(crew.pilotVisible){
-    const x=g.startX+(g.footX-g.startX)*crew.walk+(g.topX-g.footX)*crew.climb
-    const y=g.floorY+(g.topY-g.floorY)*crew.climb
-    ctx.globalAlpha*=1-Math.max(0,(crew.climb-.72)/.28)
-    const h=frame.landscape?21:23,walkDistance=(g.footX-g.startX)*crew.walk+Math.hypot(g.topX-g.footX,g.topY-g.floorY)*crew.climb
-    person(ctx,x,y,h,walkDistance*22/h,'#d3dbe0',1,!frame.briefing&&!frame.reducedMotion,false,false,false,crew.climb>0)
+    const x = g.startX + (g.footX - g.startX) * crew.walk + (g.topX - g.footX) * climb + (g.cockpitX - g.topX) * stepIn
+    const y = g.floorY + (g.topY - g.floorY) * climb + (g.cockpitY - g.topY) * stepIn
+    ctx.globalAlpha *= 1 - Math.min(1, stepIn * 1.2)
+    const h = frame.landscape ? 21 : 23
+    const walkDistance = (g.footX - g.startX) * crew.walk
+    const pose = frame.briefing || frame.reducedMotion ? 1 : stepIn > 0 ? 6
+      : crew.climb > 0 ? 4 + Math.floor(climb * 6) % 2 : Math.floor(walkDistance / 10) % 4
+    drawDeckCrew(ctx, pose, x, y, h)
   }
   ctx.restore()
 }
@@ -120,13 +127,15 @@ export function drawCarrierDeck(canvas: HTMLCanvasElement, frame: CarrierDeckFra
   const pw=Math.round(width*dpr),ph=Math.round(height*dpr)
   if(canvas.width!==pw||canvas.height!==ph){canvas.width=pw;canvas.height=ph}
   const crew=sampleCarrierCrew(launchAge,briefing,reducedMotion)
-  const kit=sampleCarrierBoarding(launchAge,briefing,reducedMotion,ambientAge)
+  const kit = sampleCarrierBoarding(launchAge, briefing, reducedMotion, ambientAge - (briefing ? 0 : launchAge))
   const release=frame.landingRelease ?? (briefing?0:unit((launchAge-CARRIER_IGNITION_START-.8)/.8))
   const clampRelease=reducedMotion?Number(release>.5):release
   const clampLoaded=getDockClampAtlas().loaded
+  const servicesLoaded=decorative && getDeckAtlas('props').loaded && getDeckAtlas('workers').loaded && getDeckAtlas('repair').loaded
+  const crewLoaded=getDeckAtlas('crew').loaded
   // Static accessibility frames only change on a boarding/clearance cut or resize.
   // Avoid repeatedly rasterizing and uploading a full-screen unchanged canvas.
-  const staticKey=reducedMotion?[width,height,dpr,landscape,decorative,frame.shipX,frame.shipY,frame.hullSize,frame.visualKey,crew.pilotState,crew.marshalState,crew.retreat,kit.ladder,kit.canopy,clampRelease,clampLoaded].join(':'):null
+  const staticKey=reducedMotion?[width,height,dpr,landscape,decorative,frame.shipX,frame.shipY,frame.hullSize,frame.visualKey,crew.pilotState,crew.marshalState,crew.retreat,kit.ladder,kit.canopy,clampRelease,clampLoaded,servicesLoaded,crewLoaded].join(':'):null
   if(staticKey&&staticDeckFrames.get(canvas)===staticKey)return
   const ctx=canvas.getContext('2d');if(!ctx)return
   if(staticKey)staticDeckFrames.set(canvas,staticKey);else staticDeckFrames.delete(canvas)
@@ -144,7 +153,9 @@ export function drawCarrierDeck(canvas: HTMLCanvasElement, frame: CarrierDeckFra
   canvas.dataset.dockClampRelease=String(clampRelease)
   const time=reducedMotion?0:ambientAge
   canvas.dataset.pilotState=crew.pilotState;canvas.dataset.marshalState=crew.marshalState
-  canvas.dataset.crewCount=String(decorative?6:2)
+  canvas.dataset.crewCount=String((crewLoaded ? 2 : 0) + (servicesLoaded ? 6 : 0))
+  canvas.dataset.crewAtlasLoaded=String(crewLoaded)
+  canvas.dataset.deckServices=String(servicesLoaded)
   canvas.dataset.fanAngle=String(decorative?time*.85:0)
   canvas.dataset.canopyOpen=String(kit.canopy);canvas.dataset.ladderExtension=String(kit.ladder)
   canvas.dataset.cockpitSealed=String(kit.sealed)
@@ -157,10 +168,12 @@ export function drawCarrierDeck(canvas: HTMLCanvasElement, frame: CarrierDeckFra
     lamp(ctx,x,y,w,landscape&&i>=6?'#ffc469':'#68e5f4',.42+cycle*.06,landscape?(i===3||i===4):i<10)
   }
   if(decorative){
+    if (servicesLoaded) drawDeckServices(ctx, time, landscape, reducedMotion)
     const patrols=landscape?[[500,850,239,19],[1080,1260,239,18],[550,730,791,18],[1170,1400,791,17]]:[[210,282,449,22],[752,814,449,22],[198,270,810,21],[760,820,810,21]]
-    for(let i=0;i<patrols.length;i++){
-      const [a,b,y,h]=patrols[i],p=sampleCrewPatrol(time,a,b,22,i*3.7)
-      person(ctx,p.x,y,h,p.distance*22/h,i%2?'#3f8292':'#c38d4d',p.facing,p.moving&&!reducedMotion)
+    for (let i = 0; i < patrols.length; i += 1) {
+      const [a, b, y, h] = patrols[i]
+      const patrol = sampleCrewPatrol(time, a, b, 22, i * 3.7)
+      drawDeckPatroller(ctx, patrol.x, y, h, patrol.facing, i % 2 === 0, patrol.distance, !reducedMotion && patrol.moving)
     }
   }
   const g=boardingGeometry(frame)
@@ -169,8 +182,10 @@ export function drawCarrierDeck(canvas: HTMLCanvasElement, frame: CarrierDeckFra
   // Once the lane is clear, stay behind the service equipment until the carrier leaves.
   if(crew.retreat<1){
     ctx.save();ctx.globalAlpha=1-Math.max(0,(crew.retreat-.8)*5)
-    const h=landscape?23:24,distance=crew.retreat>0?(safeX-marshalX)*crew.retreat*22/h:time
-    person(ctx,marshalX+(safeX-marshalX)*crew.retreat,marshalY,h,distance,'#dba349',1,crew.retreat>0&&!reducedMotion,true,crew.marshalState==='signal',true)
+    const h = landscape ? 23 : 24
+    const distance = (safeX - marshalX) * crew.retreat
+    const pose = reducedMotion ? 9 : crew.retreat > 0 ? 10 + Math.floor(distance / 10) % 2 : 8 + Math.floor(time * 2) % 2
+    drawDeckCrew(ctx, pose, marshalX + distance, marshalY, h)
     ctx.restore()
   }
 }
