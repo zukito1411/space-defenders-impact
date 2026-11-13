@@ -720,6 +720,7 @@
 }
 #root .raid__carrier-plate {
   position: absolute; inset: 0; background-color: #07151f; background-size: cover; background-position: center;
+  mask-size: cover; mask-position: center; mask-repeat: no-repeat;
   transform: translate3d(var(--carrier-shift-x, 0px), var(--carrier-shift-y, 0px), 0);
   will-change: transform;
 }
