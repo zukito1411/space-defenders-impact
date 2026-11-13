@@ -761,8 +761,8 @@ export function GradiusRaid({
     const prevPhase = phaseRef.current
     carrierStopRef.current = state.carrierStop ? { ...state.carrierStop } : null
     guestRecoveryPendingRef.current = state.recoveryPending ?? false
-    if (state.phase === 'briefing' && prevPhase !== 'briefing' && !carrierStopRef.current) {
-      sceneryRunTokenRef.current = performance.now()
+    if (state.phase === 'briefing' && prevPhase !== 'briefing') {
+      if (!carrierStopRef.current) sceneryRunTokenRef.current = performance.now()
       carrierDeckAgeRef.current = 0
     }
     if (typeof state.carrierLaunch === 'boolean') initialLaunchRef.current = state.carrierLaunch
@@ -1825,7 +1825,7 @@ export function GradiusRaid({
           getCachedEquippedCosmetics(pilot.ship.key), getRaidPlayerVisualShipKey(pilot, progressRef.current),
           null, null, 0, 0, reducedMotion, landscapeRef.current,
           { scale: displayScale, engine: enginesCold ? 0 : carrier.engine, hideCombatFx: true, carrierAge: underway ? undefined : recovery ? (recovery.release < .5 ? 0 : CARRIER_LAUNCH_SECONDS) : carrierAge })
-        if (boardingFrame && (!recovery || recovery.release < .25)) {
+        if (boardingFrame && !recovery) {
           ctx.save()
           if (landscapeRef.current) { ctx.translate(0, cssHeight); ctx.rotate(-Math.PI / 2) }
           drawCarrierBoardingForeground(ctx, boardingFrame)
@@ -4616,6 +4616,7 @@ export function GradiusRaid({
       if (!stop.remaining) {
         playerRef.current.engineBoost = 0
         if (remotePlayerRef.current) remotePlayerRef.current.engineBoost = 0
+        carrierDeckAgeRef.current = 0
         phaseRef.current = 'briefing'
         syncSnapshot()
       }
