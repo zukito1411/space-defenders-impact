@@ -1,12 +1,21 @@
 import type { CoreLanderCombatModel, Shot } from './types'
 
 type Point = readonly [number, number]
-/** Measured on the 1536x1024 v2 art, in physical right-facing hull-size units. */
+const palmPoint = (x: number, y: number): Point => [(x - 384) / 768, (y - 256) / 768]
+
+// Palm centers on the 768x512 charge and release cells. Coordinates are in
+// right-facing hull-width units around the center of the sprite.
+export const GOD_GUNDAM_PALMS = {
+  folded: { charge: palmPoint(439, 100), release: palmPoint(703, 153) },
+  burning: { charge: palmPoint(475, 128), release: palmPoint(680, 189) },
+} as const
+
+/** Measured on the landscape artwork in physical right-facing hull-size units. */
 export const MECH_FLIGHT_ANCHORS = {
   godGundam: {
-    head: [.335, -.105], hand: [.468, -.04],
-    shoulders: [[.176, -.144], [.376, -.074]],
-    nozzles: [[.078, -.094, .018], [-.370, .068, .016], [-.279, .167, .016]],
+    head: [.274, -.145], hand: GOD_GUNDAM_PALMS.folded.release,
+    shoulders: [[.025, -.145], [.286, -.14]],
+    nozzles: [[.018, -.11, .018], [-.386, .173, .016], [-.005, .186, .016]],
   },
   spiegel: {
     head: [.215, -.09], hand: [.467, -.045],
@@ -16,7 +25,7 @@ export const MECH_FLIGHT_ANCHORS = {
 } as const
 
 /** Shoulder ballistics, head pickups and hand techniques have separate origins. */
-export function getMechShotAnchor(model: CoreLanderCombatModel, kind: Shot['kind'], lane: number, landscape: boolean): Point {
+export function getMechShotAnchor(model: CoreLanderCombatModel, kind: Shot['kind'], lane: number, landscape: boolean, burning = false): Point {
   const side = lane < 0 ? 0 : 1
   if (!landscape) {
     if (kind === 'coreBlast') return [.23, -.04]
@@ -25,7 +34,8 @@ export function getMechShotAnchor(model: CoreLanderCombatModel, kind: Shot['kind
     return [side ? .16 : -.16, -.24]
   }
   const map = MECH_FLIGHT_ANCHORS[model]
-  const point = kind === 'coreBlast' || kind === 'spiegelKunai' ? map.hand
+  const hand = model === 'godGundam' && burning ? GOD_GUNDAM_PALMS.burning.release : map.hand
+  const point = kind === 'coreBlast' || kind === 'spiegelKunai' ? hand
     : kind === 'laser' || kind === 'needle' ? map.head : map.shoulders[side]
   // The physical camera turns clockwise; undo it before emitting into logical space.
   return [point[1], -point[0]]

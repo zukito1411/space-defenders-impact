@@ -16,9 +16,9 @@ const SIDE_PATHS: Record<string, string> = {
   mesiahRaptorBlack: 'mesiah-raptor-black-v1.png?art=eb641ff455b5',
   mesiahRaptorWhite: 'mesiah-raptor-white-v1.png?art=8dae3f321d42',
   coreLander: 'core-lander-v1.png?art=2806e948e9e0',
-  coreLanderBurning: 'core-lander-burning-v1.png?art=32c847766c23',
-  godGundam: 'god-gundam-flight-v2.webp',
-  godGundamBurning: 'god-gundam-burning-flight-v3.webp',
+  coreLanderBurning: 'core-lander-burning-v2.webp',
+  godGundam: 'god-gundam-flight-v3.webp',
+  godGundamBurning: 'god-gundam-burning-flight-v4.webp',
   spiegel: 'spiegel-flight-v2.webp',
   rocketElite: 'black-comet-elite-v1.png?art=ef5def01b05d',
   fastElite: 'red-wraith-elite-v1.png?art=59dd2a6cb3a7',
@@ -30,7 +30,7 @@ const SIDE_PATHS: Record<string, string> = {
   mesiahBlackElite: 'mesiah-elite-v1.png?art=eeb846760888',
   mesiahWhiteElite: 'mesiah-white-elite-v1.png?art=256938ba06ea',
   coreLanderElite: 'core-lander-elite-v1.png?art=a096bfa18bf2',
-  coreLanderBurningElite: 'core-lander-burning-elite-v1.png?art=98bc853fc28f',
+  coreLanderBurningElite: 'core-lander-burning-elite-v2.webp',
 }
 
 function sideKey(shipKey: string) {

@@ -1,10 +1,11 @@
 import type { CoreLanderCombatModel } from './types'
 import { getPublicAssetUrl } from '../sound'
 import { getCanvasSpriteDimensions, makeImageCanvasSprite } from './assets'
+import { GOD_GUNDAM_PALMS } from './mechFlight'
 
 export const MECH_ACTION_PATHS = {
-  godGundam: 'assets/ships/sideview/god-gundam-actions-v1.webp',
-  godGundamBurning: 'assets/ships/sideview/god-gundam-burning-actions-v2.webp',
+  godGundam: 'assets/ships/sideview/god-gundam-actions-v2.webp',
+  godGundamBurning: 'assets/ships/sideview/god-gundam-burning-actions-v3.webp',
   spiegel: 'assets/ships/sideview/spiegel-actions-v1.webp',
 } as const
 
@@ -32,9 +33,10 @@ export function drawMechAction(ctx: CanvasRenderingContext2D, model: CoreLanderC
   ctx.save();ctx.translate(x,y);ctx.rotate(rotation-Math.PI/2);ctx.scale(scale,scale);ctx.globalAlpha*=alpha
   ctx.drawImage(source,(cell%2)*w,Math.floor(cell/2)*h,w,h,-size/2,-size*h/w/2,size,size*h/w)
   if(model==='godGundam'&&cell===1){
-    const px=size*.305,py=size*.065,r=size*.042
+    const [palmX, palmY] = GOD_GUNDAM_PALMS[burning ? 'burning' : 'folded'].charge
+    const px=size*palmX,py=size*palmY,r=size*.048
     const glow=ctx.createRadialGradient(px,py,0,px,py,r)
-    glow.addColorStop(0,'#fffde9');glow.addColorStop(.25,'#ffe494dd');glow.addColorStop(1,'#ff9b2400')
+    glow.addColorStop(0,'#e4ffea');glow.addColorStop(.25,'#61ffa7bb');glow.addColorStop(1,'#1bd47a00')
     ctx.fillStyle=glow;ctx.beginPath();ctx.arc(px,py,r,0,Math.PI*2);ctx.fill()
   }
   ctx.restore();return true

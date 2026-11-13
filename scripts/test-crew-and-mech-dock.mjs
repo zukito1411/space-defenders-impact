@@ -17,7 +17,14 @@ for(const landscape of[false,true]){
  }
 }
 for(const model of['godGundam','spiegel'])for(let frame=0;frame<4;frame++)for(const [x,y,a]of lib.getMechDockNozzles(model,frame).roots){assert.ok(Number.isFinite(x)&&Number.isFinite(y));assert.ok(a>0&&a<.04)}
-for(const file of['god-gundam-launch-v1.webp','spiegel-launch-v1.webp','god-gundam-burning-flight-v3.webp','god-gundam-burning-actions-v2.webp']){
- const b=readFileSync(new URL('../public/assets/ships/sideview/'+file,import.meta.url));assert.equal(b.toString('ascii',12,16),'VP8X');assert.ok(b[20]&16);assert.equal(b.readUIntLE(24,3)+1,1536);assert.equal(b.readUIntLE(27,3)+1,1024)
+for(const [file,height] of [
+ ['god-gundam-launch-v2.webp',1024], ['spiegel-launch-v1.webp',1024],
+ ['god-gundam-flight-v3.webp',1024], ['god-gundam-actions-v2.webp',1024],
+ ['god-gundam-burning-flight-v4.webp',1024], ['god-gundam-burning-actions-v3.webp',1024],
+ ['core-lander-burning-v2.webp',512], ['core-lander-burning-elite-v2.webp',512],
+]){
+ const b=readFileSync(new URL('../public/assets/ships/sideview/'+file,import.meta.url))
+ assert.equal(b.toString('ascii',12,16),'VP8X');assert.ok(b[20]&16,file+' must retain its silhouette alpha')
+ assert.equal(b.readUIntLE(24,3)+1,1536);assert.equal(b.readUIntLE(27,3)+1,height)
 }
 console.log('Crew eased patrol stops; Gundam ready/crouch/lift/fly timing, pose-mounted nozzles and alpha assets passed')
