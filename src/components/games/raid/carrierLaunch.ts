@@ -3,6 +3,7 @@ export const CARRIER_BOARDING_SECONDS = 2.8
 export const CARRIER_CLEAR_SECONDS = 1
 export const CARRIER_IGNITION_START = CARRIER_BOARDING_SECONDS + CARRIER_CLEAR_SECONDS
 export const CARRIER_DEPARTURE_START = CARRIER_IGNITION_START + 1.6
+export const CARRIER_EXIT_SECONDS = CARRIER_DEPARTURE_START + 3
 export const CARRIER_LAUNCH_SECONDS = CARRIER_DEPARTURE_START + 4.8
 export const CARRIER_IGNITION_SECONDS = 1.6
 export const MESIAH_ENTRY_SECONDS = 2.4
@@ -30,7 +31,7 @@ export function sampleCarrierLaunch(age: number, landscape: boolean, reducedMoti
   // Acceleration clears the aperture; the camera then catches up to combat framing.
   const forward = flight * flight
   const flightY = dockY + ((landscape ? 32 : 40) - dockY) * forward
-  const exited = t >= CARRIER_DEPARTURE_START + 3
+  const exited = t >= CARRIER_EXIT_SECONDS
   return {
     x: dockX + (50 - dockX) * settle,
     y: reducedMotion ? (t < CARRIER_DEPARTURE_START ? dockY : 82) : flightY + (82 - flightY) * settle,
@@ -40,7 +41,7 @@ export function sampleCarrierLaunch(age: number, landscape: boolean, reducedMoti
     // Move the opaque carrier out of frame. Never dissolve planets over its walls.
     backdrop: reducedMotion ? (t < CARRIER_DEPARTURE_START ? 1 : 0) : (exited ? 0 : 1),
     shift: reducedMotion ? 0 : 1.3 * forward,
-    phase: t < CARRIER_BOARDING_SECONDS ? 'boarding' : t < CARRIER_IGNITION_START ? 'clearing' : t < CARRIER_DEPARTURE_START ? 'ignition' : t < CARRIER_DEPARTURE_START + 3 ? 'launch' : t < CARRIER_LAUNCH_SECONDS ? 'clear' : 'flight',
+    phase: t < CARRIER_BOARDING_SECONDS ? 'boarding' : t < CARRIER_IGNITION_START ? 'clearing' : t < CARRIER_DEPARTURE_START ? 'ignition' : t < CARRIER_EXIT_SECONDS ? 'launch' : t < CARRIER_LAUNCH_SECONDS ? 'clear' : 'flight',
     done: t >= CARRIER_LAUNCH_SECONDS,
   } as const
 }

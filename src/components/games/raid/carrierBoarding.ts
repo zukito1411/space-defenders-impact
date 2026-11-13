@@ -18,7 +18,7 @@ export function sampleCarrierBoarding(age: number, briefing: boolean, reduced: b
 type Mount = { x: number; y: number; w: number; h: number; hatch?: boolean }
 /** Physical-screen offsets in the same aspect-preserving hull units as the artwork. */
 export function getCarrierCockpitMount(key: string, landscape: boolean, groundedMech = false): Mount {
-  if(groundedMech)return{x:key==='spiegel'?.025:.05,y:.025,w:.045,h:.045,hatch:true}
+  if(groundedMech)return{x:key==='spiegel'?.025:.02,y:key==='spiegel'?.04:.055,w:.04,h:.035,hatch:true}
   if (key === 'godGundam' || key === 'godGundamBurning' || key === 'spiegel') {
     return landscape
       ? { x: key === 'spiegel' ? .19 : .22, y: key === 'spiegel' ? -.015 : .05, w: .045, h: .045, hatch: true }
