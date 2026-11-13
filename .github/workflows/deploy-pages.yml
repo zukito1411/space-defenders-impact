@@ -1,15 +1,11 @@
 name: Deploy Space Impact Defenders to GitHub Pages
 
-# The push filter runs this workflow ONCE when this workflow file is added.
-# Normal gameplay commits do not automatically redeploy Pages.
-# Future deployments can be started manually from Actions > Run workflow.
+# Publish the browser game after every push to main, including ordinary game commits.
 on:
   workflow_dispatch:
   push:
     branches:
       - main
-    paths:
-      - .github/workflows/deploy-pages.yml
 
 permissions:
   contents: read

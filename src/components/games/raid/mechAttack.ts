@@ -4,7 +4,7 @@ import { getCanvasSpriteDimensions, makeImageCanvasSprite } from './assets'
 
 export const MECH_ACTION_PATHS = {
   godGundam: 'assets/ships/sideview/god-gundam-actions-v1.webp',
-  godGundamBurning: 'assets/ships/sideview/god-gundam-burning-actions-v1.webp',
+  godGundamBurning: 'assets/ships/sideview/god-gundam-burning-actions-v2.webp',
   spiegel: 'assets/ships/sideview/spiegel-actions-v1.webp',
 } as const
 

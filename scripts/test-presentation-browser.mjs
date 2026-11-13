@@ -11,7 +11,7 @@ try {
   const cases=[
     {name:'portrait',width:393,height:852,landscape:false},
     {name:'landscape',width:844,height:390,landscape:true,model:'godGundam'},
-    {name:'portrait-compact',width:360,height:640,landscape:false},
+    {name:'portrait-compact',width:360,height:640,landscape:false,model:'godGundam'},
     {name:'landscape-compact',width:640,height:320,landscape:true,model:'spiegel'},
     {name:'reduced-motion',width:393,height:852,landscape:false,reduced:true},
   ]
@@ -37,6 +37,7 @@ try {
     await page.waitForFunction(()=>Number(document.querySelector('.raid__carrier-deck')?.getAttribute('data-canopy-open'))>.98,{},{timeout:20000})
     assert.equal(await deck.getAttribute('data-ladder-extension'),'1','boarding ladder must be deployed')
     await page.screenshot({path:`presentation-review/${name}-docked.png`})
+    if(item.model)assert.equal(await page.locator('.raid__fx-canvas').getAttribute('data-mech-dock-frame'),'0','Gundam must stand ready on the deck')
     const angle=await deck.getAttribute('data-fan-angle')
     if(reduced){
       await page.waitForTimeout(500)
@@ -90,6 +91,10 @@ try {
     await page.waitForTimeout(400)
     await page.screenshot({path:`presentation-review/${name}-ignition.png`})
     console.log(name,'ignition: pilot aboard, marshal safe')
+    if(item.model&&!reduced){
+      await page.waitForFunction(()=>document.querySelector('.raid__fx-canvas')?.getAttribute('data-mech-dock-frame')==='2',{},{timeout:30000})
+      await page.screenshot({path:`presentation-review/${name}-lift.png`})
+    }
     await page.waitForFunction(()=>document.querySelector('.raid')?.dataset.carrierStage==='launch',{},{timeout:30000})
     if(!reduced){
       await page.waitForFunction(()=>Math.abs(parseFloat(document.querySelector('.raid').style.getPropertyValue('--carrier-shift-x')))+Math.abs(parseFloat(document.querySelector('.raid').style.getPropertyValue('--carrier-shift-y')))>100,{},{timeout:30000})
@@ -111,7 +116,7 @@ try {
     await page.waitForFunction(()=>document.querySelector('.raid')?.dataset.carrierStage==='flight',{},{timeout:reduced?75000:45000})
     await page.waitForTimeout(1000)
     await page.screenshot({path:`presentation-review/${name}-flight.png`})
-    if(item.model){
+    if(item.model&&landscape){
       for(const stage of ['windup','charge','release','recover']){
         await page.waitForFunction(expected=>document.querySelector('.raid__fx-canvas')?.getAttribute('data-mech-action-stage')===expected,stage,{timeout:30000})
         assert.equal(await page.locator('.raid__fx-canvas').getAttribute('data-mech-action-model'),item.model)
