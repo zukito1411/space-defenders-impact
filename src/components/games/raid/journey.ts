@@ -7,7 +7,7 @@ export function getRaidStageEntrySeconds(stage: number, mode: string) {
 }
 export type RaidJourneyInput = {
   stageTheme: number; stageNumber?: number; raidMode?: string; stageAge?: number
-  clearRemaining?: number; entryRemaining?: number; arenaAge?: number; departureArena?: number
+  clearRemaining?: number; entryRemaining?: number; dockDeparture?: boolean; arenaAge?: number; departureArena?: number
 }
 export type RaidJourneyView = {
   enabled: boolean; phase: 'cruise'|'approach'|'descent'|'surface'|'ascent'|'fleet'
@@ -55,7 +55,7 @@ export function sampleRaidJourney(input: RaidJourneyInput, out: RaidJourneyView,
       if (mode !== 'endless' && planet === 1) out.fleetSize = 0.2 * ease((clearProgress - 0.35) / 0.65)
     } else {
       // A normal stage handoff continues the descent started in the clear flight.
-      const linked = previousStage === out.destination - 1
+      const linked = !input.dockDeparture && previousStage === out.destination - 1
       const automatic = mode === 'endless' ? unit((input.arenaAge ?? 0) / 2.4) : 1
       const d = entering ? (linked ? 0.6 + entryProgress * 0.4 : entryProgress) : automatic
       out.phase = d < 1 ? 'descent' : 'surface'

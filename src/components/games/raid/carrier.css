@@ -42,12 +42,14 @@
 .raid__carrier-flight-status { position: absolute; z-index: 10; inset: max(20px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) auto max(20px, env(safe-area-inset-left)); display: flex; align-items: flex-start; justify-content: space-between; color: #d8f7ff; text-shadow: 0 1px 9px #000; font: 600 11px/1.5 ui-monospace, monospace; letter-spacing: .12em; pointer-events: none; }
 .raid__carrier-flight-status > div { padding: 10px 13px; background: #061824d9; border-left: 2px solid #e8bf7a; }
 .raid__carrier-flight-status span { display: none; }
+.raid[data-carrier-stage="approach"] .raid__carrier-phase--approach,
 .raid[data-carrier-stage="ignition"] .raid__carrier-phase--ignition,
 .raid[data-carrier-stage="launch"] .raid__carrier-phase--launch,
 .raid[data-carrier-stage="clear"] .raid__carrier-phase--clear { display: block; }
 .raid__carrier-flight-status i { display: block; width: 100%; height: 2px; background: #76e2e3; margin-top: 6px; opacity: .65; }
 #root .raid__carrier-flight-status button { pointer-events: auto; width: 44px; height: 44px; border: 1px solid #74a2b3; border-radius: 4px; background: #051520d9; color: #dcfaff; font-size: 24px; cursor: pointer; }
 .raid[data-carrier-stage="underway"] > .raid__hud,
+.raid[data-carrier-stage="approach"] > .raid__hud,
 .raid[data-carrier-stage="docked"] > .raid__hud,
 .raid[data-carrier-stage="ignition"] > .raid__hud,
 .raid[data-carrier-stage="launch"] > .raid__hud,

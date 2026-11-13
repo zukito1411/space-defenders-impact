@@ -1089,6 +1089,7 @@ export class PixiRaidBackground {
       this.journeyInput.stageAge = frame.stageAge
       this.journeyInput.clearRemaining = frame.clearRemaining
       this.journeyInput.entryRemaining = frame.entryRemaining
+      this.journeyInput.dockDeparture = frame.dockDeparture
       this.journeyInput.departureArena = this.journeyArena
       this.journeyInput.arenaAge = Math.max(0, (frame.stageAge ?? 0) - this.journeyArenaSince)
       sampleRaidJourney(this.journeyInput, this.journey, this.journeyPreviousStage)
