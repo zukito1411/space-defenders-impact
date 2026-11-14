@@ -67,6 +67,14 @@ export function sampleDeckPatrolPose(distance: number, moving: boolean, blue: bo
 
 export function drawDeckPatroller(ctx: CanvasRenderingContext2D, x: number, y: number, height: number, facing: number,
   blue: boolean, distance: number, moving: boolean) {
+  if (!getDeckAtlas('workers').loaded) return
+  // A small contact shadow keeps the boots readable against the rail base.
+  ctx.save()
+  ctx.fillStyle = 'rgba(3, 9, 14, .46)'
+  ctx.beginPath()
+  ctx.ellipse(x, y - .5, height * .22, height * .055, 0, 0, Math.PI * 2)
+  ctx.fill()
+  ctx.restore()
   drawDeckPose(ctx, 'workers', sampleDeckPatrolPose(distance, moving, blue), x, y, height, facing)
 }
 

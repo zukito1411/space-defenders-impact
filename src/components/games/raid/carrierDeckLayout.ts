@@ -15,12 +15,13 @@ type DeckLayout = {
   }
 }
 
-// Boot and wheel positions in the two carrier-bay images, before cover cropping.
+// Source image coordinates, before cover cropping. Patrol feet sit at the
+// base of the railing where it meets the deck surface.
 export const CARRIER_DECK_LAYOUTS = {
   landscape: {
     patrols: [
-      [710, 870, 229, 24], [1040, 1260, 229, 23], // Upper catwalk
-      [227, 382, 795, 23], [940, 1055, 795, 22], // Separate catwalks below the flight deck
+      [710, 870, 236, 24], [1040, 1260, 236, 23], // Upper catwalk
+      [227, 382, 803, 23], [998, 1055, 803, 22], // Separate catwalks below the flight deck
     ],
     marshal: [1080, 1145, 617],
     services: {
@@ -31,8 +32,8 @@ export const CARRIER_DECK_LAYOUTS = {
   },
   portrait: {
     patrols: [
-      [104, 234, 445, 27], [793, 924, 445, 27], // Upper landings
-      [103, 234, 798, 26], [785, 919, 798, 26], // Lower landings
+      [104, 234, 455, 27], [793, 924, 455, 27], // Upper landings
+      [103, 234, 812, 26], [785, 919, 812, 26], // Lower landings
     ],
     marshal: [600, 652, 1028],
     services: {
