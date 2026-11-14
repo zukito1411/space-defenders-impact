@@ -331,6 +331,8 @@ export function GradiusRaid({
   const stageEntryRef = useRef(0)
   const initialLaunchRef = useRef(false)
   const carrierStopRef = useRef<CarrierStop | null>(null)
+  const hostileContactSeenRef = useRef(false)
+  const markHostileContactSeen = useCallback(() => { hostileContactSeenRef.current = true }, [])
   const queuedBossRef = useRef<BossKind | null>(null)
   const guestRecoveryPendingRef = useRef(false)
   const pendingNextStageRef = useRef<number | null>(null)
@@ -3067,6 +3069,7 @@ export function GradiusRaid({
     if (!rootRef.current?.isConnected) return
     if (phaseRef.current !== 'briefing') {
       carrierStopRef.current = null
+      hostileContactSeenRef.current = false
       queuedBossRef.current = null
       pendingCarrierLaunchRef.current = { startStage, fullyBuffed, mode }
       raidModeRef.current = mode
@@ -4586,6 +4589,7 @@ export function GradiusRaid({
     stopBossAttackAudio()
     carrierStopRef.current = {
       sourceStage: stageRef.current, targetStage, boss, remaining: CARRIER_RECOVERY_SECONDS,
+      firstInterception: !hostileContactSeenRef.current,
       hostStart: { x: player.x, y: player.y },
       guestStart: guest ? { x: guest.x, y: guest.y } : undefined,
     }
@@ -8105,8 +8109,10 @@ export function GradiusRaid({
 
       {snapshot.phase === 'briefing' && (
         <RaidCarrierBriefing language={language} mode={snapshot.raidMode} stage={carrierStop?.targetStage ?? snapshot.stageTheme}
-          recoveryBoss={carrierStop?.boss} shipName={player.ship.key === 'coreLander' ? getRaidGundamName(playerVisualShipKey) : player.ship.name} underway={mesiahUnderway} canLaunch={canControlOverlay}
-          onLaunch={() => resetGame()} onBack={carrierStop ? undefined : () => { if (!canControlOverlay) { exitRaid(); return }; stopRaidBgm(); phaseRef.current = 'select'; syncSnapshot() }} />
+          recoveryBoss={carrierStop?.boss} firstInterception={carrierStop?.firstInterception}
+          shipName={player.ship.key === 'coreLander' ? getRaidGundamName(playerVisualShipKey) : player.ship.name} underway={mesiahUnderway} canLaunch={canControlOverlay}
+          onInterception={markHostileContactSeen} onLaunch={() => resetGame()}
+          onBack={carrierStop ? undefined : () => { if (!canControlOverlay) { exitRaid(); return }; stopRaidBgm(); phaseRef.current = 'select'; syncSnapshot() }} />
       )}
       {(initialLaunchRef.current || carrierStop?.remaining) && (snapshot.phase === 'playing' || snapshot.phase === 'paused') && (
         <div className="raid__carrier-flight-status">

@@ -9,11 +9,11 @@ const regionTracks = [
   RAID_DEFAULT_BGM_TRACK, audio('amber-ringway'), audio('silent-fleet'), audio('violet-deepfield'),
 ] as const
 const flightDeck = audio('flight-deck')
-const bossAudio = (name: string) => getPublicAssetUrl(`audio/boss/${name}.ogg`)
 const bossTracks = {
-  command: bossAudio('command-assault'), industrial: bossAudio('heavy-ordnance'),
-  squid: bossAudio('pelagic-pursuit'), snake: bossAudio('cinder-showdown'),
-  final: bossAudio('fortress-siege'), devil: bossAudio('devil-breakout'),
+  command: getPublicAssetUrl('audio/sfx_boss_battle.wav'),
+  squid: getPublicAssetUrl('audio/bgm_boss_squid.mp3'),
+  snake: getPublicAssetUrl('audio/bgm_boss_snake.mp3'),
+  final: getPublicAssetUrl('audio/bgm_boss_final.wav'),
 } as const
 
 export const CARRIER_AUDIO = {
@@ -35,15 +35,13 @@ export function getRaidBgmTrack(stage: number, mode: RaidBgmMode, boss: BossKind
   switch (boss) {
     case 'squid':
     case 'snake':
+      return bossTracks[boss]
     case 'final':
-    case 'devil': return bossTracks[boss]
-    case 'gate':
-    case 'hydra':
-    case 'super': return bossTracks.industrial
+    case 'devil': return bossTracks.final
     default: return bossTracks.command
   }
 }
 
 export const RAID_BGM_LEVEL: Record<RaidBgmMode, number> = {
-  cruise: .22, combat: .34, boss: .52, ending: .42, hangar: .18,
+  cruise: .22, combat: .34, boss: .58, ending: .42, hangar: .18,
 }

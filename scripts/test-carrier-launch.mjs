@@ -70,8 +70,12 @@ for(const language of ['en','zh','ja','ko'])for(const mode of ['campaign','endle
  assert.deepEqual(opening.map(line => line[0]), ['commander','pilot','commander','commander'])
  for (const boss of ['squid','snake','final','devil','super']) {
   const recovery = getCarrierConversation(language,mode,5,false,boss)
-  assert.deepEqual(recovery.map(line => line[0]), ['commander','pilot','enemy','commander'])
+  assert.deepEqual(recovery.map(line => line[0]), ['commander','pilot','enemy','pilot','commander','enemy','commander','commander'])
+  assert.deepEqual(recovery.map(line => line[2] ?? 'command'), ['command','command','enemy','enemy','enemy','enemy','command','command'])
   assert.ok(recovery.every(line => line[1].length > 0))
+  const repeat = getCarrierConversation(language,mode,5,false,boss,false)
+  assert.notEqual(repeat[3][1], recovery[3][1], 'give the pilot a different reaction to a repeat interruption')
+  assert.notEqual(repeat[4][1], recovery[4][1], 'command should recognize the repeat interruption')
  }
 }
 const runtime=read('src/components/games/raid/GradiusRaidRuntime.tsx')

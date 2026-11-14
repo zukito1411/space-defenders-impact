@@ -6,7 +6,7 @@ export const HOSTILE_HOLOGRAM_URL = getPublicAssetUrl('assets/ui/mesiah-hostile-
 export const COMMANDER_HOLOGRAM_URL = getPublicAssetUrl('assets/ui/mesiah-commander-hologram-v1.webp')
 
 type Speaker = 'commander' | 'pilot' | 'enemy'
-type Line = readonly [speaker: Speaker, body: string]
+type Line = readonly [speaker: Speaker, body: string, channel?: 'enemy']
 type Scene = readonly [situation: string, pilot: string, reply: string, launch: string]
 type RecoveryBoss = 'squid' | 'snake' | 'final' | 'devil' | 'super'
 type Scenes = Record<RaidMode | RecoveryBoss | 'checkpoint', Scene>
@@ -65,11 +65,83 @@ export const COMMS_COPY = {
   ko: { commander: 'Mesiah 함장', pilot: '파일럿', enemy: '미확인 통신', override: '회선 차단', bridge: '파일럿, 함교로. 출발한다.' },
 } as const
 
+type Interruption = {
+  first: readonly [pilot: string, commander: string]
+  again: readonly [pilot: string, commander: string]
+  enemy: Record<RecoveryBoss, string>
+  restored: string
+}
+
+const interruptions: Record<LanguageCode, Interruption> = {
+  en: {
+    first: ['Commander? Who is that? This is our private channel.', 'I don’t know. Comms, how did they get in? Can you cut the feed?'],
+    again: ['That’s the same signal. Can they hear us again?', 'Assume they can. Comms, switch the convoy to our backup frequency.'],
+    enemy: {
+      squid: 'I can stop talking if you like. The scout is still out there. I’ll shoot down any rescue ship that goes near him.',
+      snake: 'Go ahead and switch frequencies. I can see the lead transport from here. If it moves, I fire.',
+      final: 'You’ve got time to pull your carrier out of the way. Give the order now and your crew goes home.',
+      devil: 'Ask them to cut it again. They’ve tried twice already. I was on your channel before you heard the distress call.',
+      super: 'One of those fighters is leaking fuel. You can’t leave them out there much longer. What’s it going to be?',
+    },
+    restored: 'Pilot, can you hear me? We’re on the backup channel now.',
+  },
+  zh: {
+    first: ['舰长？那是谁？这是我们的专用频道。','我也不知道。通讯，他们怎么进来的？能切断画面吗？'],
+    again: ['又是那个信号。他们还能听见我们吗？','先按他们听得见处理。通讯，让船队换到备用频率。'],
+    enemy: {
+      squid: '不想听我说话也行。侦察兵还在外面，哪艘救援船敢靠近，我就打下来。',
+      snake: '换频率吧。我在这儿看得见领头的运输船。它一动，我就开火。',
+      final: '你的航母还来得及让开。现在下令，你的船员就能回家。',
+      devil: '再让他们切一次试试。他们已经试过两次了。你听到求救信号之前，我就在你们的频道里。',
+      super: '有架战机在漏油。你不能让他们在外面等太久。想好了吗？',
+    },
+    restored: '飞行员，听得见吗？我们已经换到备用频道了。',
+  },
+  ja: {
+    first: ['艦長？ 誰ですか、今の。ここは専用回線ですよね。','わからん。通信、どうやって入られた？ 映像を切れるか？'],
+    again: ['またあの信号です。こっちの声も聞こえてますか？','聞こえていると思え。通信、船団を予備周波数に切り替えろ。'],
+    enemy: {
+      squid: '話はもういいか。偵察兵はまだ外にいる。近づく救助船は撃ち落とす。',
+      snake: '周波数を変えればいい。先頭の輸送船はここから見えている。動けば撃つ。',
+      final: '母艦をどける時間はまだある。今すぐ命令すれば、乗員は帰れるぞ。',
+      devil: 'もう一度切らせてみろ。すでに二度試したようだがな。救難信号が聞こえる前から、この回線にいた。',
+      super: '一機から燃料が漏れている。もう長くは待たせられないぞ。どうする？',
+    },
+    restored: 'パイロット、聞こえるか？ 予備回線に切り替えた。',
+  },
+  ko: {
+    first: ['함장님? 저게 누구죠? 우리 전용 채널인데요.','나도 모르겠다. 통신, 어떻게 들어온 거야? 화면 끊을 수 있어?'],
+    again: ['또 그 신호입니다. 우리 말도 들을 수 있는 건가요?','들린다고 생각해. 통신, 선단을 예비 주파수로 옮겨.'],
+    enemy: {
+      squid: '말은 그만하지. 정찰병은 아직 밖에 있어. 가까이 오는 구조선은 격추하겠다.',
+      snake: '주파수나 바꿔 봐. 선두 수송선은 여기서 보여. 움직이면 쏜다.',
+      final: '아직 모함을 피할 시간은 있어. 지금 명령하면 승무원들은 돌아갈 수 있다.',
+      devil: '한 번 더 끊으라고 해 봐. 벌써 두 번이나 시도했지. 구조 신호를 듣기 전부터 이 채널에 있었다.',
+      super: '전투기 한 대에서 연료가 새고 있어. 저 밖에 오래 둘 수 없을 텐데. 어떻게 할 거지?',
+    },
+    restored: '파일럿, 들리나? 예비 채널로 옮겼다.',
+  },
+}
+
 export function getCarrierConversation(language: LanguageCode, mode: RaidMode, stage: number,
-  underway: boolean, boss?: BossKind): readonly Line[] {
+  underway: boolean, boss?: BossKind, firstInterception = true): readonly Line[] {
   const scene = boss ? boss === 'squid' || boss === 'snake' || boss === 'final' || boss === 'devil' ? boss : 'super'
     : mode === 'campaign' && stage > 1 ? 'checkpoint' : mode
   const [situation, pilot, reply, launch] = scenes[language][scene]
   const departure = underway ? (boss ? `${launch} ${COMMS_COPY[language].bridge}` : COMMS_COPY[language].bridge) : launch
-  return [['commander', situation], ['pilot', pilot], [boss ? 'enemy' : 'commander', reply], ['commander', departure]]
+  if (scene === 'campaign' || scene === 'endless' || scene === 'bossRush' || scene === 'checkpoint') {
+    return [['commander', situation], ['pilot', pilot], ['commander', reply], ['commander', departure]]
+  }
+  const interruption = interruptions[language]
+  const [pilotReaction, commanderReaction] = firstInterception ? interruption.first : interruption.again
+  return [
+    ['commander', situation],
+    ['pilot', pilot],
+    ['enemy', reply, 'enemy'],
+    ['pilot', pilotReaction, 'enemy'],
+    ['commander', commanderReaction, 'enemy'],
+    ['enemy', interruption.enemy[scene], 'enemy'],
+    ['commander', interruption.restored],
+    ['commander', departure],
+  ]
 }

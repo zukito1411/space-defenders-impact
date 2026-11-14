@@ -5,6 +5,7 @@ export type CarrierStop = {
   sourceStage: number
   targetStage: number
   boss: BossKind
+  firstInterception?: boolean
   remaining: number
   hostStart: Vec
   guestStart?: Vec
