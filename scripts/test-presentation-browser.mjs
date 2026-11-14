@@ -3,6 +3,27 @@ import { spawn } from 'node:child_process'
 import { mkdir } from 'node:fs/promises'
 import assert from 'node:assert/strict'
 const server=spawn(process.execPath,['node_modules/vite/bin/vite.js','--host','127.0.0.1'],{stdio:'ignore'})
+const briefingCopySelector = '.raid__carrier-briefing .raid__briefing-copy'
+
+async function waitForBriefingLine(page, previousLine = null, reveal = false) {
+  const handle = await page.waitForFunction(({ selector, previousLine }) => {
+    const paragraph = document.querySelector(selector)
+    const full = paragraph?.getAttribute('aria-label')
+    return full && full !== previousLine ? full : false
+  }, { selector: briefingCopySelector, previousLine })
+  const full = await handle.jsonValue()
+  if (reveal) {
+    const paragraph = page.locator(briefingCopySelector)
+    await paragraph.evaluate(element => {
+      if (element.textContent !== element.getAttribute('aria-label')) {
+        element.closest('.raid__carrier-briefing').querySelector('.raid__carrier-advance').click()
+      }
+    })
+  }
+  await page.waitForFunction(({ selector, full }) => document.querySelector(selector)?.textContent === full, { selector: briefingCopySelector, full })
+  return full
+}
+
 let browser
 try {
   for(let i=0;i<120;i++){try{if((await fetch('http://127.0.0.1:5173/scripts/presentation-fixture.html')).ok)break}catch{}await new Promise(r=>setTimeout(r,250))}
@@ -64,15 +85,23 @@ try {
     assert.equal(layout.overflow,false,`${name}: briefing overflow`)
     assert.ok(layout.commsBottom<=height,`${name}: actions below screen`)
     await page.waitForFunction(() => document.querySelector('.raid__carrier-hologram[data-channel=command] img')?.naturalWidth > 0)
-    for(let beat=0;beat<8;beat++){
-      const advance=page.locator('.raid__carrier-advance')
-      if(beat>0)await advance.click()
-      const paragraph=page.locator('.raid__carrier-comms p')
-      const full=await paragraph.getAttribute('aria-label')
-      if(beat===0)assert.match(full,/invasion fleet/)
-      if(beat===6)assert.match(full,/get the next transports off the ground/)
-      if(await paragraph.innerText()!==full)await advance.click()
-      assert.equal(await paragraph.innerText(),full,`${name}: full transmission is readable`)
+    const advance=page.locator('.raid__carrier-advance')
+    let previousLine = null
+    for (let beat = 0; beat < 9; beat += 1) {
+      if (beat > 0) await advance.click()
+      const full = await waitForBriefingLine(page, previousLine, true)
+      previousLine = full
+      if (beat === 0) {
+        assert.match(full, /Reptilior cruisers/)
+        await page.locator('.raid__carrier-hologram[data-channel=command] .raid__carrier-emblem').waitFor({ state: 'attached' })
+      }
+      if (beat === 1) {
+        assert.match(full, /Pelagic and Cinder/)
+        const general = page.locator('.raid__carrier-hologram[data-channel=cfoc]')
+        await general.locator('.raid__carrier-emblem').waitFor({ state: 'attached' })
+        assert.ok(await general.locator('img').evaluate(img => img.complete && img.naturalWidth > 0))
+      }
+      if (beat === 8) assert.match(full, /covering their advance/)
       const reading=await page.locator('.raid__carrier-briefing').evaluate(el=>{
         const a=el.querySelector('.raid__carrier-mission').getBoundingClientRect(),b=el.querySelector('.raid__carrier-comms').getBoundingClientRect()
         return {overlap:a.bottom>b.top,overflow:el.scrollHeight>el.clientHeight}
@@ -167,10 +196,7 @@ try {
     await recovery.screenshot({ path: 'presentation-review/mesiah-recovery-briefing.png' })
     const advance = briefing.locator('.raid__carrier-advance')
     const paragraph = briefing.locator('.raid__briefing-copy')
-    const finishLine = async () => {
-      const line = await paragraph.getAttribute('aria-label')
-      await recovery.waitForFunction(expected => document.querySelector('.raid__briefing-copy')?.textContent === expected, line)
-    }
+    const finishLine = () => waitForBriefingLine(recovery)
     for (let beat = 0; beat < 2; beat++) {
       await finishLine()
       await advance.click()

@@ -7,6 +7,7 @@ import { CARRIER_DEPARTURE_START, CARRIER_LAUNCH_SECONDS, MESIAH_ENTRY_SECONDS, 
 import { useCarrierLaunchRequest } from './useCarrierLaunchRequest'
 import { preloadCarrierAssets } from './carrierAssets'
 import { RaidCarrierBriefing } from './RaidCarrierBriefing'
+import { CAMPAIGN_COMMS_UI } from './campaignComms'
 import { getCarrierMission } from './carrierMission'
 import { getRaidPlayerHullSize } from './playerMuzzle'
 import { sampleLaunchFlight } from './raidLaunch'
@@ -4344,7 +4345,7 @@ export function GradiusRaid({
 
   const exitRaid = useCallback(() => {
     const score = Math.max(playerRef.current.score, remotePlayerRef.current?.score ?? 0)
-    if (phaseRef.current === 'victory') {
+    if (phaseRef.current === 'victory' || carrierStopRef.current?.debrief) {
       submitRaidLeaderboardScore(score)
       reportRaidRunComplete('victory')
     } else if (phaseRef.current === 'gameover') {
@@ -4582,13 +4583,23 @@ export function GradiusRaid({
     }
   }, [emitCommandBossShot])
 
-  const beginCarrierRecovery = useCallback((targetStage: number, boss: BossKind) => {
+  const showRaidVictory = useCallback(() => {
+    carrierStopRef.current = null
+    phaseRef.current = 'victory'
+    victoryBlackoutRef.current = VICTORY_BLACKOUT_SECONDS
+    startRaidBgm(MAX_RAID_STAGE, 'ending')
+    reportRaidRunComplete('victory')
+    syncSnapshot()
+  }, [reportRaidRunComplete, startRaidBgm, syncSnapshot])
+
+  const beginCarrierRecovery = useCallback((targetStage: number, boss?: BossKind) => {
     const player = playerRef.current
     const guest = remotePlayerRef.current
-    queuedBossRef.current = boss
+    queuedBossRef.current = boss ?? null
     stopBossAttackAudio()
     carrierStopRef.current = {
-      sourceStage: stageRef.current, targetStage, boss, remaining: CARRIER_RECOVERY_SECONDS,
+      sourceStage: stageRef.current, targetStage, remaining: CARRIER_RECOVERY_SECONDS,
+      ...(boss ? { boss } : { debrief: true as const }),
       firstInterception: !hostileContactSeenRef.current,
       hostStart: { x: player.x, y: player.y },
       guestStart: guest ? { x: guest.x, y: guest.y } : undefined,
@@ -4709,12 +4720,13 @@ export function GradiusRaid({
       randomEventRef.current = null
       randomEventSpawnTimerRef.current = 0
       const nextStage = pendingNextStageRef.current
+      const returningAfterVictory = victoryPendingRef.current && raidModeRef.current === 'campaign'
       const recovering = nextStage !== null && shouldRecoverAfterStage(raidModeRef.current, stageRef.current, nextStage)
       animateStageClearPlayer(player, dt, 50, pointerTargetRef.current, keysRef.current)
-      if (recovering) player.y = Math.max(62, player.y)
+      if (recovering || returningAfterVictory) player.y = Math.max(62, player.y)
       if (remotePlayer) {
         animateStageClearPlayer(remotePlayer, dt, 58, remotePointerTargetRef.current, remoteKeysRef.current)
-        if (recovering) remotePlayer.y = Math.max(64, remotePlayer.y)
+        if (recovering || returningAfterVictory) remotePlayer.y = Math.max(64, remotePlayer.y)
       }
       if (devilAssistPlayer) {
         animateStageClearPlayer(devilAssistPlayer, dt, devilAssistPlayer.x < 50 ? 38 : 62)
@@ -4733,12 +4745,12 @@ export function GradiusRaid({
       }
       if (before > 0 && stageClearRef.current <= 0) {
         if (victoryPendingRef.current) {
-          // Victory transition: fly-forward done - fade to black then show cutscene
           victoryPendingRef.current = false
-          phaseRef.current = 'victory'
-          victoryBlackoutRef.current = VICTORY_BLACKOUT_SECONDS
-          startRaidBgm(MAX_RAID_STAGE, 'ending')
-          reportRaidRunComplete('victory')
+          if (returningAfterVictory) {
+            beginCarrierRecovery(stageRef.current)
+          } else {
+            showRaidVictory()
+          }
           return
         }
         const pendingNextStage = pendingNextStageRef.current
@@ -7163,7 +7175,7 @@ export function GradiusRaid({
     if (remotePlayerRef.current && remotePlayerRef.current.score > highScoreRef.current) {
       highScoreRef.current = remotePlayerRef.current.score
     }
-  }, [activateNuke, addRipple, beginCarrierRecovery, emitCommandBossShot, damagePlayer, destroyPlayerByBossCollision, detonateNuke, finishBarrage, fireEnemy, firePlayer, getLivingPlayers, getNearestLivingPlayer, reportRaidRunComplete, spawnAsteroidCluster, spawnBoss, spawnEnemyAt, spawnFormation, spawnPowerUp, spawnLevelUpPowerUp, spawnSparks, startRaidBgm, startRandomRaidEvent, stopRaidBgm, submitRaidLeaderboardScore, syncSnapshot, resolveBossKind, triggerScreenShake])
+  }, [activateNuke, addRipple, beginCarrierRecovery, emitCommandBossShot, damagePlayer, destroyPlayerByBossCollision, detonateNuke, finishBarrage, fireEnemy, firePlayer, getLivingPlayers, getNearestLivingPlayer, showRaidVictory, spawnAsteroidCluster, spawnBoss, spawnEnemyAt, spawnFormation, spawnPowerUp, spawnLevelUpPowerUp, spawnSparks, startRaidBgm, startRandomRaidEvent, stopRaidBgm, submitRaidLeaderboardScore, syncSnapshot, resolveBossKind, triggerScreenShake])
 
   const getRaidFocusableControls = useCallback(() => {
     const root = rootRef.current
@@ -7985,9 +7997,7 @@ export function GradiusRaid({
       )}
 
       {snapshot.stageClear > 0 && (
-        snapshot.raidMode !== 'endless' && snapshot.stageTheme >= MAX_RAID_STAGE && !(
-          guestRecoveryPendingRef.current || pendingNextStageRef.current === NORMAL_RAID_DEVIL_BONUS_STAGE
-        )
+        snapshot.raidMode === 'bossRush' && snapshot.stageTheme >= MAX_RAID_STAGE
           // Final-stage fly-through: black fade instead of white flash � leads into ending cutscene
           ? <div className="raid__stage-flash" style={{
               opacity: stageClearProgress > 0.58 ? Math.min(1, (stageClearProgress - 0.58) / 0.32) : 0,
@@ -8111,7 +8121,8 @@ export function GradiusRaid({
         <RaidCarrierBriefing language={language} mode={snapshot.raidMode} stage={carrierStop?.targetStage ?? snapshot.stageTheme}
           recoveryBoss={carrierStop?.boss} firstInterception={carrierStop?.firstInterception}
           shipName={player.ship.key === 'coreLander' ? getRaidGundamName(playerVisualShipKey) : player.ship.name} underway={mesiahUnderway} canLaunch={canControlOverlay}
-          onInterception={markHostileContactSeen} onLaunch={() => resetGame()}
+          debrief={carrierStop?.debrief} onInterception={markHostileContactSeen}
+          onLaunch={carrierStop?.debrief ? showRaidVictory : () => resetGame()}
           onBack={carrierStop ? undefined : () => { if (!canControlOverlay) { exitRaid(); return }; stopRaidBgm(); phaseRef.current = 'select'; syncSnapshot() }} />
       )}
       {(initialLaunchRef.current || carrierStop?.remaining) && (snapshot.phase === 'playing' || snapshot.phase === 'paused') && (
@@ -8163,7 +8174,7 @@ export function GradiusRaid({
               </div>
               <div className="raid__ending-home-signal">
                 <span>{menuText.missionDebrief}</span>
-                <b>{menuText.earthLineSecured}</b>
+                <b>{snapshot.raidMode === 'campaign' ? CAMPAIGN_COMMS_UI[language].ending : menuText.earthLineSecured}</b>
               </div>
               <div className="raid__ending-wake raid__ending-wake--host" />
               <div className="raid__ending-ship raid__ending-ship--host">
@@ -8191,18 +8202,18 @@ export function GradiusRaid({
             <div className="raid__ending-medal" aria-hidden="true">
               <span>{MAX_RAID_STAGE}</span>
             </div>
-            <h2 id="raid-ending-title">{menuText.earthLineSecured}</h2>
-            <p>
-              {menuText.endingCopy}
-            </p>
-            <div className="raid__ending-log" aria-label={menuText.missionDebrief}>
-              {raidText.endingLines.map((line, index) => (
-                <span key={line} style={{ '--ending-line': index } as CSSProperties}>
-                  {line}
-                </span>
-              ))}
-            </div>
-            <p className="raid__ending-epilogue">{menuText.endingEpilogue}</p>
+            <h2 id="raid-ending-title">{snapshot.raidMode === 'campaign' ? CAMPAIGN_COMMS_UI[language].ending : menuText.earthLineSecured}</h2>
+            {snapshot.raidMode !== 'campaign' && (
+              <>
+                <p>{menuText.endingCopy}</p>
+                <div className="raid__ending-log" aria-label={menuText.missionDebrief}>
+                  {raidText.endingLines.map((line, index) => (
+                    <span key={line} style={{ '--ending-line': index } as CSSProperties}>{line}</span>
+                  ))}
+                </div>
+                <p className="raid__ending-epilogue">{menuText.endingEpilogue}</p>
+              </>
+            )}
             <div className="raid__ending-stats">
               <span>
                 <small>{hudText.stage}</small>

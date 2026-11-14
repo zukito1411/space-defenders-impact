@@ -4,12 +4,11 @@ import type { BossKind, RaidMode, Vec } from './types'
 export type CarrierStop = {
   sourceStage: number
   targetStage: number
-  boss: BossKind
   firstInterception?: boolean
   remaining: number
   hostStart: Vec
   guestStart?: Vec
-}
+} & ({ boss: BossKind; debrief?: false } | { boss?: undefined; debrief: true })
 
 export const CARRIER_RECOVERY_SECONDS = 6.2
 const unit = (value: number) => Math.max(0, Math.min(1, value))

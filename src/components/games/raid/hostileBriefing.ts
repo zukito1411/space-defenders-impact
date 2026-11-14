@@ -1,54 +1,15 @@
 import type { LanguageCode } from '../../../i18n'
 import { getPublicAssetUrl } from '../sound'
 import type { BossKind, RaidMode } from './types'
+import { getCampaignTransmission, type CommsLine } from './campaignComms'
 
 export const HOSTILE_HOLOGRAM_URL = getPublicAssetUrl('assets/ui/mesiah-hostile-hologram-v1.webp')
+export const GENERAL_HOLOGRAM_URL = getPublicAssetUrl('assets/ui/cfoc-general-hologram-v1.webp')
 export const COMMANDER_HOLOGRAM_URL = getPublicAssetUrl('assets/ui/mesiah-commander-hologram-v1.webp')
 
-type Speaker = 'commander' | 'pilot' | 'enemy'
-type Line = readonly [speaker: Speaker, body: string, channel?: 'enemy']
 type Scene = readonly [situation: string, pilot: string, reply: string, launch: string]
 type RecoveryBoss = 'squid' | 'snake' | 'final' | 'devil' | 'super'
 type Scenes = Record<Exclude<RaidMode, 'campaign'> | RecoveryBoss | 'checkpoint', Scene>
-
-const campaignOpening: Record<LanguageCode, readonly Line[]> = {
-  en: [
-    ['commander', 'Pilot, did you see Earth’s defense stations go dark? An invasion fleet hit them just before dawn.'],
-    ['pilot', 'I saw the lights go out. I thought we’d lost the feed. Did anyone get off the ground?'],
-    ['commander', 'Three civilian transports made it up. We’re hiding them behind Mesiah. The rest are still on the ground.'],
-    ['pilot', 'Why are the enemy ships holding here? They could go straight for the cities.'],
-    ['commander', 'They’re sealing the launch routes first. The carrier ahead is sending fighters after every ship that launches.'],
-    ['pilot', 'Can we turn around and get these three somewhere safe?'],
-    ['commander', 'We could. Everyone still on Earth would be trapped. Take out that carrier so we can get the next transports off the ground.'],
-  ],
-  zh: [
-    ['commander', '飞行员，看见地球防御站熄灯了吗？天快亮的时候，入侵舰队袭击了它们。'],
-    ['pilot', '我看见了，还以为是画面断了。有人撤出来吗？'],
-    ['commander', '有三艘民用运输船升空了，现在躲在 Mesiah 后面。其他人还在地面。'],
-    ['pilot', '敌舰为什么停在这儿？他们明明可以直奔城市。'],
-    ['commander', '他们要先封死撤离航线。每有一艘船升空，前面那艘航母就会派战机拦截。'],
-    ['pilot', '我们能掉头，先把这三艘船送到安全的地方吗？'],
-    ['commander', '可以，但地面上的人就走不了了。击沉那艘航母，我们才能让下一批运输船升空。'],
-  ],
-  ja: [
-    ['commander', 'パイロット、地球の防衛ステーションの灯が消えたのを見たか？ 夜明け前に侵攻艦隊が襲ってきた。'],
-    ['pilot', '見ました。映像が途切れたのかと。地上から脱出できた人は？'],
-    ['commander', '民間の輸送船が三隻上がった。今は Mesiah の陰にいる。他はまだ地上だ。'],
-    ['pilot', '敵はなぜここで止まってるんです？ 街に直行できるのに。'],
-    ['commander', '先に脱出路を塞ぐつもりだ。船が上がるたび、前の空母から迎撃機が出ている。'],
-    ['pilot', '引き返して、その三隻だけでも安全な所に連れていけませんか？'],
-    ['commander', 'できる。だが地上の人たちが取り残される。あの空母を落とせ。次の輸送船が離陸できるようにするんだ。'],
-  ],
-  ko: [
-    ['commander', '파일럿, 지구 방어 기지의 불이 꺼지는 걸 봤나? 동트기 직전에 침공 함대가 공격했다.'],
-    ['pilot', '봤습니다. 영상이 끊긴 줄 알았어요. 지상에서 빠져나온 사람은 있습니까?'],
-    ['commander', '민간 수송선 세 척이 올라왔다. 지금은 Mesiah 뒤에 숨어 있어. 나머지는 아직 지상이다.'],
-    ['pilot', '적은 왜 여기서 멈춘 거죠? 도시로 바로 갈 수 있잖아요.'],
-    ['commander', '탈출로부터 막으려는 거야. 배가 이륙할 때마다 저 앞의 항모에서 전투기를 보내고 있어.'],
-    ['pilot', '돌아가서 저 세 척이라도 안전한 곳으로 데려갈 수 없습니까?'],
-    ['commander', '그럴 수는 있어. 그럼 지상에 있는 사람들은 갇히게 돼. 저 항모를 격침시켜. 다음 수송선들이 이륙할 수 있게.'],
-  ],
-}
 
 const scenes: Record<LanguageCode, Scenes> = {
   en: {
@@ -99,13 +60,6 @@ export const COMMS_COPY = {
   ja: { commander: 'Mesiah 艦長', pilot: 'パイロット', enemy: '不明な通信', override: '通信割り込み', bridge: 'パイロット、艦橋へ。出るぞ。' },
   ko: { commander: 'Mesiah 함장', pilot: '파일럿', enemy: '미확인 통신', override: '회선 차단', bridge: '파일럿, 함교로. 출발한다.' },
 } as const
-
-const campaignClearance: Record<LanguageCode, string> = {
-  en: 'Deck, release the clamps. Pilot, you’re clear to go.',
-  zh: '甲板，松开锁具。飞行员，可以出击。',
-  ja: '甲板、クランプ解除。パイロット、発進していいぞ。',
-  ko: '갑판, 고정 장치 풀어. 파일럿, 출격해도 된다.',
-}
 
 type Interruption = {
   first: readonly [pilot: string, commander: string]
@@ -166,9 +120,10 @@ const interruptions: Record<LanguageCode, Interruption> = {
 }
 
 export function getCarrierConversation(language: LanguageCode, mode: RaidMode, stage: number,
-  underway: boolean, boss?: BossKind, firstInterception = true): readonly Line[] {
-  if (!boss && mode === 'campaign' && stage <= 1) {
-    return [...campaignOpening[language], ['commander', underway ? COMMS_COPY[language].bridge : campaignClearance[language]]]
+  underway: boolean, boss?: BossKind, firstInterception = true, debrief = false): readonly CommsLine[] {
+  if (mode === 'campaign') {
+    const transmission = getCampaignTransmission(language, stage, debrief)
+    if (transmission) return transmission
   }
   const scene = boss ? boss === 'squid' || boss === 'snake' || boss === 'final' || boss === 'devil' ? boss : 'super'
     : mode === 'campaign' ? 'checkpoint' : mode

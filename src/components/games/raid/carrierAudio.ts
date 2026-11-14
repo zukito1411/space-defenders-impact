@@ -17,11 +17,11 @@ function resumeSample(audio: HTMLAudioElement) {
   void audio.play().catch(() => {}).finally(() => pending.delete(audio))
 }
 
-export function playHostileChannel() {
+export function playHostileChannel(laugh = false) {
   const { master, ui } = getGameAudioMixSettings()
   if (!getGameSoundEnabled() || master * ui === 0) return
-  const audio = new Audio(CARRIER_AUDIO.interruption)
-  audio.volume = .55 * master * ui
+  const audio = new Audio(laugh ? CARRIER_AUDIO.reptiliorLaugh : CARRIER_AUDIO.interruption)
+  audio.volume = (laugh ? .72 : .55) * master * ui
   void audio.play().catch(() => {})
   return () => audio.pause()
 }
