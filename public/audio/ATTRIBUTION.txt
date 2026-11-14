@@ -77,3 +77,24 @@ CC0 dedication: https://creativecommons.org/publicdomain/zero/1.0/
 Publisher note:
 - Verify each asset's exact license text on its OpenGameArt page before final release.
 - If attribution is required, include credits in-game and/or in your game credits page.
+
+Boss battle score and attack sounds (game edits, level adjustments, and Ogg encodes)
+
+- Technological Messup by Centurion_of_war (CC0), command-assault.ogg
+  https://opengameart.org/content/technological-messup
+- Final Stand by Centurion_of_war (CC0), heavy-ordnance.ogg (phase 2 heavy drums) and fortress-siege.ogg (phase 4)
+  https://opengameart.org/content/final-stand-0
+- Charge! by Centurion_of_war (CC0), pelagic-pursuit.ogg
+  https://opengameart.org/content/charge
+- Confrontation by Centurion_of_war (CC0), cinder-showdown.ogg
+  https://opengameart.org/content/confrontation-1
+- Boss Battle #9 [Metal] by nene (CC0), devil-breakout.ogg
+  https://opengameart.org/content/boss-battle-9-metal
+- laser-charge.wav by StavSounds (CC0), beam-charge.ogg
+  https://freesound.org/people/StavSounds/sounds/701702/
+- Doomsday Laser Cannon Sound Effect by TAD (CC0), beam-fire.ogg and cannon.ogg
+  https://opengameart.org/content/doomsday-laser-cannon-sound-effect
+- Big scary troll sounds by Darsycho (CC0), creature-strike.ogg
+  https://opengameart.org/content/big-scary-troll-sounds
+- Pressure Hiss by unfa (CC0), venom.ogg
+  https://freesound.org/people/unfa/sounds/211096/

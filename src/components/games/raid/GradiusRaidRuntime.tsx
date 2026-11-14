@@ -1,3 +1,4 @@
+import { commandBossReleaseCue, markBossAttack, playGuestBossAttack, stopBossAttackAudio } from './bossAudio'
 import { CarrierAudio } from './carrierAudio'
 import { getRaidBgmTrack, RAID_BGM_LEVEL } from './raidSoundtrack'
 import { CARRIER_RECOVERY_SECONDS, sampleCarrierRecovery, shouldRecoverAfterStage, shouldRecoverBeforeEndlessBoss, type CarrierStop } from './carrierRecovery'
@@ -21,7 +22,7 @@ import { commitRaidFighterManeuver, getRaidFighterSpeedScale, fireRaidFighter, g
 import { BOSS_BREAKUP_DELAYS, drawBossImpact, getBossBreakupPoint, recordBossImpact } from './bossDamageFx'
 import { prefersRaidReducedMotion } from './commandBossRender'
 import { drawIncomingHazard, drawRecoveryCue, findIncomingHazard, needsRepair, passesNearPilot } from './flightCues'
-import { advanceCommandBoss, getCommandBossProfile, getCommandBossHpScale, interruptCommandBoss, isCommandBeam, COMMAND_SHOT_LIMIT, COMMAND_WARNING, COMMAND_FIRED, COMMAND_PHASE } from './commandBoss'
+import { advanceCommandBoss, getCommandBossProfile, getCommandBossHpScale, interruptCommandBoss, isCommandBeam, COMMAND_SHOT_LIMIT, COMMAND_WARNING, COMMAND_FIRED } from './commandBoss'
 import { getCampaignBossKind, getGenericBossArt } from './bossCatalog'
 import { pickGameplayWreckVariant } from './wreckVariety'
 import { getRaidStageEntrySeconds } from './journey'
@@ -45,7 +46,7 @@ import { GameDialog } from '../../ui/GameDialog'
 import type { CSSProperties } from 'react'
 import { RAID_DEVIL_MASTER_PROJECTILE_FILTER, RAID_DEVIL_MASTER_PROJECTILE_GLOW_STOPS, RAID_OTHER_ASSET_PATHS, RAID_PLAYER_LASER_HEAD_STOPS, RAID_SNAKE_FANG_GLOW_STOPS, RAID_SQUID_BUBBLE_STOPS, RAID_SQUID_INK_STOPS, RAID_VENOM_SPIT_STOPS, drawCanvasSpriteContain, getEnemyCanvasSize, getDerelictWreckVariantData, getDevilMasterProjectileCanvasSprite, getRaidSideShipCanvasSprite, getShipCanvasSprite, getNormalAlienCanvasSprite } from './assets'
 import type { CanvasSpriteEntry } from './assets'
-import { playCommandBossCharge, playCoreLanderPhysicalAttackSound, playPickupVoiceLine, warmPickupVoiceSamples } from './audio'
+import { playCoreLanderPhysicalAttackSound, playPickupVoiceLine, warmPickupVoiceSamples } from './audio'
 import { DEFAULT_RAID_PALETTE, PixiRaidBackground, RAID_BOSS_BACKGROUND_THEME_FINAL, RAID_BOSS_BACKGROUND_THEME_SNAKE, RAID_BOSS_BACKGROUND_THEME_SQUID, drawVolcanicWorldForegroundClouds, drawWateryWorldForegroundClouds, getRaidCameraShakeOffset, isVolcanicWorldTheme, isWateryWorldTheme } from './background'
 import type { RaidPalette } from './background'
 import { forEachDevilBossBeamLane, forEachFinalBossBeamLane, getDevilBossBeamRadius, getDevilBossChargeDuration, getFinalBossBeamLaneCount, getFinalBossBeamRadius } from './bossAttacks'
@@ -841,13 +842,15 @@ export function GradiusRaid({
         return !previous || previous.hp / Math.max(1, previous.maxHp) > 0.25
       })
       if (criticalBoss) playGameSound('stinger_2')
+      if (state.phase === 'playing') {
+        for (const enemy of state.enemies) {
+          if (enemy.attackAudio) playGuestBossAttack(enemy, prevEnemiesForAudio.find(previous => previous.id === enemy.id))
+        }
+      } else if (prevPhase === 'playing') stopBossAttackAudio()
       const command = state.enemies.find((enemy) => enemy.hp > 0 && enemy.bossAttackSerial !== undefined)
       if (command && state.phase === 'playing') {
         const previous = prevEnemiesForAudio.find((enemy) => enemy.id === command.id)
-        if (previous && command.bossAttackSerial !== previous.bossAttackSerial) {
-          playCommandBossCharge(command, (command.bossCombatPhase ?? 0) > (previous.bossCombatPhase ?? 0), landscapeRef.current)
-        }
-        if (command.bossLastVolleyAge !== undefined && command.bossLastVolleyAge !== previous?.bossLastVolleyAge) {
+        if (!command.attackAudio && command.bossLastVolleyAge !== undefined && command.bossLastVolleyAge !== previous?.bossLastVolleyAge) {
           playGameSound(isCommandBeam(command.bossAttackPattern) ? 'laser' : 'rocket')
         }
         const impact = command.bossImpact
@@ -3358,6 +3361,7 @@ export function GradiusRaid({
     if (session && !session.isHost) return
     if (phaseRef.current !== 'playing') return
     phaseRef.current = 'paused'
+    stopBossAttackAudio()
     stopRaidBgm()
     syncSnapshot()
   })
@@ -4443,6 +4447,7 @@ export function GradiusRaid({
     if (allyAlive) return
 
     phaseRef.current = 'gameover'
+    stopBossAttackAudio()
     stopBGM()
     stopRaidBgm()
     const finalScore = Math.max(playerRef.current.score, remotePlayerRef.current?.score ?? 0)
@@ -4522,14 +4527,8 @@ export function GradiusRaid({
             maxLife: 3.2,
           })
         }
-        playGameSound('rocket')
-        return
       }
-      if (kind === 'final') {
-        playGameSound('laser')
-        return
-      }
-      playGameSound('rocket')
+      markBossAttack(enemy, kind === 'snake' ? 'venom' : kind === 'squid' ? 'strike' : 'cannon')
       return
     }
 
@@ -4563,7 +4562,7 @@ export function GradiusRaid({
         })
         enemyShotsRef.current.push({ id: shotId++, x: enemy.x, y: enemy.y + 6, vx: sweep * 0.18, vy: 36, damage: 1, kind: 'boss', radius: 1.65 })
       }
-      playGameSound(kind === 'lancer' ? 'laser' : 'rocket')
+      markBossAttack(enemy, kind === 'brood' ? 'strike' : 'cannon')
       return
     }
 
@@ -4584,6 +4583,7 @@ export function GradiusRaid({
     const player = playerRef.current
     const guest = remotePlayerRef.current
     queuedBossRef.current = boss
+    stopBossAttackAudio()
     carrierStopRef.current = {
       sourceStage: stageRef.current, targetStage, boss, remaining: CARRIER_RECOVERY_SECONDS,
       hostStart: { x: player.x, y: player.y },
@@ -5564,7 +5564,7 @@ export function GradiusRaid({
               })
             }
             spawnSparks(enemy.x, enemy.y + 12, '#ef4444', 68, 9)
-            playGameSound('laser')
+            markBossAttack(enemy, chargePattern === 'diagonal' || chargePattern === 'cross' ? 'strike' : 'beam')
             triggerScreenShake(chargePattern === 'diagonal' ? 1.5 : 2.25, chargePattern === 'rotate' ? 300 : 220)
             if (chargePattern === 'diagonal') {
               devilSnakeBurstLeft = Math.max(0, devilSnakeBurstLeft - 1)
@@ -5610,7 +5610,7 @@ export function GradiusRaid({
             chargeCooldown = 999
             addRipple(chargePattern === 'rotate' ? 50 : chargeLane, chargePattern === 'rotate' ? 50 : chargeTargetY, skillVolleyActive ? '#f87171' : '#ef4444', chargePattern === 'rotate' ? 27 : skillVolleyActive ? 21 : 18)
             spawnSparks(enemy.x, enemy.y + 8, skillVolleyActive ? '#fca5a5' : '#fb7185', skillVolleyActive ? 58 : 44, 8)
-            playGameSound('countdown')
+            markBossAttack(enemy, 'charge', chargeTimer)
           }
         }
       }
@@ -5661,7 +5661,7 @@ export function GradiusRaid({
               })
             }
             spawnSparks(enemy.x, enemy.y + 8, '#38bdf8', 84, 9)
-            playGameSound('laser')
+            markBossAttack(enemy, 'beam')
             if (wasRapidCharge && beamVolleyLeft > 0) {
               beamVolleyLeft -= 1
               chargeCooldown = 0.42 + Math.random() * 0.28
@@ -5720,7 +5720,7 @@ export function GradiusRaid({
             const laneCount = getFinalBossBeamLaneCount(chargePattern)
             addRipple(chargeLane, 84, '#38bdf8', laneCount >= 4 ? 16 : laneCount === 3 ? 18 : laneCount === 2 ? 20 : 24)
             spawnSparks(enemy.x, enemy.y + 6, '#38bdf8', 52, 8)
-            playGameSound('countdown')
+            markBossAttack(enemy, 'charge', chargeTimer)
           }
         }
       }
@@ -5751,7 +5751,7 @@ export function GradiusRaid({
               })
               spawnSparks(enemy.x, enemy.y + 10, '#f0abfc', 42, 8)
               addRipple(enemy.x, enemy.y + 14, '#f472b6', 22)
-              playGameSound('laser')
+              markBossAttack(enemy, 'strike')
               chargeCooldown = 3.65 + Math.random() * 1.05
               fireCooldown = Math.max(fireCooldown, 1.25)
             } else {
@@ -5768,7 +5768,7 @@ export function GradiusRaid({
               }
               spawnSparks(chargeLane, chargeTargetY, '#f472b6', 44, 8)
               addRipple(chargeLane, chargeTargetY, '#f472b6', 18)
-              playGameSound('hit')
+              markBossAttack(enemy, 'strike')
               chargeCooldown = 2.2 + Math.random() * 1.05
               fireCooldown = Math.max(fireCooldown, 1.05)
             }
@@ -5798,7 +5798,7 @@ export function GradiusRaid({
             if (bossKind === 'squid') beamVolleyLeft = squidSpecialStep + 1
             addRipple(enemy.x, enemy.y + 14, '#f472b6', 18)
             spawnSparks(enemy.x, enemy.y + 7, '#f0abfc', 34, 7)
-            playGameSound('countdown')
+            markBossAttack(enemy, 'charge', chargeTimer)
           } else if (slapTarget && chargeCooldown <= 0) {
             chargeTimer = 0.9
             chargePattern = 'single'
@@ -5808,7 +5808,7 @@ export function GradiusRaid({
             if (bossKind === 'squid') beamVolleyLeft = squidSpecialStep + 1
             addRipple(chargeLane, chargeTargetY, '#f472b6', 18)
             spawnSparks(enemy.x, enemy.y + 10, '#a855f7', 28, 7)
-            playGameSound('countdown')
+            markBossAttack(enemy, 'charge', chargeTimer)
           }
         }
       }
@@ -5902,7 +5902,7 @@ export function GradiusRaid({
             }
             spawnSparks(enemy.x, enemy.y + 4, '#22d3ee', 44, 8)
             addRipple(lane, chargePattern === 'horizontal' || chargePattern === 'cross' ? targetY : enemy.y + 30, chargePattern === 'scatter' ? '#22d3ee' : chargePattern === 'horizontal' || chargePattern === 'cross' ? '#84cc16' : '#22d3ee', chargePattern === 'scatter' ? 20 : chargePattern === 'horizontal' ? 22 : 16)
-            playGameSound('laser')
+            markBossAttack(enemy, chargePattern === 'cross' ? 'strike' : 'venom')
             chargeCooldown = chargePattern === 'horizontal' ? 6.8 + Math.random() * 1.2 : chargePattern === 'cross' ? 6.2 + Math.random() * 1.1 : chargePattern === 'scatter' ? 6.6 + Math.random() * 1.4 : chargePattern === 'trident' ? 5.9 + Math.random() * 1.2 : 5.2 + Math.random() * 1.2
             fireCooldown = Math.max(fireCooldown, 1.7)
           }
@@ -5935,15 +5935,15 @@ export function GradiusRaid({
             if (bossKind === 'snake') beamVolleyLeft = snakeSpecialStep + 1
             addRipple(chargeLane, chargePattern === 'horizontal' || chargePattern === 'cross' ? chargeTargetY : enemy.y + 32, chargePattern === 'horizontal' || chargePattern === 'cross' ? '#84cc16' : '#22d3ee', chargePattern === 'scatter' ? 20 : 17)
             spawnSparks(enemy.x, enemy.y + 3, '#38bdf8', 36, 7)
-            playGameSound('countdown')
+            markBossAttack(enemy, 'charge', chargeTimer)
           }
         }
       }
       if (commandProfile) {
         const event = advanceCommandBoss(enemy, dt, livingPlayersThisTick, raidDifficultyRef.current,
           Math.max(0, COMMAND_SHOT_LIMIT - enemyShotsRef.current.length), emitCommandBossShot)
-        if (event & COMMAND_WARNING) playCommandBossCharge(enemy, Boolean(event & COMMAND_PHASE), landscapeRef.current)
-        if (event & COMMAND_FIRED) playGameSound(isCommandBeam(enemy.bossAttackPattern) ? 'laser' : 'rocket')
+        if (event & COMMAND_WARNING) markBossAttack(enemy, 'charge', enemy.bossWarningSeconds)
+        if (event & COMMAND_FIRED) markBossAttack(enemy, commandBossReleaseCue(enemy))
       }
       const nextFire = fireCooldown - dt * (enemy.isBoss ? bossFireDrain : 1)
       const bossInPause = !commandProfile && enemy.isBoss && bossKind !== 'devil' && (bossRushAggressive ? nowSeconds % 5 > 4.25 : nowSeconds % 6 > 3)
@@ -7582,6 +7582,7 @@ export function GradiusRaid({
   }, [carrierAudio])
 
   useEffect(() => () => {
+    stopBossAttackAudio()
     stopBGM()
     stopRaidBgm()
   }, [stopRaidBgm])

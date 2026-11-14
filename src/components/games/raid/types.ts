@@ -124,6 +124,8 @@ export type Shot = Vec & {
   burning?: boolean
 }
 
+export type BossAttackCue = 'charge' | 'beam' | 'cannon' | 'strike' | 'venom'
+
 export type BossImpactKind = 'shield' | 'armor' | 'heavy' | 'core'
 
 export type Enemy = Vec & {
@@ -144,6 +146,7 @@ export type Enemy = Vec & {
   bossKind: BossKind | null
   /** Canonical art identity; optional for compatibility with older co-op packets. */
   bossArtStage?: number
+  attackAudio?: Readonly<{ serial: number; cue: BossAttackCue; seconds?: number }>
   bossEncounterAge?: number
   bossPhaseStartedAge?: number
   bossLastVolleyAge?: number

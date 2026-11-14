@@ -303,7 +303,7 @@ const bossAlertRef={current:0},bossMessageRef={current:null};
 const BOSS_RUSH_MOTION_SCALE=1.18,BOSS_RUSH_SPECIAL_RECHARGE_SCALE=1.32,BOSS_RUSH_ATTACK_COOLDOWN_SCALE=.72;
 export let legacyFires=0,totalShots=0;
 const playBossCriticalStinger=()=>{},getNearestLivingPlayerThisTick=()=>player;
-const fireEnemy=()=>{legacyFires++},playGameSound=()=>{},playCommandBossCharge=()=>{},addRipple=()=>{};
+const fireEnemy=()=>{legacyFires++},playGameSound=()=>{},markBossAttack=()=>{},commandBossReleaseCue=()=>'beam',addRipple=()=>{};
 let shotId=0;
 const emitCommandBossShot=s=>{enemyShotsRef.current.push({...s,id:shotId++});totalShots++};
 export function tick(dt,now){const nowSeconds=now/1000;

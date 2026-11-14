@@ -109,12 +109,6 @@ export function shouldForceLocalDerelictWreckTest(stage: number, mode: RaidMode)
 
 export const RAID_DEFAULT_BGM_TRACK = getPublicAssetUrl('audio/bgm_scifi_loop.ogg')
 
-export const RAID_BOSS_SQUID_BGM_TRACK = getPublicAssetUrl('audio/bgm_boss_squid.mp3')
-
-export const RAID_BOSS_SNAKE_BGM_TRACK = getPublicAssetUrl('audio/bgm_boss_snake.mp3')
-
-export const RAID_BOSS_FINAL_BGM_TRACK = getPublicAssetUrl('audio/bgm_boss_final.wav')
-
 export const RAID_ENDING_BGM_TRACK = getPublicAssetUrl('audio/bgm_shelter.wav')
 
 export const RAID_BOSS_APPROACH_SILENCE_SECONDS = 5.5

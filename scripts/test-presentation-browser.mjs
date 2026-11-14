@@ -63,7 +63,8 @@ try {
     assert.equal(layout.overlap,false,`${name}: mission and comms overlap`)
     assert.equal(layout.overflow,false,`${name}: briefing overflow`)
     assert.ok(layout.commsBottom<=height,`${name}: actions below screen`)
-    for(let beat=0;beat<3;beat++){
+    await page.waitForFunction(() => document.querySelector('.raid__carrier-hologram[data-channel=command] img')?.naturalWidth > 0)
+    for(let beat=0;beat<4;beat++){
       const advance=page.locator('.raid__carrier-advance')
       if(beat>0)await advance.click()
       const paragraph=page.locator('.raid__carrier-comms p')
@@ -160,6 +161,7 @@ try {
     assert.equal(await raid.getAttribute('data-carrier-stage'), 'docked')
     assert.equal(await raid.locator('.raid__carrier-deck').getAttribute('data-dock-clamp-release'), '0')
     assert.equal(await briefing.locator('.raid__carrier-back').count(), 0)
+    await recovery.waitForFunction(() => document.querySelector('.raid__carrier-hologram[data-channel=command] img')?.naturalWidth > 0)
     await recovery.screenshot({ path: 'presentation-review/mesiah-recovery-briefing.png' })
     const advance = briefing.locator('.raid__carrier-advance')
     const paragraph = briefing.locator('.raid__briefing-copy')
@@ -171,23 +173,26 @@ try {
       await finishLine()
       await advance.click()
     }
-    await briefing.locator('.raid__carrier-hologram img').waitFor()
+    await briefing.locator('.raid__carrier-hologram[data-channel=enemy] img').waitFor()
     await recovery.waitForFunction(() => document.querySelector('.raid__carrier-hologram img')?.naturalWidth > 0)
     assert.equal(await briefing.getAttribute('data-hostile'), 'true')
-    assert.match(await paragraph.getAttribute('aria-label'), /keep flying back to that ship/)
+    assert.match(await paragraph.getAttribute('aria-label'), /I’ve been listening since you left the bay/)
     await finishLine()
     await recovery.screenshot({ path: 'presentation-review/mesiah-hostile-transmission.png' })
     await advance.click()
-    assert.equal(await briefing.locator('.raid__carrier-hologram').count(), 0)
-    assert.match(await paragraph.getAttribute('aria-label'), /Close the bay behind you/)
+    assert.equal(await briefing.locator('.raid__carrier-hologram[data-channel=command]').count(), 1)
+    assert.match(await paragraph.getAttribute('aria-label'), /draw Devil Gundam away from the carrier/)
     await briefing.locator('.raid__carrier-skip').click()
     await recovery.locator('.raid__boss-warning').waitFor({ timeout: 75000 })
     assert.equal(await briefing.count(), 0)
     const playedAudio = await recovery.evaluate(() => window.playedAudio)
-    for (const cue of ['flight-deck', 'hangar-bed', 'hostile-channel', 'thruster-heat', 'thruster-release', 'devil-gundam']) {
+    for (const cue of ['flight-deck', 'hangar-bed', 'hostile-channel', 'thruster-heat', 'thruster-release']) {
       assert.ok(playedAudio.includes(`/audio/mesiah/${cue}.ogg`), `Mesiah sequence did not play ${cue}`)
     }
-    console.log('Mesiah docks before Devil Gundam, shows the hostile transmission and resumes the same encounter')
+    await recovery.waitForFunction(() => window.playedAudio.includes('/audio/boss/devil-breakout.ogg'), {}, { timeout: 10000 })
+    await recovery.waitForFunction(() => window.playedAudio.includes('/audio/boss/beam-charge.ogg') &&
+      ['/audio/boss/beam-fire.ogg', '/audio/boss/creature-strike.ogg'].some(path => window.playedAudio.includes(path)), {}, { timeout: 45000 })
+    console.log('Mesiah briefing switches between commander and enemy; Devil Gundam has its own battle music and timed attack sounds')
   } finally {
     await recovery.close()
   }

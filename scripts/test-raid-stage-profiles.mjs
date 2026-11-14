@@ -16,6 +16,7 @@ const spawnSource = section('  const spawnEnemyAt = useCallback', '  const spawn
 const fireSource = section('  const fireEnemy = useCallback', '  const beginCarrierRecovery = useCallback')
 const harness = `
 const useCallback = fn => fn
+const markBossAttack = () => {}
 let enemyId = 0, shotId = 0
 const stageRef = { current: 1 }, waveRef = { current: 1 }, wingSerialRef = { current: 0 }
 const playerRef = { current: { x: 50, y: 83 } }, enemyHpMultRef = { current: 1 }
