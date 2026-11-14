@@ -42,6 +42,38 @@ Required credit: "Music by Matthew Pablo / www.matthewpablo.com"
 Source page: https://opengameart.org/content/boss-battle-2-symphonic-metal
 Used for: bgm_boss_final.wav
 
+Mesiah and regional score (all edits are game trims, level adjustments and Ogg encodes)
+
+- Beyond cosmos by Centurion_of_war (CC0), amber-ringway.ogg
+  https://opengameart.org/content/beyond-cosmos
+- Space Echo by Centurion_of_war (CC0), silent-fleet.ogg
+  https://opengameart.org/content/space-echo
+- ZenoStar by Centurion_of_war (CC0), violet-deepfield.ogg
+  https://opengameart.org/content/zenostar
+- Dark Horse by Centurion_of_war (CC0), flight-deck.ogg
+  https://opengameart.org/content/dark-horse
+- Space Fighter Loop by Kevin MacLeod (incompetech.com), command-fleet.ogg
+  https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100672
+- The Complex by Kevin MacLeod (incompetech.com), industrial-command.ogg
+  https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1300025
+- Corruption by Kevin MacLeod (incompetech.com), devil-gundam.ogg
+  https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1600004
+  The three Kevin MacLeod tracks are licensed under CC BY 4.0:
+  https://creativecommons.org/licenses/by/4.0/
+
+Mesiah deck and radio effects (trimmed, filtered and encoded for the scene)
+
+- underwater or space engine rumble by gmason (CC0), hangar-bed.ogg
+  https://opengameart.org/content/underwater-or-space-engine-rumble
+- Sci-fi Engine Startup by JapanYoshiTheGamer (CC0), thruster-heat.ogg
+  https://freesound.org/people/JapanYoshiTheGamer/sounds/361250/
+- Rocket Engine by theMinesAreShakin (CC0), thruster-release.ogg
+  https://opengameart.org/content/rocket-engine
+- Shortwave radio static & beeps by nakkivene66 (CC0), hostile-channel.ogg
+  https://freesound.org/people/nakkivene66/sounds/583363/
+
+CC0 dedication: https://creativecommons.org/publicdomain/zero/1.0/
+
 Publisher note:
 - Verify each asset's exact license text on its OpenGameArt page before final release.
 - If attribution is required, include credits in-game and/or in your game credits page.

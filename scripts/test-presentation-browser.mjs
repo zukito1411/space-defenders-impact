@@ -140,7 +140,15 @@ try {
   }
   const recovery = await browser.newPage({ viewport: { width: 844, height: 390 } })
   try {
-    await recovery.addInitScript(() => localStorage.setItem('raid-flight-view', 'landscape'))
+    await recovery.addInitScript(() => {
+      localStorage.setItem('raid-flight-view', 'landscape')
+      const play = HTMLMediaElement.prototype.play
+      window.playedAudio = []
+      HTMLMediaElement.prototype.play = function () {
+        if (this instanceof HTMLAudioElement && this.src) window.playedAudio.push(new URL(this.src).pathname)
+        return play.call(this)
+      }
+    })
     await recovery.goto('http://127.0.0.1:5173/scripts/presentation-fixture.html?mode=endless')
     await recovery.locator('button.raid__start').first().click({ timeout: 120000 })
     const briefing = recovery.locator('.raid__carrier-briefing')
@@ -153,10 +161,33 @@ try {
     assert.equal(await raid.locator('.raid__carrier-deck').getAttribute('data-dock-clamp-release'), '0')
     assert.equal(await briefing.locator('.raid__carrier-back').count(), 0)
     await recovery.screenshot({ path: 'presentation-review/mesiah-recovery-briefing.png' })
+    const advance = briefing.locator('.raid__carrier-advance')
+    const paragraph = briefing.locator('.raid__briefing-copy')
+    const finishLine = async () => {
+      const line = await paragraph.getAttribute('aria-label')
+      await recovery.waitForFunction(expected => document.querySelector('.raid__briefing-copy')?.textContent === expected, line)
+    }
+    for (let beat = 0; beat < 2; beat++) {
+      await finishLine()
+      await advance.click()
+    }
+    await briefing.locator('.raid__carrier-hologram img').waitFor()
+    await recovery.waitForFunction(() => document.querySelector('.raid__carrier-hologram img')?.naturalWidth > 0)
+    assert.equal(await briefing.getAttribute('data-hostile'), 'true')
+    assert.match(await paragraph.getAttribute('aria-label'), /keep flying back to that ship/)
+    await finishLine()
+    await recovery.screenshot({ path: 'presentation-review/mesiah-hostile-transmission.png' })
+    await advance.click()
+    assert.equal(await briefing.locator('.raid__carrier-hologram').count(), 0)
+    assert.match(await paragraph.getAttribute('aria-label'), /Close the bay behind you/)
     await briefing.locator('.raid__carrier-skip').click()
     await recovery.locator('.raid__boss-warning').waitFor({ timeout: 75000 })
     assert.equal(await briefing.count(), 0)
-    console.log('Endless approaches Mesiah, docks before Devil Gundam and resumes the same encounter')
+    const playedAudio = await recovery.evaluate(() => window.playedAudio)
+    for (const cue of ['flight-deck', 'hangar-bed', 'hostile-channel', 'thruster-heat', 'thruster-release', 'devil-gundam']) {
+      assert.ok(playedAudio.includes(`/audio/mesiah/${cue}.ogg`), `Mesiah sequence did not play ${cue}`)
+    }
+    console.log('Mesiah docks before Devil Gundam, shows the hostile transmission and resumes the same encounter')
   } finally {
     await recovery.close()
   }
