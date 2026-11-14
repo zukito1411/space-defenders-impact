@@ -20,15 +20,15 @@ for(const [w,h,l]of[[393,852,false],[360,640,false],[844,390,true],[640,320,true
  assert.ok(Math.abs(c.x+(c.sw*.5)*c.scale-w*.5)<1e-8)
  assert.ok(Math.abs(c.y+(c.sh*.5)*c.scale-h*.5)<1e-8)
 }
-// Source-art measurements. Each lower landscape platform stops at a different
-// wall pier, with exposed pipework between them.
+// Source-art measurements of the rail bases. The lower right route starts
+// beyond the ladder opening. Feet must stay within one pixel of the floor.
 const walkable = {
  landscape: {
-  catwalks: [[700,880,222,234],[1030,1270,222,234],[218,398,788,801],[924,1067,788,801]],
+  catwalks: [[700,880,235,237],[1030,1270,235,237],[218,398,802,804],[988,1067,802,804]],
   flightDeck: [220,1270,613,633],
  },
  portrait: {
-  catwalks: [[88,245,441,452],[780,936,441,452],[88,245,794,806],[775,932,794,806]],
+  catwalks: [[88,245,454,456],[780,936,454,456],[88,245,811,813],[775,932,811,813]],
   flightDeck: [342,666,227,1192],
  },
 }
