@@ -203,8 +203,9 @@ try {
       assert.ok(playedAudio.includes(`/audio/mesiah/${cue}.ogg`), `Mesiah sequence did not play ${cue}`)
     }
     await recovery.waitForFunction(() => window.playedAudio.includes('/audio/bgm_boss_final.wav'), {}, { timeout: 10000 })
+    // The boss warning starts before Devil Gundam enters firing range. Software rendering can slow that approach.
     await recovery.waitForFunction(() => window.playedAudio.includes('/audio/boss/beam-charge.ogg') &&
-      ['/audio/boss/beam-fire.ogg', '/audio/boss/creature-strike.ogg'].some(path => window.playedAudio.includes(path)), {}, { timeout: 45000 })
+      ['/audio/boss/beam-fire.ogg', '/audio/boss/creature-strike.ogg'].some(path => window.playedAudio.includes(path)), {}, { timeout: 90000 })
     console.log('Mesiah briefing switches between commander and enemy; Devil Gundam has its own battle music and timed attack sounds')
   } finally {
     await recovery.close()
