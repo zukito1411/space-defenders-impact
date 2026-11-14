@@ -40,6 +40,23 @@ try {
     const {name,width,height,landscape,reduced=false}=item
     const context=await browser.newContext({viewport:{width,height},hasTouch:true,deviceScaleFactor:1,reducedMotion:reduced?'reduce':'no-preference',recordVideo:{dir:'presentation-review',size:{width,height}}})
     await context.addInitScript(value=>localStorage.setItem('raid-flight-view',value?'landscape':'vertical'),landscape)
+    if (name === 'portrait') {
+      await context.addInitScript(() => {
+        const play = HTMLMediaElement.prototype.play
+        let unlockedMusic
+        HTMLMediaElement.prototype.play = function () {
+          // Emulate a browser that grants permission per media element.
+          const path = new URL(this.src).pathname
+          if (path.endsWith('/flight-deck.ogg')) unlockedMusic ??= this
+          if (path.endsWith('/bgm_scifi_loop.ogg') && this !== unlockedMusic) {
+            return Promise.reject(new DOMException('Music player is not unlocked', 'NotAllowedError'))
+          }
+          return play.call(this)
+        }
+        window.stageOneMusicIsPlaying = () => unlockedMusic?.src.endsWith('/bgm_scifi_loop.ogg') &&
+          !unlockedMusic.paused && unlockedMusic.currentTime > 0.1 && unlockedMusic.volume > 0
+      })
+    }
     const page=await context.newPage(),errors=[]
     page.on('pageerror',e=>errors.push(e.message))
     await page.goto('http://127.0.0.1:5173/scripts/presentation-fixture.html'+(item.model?'?model='+item.model:''))
@@ -160,6 +177,7 @@ try {
     // Reduced motion cuts directly to space at departure, retaining the shared
     // simulation clock. SwiftShader needs a larger budget for that entire hold.
     await page.waitForFunction(()=>document.querySelector('.raid')?.dataset.carrierStage==='flight',{},{timeout:reduced?75000:45000})
+    if (name === 'portrait') await page.waitForFunction(() => window.stageOneMusicIsPlaying(), {}, { timeout: 15000 })
     await page.waitForTimeout(1000)
     await page.screenshot({path:`presentation-review/${name}-flight.png`})
     if(item.model&&landscape){

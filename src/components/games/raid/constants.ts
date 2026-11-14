@@ -111,8 +111,6 @@ export const RAID_DEFAULT_BGM_TRACK = getPublicAssetUrl('audio/bgm_scifi_loop.og
 
 export const RAID_ENDING_BGM_TRACK = getPublicAssetUrl('audio/bgm_shelter.wav')
 
-export const RAID_BOSS_APPROACH_SILENCE_SECONDS = 5.5
-
 export const SHIP_OPTIONS: ShipOption[] = [
   { key: 'rocket', name: 'Black Comet', role: 'Balanced missile frame', speed: 1, hp: 6, fireRate: 1 },
   { key: 'fast', name: 'Red Wraith', role: 'Fastest dodge craft', speed: 1.18, hp: 5, fireRate: 1.08 },
