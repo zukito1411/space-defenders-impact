@@ -1296,15 +1296,14 @@ export function drawRaidPlayer(
     // logical upward flight direction before the camera transform.
     const attackActive = !presentation?.hideCombatFx && !isDown && (phase === 'playing' || phase === 'paused') && (player.godMeleeCloak ?? 0) <= 0
     const attackPose = coreLanderCombatModel && attackActive
-      ? sampleMechAttack(player.fireCooldown, getCoreLanderFireInterval(player), attackActive, reducedMotion) : null
+      ? sampleMechAttack(coreLanderCombatModel, player.fireCooldown, getCoreLanderFireInterval(player), reducedMotion) : null
     // Pick one form and one registered pose. Alpha crossfades between displaced arms
     // would draw a ghost arm, and would not correspond to the actual release point.
-    const attackFrame = attackPose && (reducedMotion ? 2 : attackPose.frame)
-    const actionDrawn = coreLanderCombatModel && attackFrame !== null && drawMechAction(ctx, coreLanderCombatModel, coreLanderBurning, attackFrame, x, y, renderSize, alpha, rotation, scale)
+    const actionDrawn = coreLanderCombatModel && attackPose && drawMechAction(ctx, coreLanderCombatModel, coreLanderBurning, attackPose.frame, x, y, renderSize, alpha, rotation, scale)
     if (actionDrawn && attackPose && ctx.canvas?.dataset) {
       ctx.canvas.dataset.mechActionModel = coreLanderCombatModel ?? ''
       ctx.canvas.dataset.mechActionStage = attackPose.stage
-      ctx.canvas.dataset.mechActionFrame = String(attackFrame)
+      ctx.canvas.dataset.mechActionFrame = String(attackPose.frame)
     }
     if (!actionDrawn) {
       const burningBlend = sideBurningSprite?.loaded ? coreLanderBurningBlend : 0
