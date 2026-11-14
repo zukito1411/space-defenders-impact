@@ -59,30 +59,48 @@ for (const landscape of [false,true]) for (const reduced of [false,true]) for (c
  const exterior=recover(2.2,landscape,reduced,false,underway)
  assert.equal(exterior.exteriorAlpha,!reduced&&!underway?1:0)
 }
-const {getCarrierMission}=await module('src/components/games/raid/carrierMission.ts')
-const commsSource = read('src/components/games/raid/hostileBriefing.ts').replace(/^import .*\n/gm, '')
-const commsJs = ts.transpileModule('const getPublicAssetUrl = path => path;\n' + commsSource, {compilerOptions:{module:ts.ModuleKind.ESNext}}).outputText
-const {getCarrierConversation} = await import('data:text/javascript;base64,' + Buffer.from(commsJs).toString('base64'))
-for(const language of ['en','zh','ja','ko'])for(const mode of ['campaign','endless','bossRush']){
- const m=getCarrierMission(language,mode)
- assert.equal(m.goals.length,3)
- const opening = getCarrierConversation(language,mode,1,false)
- assert.deepEqual(opening.map(line => line[0]), mode === 'campaign'
-  ? ['commander','pilot','commander','pilot','commander','pilot','commander','commander']
-  : ['commander','pilot','commander','commander'])
- assert.ok(opening.every(([, text, channel]) => text.length > 0 && !channel))
- if (mode === 'campaign') {
-  assert.equal(getCarrierConversation(language,mode,2,false).length,4)
-  assert.notEqual(getCarrierConversation(language,mode,1,true).at(-1)[1],opening.at(-1)[1])
- }
- for (const boss of ['squid','snake','final','devil','super']) {
-  const recovery = getCarrierConversation(language,mode,5,false,boss)
-  assert.deepEqual(recovery.map(line => line[0]), ['commander','pilot','enemy','pilot','commander','enemy','commander','commander'])
-  assert.deepEqual(recovery.map(line => line[2] ?? 'command'), ['command','command','enemy','enemy','enemy','enemy','command','command'])
-  assert.ok(recovery.every(line => line[1].length > 0))
-  const repeat = getCarrierConversation(language,mode,5,false,boss,false)
-  assert.notEqual(repeat[3][1], recovery[3][1], 'give the pilot a different reaction to a repeat interruption')
-  assert.notEqual(repeat[4][1], recovery[4][1], 'command should recognize the repeat interruption')
+const campaignCommsUrl = await moduleUrl('src/components/games/raid/campaignComms.ts')
+const {getCarrierMission} = await import(await moduleUrl('src/components/games/raid/carrierMission.ts', {
+ './campaignComms': campaignCommsUrl,
+}))
+const assetUrl = 'data:text/javascript,export const getPublicAssetUrl = path => path'
+const {getCarrierConversation} = await import(await moduleUrl('src/components/games/raid/hostileBriefing.ts', {
+ './campaignComms': campaignCommsUrl,
+ '../sound': assetUrl,
+}))
+for (const language of ['en', 'zh', 'ja', 'ko']) {
+ for (const mode of ['campaign', 'endless', 'bossRush']) {
+  assert.equal(getCarrierMission(language, mode).goals.length, 3)
+  const opening = getCarrierConversation(language, mode, 1, false)
+  assert.ok(opening.every(([, text]) => text.length > 0))
+  if (mode === 'campaign') {
+   assert.deepEqual(opening.map(line => line[0]), [
+    'commander', 'general', 'commander', 'general', 'commander', 'general', 'commander', 'pilot', 'commander',
+   ])
+   assert.equal(getCarrierConversation(language, mode, 2, false).length, 4)
+   for (const [stage, boss, length] of [[5, 'squid', 7], [10, 'snake', 10], [15, 'final', 14], [16, 'devil', 2]]) {
+    const recovery = getCarrierConversation(language, mode, stage, false, boss)
+    assert.equal(recovery.length, length)
+    assert.ok(recovery.every(([, text]) => text.length > 0))
+    assert.equal(recovery.some(line => line[0] === 'reptilior'), stage === 15)
+    assert.equal(recovery.filter(line => line[3]).length, stage === 15 ? 1 : 0)
+    assert.deepEqual(recovery, getCarrierConversation(language, mode, stage, true))
+   }
+   const debrief = getCarrierConversation(language, mode, 15, false, undefined, undefined, true)
+   assert.equal(debrief.length, 8)
+   assert.ok(debrief.every(([speaker, line]) => ['commander', 'pilot'].includes(speaker) && line.length > 0))
+   assert.deepEqual(debrief, getCarrierConversation(language, mode, 16, false, undefined, undefined, true))
+  } else {
+   assert.deepEqual(opening.map(line => line[0]), ['commander', 'pilot', 'commander', 'commander'])
+   for (const boss of ['squid', 'snake', 'final', 'devil', 'super']) {
+    const recovery = getCarrierConversation(language, mode, 5, false, boss)
+    assert.deepEqual(recovery.map(line => line[0]), ['commander', 'pilot', 'enemy', 'pilot', 'commander', 'enemy', 'commander', 'commander'])
+    assert.deepEqual(recovery.map(line => line[2] ?? 'command'), ['command', 'command', 'enemy', 'enemy', 'enemy', 'enemy', 'command', 'command'])
+    const repeat = getCarrierConversation(language, mode, 5, false, boss, false)
+    assert.notEqual(repeat[3][1], recovery[3][1])
+    assert.notEqual(repeat[4][1], recovery[4][1])
+   }
+  }
  }
 }
 const runtime=read('src/components/games/raid/GradiusRaidRuntime.tsx')
@@ -91,4 +109,4 @@ assert.match(runtime,/carrierLaunch: initialLaunchRef.current/)
 assert.match(runtime,/if \(carrierActive\) \{[\s\S]*?renderCarrierPilot\(ownShipRef[\s\S]*?return/)
 const assets=read('src/components/games/raid/carrierAssets.ts')
 for(const path of assets.matchAll(/'([^']+\.webp)'/g))assert.ok(readFileSync(new URL('../public/'+path[1],import.meta.url)).length>10000)
-console.log('Carrier: dock/ignition/release/flight/settle at 30/60/120Hz, reduced motion, co-op clock fields and all twelve mission scripts passed')
+console.log('Carrier: dock/ignition/release/flight/settle at 30/60/120Hz, reduced motion, co-op clock fields and localized campaign and arcade transmissions passed')

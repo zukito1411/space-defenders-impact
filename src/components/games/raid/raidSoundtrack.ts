@@ -21,6 +21,7 @@ export const CARRIER_AUDIO = {
   ignition: audio('thruster-heat'),
   departure: audio('thruster-release'),
   interruption: audio('hostile-channel'),
+  reptiliorLaugh: audio('reptilior-laugh'),
 } as const
 
 export const RAID_SOUNDTRACK_URLS = [

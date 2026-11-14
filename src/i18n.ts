@@ -87,24 +87,24 @@ export const TEXT = {
       progress: 'Raid story progress',
       scenes: [
         {
-          eyebrow: 'Orbital Incident',
-          title: 'Earth Lost Contact',
-          text: 'The first alien fortress arrived above the Moon and cut the relay lanes between Earth and the outer colonies. Cities watched the sky burn while Command ordered the defense grid to keep one corridor open.',
+          eyebrow: 'Former Allies',
+          title: 'Earth’s Defense Fleets Split',
+          text: 'The Space Protection Federation Operative and the Celestial Force Obliteration Command once fought together to stop a Reptilior invasion. Now the C.F.O.C. has broken away.',
         },
         {
-          eyebrow: 'Assault Order',
-          title: 'A Single Ship Can Slip Through',
-          text: 'The blockade is too dense for a fleet, but a raid craft can enter the gaps between patrols. Your mission is to break each sector anchor and push the strike deeper into enemy space.',
+          eyebrow: 'Invasion Fleet',
+          title: 'Pelagic Is First',
+          text: 'The C.F.O.C. general wants the worlds beyond Earth under his command. Reptilior cruisers have joined his fleet, and the first wave is already heading for Pelagic.',
         },
         {
-          eyebrow: 'Route To The Core',
-          title: 'Fifteen Sectors Stand Ahead',
-          text: 'Scouts, bio-weapons, and machine guardians hold the route to the fortress core. Every guardian destroyed weakens the invasion net and gives Earth more time to recover.',
+          eyebrow: 'Pursuit Course',
+          title: 'From Pelagic to Cinder',
+          text: 'The S.P.F.O. is sending Mesiah after the fleet. Break through the formations ahead and stop the attack before it spreads from Pelagic to Cinder.',
         },
         {
-          eyebrow: 'Return Objective',
-          title: 'Bring The Signal Home',
-          text: 'After the final core falls, guide your ship back through the collapsing battle zone. If the signal reaches Earth, the defense grid can rise again.',
+          eyebrow: 'Flight Clearance',
+          title: 'Report to Mesiah',
+          text: 'Your next briefing is in the hangar. Your commander is trying to reach the C.F.O.C. general before their fleets open fire.',
         },
       ],
     },
@@ -339,24 +339,24 @@ export const TEXT = {
       progress: '突击剧情进度',
       scenes: [
         {
-          eyebrow: '轨道事件',
-          title: '地球失去联络',
-          text: '第一座外星要塞抵达月球上空，切断了地球与外环殖民地之间的中继航道。城市看着天空燃烧，指挥部下令防御网必须保住一条通道。',
+          eyebrow: '昔日盟友',
+          title: '地球防卫舰队分裂',
+          text: '太空保护联邦行动组织（S.P.F.O.）和天体歼灭司令部（C.F.O.C.）曾并肩击退雷蜥人的入侵。如今 C.F.O.C. 已经脱离。',
         },
         {
-          eyebrow: '突击命令',
-          title: '一架战机可以穿过去',
-          text: '封锁线太密，整支舰队无法通过，但突击战机可以钻进巡逻队之间的空隙。你的任务是摧毁每个区域锚点，把攻势推进到敌方深处。',
+          eyebrow: '入侵舰队',
+          title: '佩拉吉克是首个目标',
+          text: 'C.F.O.C. 将军想统治地球之外的星球。雷蜥人巡洋舰已加入他的舰队，第一波攻势正朝佩拉吉克而去。',
         },
         {
-          eyebrow: '核心航线',
-          title: '前方有十五个区域',
-          text: '侦察机、生体兵器和机械守卫控制着通往要塞核心的路线。每击败一名守卫，入侵网络就会削弱，地球也会多一点恢复时间。',
+          eyebrow: '追击航线',
+          title: '从佩拉吉克到辛德',
+          text: 'S.P.F.O. 派 Mesiah 追击。突破前方编队，阻止战火从佩拉吉克蔓延到辛德。',
         },
         {
-          eyebrow: '返航目标',
-          title: '把信号带回地球',
-          text: '最终核心被摧毁后，驾驶战机穿过正在崩解的战场返航。只要信号抵达地球，防御网就能重新启动。',
+          eyebrow: '出击许可',
+          title: '前往 Mesiah',
+          text: '下一场简报在机库。指挥官正试图在双方交火前联系 C.F.O.C. 将军。',
         },
       ],
     },
@@ -591,24 +591,24 @@ export const TEXT = {
       progress: 'レイドストーリー進行',
       scenes: [
         {
-          eyebrow: '軌道事件',
-          title: '地球との連絡が途絶えた',
-          text: '最初のエイリアン要塞が月の上空に現れ、地球と外縁コロニーを結ぶ中継航路を断ち切った。都市は燃える空を見上げ、司令部は防衛網に最後の回廊を維持するよう命じた。',
+          eyebrow: 'かつての同盟',
+          title: '地球の防衛艦隊が分裂',
+          text: 'S.P.F.O. と C.F.O.C. は、かつて共闘してレプティリアの侵攻を退けた。だが今、C.F.O.C. は袂を分かった。',
         },
         {
-          eyebrow: '強襲命令',
-          title: '一機なら封鎖を抜けられる',
-          text: '封鎖線は艦隊には厚すぎるが、強襲機なら哨戒隊の隙間へ入り込める。各セクターのアンカーを破壊し、敵宙域の奥へ攻撃を進めろ。',
+          eyebrow: '侵攻艦隊',
+          title: '最初の標的はペラジック',
+          text: 'C.F.O.C. の将軍は地球の外にある星々を支配しようとしている。レプティリアの巡洋艦が合流し、第一波はすでにペラジックへ向かっている。',
         },
         {
-          eyebrow: '中核航路',
-          title: '十五のセクターが待つ',
-          text: '偵察機、生体兵器、機械守護者が要塞中核への航路を押さえている。守護者を倒すたびに侵攻網は弱まり、地球は立て直す時間を得る。',
+          eyebrow: '追撃航路',
+          title: 'ペラジックからシンダーへ',
+          text: 'S.P.F.O. は Mesiah を追撃に出す。敵の編隊を突破し、ペラジックからシンダーへ戦火が広がる前に止めろ。',
         },
         {
-          eyebrow: '帰還目標',
-          title: '信号を地球へ持ち帰れ',
-          text: '最後のコアを破壊したら、崩れゆく戦場を抜けて帰還せよ。その信号が地球に届けば、防衛網は再び起動できる。',
+          eyebrow: '出撃許可',
+          title: 'Mesiah に集合',
+          text: '次のブリーフィングは格納庫で行う。司令官は両艦隊が撃ち合う前に、C.F.O.C. の将軍と連絡を取ろうとしている。',
         },
       ],
     },
@@ -843,24 +843,24 @@ export const TEXT = {
       progress: '레이드 이야기 진행',
       scenes: [
         {
-          eyebrow: '궤도 사건',
-          title: '지구와의 연락이 끊겼다',
-          text: '첫 외계 요새가 달 상공에 나타나 지구와 외곽 식민지를 잇는 중계 항로를 끊었습니다. 도시는 불타는 하늘을 바라보았고, 사령부는 방어망에 마지막 통로를 지키라고 명령했습니다.',
+          eyebrow: '옛 동맹',
+          title: '지구 방어 함대의 분열',
+          text: 'S.P.F.O.와 C.F.O.C.는 한때 함께 싸워 렙틸리어의 침공을 물리쳤다. 이제 C.F.O.C.는 동맹을 떠났다.',
         },
         {
-          eyebrow: '강습 명령',
-          title: '한 기라면 봉쇄를 통과할 수 있다',
-          text: '봉쇄선은 함대가 지나가기엔 너무 촘촘하지만, 강습기는 초계대 사이의 빈틈으로 들어갈 수 있습니다. 각 구역의 앵커를 파괴하고 공격을 적진 깊숙이 밀어 넣으세요.',
+          eyebrow: '침공 함대',
+          title: '첫 표적은 펠라직',
+          text: 'C.F.O.C. 장군은 지구 밖의 세계들을 지배하려 한다. 렙틸리어 순양함이 그와 합류했고, 선발대는 이미 펠라직으로 향하고 있다.',
         },
         {
-          eyebrow: '핵심 항로',
-          title: '열다섯 구역이 앞을 막고 있다',
-          text: '정찰기, 생체 병기, 기계 수호자가 요새 핵심으로 향하는 항로를 지키고 있습니다. 수호자를 쓰러뜨릴 때마다 침공망은 약해지고 지구는 회복할 시간을 얻습니다.',
+          eyebrow: '추격 항로',
+          title: '펠라직에서 신더까지',
+          text: 'S.P.F.O.는 Mesiah를 보내 함대를 추격한다. 적 편대를 돌파하고 전투가 펠라직에서 신더로 번지기 전에 막아라.',
         },
         {
-          eyebrow: '귀환 목표',
-          title: '신호를 지구로 가져가라',
-          text: '마지막 코어가 무너지면 붕괴하는 전장을 지나 귀환하세요. 그 신호가 지구에 닿으면 방어망은 다시 가동될 수 있습니다.',
+          eyebrow: '출격 허가',
+          title: 'Mesiah로 집결',
+          text: '다음 브리핑은 격납고에서 열린다. 사령관은 양쪽 함대가 교전하기 전에 C.F.O.C. 장군과 연락하려 한다.',
         },
       ],
     },
@@ -1130,7 +1130,7 @@ export const RAID_TEXT = {
     briefingPanels: [
       {
         title: 'Mission',
-        body: 'Break through the alien blockade, survive all 15 stages, and destroy the final fortress guarding Earth orbit.',
+        body: 'Follow the invasion fleet across 15 stages and destroy the Reptilior flagship in the deepfield.',
         items: ['Your ship fires automatically.', 'PC follows the mouse cursor.', 'Space or the NUKE icon launches a nuclear strike with a 60 second cooldown.', 'Mobile follows above your finger so your hand does not cover the ship.', 'Stages 5, 10, and 15 are guarded by larger boss threats.'],
       },
       {
@@ -1277,7 +1277,7 @@ export const RAID_TEXT = {
     briefingPanels: [
       {
         title: '任务',
-        body: '突破外星封锁，存活全部 15 个关卡，并摧毁守卫地球轨道的最终堡垒。',
+        body: '追击入侵舰队，通过全部 15 个关卡，在深空摧毁雷蜥人旗舰。',
         items: ['战机会自动开火。', 'PC 端跟随鼠标光标。', 'Space 或 NUKE 图标可发动核打击，冷却 60 秒。', '移动端会跟随手指上方，避免手掌遮住战机。', '第 5、10、15 关由更大型 Boss 守卫。'],
       },
       {
@@ -1424,7 +1424,7 @@ export const RAID_TEXT = {
     briefingPanels: [
       {
         title: '任務',
-        body: 'エイリアン封鎖を突破し、全15ステージを生き延び、地球軌道を守る最終要塞を破壊せよ。',
+        body: '全15ステージにわたって侵攻艦隊を追い、深宇宙でレプティリアの旗艦を破壊せよ。',
         items: ['機体は自動で射撃します。', 'PC ではマウスカーソルに追従します。', 'Space または NUKE アイコンで、60秒クールダウンの核攻撃を発射します。', 'モバイルでは指の少し上を追従し、手で機体を隠しません。', 'ステージ 5、10、15 には大型ボスが待ち構えています。'],
       },
       {
@@ -1571,7 +1571,7 @@ export const RAID_TEXT = {
     briefingPanels: [
       {
         title: '임무',
-        body: '외계 봉쇄를 돌파하고 15개 스테이지를 모두 생존한 뒤, 지구 궤도를 지키는 최종 요새를 파괴하세요.',
+        body: '15개 스테이지를 거치며 침공 함대를 추격하고 심우주에서 렙틸리어 기함을 파괴하세요.',
         items: ['기체는 자동으로 발사합니다.', 'PC에서는 마우스 커서를 따라갑니다.', 'Space 또는 NUKE 아이콘으로 60초 쿨다운의 핵 공격을 발사합니다.', '모바일에서는 손가락 위를 따라가 손이 기체를 가리지 않습니다.', '스테이지 5, 10, 15에는 더 큰 보스 위협이 지키고 있습니다.'],
       },
       {
@@ -2327,7 +2327,7 @@ export const RELEASE_TEXT = {
       squid_biology: { title: 'Squid Biology', desc: 'Notes on luminous organs, whip range, and split-bubble pressure.' },
       serpent_guardian: { title: 'Serpent Guardian', desc: 'A stage 10 coiling boss with dangerous lane pressure.' },
       serpent_scales: { title: 'Serpent Scales', desc: 'Layered armor plates and energy nodes from the guardian serpent.' },
-      orbital_fortress: { title: 'Orbital Fortress', desc: 'The final interstellar warship guarding Earth orbit.' },
+      orbital_fortress: { title: 'Orbital Fortress', desc: 'The Reptilior command ship held in reserve in the deepfield.' },
       devil_gundam: { title: 'Devil Gundam', desc: 'A rare Endless Flight anomaly with DG-cell pressure and massive core durability.' },
       devil_cells: { title: 'DG-Cell Contamination', desc: 'Corrupted space patterns recorded around the Devil Gundam anomaly.' },
       master_projectile_trace: { title: 'Master Strike Trace', desc: 'A lunging Devil Gundam projectile profile built for delayed dodge pressure.' },
@@ -2621,7 +2621,7 @@ export const RELEASE_TEXT = {
       squid_biology: { title: '巨鱿生物学', desc: '关于发光器官、触手范围与分裂泡压制的笔记。' },
       serpent_guardian: { title: '星蛇守卫', desc: '第 10 关盘绕 Boss，制造危险路线压力。' },
       serpent_scales: { title: '星蛇鳞甲', desc: '守卫星蛇的层叠装甲板与能量节点。' },
-      orbital_fortress: { title: '轨道堡垒', desc: '守卫地球轨道的最终星际战舰。' },
+      orbital_fortress: { title: '轨道堡垒', desc: '部署在深空的雷蜥人指挥舰。' },
       devil_gundam: { title: '恶魔高达', desc: '无尽飞行中的稀有异常体，拥有 DG 细胞压迫和极高核心耐久。' },
       devil_cells: { title: 'DG 细胞污染', desc: '恶魔高达异常体周围记录到的腐化空间模式。' },
       master_projectile_trace: { title: '东方不败突击轨迹', desc: '一种带延迟闪避压力的恶魔高达冲刺投射体轮廓。' },
@@ -2915,7 +2915,7 @@ export const RELEASE_TEXT = {
       squid_biology: { title: 'スクイッド生態', desc: '発光器官、触手範囲、分裂バブル圧力の記録。' },
       serpent_guardian: { title: 'サーペントガーディアン', desc: '危険なレーン圧力を生むステージ10の蛇型ボス。' },
       serpent_scales: { title: 'サーペントの鱗', desc: '守護蛇の積層装甲板とエネルギーノード。' },
-      orbital_fortress: { title: 'オービタルフォートレス', desc: '地球軌道を守る最終星間戦艦。' },
+      orbital_fortress: { title: 'オービタルフォートレス', desc: '深宇宙で待機していたレプティリアの指揮艦。' },
       devil_gundam: { title: 'デビルガンダム', desc: 'DG 細胞の圧力と極めて高いコア耐久を持つ、エンドレス飛行の希少異常体。' },
       devil_cells: { title: 'DG細胞汚染', desc: 'デビルガンダム異常体の周辺で記録された侵食空間パターン。' },
       master_projectile_trace: { title: 'マスター突撃トレース', desc: '遅延回避圧力を生むデビルガンダムの突進投射体プロファイル。' },
@@ -3209,7 +3209,7 @@ export const RELEASE_TEXT = {
       squid_biology: { title: '오징어 생태', desc: '발광 기관, 촉수 사거리, 분열 거품 압박 기록입니다.' },
       serpent_guardian: { title: '서펜트 가디언', desc: '위험한 라인 압박을 만드는 스테이지 10의 뱀형 보스입니다.' },
       serpent_scales: { title: '서펜트 비늘', desc: '수호 뱀의 겹장갑 판과 에너지 노드입니다.' },
-      orbital_fortress: { title: '궤도 요새', desc: '지구 궤도를 지키는 최종 성간 전함입니다.' },
+      orbital_fortress: { title: '궤도 요새', desc: '심우주에서 대기하던 렙틸리어 지휘함입니다.' },
       devil_gundam: { title: '데빌 건담', desc: 'DG 세포 압박과 거대한 코어 내구도를 지닌 끝없는 비행의 희귀 이상체입니다.' },
       devil_cells: { title: 'DG 세포 오염', desc: '데빌 건담 이상체 주변에서 기록된 침식 우주 패턴입니다.' },
       master_projectile_trace: { title: '마스터 돌격 흔적', desc: '지연 회피 압박을 만드는 데빌 건담 돌진 투사체 프로필입니다.' },

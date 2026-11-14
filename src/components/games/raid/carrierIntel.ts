@@ -1,6 +1,7 @@
 import { getRaidText, getReleaseText, type LanguageCode } from '../../../i18n'
 import { getCampaignBossKind, getGenericBossArt } from './bossCatalog'
 import { cosmicArrival } from './cosmos'
+import { getCampaignOpeningIntel } from './campaignComms'
 import { getRaidStageEncounter } from './stageEncounters'
 import type { BossKind, RaidMode } from './types'
 
@@ -18,15 +19,8 @@ const copy = {
   ko: { order: '요격', heading: '다음 표적' },
 } as const
 
-const openingEvacuation = {
-  en: { objective: 'Reopen Earth’s evacuation route', goals: ['Break the blockade', 'Protect the transports', 'Destroy the enemy carrier'] },
-  zh: { objective: '打通地球撤离航线', goals: ['突破封锁', '保护运输船', '击沉敌方航母'] },
-  ja: { objective: '地球の避難航路を開け', goals: ['封鎖を突破', '輸送船を守る', '敵空母を撃破'] },
-  ko: { objective: '지구 대피 항로를 열어라', goals: ['봉쇄 돌파', '수송선 보호', '적 항모 격침'] },
-}
-
 export function getCarrierSectorIntel(language: LanguageCode, mode: RaidMode, stage: number, recoveryBoss?: BossKind) {
-  if (!recoveryBoss && mode === 'campaign' && stage === 1) return openingEvacuation[language]
+  if (!recoveryBoss && mode === 'campaign' && stage === 1) return getCampaignOpeningIntel(language)
   const words = copy[language] ?? copy.en
   const text = getRaidText(language)
   const kind = recoveryBoss ?? (mode === 'endless' ? undefined : getCampaignBossKind(stage))
@@ -34,8 +28,10 @@ export function getCarrierSectorIntel(language: LanguageCode, mode: RaidMode, st
   const target = codexKey ? getReleaseText(language).codexMap[codexKey].title : kind ? getGenericBossArt(kind, stage)?.name : undefined
   const arrival = mode === 'endless' || recoveryBoss === 'devil' ? undefined : cosmicArrival(stage, true).name
   const formation = (mode === 'campaign' && recoveryBoss !== 'devil') || (!recoveryBoss && mode === 'endless') ? text.hud.formationIntel[getRaidStageEncounter(stage).wings[0][0]] : undefined
+  const campaignBossStage = mode === 'campaign' && (stage === 5 || stage === 10 || stage === 15)
+  const showTarget = recoveryBoss || campaignBossStage
   return {
-    objective: target && recoveryBoss ? `${words.order} ${target}` : undefined,
-    goals: recoveryBoss && target ? [arrival ?? 'Mesiah', formation ?? words.heading, target] : undefined,
+    objective: target && showTarget ? `${words.order} ${target}` : undefined,
+    goals: showTarget && target ? [arrival ?? 'Mesiah', formation ?? words.heading, target] : undefined,
   }
 }
