@@ -29,6 +29,42 @@ try {
   for(let i=0;i<120;i++){try{if((await fetch('http://127.0.0.1:5173/scripts/presentation-fixture.html')).ok)break}catch{}await new Promise(r=>setTimeout(r,250))}
   browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH,args:['--enable-unsafe-swiftshader','--use-angle=swiftshader']})
   await mkdir('presentation-review',{recursive:true})
+  const story = await browser.newPage({ viewport: { width: 640, height: 320 }, reducedMotion: 'reduce' })
+  try {
+    for (const [scene, count, required, last] of [
+      ['5', 8, { 1: ['cfoc', /you just cost us Pelagic/i] }, /before it reaches the coast/],
+      ['10', 9, { 2: ['cfoc', /you ruined Pelagic/i] }, /its next stop is Pelagic/],
+      ['15', 15, { 2: ['enemy', /leave that channel open/i], 3: ['cfoc', /Pelagic was ours/] }, /Everything we have left rides on you/],
+      ['16', 7, { 0: ['command', /rift just opened/] }, /Whatever that thing is/],
+      ['ending', 14, { 2: ['enemy', /put out every light/], 3: ['pilot', /Do we follow/] }, /You gave Earth a chance/],
+    ]) {
+      await story.goto('http://127.0.0.1:5173/scripts/presentation-fixture.html?briefing=' + scene)
+      const advance = story.locator('.raid__carrier-advance')
+      let line = null
+      for (let beat = 0; beat < count; beat += 1) {
+        line = await waitForBriefingLine(story, line)
+        if (required[beat]) {
+          const [channel, pattern] = required[beat]
+          assert.match(line, pattern)
+          await story.locator(`.raid__carrier-hologram[data-channel="${channel}"]`).waitFor()
+        }
+        if (scene === '15' && beat === 3) {
+          await story.locator('.raid__carrier-hologram--relay[data-channel="enemy"]').waitFor()
+        }
+        if (scene === '16') assert.doesNotMatch(line, /gundam/i)
+        const overlap = await story.locator('.raid__carrier-briefing').evaluate(element =>
+          element.querySelector('.raid__carrier-mission').getBoundingClientRect().bottom >
+          element.querySelector('.raid__carrier-comms').getBoundingClientRect().top)
+        assert.equal(overlap, false, `Campaign scene ${scene}, line ${beat + 1}: briefing overlap`)
+        if (beat === count - 1) assert.match(line, last)
+        await advance.click()
+      }
+      await story.locator('#root[data-briefing-complete="true"]').waitFor()
+      console.log('Campaign scene', scene, 'passed')
+    }
+  } finally {
+    await story.close()
+  }
   const cases=[
     {name:'portrait',width:393,height:852,landscape:false},
     {name:'landscape',width:844,height:390,landscape:true,model:'godGundam'},
@@ -104,7 +140,7 @@ try {
     await page.waitForFunction(() => document.querySelector('.raid__carrier-hologram[data-channel=command] img')?.naturalWidth > 0)
     const advance=page.locator('.raid__carrier-advance')
     let previousLine = null
-    for (let beat = 0; beat < 9; beat += 1) {
+    for (let beat = 0; beat < 10; beat += 1) {
       if (beat > 0) await advance.click()
       const full = await waitForBriefingLine(page, previousLine, true)
       previousLine = full
@@ -113,16 +149,17 @@ try {
         await page.locator('.raid__carrier-hologram[data-channel=command] .raid__carrier-emblem').waitFor({ state: 'attached' })
       }
       if (beat === 1) {
-        assert.match(full, /Pelagic and Cinder/)
+        assert.match(full, /big enough to take Pelagic/)
         const general = page.locator('.raid__carrier-hologram[data-channel=cfoc]')
         await general.locator('.raid__carrier-emblem').waitFor({ state: 'attached' })
         await page.waitForFunction(() => document.querySelector('.raid__carrier-hologram[data-channel=cfoc] img')?.naturalWidth > 0)
       }
-      if (beat === 7) {
-        assert.match(full, /Should I follow/)
+      if (beat === 6) {
+        assert.match(full, /broke formation/)
         await page.waitForFunction(() => document.querySelector('.raid__carrier-hologram[data-channel=pilot] img')?.naturalWidth > 0)
       }
-      if (beat === 8) assert.match(full, /covering their advance/)
+      if (beat === 8) assert.match(full, /they're firing/)
+      if (beat === 9) assert.match(full, /Return fire/)
       const reading=await page.locator('.raid__carrier-briefing').evaluate(el=>{
         const a=el.querySelector('.raid__carrier-mission').getBoundingClientRect(),b=el.querySelector('.raid__carrier-comms').getBoundingClientRect()
         return {overlap:a.bottom>b.top,overflow:el.scrollHeight>el.clientHeight}

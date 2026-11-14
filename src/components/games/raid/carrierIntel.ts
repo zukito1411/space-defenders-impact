@@ -1,7 +1,7 @@
 import { getRaidText, getReleaseText, type LanguageCode } from '../../../i18n'
 import { getCampaignBossKind, getGenericBossArt } from './bossCatalog'
 import { cosmicArrival } from './cosmos'
-import { getCampaignOpeningIntel } from './campaignComms'
+import { getCampaignOpeningIntel, getCampaignRiftIntel } from './campaignComms'
 import { getRaidStageEncounter } from './stageEncounters'
 import type { BossKind, RaidMode } from './types'
 
@@ -21,6 +21,7 @@ const copy = {
 
 export function getCarrierSectorIntel(language: LanguageCode, mode: RaidMode, stage: number, recoveryBoss?: BossKind) {
   if (!recoveryBoss && mode === 'campaign' && stage === 1) return getCampaignOpeningIntel(language)
+  if (mode === 'campaign' && stage === 16) return getCampaignRiftIntel(language)
   const words = copy[language] ?? copy.en
   const text = getRaidText(language)
   const kind = recoveryBoss ?? (mode === 'endless' ? undefined : getCampaignBossKind(stage))

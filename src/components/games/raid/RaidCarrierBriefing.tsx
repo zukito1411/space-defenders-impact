@@ -39,7 +39,7 @@ export function RaidCarrierBriefing({ language, mode, stage, recoveryBoss, first
   const onLaunchRef = useRef(onLaunch)
   onLaunchRef.current = onLaunch
   const reduced = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches
-  const [speaker, body, channel, cue] = beats[beat]
+  const [speaker, body, channel, direction, sound, relayed] = beats[beat]
   const hostile = channel === 'enemy'
   const general = channel === 'general'
   const red = hostile || general
@@ -49,8 +49,8 @@ export function RaidCarrierBriefing({ language, mode, stage, recoveryBoss, first
   const portrait = pilot ? PILOT_HOLOGRAM_URL : hostile ? HOSTILE_HOLOGRAM_URL : general ? GENERAL_HOLOGRAM_URL : COMMANDER_HOLOGRAM_URL
   const speakerLabel = campaign && speaker === 'commander' ? story.commander : labels[speaker]
   useEffect(() => {
-    if (hostile) return playHostileChannel(Boolean(cue))
-  }, [hostile, cue])
+    if (hostile || sound) return playHostileChannel(sound === 'laugh')
+  }, [hostile, sound])
   useEffect(() => {
     if (hostile && canLaunch) onInterception()
   }, [hostile, canLaunch, onInterception])
@@ -94,10 +94,15 @@ export function RaidCarrierBriefing({ language, mode, stage, recoveryBoss, first
       {faction && <FactionEmblem red={general} />}
       <img src={portrait} alt="" />
     </div>
+    {relayed && <div className="raid__carrier-hologram raid__carrier-hologram--relay" data-channel="enemy" data-listening aria-hidden="true">
+      <img src={HOSTILE_HOLOGRAM_URL} alt="" />
+    </div>}
     <div className="raid__carrier-comms">
       <div className="raid__carrier-speaker"><div aria-hidden="true" className="raid__carrier-signal">{[0,1,2,3,4].map(i=><i key={i} style={{animationDelay:`${i * -.13}s`}} />)}</div><span>{speakerLabel}</span><small>{underway ? mission.bridgeHold : mission.docked} · {shipName}</small></div>
-      {cue && <div className="raid__carrier-stage-direction">{cue}</div>}
-      <p className="raid__briefing-copy" aria-label={body}><span aria-hidden="true">{visible}<i className="raid__carrier-cursor" /></span></p>
+      <div key={beat} className="raid__carrier-transcript">
+        {direction && <div className="raid__carrier-stage-direction">{direction}</div>}
+        <p className="raid__briefing-copy" aria-label={body}><span aria-hidden="true">{visible}<i className="raid__carrier-cursor" /></span></p>
+      </div>
       <div className="raid__carrier-actions">
         {onBack && <button className="raid__carrier-back" onClick={onBack} type="button">{mission.back}</button>}
         {canLaunch && <button className="raid__carrier-skip" onClick={launch} type="button">{debrief ? story.skip : mission.skip}</button>}

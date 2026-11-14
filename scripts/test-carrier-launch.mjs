@@ -75,20 +75,26 @@ for (const language of ['en', 'zh', 'ja', 'ko']) {
   assert.ok(opening.every(([, text]) => text.length > 0))
   if (mode === 'campaign') {
    assert.deepEqual(opening.map(line => line[0]), [
-    'commander', 'general', 'commander', 'general', 'commander', 'general', 'commander', 'pilot', 'commander',
+    'commander', 'general', 'commander', 'general', 'commander', 'general', 'pilot', 'commander', 'pilot', 'commander',
    ])
    assert.equal(getCarrierConversation(language, mode, 2, false).length, 4)
-   for (const [stage, boss, length] of [[5, 'squid', 7], [10, 'snake', 10], [15, 'final', 14], [16, 'devil', 2]]) {
+   for (const [stage, boss, length] of [[5, 'squid', 8], [10, 'snake', 9], [15, 'final', 15], [16, 'devil', 7]]) {
     const recovery = getCarrierConversation(language, mode, stage, false, boss)
     assert.equal(recovery.length, length)
     assert.ok(recovery.every(([, text]) => text.length > 0))
     assert.equal(recovery.some(line => line[0] === 'reptilior'), stage === 15)
-    assert.equal(recovery.filter(line => line[3]).length, stage === 15 ? 1 : 0)
+    assert.equal(recovery[0][0], 'commander')
+    assert.ok(recovery[0][3])
+    assert.equal(recovery.filter(line => line[4] === 'laugh').length, stage === 15 ? 1 : 0)
+    assert.equal(recovery.filter(line => line[5]).length, stage === 15 ? 3 : 0)
     assert.deepEqual(recovery, getCarrierConversation(language, mode, stage, true))
    }
    const debrief = getCarrierConversation(language, mode, 15, false, undefined, undefined, true)
-   assert.equal(debrief.length, 8)
-   assert.ok(debrief.every(([speaker, line]) => ['commander', 'pilot'].includes(speaker) && line.length > 0))
+   assert.equal(debrief.length, 14)
+   assert.ok(debrief.every(([, line]) => line.length > 0))
+   assert.equal(debrief[2][0], 'reptilior')
+   assert.equal(debrief[2][2], 'enemy')
+   assert.equal(debrief[3][4], 'static')
    assert.deepEqual(debrief, getCarrierConversation(language, mode, 16, false, undefined, undefined, true))
   } else {
    assert.deepEqual(opening.map(line => line[0]), ['commander', 'pilot', 'commander', 'commander'])
