@@ -45,3 +45,17 @@ In Air Raid, open **Pause → Settings → Show FPS and performance timings (Air
 
 - [Latest Android releases](https://github.com/zukito1411/space-defenders-impact/releases)
 - [Build and signature verification](https://github.com/zukito1411/space-defenders-impact/actions/workflows/android-release.yml)
+
+## Android asset downloads
+
+Android releases keep the game code and startup logo in the APK. Install the
+APK as an update to keep your saves and settings. The first launch on the split
+build needs an internet connection to download the game media. After that,
+Android reuses local files for offline play and only fetches packs containing
+missing or changed assets. If a download stops, retry from the startup screen.
+
+The signed release workflow uploads the content-addressed ZIPs to
+`android-assets-v1` before making the APK available. The APK pins its exact
+media inventory. Keep the asset release and its existing packs so that older
+APKs can still finish a first download. Regular APK retention applies only to
+`android-vN` releases.

@@ -1,20 +1,41 @@
 package com.zukito.spaceimpactdefender;
 
 import android.content.res.Configuration;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
 import android.view.WindowInsets;
 import android.view.WindowInsetsController;
 import android.view.WindowManager;
+import android.webkit.WebResourceRequest;
+import android.webkit.WebResourceResponse;
+import android.webkit.WebView;
 import com.getcapacitor.BridgeActivity;
+import com.getcapacitor.BridgeWebViewClient;
 
 public class MainActivity extends BridgeActivity {
+    GameAssetStore gameAssets;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         registerPlugin(LanRelayPlugin.class);
         registerPlugin(FlightViewPlugin.class);
+        registerPlugin(GameAssetsPlugin.class);
+        gameAssets = new GameAssetStore(this);
         super.onCreate(savedInstanceState);
+        Uri local = Uri.parse(bridge.getLocalUrl());
+        bridge.setWebViewClient(new BridgeWebViewClient(bridge) {
+            @Override
+            public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
+                Uri requested = request.getUrl();
+                if (local.getScheme().equals(requested.getScheme()) && local.getAuthority().equals(requested.getAuthority())) {
+                    WebResourceResponse media = gameAssets.serve(request);
+                    if (media != null) return media;
+                }
+                return super.shouldInterceptRequest(view, request);
+            }
+        });
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             WindowManager.LayoutParams attributes = getWindow().getAttributes();

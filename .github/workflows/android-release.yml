@@ -54,6 +54,9 @@ jobs:
       - name: Build production web assets
         run: npm run build
 
+      - name: Package downloadable Android media
+        run: python3 scripts/package-android-assets.py
+
       - name: Copy web assets and sync Capacitor plugins
         run: npx cap sync android
 
@@ -191,6 +194,27 @@ jobs:
           mkdir -p release-output
           cp "$APK" "release-output/SpaceImpactDefender-v${GITHUB_RUN_NUMBER}-release.apk"
 
+      - name: Publish missing media packs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG=android-assets-v1
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            gh release create "$TAG" --target "$GITHUB_SHA" --title 'Android game assets' \
+              --notes 'Immutable media packs used by Space Impact Defender Android APKs.' --prerelease --latest=false
+          fi
+          RELEASE_ID="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" --jq '.id')"
+          gh api --paginate "repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID/assets?per_page=100" \
+            --jq '.[] | select(.state == "uploaded") | .name' > "$RUNNER_TEMP/uploaded-media.txt"
+          # Iterate the manifest so a retried run also repairs any unfinished uploads.
+          while IFS= read -r filename; do
+            if ! grep -Fxq "$filename" "$RUNNER_TEMP/uploaded-media.txt"; then
+              gh release upload "$TAG" "release/android-assets/$filename" --clobber
+            fi
+          done < <(jq -r '.packs[].hash + ".zip"' dist/native-assets.json)
+
       - name: Publish one APK per release with explicit signing status
         env:
           GH_TOKEN: ${{ github.token }}
@@ -199,7 +223,7 @@ jobs:
           set -euo pipefail
           TAG="android-v${GITHUB_RUN_NUMBER}"
           APK="release-output/SpaceImpactDefender-v${GITHUB_RUN_NUMBER}-release.apk"
-          RELEASE_NOTES="Android APK from commit ${GITHUB_SHA}. Signed with the same permanent certificate secured in an unpublished private draft. v19 and earlier had per-build keys and require one last reinstall."
+          RELEASE_NOTES="Android APK from commit ${GITHUB_SHA}. The first launch with split assets downloads the game media. Later updates reuse verified local files and fetch missing packs only. Signed with the permanent Android certificate. v19 and earlier had per-build keys and require one last reinstall."
           if gh release view "$TAG" > /dev/null 2>&1; then
             gh release upload "$TAG" "$APK" --clobber
             gh release edit "$TAG" --latest
