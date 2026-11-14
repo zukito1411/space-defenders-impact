@@ -1,3 +1,4 @@
+import { Capacitor } from '@capacitor/core'
 import { commandBossReleaseCue, markBossAttack, playGuestBossAttack, stopBossAttackAudio } from './bossAudio'
 import { CarrierAudio } from './carrierAudio'
 import { getRaidBgmTrack, RAID_BGM_LEVEL } from './raidSoundtrack'
@@ -357,6 +358,8 @@ export function GradiusRaid({
   const unlockedStageRef = useRef(getUnlockedStage())
   const [carrierAudio] = useState(() => new CarrierAudio())
   const raidBgmElementRef = useRef<HTMLAudioElement | null>(null)
+  const raidBgmLoadRef = useRef<AbortController | null>(null)
+  const raidBgmObjectUrlRef = useRef<string | null>(null)
   const raidBgmPlayRef = useRef<Promise<void> | null>(null)
   const bgmFadeRef = useRef(0)
   const raidBgmTargetVolumeRef = useRef(0)
@@ -1423,6 +1426,11 @@ export function GradiusRaid({
     if (bgmFadeRef.current) cancelAnimationFrame(bgmFadeRef.current)
     bgmFadeRef.current = 0
     raidBgmPlayRef.current = null
+    if (raidBgmLoadRef.current) {
+      raidBgmLoadRef.current.abort()
+      raidBgmLoadRef.current = null
+      raidBgmTrackRef.current = null
+    }
     if (typeof window !== 'undefined') {
       if (raidBgmDuckAnimationRef.current) window.cancelAnimationFrame(raidBgmDuckAnimationRef.current)
       if (raidBgmDuckRestoreTimerRef.current) window.clearTimeout(raidBgmDuckRestoreTimerRef.current)
@@ -1442,7 +1450,8 @@ export function GradiusRaid({
 
   const resumeRaidBgm = useCallback(() => {
     const audio = raidBgmElementRef.current
-    if (!raidBgmModeRef.current || !audio?.paused || audio.error || raidBgmPlayRef.current || !getGameSoundEnabled()) return
+    if (!raidBgmModeRef.current || !audio?.paused || !audio.getAttribute('src') ||
+      audio.error || raidBgmLoadRef.current || raidBgmPlayRef.current || !getGameSoundEnabled()) return
     const attempt = audio.play()
     raidBgmPlayRef.current = attempt
     void attempt.catch(() => {
@@ -1488,11 +1497,17 @@ export function GradiusRaid({
     raidBgmDuckRestoreTimerRef.current = 0
     raidBgmDuckAnimationRef.current = 0
     raidBgmPlayRef.current = null
+    raidBgmLoadRef.current?.abort()
+    raidBgmLoadRef.current = null
     audio.pause()
+    audio.removeAttribute('src')
+    if (raidBgmObjectUrlRef.current) {
+      URL.revokeObjectURL(raidBgmObjectUrlRef.current)
+      raidBgmObjectUrlRef.current = null
+    }
     audio.loop = true
     audio.preload = 'auto'
     audio.volume = 0
-    audio.src = track
     const started = performance.now()
     const fade = (time: number) => {
       const progress = Math.max(0, Math.min(1, (time - started) / 360))
@@ -1502,7 +1517,35 @@ export function GradiusRaid({
       bgmFadeRef.current = progress < 1 ? requestAnimationFrame(fade) : 0
     }
     bgmFadeRef.current = requestAnimationFrame(fade)
-    resumeRaidBgm()
+    if (Capacitor.getPlatform() !== 'android') {
+      audio.src = track
+      resumeRaidBgm()
+      return
+    }
+
+    // Read Android's verified local file with a normal GET. The media player
+    // can seek and loop the resulting Blob without WebView Range requests.
+    audio.load()
+    const load = new AbortController()
+    raidBgmLoadRef.current = load
+    void fetch(track, { signal: load.signal }).then(response => {
+      if (!response.ok) throw new Error(`Soundtrack HTTP ${response.status}`)
+      return response.blob()
+    }).then(blob => {
+      if (load.signal.aborted) return
+      if (!blob.size || !/^(audio\/|application\/ogg$)/i.test(blob.type)) throw new Error('Invalid soundtrack response')
+      const localUrl = URL.createObjectURL(blob)
+      raidBgmObjectUrlRef.current = localUrl
+      raidBgmLoadRef.current = null
+      audio.src = localUrl
+      resumeRaidBgm()
+    }).catch(error => {
+      if (load.signal.aborted) return
+      console.warn('Could not read the local raid soundtrack', track, error)
+      raidBgmLoadRef.current = null
+      audio.src = track
+      resumeRaidBgm()
+    })
   }, [resumeRaidBgm, stopRaidBgm])
 
   stopRaidBgmRef.current = stopRaidBgm
@@ -7580,6 +7623,13 @@ export function GradiusRaid({
     stopBossAttackAudio()
     stopBGM()
     stopRaidBgm()
+    if (raidBgmObjectUrlRef.current) {
+      raidBgmElementRef.current?.removeAttribute('src')
+      raidBgmElementRef.current?.load()
+      URL.revokeObjectURL(raidBgmObjectUrlRef.current)
+      raidBgmObjectUrlRef.current = null
+      raidBgmTrackRef.current = null
+    }
   }, [stopRaidBgm])
 
   const updatePointer = (clientX: number, clientY: number, pointerType: string) => {
