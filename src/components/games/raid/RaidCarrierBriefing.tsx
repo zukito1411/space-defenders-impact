@@ -99,8 +99,10 @@ export function RaidCarrierBriefing({ language, mode, stage, recoveryBoss, first
     </div>}
     <div className="raid__carrier-comms">
       <div className="raid__carrier-speaker"><div aria-hidden="true" className="raid__carrier-signal">{[0,1,2,3,4].map(i=><i key={i} style={{animationDelay:`${i * -.13}s`}} />)}</div><span>{speakerLabel}</span><small>{underway ? mission.bridgeHold : mission.docked} · {shipName}</small></div>
-      {direction && <div className="raid__carrier-stage-direction">{direction}</div>}
-      <p className="raid__briefing-copy" aria-label={body}><span aria-hidden="true">{visible}<i className="raid__carrier-cursor" /></span></p>
+      <div key={beat} className="raid__carrier-transcript">
+        {direction && <div className="raid__carrier-stage-direction">{direction}</div>}
+        <p className="raid__briefing-copy" aria-label={body}><span aria-hidden="true">{visible}<i className="raid__carrier-cursor" /></span></p>
+      </div>
       <div className="raid__carrier-actions">
         {onBack && <button className="raid__carrier-back" onClick={onBack} type="button">{mission.back}</button>}
         {canLaunch && <button className="raid__carrier-skip" onClick={launch} type="button">{debrief ? story.skip : mission.skip}</button>}
