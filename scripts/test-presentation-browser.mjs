@@ -64,11 +64,13 @@ try {
     assert.equal(layout.overflow,false,`${name}: briefing overflow`)
     assert.ok(layout.commsBottom<=height,`${name}: actions below screen`)
     await page.waitForFunction(() => document.querySelector('.raid__carrier-hologram[data-channel=command] img')?.naturalWidth > 0)
-    for(let beat=0;beat<4;beat++){
+    for(let beat=0;beat<8;beat++){
       const advance=page.locator('.raid__carrier-advance')
       if(beat>0)await advance.click()
       const paragraph=page.locator('.raid__carrier-comms p')
       const full=await paragraph.getAttribute('aria-label')
+      if(beat===0)assert.match(full,/invasion fleet/)
+      if(beat===6)assert.match(full,/get the next transports off the ground/)
       if(await paragraph.innerText()!==full)await advance.click()
       assert.equal(await paragraph.innerText(),full,`${name}: full transmission is readable`)
       const reading=await page.locator('.raid__carrier-briefing').evaluate(el=>{

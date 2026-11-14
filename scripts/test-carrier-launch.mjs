@@ -67,7 +67,14 @@ for(const language of ['en','zh','ja','ko'])for(const mode of ['campaign','endle
  const m=getCarrierMission(language,mode)
  assert.equal(m.goals.length,3)
  const opening = getCarrierConversation(language,mode,1,false)
- assert.deepEqual(opening.map(line => line[0]), ['commander','pilot','commander','commander'])
+ assert.deepEqual(opening.map(line => line[0]), mode === 'campaign'
+  ? ['commander','pilot','commander','pilot','commander','pilot','commander','commander']
+  : ['commander','pilot','commander','commander'])
+ assert.ok(opening.every(([, text, channel]) => text.length > 0 && !channel))
+ if (mode === 'campaign') {
+  assert.equal(getCarrierConversation(language,mode,2,false).length,4)
+  assert.notEqual(getCarrierConversation(language,mode,1,true).at(-1)[1],opening.at(-1)[1])
+ }
  for (const boss of ['squid','snake','final','devil','super']) {
   const recovery = getCarrierConversation(language,mode,5,false,boss)
   assert.deepEqual(recovery.map(line => line[0]), ['commander','pilot','enemy','pilot','commander','enemy','commander','commander'])
