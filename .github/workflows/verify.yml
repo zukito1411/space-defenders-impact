@@ -83,6 +83,8 @@ jobs:
         run: |
           npm ci
           npm run build
+          python3 scripts/test-android-asset-packaging.py
+          python3 scripts/package-android-assets.py
           npx cap sync android
       - name: Generate temporary CI-only signing key
         shell: bash
@@ -118,6 +120,20 @@ jobs:
           test -s "$APK"
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose "$APK"
 
+      - name: Verify APK media separation
+        run: |
+          python3 - <<'PY'
+          import json
+          from zipfile import ZipFile
+
+          with ZipFile("android/app/build/outputs/apk/release/SpaceImpactDefender-release.apk") as apk:
+              files = set(apk.namelist())
+              manifest = json.loads(apk.read("assets/public/native-assets.json"))
+              assert "assets/public/assets/brand/zuki-logo-v1.png" in files
+              assert "assets/public/index.html" in files
+              assert manifest["files"] and manifest["packs"]
+              assert all("assets/public/" + path not in files for path in manifest["files"])
+          PY
 
 
   presentation-browser:

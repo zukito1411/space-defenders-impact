@@ -22,6 +22,9 @@
       #startup-splash.is-complete { opacity: 0; }
       #startup-splash .startup-error { position: absolute; bottom: max(64px,calc(env(safe-area-inset-bottom) + 56px)); left: 24px; right: 24px; color: #d8e4e8; text-align: center; font: 14px/1.5 sans-serif; }
       #startup-splash .startup-error button { display: block; margin: 10px auto 0; padding: 8px 18px; border: 1px solid #8b9ba3; border-radius: 4px; background: #111c25; color: #fff; }
+      #startup-splash:has(.startup-download) img { width: min(55vw, 35dvh, 280px); align-self: start; }
+      #startup-splash .startup-download { bottom: max(48px, calc(env(safe-area-inset-bottom) + 44px)); }
+      #startup-splash .startup-download progress { width: min(80vw, 330px); accent-color: #66dbe7; }
       @keyframes startup-logo-in { from { opacity: 0; } to { opacity: 1; } }
       @media (prefers-reduced-motion: reduce) { #startup-splash { transition: none; } #startup-splash.is-ready img { animation: none; opacity: 1; } }
     </style>
