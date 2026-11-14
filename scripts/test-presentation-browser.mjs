@@ -200,7 +200,7 @@ try {
     await recovery.screenshot({ path: 'presentation-review/mesiah-recovery-briefing.png' })
     const advance = briefing.locator('.raid__carrier-advance')
     const paragraph = briefing.locator('.raid__briefing-copy')
-    const finishLine = () => waitForBriefingLine(recovery)
+    const finishLine = () => waitForBriefingLine(recovery, null, true)
     for (let beat = 0; beat < 2; beat++) {
       await finishLine()
       await advance.click()
