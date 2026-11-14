@@ -4343,6 +4343,15 @@ export function GradiusRaid({
     })
   }, [onRunComplete, playerName])
 
+  const showRaidVictory = useCallback(() => {
+    carrierStopRef.current = null
+    phaseRef.current = 'victory'
+    victoryBlackoutRef.current = VICTORY_BLACKOUT_SECONDS
+    startRaidBgm(MAX_RAID_STAGE, 'ending')
+    reportRaidRunComplete('victory')
+    syncSnapshot()
+  }, [reportRaidRunComplete, startRaidBgm, syncSnapshot])
+
   const exitRaid = useCallback(() => {
     const score = Math.max(playerRef.current.score, remotePlayerRef.current?.score ?? 0)
     if (phaseRef.current === 'victory' || carrierStopRef.current?.debrief) {
@@ -4582,15 +4591,6 @@ export function GradiusRaid({
       enemyShotsRef.current.push({ id: shotId++, x: enemy.x, y: enemy.y + 2, vx: (aimX / mag) * 29, vy: (aimY / mag) * 29, damage: 1, kind: 'enemy', radius: 1.25 })
     }
   }, [emitCommandBossShot])
-
-  const showRaidVictory = useCallback(() => {
-    carrierStopRef.current = null
-    phaseRef.current = 'victory'
-    victoryBlackoutRef.current = VICTORY_BLACKOUT_SECONDS
-    startRaidBgm(MAX_RAID_STAGE, 'ending')
-    reportRaidRunComplete('victory')
-    syncSnapshot()
-  }, [reportRaidRunComplete, startRaidBgm, syncSnapshot])
 
   const beginCarrierRecovery = useCallback((targetStage: number, boss?: BossKind) => {
     const player = playerRef.current
