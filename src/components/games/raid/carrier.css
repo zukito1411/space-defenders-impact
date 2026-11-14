@@ -71,7 +71,9 @@
   29%, 52%, 69% { opacity: 1; }
   100% { opacity: 0; }
 }
-.raid__carrier-stage-direction { margin-top: 6px; color: #e2a6a8; font-size: 11px; font-style: italic; }
+.raid__carrier-stage-direction { margin: 6px 0; color: #a6c1d2; font-size: 11px; font-style: italic; }
+.raid__carrier-briefing[data-hostile] .raid__carrier-stage-direction { color: #e2a6a8; }
+.raid__carrier-hologram.raid__carrier-hologram--relay { left: 79%; width: min(16vw, 14vh, 100px); }
 .raid__carrier-hologram::after {
   content: '';
   position: absolute;
@@ -121,6 +123,7 @@
 #root .raid--landscape .raid__carrier-comms p { font-size: 12px; min-height: 4.65em; }
 .raid--landscape .raid__carrier-actions { margin-top: 8px; }
 .raid--landscape .raid__carrier-hologram { left: 72%; top: 51%; width: min(31vw, 56vh, 250px); }
+.raid--landscape .raid__carrier-hologram.raid__carrier-hologram--relay { left: 88%; top: 36%; width: min(13vw, 24vh, 100px); }
 @media (max-height: 700px) and (orientation: portrait) {
   .raid__carrier-mission { top: 58px; }
   #root .raid__carrier-mission h2 { font-size: 22px; margin: 7px 0 10px; }
