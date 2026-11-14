@@ -99,7 +99,7 @@ try {
         assert.match(full, /Pelagic and Cinder/)
         const general = page.locator('.raid__carrier-hologram[data-channel=cfoc]')
         await general.locator('.raid__carrier-emblem').waitFor({ state: 'attached' })
-        assert.ok(await general.locator('img').evaluate(img => img.complete && img.naturalWidth > 0))
+        await page.waitForFunction(() => document.querySelector('.raid__carrier-hologram[data-channel=cfoc] img')?.naturalWidth > 0)
       }
       if (beat === 8) assert.match(full, /covering their advance/)
       const reading=await page.locator('.raid__carrier-briefing').evaluate(el=>{
