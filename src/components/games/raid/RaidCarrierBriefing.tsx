@@ -7,26 +7,31 @@ import { playHostileChannel } from './carrierAudio'
 import { COMMANDER_HOLOGRAM_URL, COMMS_COPY, getCarrierConversation, HOSTILE_HOLOGRAM_URL } from './hostileBriefing'
 import './carrier.css'
 
-export function RaidCarrierBriefing({ language, mode, stage, recoveryBoss, shipName, underway, canLaunch, onLaunch, onBack }: {
+export function RaidCarrierBriefing({ language, mode, stage, recoveryBoss, firstInterception, shipName, underway, canLaunch, onInterception, onLaunch, onBack }: {
   language: LanguageCode; mode: RaidMode; stage: number; shipName: string
   recoveryBoss?: BossKind; underway: boolean; canLaunch: boolean; onLaunch: () => void; onBack?: () => void
+  firstInterception?: boolean
+  onInterception: () => void
 }) {
   const mission = getCarrierMission(language, mode)
   const intel = getCarrierSectorIntel(language, mode, stage, recoveryBoss)
   const labels = COMMS_COPY[language]
-  const beats = getCarrierConversation(language, mode, stage, underway, recoveryBoss)
+  const beats = getCarrierConversation(language, mode, stage, underway, recoveryBoss, firstInterception)
   const [beat, setBeat] = useState(0)
   const [elapsed, setElapsed] = useState(0)
   const launched = useRef(false)
   const onLaunchRef = useRef(onLaunch)
   onLaunchRef.current = onLaunch
   const reduced = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches
-  const [speaker, body] = beats[beat]
-  const hostile = speaker === 'enemy'
+  const [speaker, body, channel] = beats[beat]
+  const hostile = channel === 'enemy'
   const portrait = hostile ? HOSTILE_HOLOGRAM_URL : COMMANDER_HOLOGRAM_URL
   useEffect(() => {
     if (hostile) return playHostileChannel()
   }, [hostile])
+  useEffect(() => {
+    if (hostile && canLaunch) onInterception()
+  }, [hostile, canLaunch, onInterception])
   const revealSeconds = reduced ? 0 : Array.from(body).length / (language === 'en' ? 48 : 23)
   const visible = elapsed >= revealSeconds ? body : Array.from(body).slice(0, Math.floor(elapsed * (language === 'en' ? 48 : 23))).join('')
   const launch = () => {
@@ -62,7 +67,7 @@ export function RaidCarrierBriefing({ language, mode, stage, recoveryBoss, shipN
       <div className="raid__carrier-goals">{(intel.goals ?? mission.goals).map((goal, index) => <span key={goal}><b>0{index + 1}</b>{goal}</span>)}</div>
     </div>
     <div key={portrait} className="raid__carrier-hologram" data-channel={hostile ? 'enemy' : 'command'}
-      data-listening={speaker === 'pilot' || undefined} aria-hidden="true">
+      data-listening={(hostile ? speaker !== 'enemy' : speaker === 'pilot') || undefined} aria-hidden="true">
       <img src={portrait} alt="" />
     </div>
     <div className="raid__carrier-comms">
