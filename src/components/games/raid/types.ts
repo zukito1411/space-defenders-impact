@@ -17,7 +17,7 @@ export type MirageBossKind = 'squid' | 'snake'
 
 export type MiniBossKind = 'stalker' | 'brood' | 'lancer'
 
-export type RaidBgmMode = 'cruise' | 'combat' | 'boss' | 'ending'
+export type RaidBgmMode = 'cruise' | 'combat' | 'boss' | 'ending' | 'hangar'
 
 export type RaidMode = 'campaign' | 'endless' | 'bossRush'
 

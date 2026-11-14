@@ -11,7 +11,9 @@ import { RAID_COMBAT_ART_URLS, preloadRaidCombatArt } from './combatArt'
 import { SPACE_JET_FORCE_FIELD_ASSET_PATH, getSpaceJetForceFieldSprite, RAID_COBRA_BOSS_ASSET_PATH, RAID_CORE_LANDER_BARRAGE_ASSET_PATHS, RAID_CORE_LANDER_COMBAT_MODELS, RAID_DERELICT_WRECK_ASSET_PATH, RAID_DERELICT_WRECK_VARIANTS, RAID_DEVIL_BOSS_ASSET_PATHS, RAID_DEVIL_BOSS_POSES, RAID_DEVIL_MASTER_PROJECTILE_ASSET_PATH, RAID_FINAL_BOSS_ASSET_PATH, RAID_OTHER_ASSET_PATHS, RAID_SQUID_BOSS_ASSET_PATH, getCobraBossCanvasSprite, getGenericBossCanvasSprite, getDerelictWreckCanvasSprite, getDevilBossCanvasSprite, getDevilMasterProjectileCanvasSprite, getEliteAlienCanvasSprite, getFinalBossCanvasSprite, getGodGundamBarrageCanvasSprite, getNormalAlienCanvasSprite, getRaidOtherCanvasSprite, getShipCanvasSprite, getSquidBossCanvasSprite, warmRaidCanvasFilterVariants } from './assets'
 import type { CanvasSpriteEntry, GodGundamBarragePose, RaidOtherAssetKey } from './assets'
 import { DEFAULT_PICKUP_VOICE_SAMPLE_URL, PICKUP_VOICE_SAMPLE_URLS } from './audio'
-import { RAID_BOSS_BGM_TRACK, RAID_BOSS_FINAL_BGM_TRACK, RAID_BOSS_SNAKE_BGM_TRACK, RAID_BOSS_SQUID_BGM_TRACK, RAID_DEFAULT_BGM_TRACK, RAID_ENDING_BGM_TRACK, SHIP_OPTIONS } from './constants'
+import { SHIP_OPTIONS } from './constants'
+import { RAID_SOUNDTRACK_URLS } from './raidSoundtrack'
+import { HOSTILE_HOLOGRAM_URL } from './hostileBriefing'
 import { getHomingMissileSprite, warmPowerPickupSpriteCache } from './effectsRender'
 import { getCoreBlastSprite, getHoneycombShieldSprite, warmRaidEngineExhaust } from './playerRender'
 import type { RaidAssetPreloadState } from './types'
@@ -70,6 +72,7 @@ export function warmRaidCanvasAssets() {
 
 export function getRaidPersistentImageUrls() {
   const urls = new Set<string>()
+  urls.add(HOSTILE_HOLOGRAM_URL)
   urls.add(getPublicAssetUrl(SPACE_JET_FORCE_FIELD_ASSET_PATH))
   for (const url of [...RAID_COMBAT_ART_URLS, ...COSMOS_ART_URLS, ...SURFACE_ART_URLS, ...WRECK_ART_URLS]) urls.add(url)
   for (const art of CAMPAIGN_BOSS_ART) urls.add(getPublicAssetUrl(art.assetPath))
@@ -100,12 +103,7 @@ export function getRaidPersistentImageUrls() {
 export function getRaidPersistentAudioUrls() {
   return [
     COSMOS_AMBIENCE_URL,
-    RAID_DEFAULT_BGM_TRACK,
-    RAID_BOSS_BGM_TRACK,
-    RAID_BOSS_SQUID_BGM_TRACK,
-    RAID_BOSS_SNAKE_BGM_TRACK,
-    RAID_BOSS_FINAL_BGM_TRACK,
-    RAID_ENDING_BGM_TRACK,
+    ...RAID_SOUNDTRACK_URLS,
     DEFAULT_PICKUP_VOICE_SAMPLE_URL,
     ...Object.values(PICKUP_VOICE_SAMPLE_URLS),
     getPublicAssetUrl('audio/sfx_laser.wav'),
