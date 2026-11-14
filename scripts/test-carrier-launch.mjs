@@ -60,10 +60,19 @@ for (const landscape of [false,true]) for (const reduced of [false,true]) for (c
  assert.equal(exterior.exteriorAlpha,!reduced&&!underway?1:0)
 }
 const {getCarrierMission}=await module('src/components/games/raid/carrierMission.ts')
+const commsSource = read('src/components/games/raid/hostileBriefing.ts').replace(/^import .*\n/gm, '')
+const commsJs = ts.transpileModule('const getPublicAssetUrl = path => path;\n' + commsSource, {compilerOptions:{module:ts.ModuleKind.ESNext}}).outputText
+const {getCarrierConversation} = await import('data:text/javascript;base64,' + Buffer.from(commsJs).toString('base64'))
 for(const language of ['en','zh','ja','ko'])for(const mode of ['campaign','endless','bossRush']){
  const m=getCarrierMission(language,mode)
- assert.equal(m.goals.length,3);assert.equal(m.beats.length,3)
- assert.ok(m.beats.every(b=>b.length===3&&b[2].length>0))
+ assert.equal(m.goals.length,3)
+ const opening = getCarrierConversation(language,mode,1,false)
+ assert.deepEqual(opening.map(line => line[0]), ['commander','pilot','commander','commander'])
+ for (const boss of ['squid','snake','final','devil','super']) {
+  const recovery = getCarrierConversation(language,mode,5,false,boss)
+  assert.deepEqual(recovery.map(line => line[0]), ['commander','pilot','enemy','commander'])
+  assert.ok(recovery.every(line => line[1].length > 0))
+ }
 }
 const runtime=read('src/components/games/raid/GradiusRaidRuntime.tsx')
 assert.match(runtime,/stageEntryRef.current = underway \? MESIAH_ENTRY_SECONDS : CARRIER_LAUNCH_SECONDS/)

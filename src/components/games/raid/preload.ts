@@ -13,7 +13,8 @@ import type { CanvasSpriteEntry, GodGundamBarragePose, RaidOtherAssetKey } from 
 import { DEFAULT_PICKUP_VOICE_SAMPLE_URL, PICKUP_VOICE_SAMPLE_URLS } from './audio'
 import { SHIP_OPTIONS } from './constants'
 import { RAID_SOUNDTRACK_URLS } from './raidSoundtrack'
-import { HOSTILE_HOLOGRAM_URL } from './hostileBriefing'
+import { BOSS_AUDIO_URLS } from './bossAudio'
+import { COMMANDER_HOLOGRAM_URL, HOSTILE_HOLOGRAM_URL } from './hostileBriefing'
 import { getHomingMissileSprite, warmPowerPickupSpriteCache } from './effectsRender'
 import { getCoreBlastSprite, getHoneycombShieldSprite, warmRaidEngineExhaust } from './playerRender'
 import type { RaidAssetPreloadState } from './types'
@@ -73,6 +74,7 @@ export function warmRaidCanvasAssets() {
 export function getRaidPersistentImageUrls() {
   const urls = new Set<string>()
   urls.add(HOSTILE_HOLOGRAM_URL)
+  urls.add(COMMANDER_HOLOGRAM_URL)
   urls.add(getPublicAssetUrl(SPACE_JET_FORCE_FIELD_ASSET_PATH))
   for (const url of [...RAID_COMBAT_ART_URLS, ...COSMOS_ART_URLS, ...SURFACE_ART_URLS, ...WRECK_ART_URLS]) urls.add(url)
   for (const art of CAMPAIGN_BOSS_ART) urls.add(getPublicAssetUrl(art.assetPath))
@@ -104,6 +106,7 @@ export function getRaidPersistentAudioUrls() {
   return [
     COSMOS_AMBIENCE_URL,
     ...RAID_SOUNDTRACK_URLS,
+    ...BOSS_AUDIO_URLS,
     DEFAULT_PICKUP_VOICE_SAMPLE_URL,
     ...Object.values(PICKUP_VOICE_SAMPLE_URLS),
     getPublicAssetUrl('audio/sfx_laser.wav'),

@@ -1,75 +1,75 @@
 import type { LanguageCode } from '../../../i18n'
 import { getPublicAssetUrl } from '../sound'
-import type { BossKind } from './types'
+import type { BossKind, RaidMode } from './types'
 
-type Exchange = readonly [contact: string, order: string, threat: string, reply: string]
-type RecoveryBoss = 'squid' | 'snake' | 'final' | 'devil' | 'super'
 export const HOSTILE_HOLOGRAM_URL = getPublicAssetUrl('assets/ui/mesiah-hostile-hologram-v1.webp')
+export const COMMANDER_HOLOGRAM_URL = getPublicAssetUrl('assets/ui/mesiah-commander-hologram-v1.webp')
 
-const exchanges: Record<LanguageCode, Record<RecoveryBoss, Exchange>> = {
+type Speaker = 'commander' | 'pilot' | 'enemy'
+type Line = readonly [speaker: Speaker, body: string]
+type Scene = readonly [situation: string, pilot: string, reply: string, launch: string]
+type RecoveryBoss = 'squid' | 'snake' | 'final' | 'devil' | 'super'
+type Scenes = Record<RaidMode | RecoveryBoss | 'checkpoint', Scene>
+
+const scenes: Record<LanguageCode, Scenes> = {
   en: {
-    squid: ['Pilot, we lost a scout under the cloud deck. The Abyss Squid is still down there.',
-      'Take us below the clouds. Draw its tendrils off the carrier. I’ll keep your way home open.',
-      'Your scout called for Mesiah until the water took him. I wondered when you’d answer.',
-      'Cut the channel. We’re going after our scout. Keep your comms open, pilot.'],
-    snake: ['Cinder control has gone quiet. The Serpent Guardian is coiled around the evacuation route.',
-      'Get between it and the convoy. Wait for the sweep to pass, then punch a hole through.',
-      'I can see your convoy through the ash. Which ship should I start with?',
-      'Convoy, hold behind us. Pilot, make it look at you. You’re clear to launch.'],
-    final: ['That fortress is turning its batteries toward Earth. We just watched it burn through a moon relay.',
-      'I need you in close before it takes the shot. The moment those emitters light up, break off.',
-      'Your relay took eleven seconds. How long do you suppose the carrier will last?',
-      'Helm, put Mesiah between the fortress and Earth. Pilot, take those guns away.'],
-    devil: ['Pilot, we’ve picked up DG cells inside the wreck field. Something in there is answering our calls.',
-      'Keep it clear of Mesiah. Let it commit to a charge before you turn back in.',
-      'You keep flying back to that ship. I’ll remember where to find you.',
-      'Close the bay behind you. I want that thing well away from this crew.'],
-    super: ['That carrier has been shadowing us since the last jump. Now it’s cutting across our bow.',
-      'Pull its guns away from our flight deck. Let its first volley go by, then go in.',
-      'Mesiah, your distress calls carry quite far. It was kind of you to leave them on.',
-      'Switch to tightbeam. Pilot, clear the approach so we can pull the rest of the wing aboard.'],
+    campaign: ['Pilot, this is Mesiah. An enemy carrier just took up position between us and Earth. We’ve got evac ships coming in behind us.', 'Are the evac ships staying here?', 'Until you open a lane. Go after the carrier first. We’ll keep its escorts busy while you make your pass.', 'Deck, release the clamps. Pilot, you’re clear to go.'],
+    endless: ['Pilot, another wave is on its way. The last transports are still loading.', 'How much time do they need?', 'As much as you can give them. Stay between the attackers and the transports. We’ll call you back when the last one clears.', 'Deck, clear the bay. Pilot, you’re up.'],
+    bossRush: ['Pilot, we’ve found all three enemy command ships. We can reach the first one before the others close in.', 'Which one do you want me to hit first?', 'The one on your scope. Take it down and I’ll give you the next heading.', 'You’re clear to launch. Call me when you have eyes on it.'],
+    checkpoint: ['Welcome back, pilot. We’ve picked up the next enemy formation ahead of our position.', 'Do I go straight through them?', 'Yes. Clear a lane and stay on this channel. I’ll call out the command ship as soon as we have it.', 'Deck, release the clamps. Pilot, you’re clear to go.'],
+    squid: ['Good to have you back. One of our scouts went down over Pelagic. We picked up a distress call, then something hit the relay buoy.', 'Did anyone get out?', 'The pilot did. I cut the buoy after he gave you his position. You’re welcome to come get him.', 'That came from the Squid’s position. Stay low and pull it off the beacon. I’ll send rescue in behind you.'],
+    snake: ['The evac convoy made it as far as Cinder. There’s a Guardian sitting across the exit, and the transport crews are asking whether to run for it.', 'Tell them to hold. How close is it?', 'Close enough to hear you say that. Tell their crews they have two minutes to turn around.', 'Convoy, stay put. Pilot, get between them and that thing. I’ll give the convoy the go-ahead once you’ve drawn it off.'],
+    final: ['Pilot, the fortress just destroyed our lunar relay. Its main guns are coming around toward Earth.', 'Can you get Mesiah between the guns and Earth?', 'I heard that. If you put your carrier there, I’ll fire through it.', 'Helm, bring us across. Pilot, go for the gun emitters. If they start lighting up, get out of the beam.'],
+    devil: ['Hold on. That distress call coming out of the wreck field is on our frequency. It sounds like one of ours.', 'Can you ask them for their call sign?', 'You don’t recognize me? I heard you ask Mesiah for clearance. I’ve been listening since you left the bay.', 'Comms, shut it out. Pilot, draw Devil Gundam away from the carrier. Wait for it to commit before you turn in.'],
+    super: ['We’ve got a heavy carrier closing on the flight deck. There are still two of our fighters outside waiting to dock.', 'Can we take them in before it gets here?', 'I see both of them. Shut the bay now and I’ll let your carrier go.', 'Keep the bay open. Pilot, get its guns off our fighters. Once it’s looking at you, I can bring them in.'],
   },
   zh: {
-    squid: ['飞行员，一艘侦察机在云层下失联了。深渊巨鱿还在下面。','下到云层底下，把它的触手引离母舰。归航通道我来守。','你的侦察兵一直在呼叫 Mesiah，直到海水淹没了他。我就想，你什么时候才会应答。','切断通讯。我们去找那艘侦察机。飞行员，保持联络。'],
-    snake: ['熔岩区的管制台失联了。蛇形守卫盘踞在撤离航线上。','挡在它和运输队之间。等它扫过，再冲过去打开缺口。','隔着灰烬，我也看得见你们的运输队。你说，我该从哪艘下手？','运输队，跟在我们后面。飞行员，把它的注意力引到你身上。批准出击。'],
-    final: ['那座要塞正把炮口转向地球。我们刚看着它摧毁了月面中继站。','在它开火前贴上去。看到发射器亮起就立刻脱离。','摧毁你们的中继站只用了十一秒。你猜母舰能撑多久？','舵手，把 Mesiah 开到要塞与地球之间。飞行员，打掉那些炮。'],
-    devil: ['飞行员，残骸场里发现了 DG 细胞。有东西在回应我们的呼叫。','别让它靠近 Mesiah。等它冲过来，再回转反击。','你总是飞回那艘船。我会记住，到哪里去找你。','你一离舰就关舱门。把那东西引离我们的船员。'],
-    super: ['那艘航母从上次跃迁就一直尾随我们。它现在正横切舰首。','把它的炮口引离飞行甲板。等第一轮齐射过去再攻进去。','Mesiah，你们的求救信号传得真远。多谢你们一直开着。','切换窄波束。飞行员，清空进场航道，让剩下的僚机回舰。'],
+    campaign: ['飞行员，我是 Mesiah 舰长。敌方航母挡在地球前面，撤离船还在我们身后。','撤离船要留在这儿吗？','等你打开航道。先打航母，我们会拖住它的护航舰。','甲板，松开锁具。飞行员，可以出击。'],
+    endless: ['飞行员，下一波敌军就要到了。最后几艘运输船还在登船。','他们还需要多久？','能撑多久就撑多久。挡在敌机和运输船之间，最后一艘离开后我会叫你回来。','甲板，清空航道。飞行员，轮到你了。'],
+    bossRush: ['飞行员，三艘敌方指挥舰都找到了。我们能在另外两艘赶到前拦住第一艘。','先打哪一艘？','先打雷达上那艘。击沉它以后，我给你下一个航向。','可以出击。看到它就告诉我。'],
+    checkpoint: ['欢迎回来，飞行员。前方发现了下一支敌方编队。','直接从他们中间打过去？','对，打开一条航道，保持联络。找到指挥舰就告诉你。','甲板，松开锁具。飞行员，可以出击。'],
+    squid: ['回来就好。我们有架侦察机坠入佩拉吉克。刚收到求救信号，中继浮标就被打掉了。','有人弹射出来了吗？','飞行员还活着。他把位置告诉你们之后，我切断了浮标。你们可以来找他。','信号来自巨鱿的位置。低空飞，把它从信标旁引开。救援队跟在你后面。'],
+    snake: ['撤离船队到了辛德。守卫堵着出口，运输船在问要不要冲过去。','让他们等一下。敌人离多远？','近到能听到这句话。告诉他们，两分钟之内掉头。','船队原地待命。飞行员，插到他们中间。你把它引开，我就让船队通过。'],
+    final: ['飞行员，要塞刚打掉了月球中继站。主炮正在转向地球。','Mesiah 能挡在主炮和地球之间吗？','我听见了。你把航母开过来，我就连它一起打穿。','舵手，横过来。飞行员，打它的发射器。看到炮口亮起就离开射线。'],
+    devil: ['等等。残骸里那个求救信号用的是我们的频率。听起来像自己人。','能问一下他的呼号吗？','没认出我？你向 Mesiah 请求离舰，我从那时候就在听。','通讯，切断信号。飞行员，把恶魔高达引离母舰。等它冲过来再转回去。'],
+    super: ['一艘重型航母正在逼近飞行甲板。我们还有两架战机在外面等着回舰。','能在它到之前把战机接进来吗？','两架我都看见了。现在关上舱门，我就放过你们的航母。','舱门保持开启。飞行员，把炮火从战机身上引开。我来接他们。'],
   },
   ja: {
-    squid: ['パイロット、雲の下で偵察機を見失った。深淵のイカはまだそこにいる。','雲の下へ降りて、触手を母艦から引き離せ。帰り道はこちらで守る。','偵察兵は海に呑まれるまで Mesiah を呼んでいた。返事はまだかと思ってね。','回線を切れ。偵察機を捜しに行くぞ。パイロット、通信は開けておけ。'],
-    snake: ['シンダーの管制局が沈黙した。サーペント・ガーディアンが避難航路を塞いでいる。','船団と奴の間に入れ。薙ぎ払いをやり過ごしてから突破するんだ。','灰の向こうに船団が見える。さて、どの船から始めようか。','船団は我々の後方へ。パイロット、奴を引きつけろ。発進を許可する。'],
-    final: ['要塞の砲台が地球を向き始めた。ついさっき月の中継局を焼き切ったばかりだ。','撃たれる前に接近しろ。砲口が光ったらすぐに離脱だ。','中継局は十一秒もった。君たちの母艦は何秒もつかな。','操舵、Mesiah を地球と要塞の間に。パイロット、砲台を潰してくれ。'],
-    devil: ['パイロット、残骸の中に DG 細胞の反応。何かがこちらの呼びかけに応えている。','Mesiah に近づけるな。奴が突進してから反転しろ。','君はいつもあの艦に帰る。どこを探せばいいか覚えておこう。','発進したらすぐに閉鎖しろ。奴を乗員に近づけるな。'],
-    super: ['あの母艦、前の跳躍からついてきている。今度は艦首を横切る気だ。','奴の砲を飛行甲板からそらせ。最初の一斉射をかわしてから突っ込め。','Mesiah、救難信号はよく届いているよ。流し続けてくれて助かった。','指向性通信に切り替えろ。パイロット、残りの編隊を収容する進入路を確保してくれ。'],
+    campaign: ['パイロット、こちら Mesiah。敵空母が地球への航路を塞いだ。後ろには避難船がいる。','避難船はここで待機ですか？','君が道を開くまでな。空母を先に叩け。護衛はこちらで引きつける。','甲板、クランプ解除。パイロット、発進していいぞ。'],
+    endless: ['パイロット、次が来る。最後の輸送船はまだ人を乗せている。','あと何分必要ですか？','稼げるだけ頼む。敵と輸送船の間に入れ。最後の船が抜けたら呼び戻す。','甲板を空けろ。パイロット、出番だ。'],
+    bossRush: ['パイロット、指揮艦三隻を捕捉した。残りが合流する前に先頭に届く。','どれから沈めますか？','レーダーに映っている艦だ。沈めたら次の方角を知らせる。','発進していいぞ。目視したら連絡を。'],
+    checkpoint: ['おかえり、パイロット。前方に次の敵編隊を捕捉した。','正面から抜けますか？','そうだ。航路を開いて通信は切るな。指揮艦を見つけたら知らせる。','甲板、クランプ解除。発進していいぞ。'],
+    squid: ['無事だったか。ペラジック上空で偵察機が墜ちた。救難信号の直後に中継ブイがやられた。','脱出できたんですか？','できたさ。位置を伝え終わってからブイを切った。迎えに来ればいい。','イカの位置からだ。低く飛んでビーコンから引き離せ。後ろから救助隊を出す。'],
+    snake: ['避難船団はシンダーまで着いた。出口にガーディアンがいる。船団が強行突破の許可を求めている。','待たせてください。敵との距離は？','その声が聞こえる距離だ。船団に二分で引き返せと伝えろ。','船団は待機。パイロット、間に入れ。君が引きつけたら船を通す。'],
+    final: ['パイロット、要塞が月の中継局を壊した。主砲を地球に向けている。','Mesiah を射線に入れられますか？','聞こえたぞ。空母を出すなら、まとめて撃ち抜く。','操舵、射線に入れ。パイロット、発射器を狙え。光ったらすぐ射線から離れろ。'],
+    devil: ['待て。残骸からの救難信号、うちの周波数だ。声も味方に聞こえる。','コールサインを聞けますか？','わからないか？ Mesiah に発進許可を求めていたな。あれからずっと聞いていた。','通信を切れ。パイロット、デビルガンダムを母艦から離せ。突っ込んできたら反転だ。'],
+    super: ['重空母が飛行甲板に迫っている。まだ二機が外で着艦を待っている。','敵が来る前に収容できますか？','二機とも見えている。今すぐ格納庫を閉めれば、母艦は見逃してやる。','格納庫は開けておけ。パイロット、砲火を引きつけろ。その間に二機を収容する。'],
   },
   ko: {
-    squid: ['파일럿, 구름 아래에서 정찰기를 잃었다. 심연의 오징어는 아직 그 아래 있다.','구름 아래로 내려가 촉수를 모함에서 떼어 놔. 돌아오는 길은 내가 지킨다.','정찰병은 바닷물에 잠길 때까지 Mesiah를 불렀지. 언제 대답하나 궁금했다.','회선 끊어. 정찰기를 찾으러 간다. 파일럿, 통신은 열어 둬.'],
-    snake: ['신더 관제소가 응답하지 않는다. 서펀트 가디언이 대피 항로를 막고 있다.','수송선단과 놈 사이에 들어가. 휩쓸기가 지나가면 틈을 뚫어.','잿더미 너머로 수송선이 보이는군. 어느 배부터 시작할까?','선단은 우리 뒤로. 파일럿, 놈의 시선을 끌어. 출격을 허가한다.'],
-    final: ['요새가 포대를 지구 쪽으로 돌리고 있다. 방금 달의 중계소를 태워 버렸어.','쏘기 전에 접근해. 포구가 빛나는 순간 이탈한다.','중계소는 11초 버텼다. 너희 모함은 얼마나 버틸까?','조타, Mesiah를 지구와 요새 사이로. 파일럿, 저 포대들을 없애 줘.'],
-    devil: ['파일럿, 잔해 지대 안에서 DG 세포가 잡혔다. 뭔가 우리 호출에 응답하고 있다.','놈을 Mesiah에서 멀리 떼어 놔. 돌진이 시작되면 돌아서 반격해.','넌 늘 그 함선으로 돌아가는군. 어디서 널 찾을지 기억해 두지.','출격하면 바로 격납고를 닫아. 저것을 우리 승무원에게 가까이 두지 마.'],
-    super: ['저 항모가 지난 도약부터 따라붙었어. 이제 우리 뱃머리를 가로지른다.','놈의 포를 비행 갑판에서 돌려. 첫 일제 사격을 흘린 뒤 파고들어.','Mesiah, 구조 신호가 아주 멀리 들리는군. 계속 켜 둬서 고맙다.','지향성 통신으로 전환해. 파일럿, 나머지 편대가 돌아오도록 접근로를 열어 줘.'],
+    campaign: ['파일럿, 여기는 Mesiah. 적 항모가 지구로 가는 길을 막았다. 대피선들이 우리 뒤에 있어.','대피선은 여기서 기다립니까?','네가 길을 열 때까지는. 항모부터 공격해. 호위함은 우리가 붙잡아 둘게.','갑판, 고정 장치 풀어. 파일럿, 출격해도 된다.'],
+    endless: ['파일럿, 다음 편대가 오고 있다. 마지막 수송선에 아직 사람들이 타고 있어.','얼마나 더 필요합니까?','벌어 줄 수 있는 만큼. 적과 수송선 사이를 막아 줘. 마지막 배가 빠지면 부르겠다.','갑판 비워. 파일럿, 네 차례야.'],
+    bossRush: ['파일럿, 적 지휘함 세 척을 찾았다. 나머지가 합류하기 전에 첫 함선에 닿을 수 있어.','어느 쪽부터 칠까요?','레이더에 잡힌 함선. 격침시키면 다음 방향을 알려 줄게.','출격해도 된다. 직접 보이면 연락해.'],
+    checkpoint: ['돌아왔군, 파일럿. 전방에서 다음 적 편대를 잡았다.','정면으로 뚫습니까?','그래. 길을 열고 통신은 유지해. 지휘함을 찾으면 바로 알려 줄게.','갑판, 고정 장치 풀어. 출격해도 된다.'],
+    squid: ['무사히 왔군. 펠라직 상공에서 정찰기 한 대가 떨어졌다. 구조 신호 직후 중계 부표가 끊겼어.','탈출했습니까?','살아 있어. 위치를 알려 준 다음에 내가 부표를 껐지. 구하러 와도 좋아.','오징어가 있는 곳에서 온 신호야. 낮게 가서 신호기에서 떼어 놔. 뒤에 구조대를 보낼게.'],
+    snake: ['대피 선단이 신더까지 갔다. 가디언이 출구를 막고 있어. 수송선들이 돌파해도 되냐고 묻는다.','기다리라고 하세요. 적이 얼마나 가깝죠?','그 말이 들릴 만큼. 선단에 2분 안에 돌아가라고 해.','선단은 대기. 파일럿, 사이에 들어가. 네가 끌어내면 배들을 통과시킬게.'],
+    final: ['파일럿, 요새가 달 중계소를 날려 버렸다. 주포가 지구 쪽으로 돌아가고 있어.','Mesiah를 사선에 넣을 수 있습니까?','들었다. 항모를 거기에 세우면 같이 뚫어 버리겠다.','조타, 사선으로 들어가. 파일럿, 발사기를 노려. 빛이 나면 빔 경로에서 벗어나.'],
+    devil: ['잠깐. 잔해에서 들리는 구조 신호, 우리 주파수다. 목소리도 아군 같아.','호출 부호를 물어볼까요?','나를 모르겠나? Mesiah에 출격 허가를 요청했지. 그때부터 듣고 있었다.','통신 끊어. 파일럿, 데빌 건담을 모함에서 떼어 놔. 놈이 돌진하면 돌아서.'],
+    super: ['중항모가 비행 갑판으로 다가온다. 아직 전투기 두 대가 밖에서 착함 대기 중이야.','적이 오기 전에 수용할 수 있습니까?','두 대 다 보인다. 지금 격납고를 닫으면 모함은 보내 주지.','격납고는 열어 둬. 파일럿, 함포를 네 쪽으로 돌려. 그 사이에 둘을 받아들인다.'],
   },
 }
 
-const channels = {
-  en: ['Mesiah Commander', 'Enemy transmission', 'Signal override', 'Pilot, take the bridge. We’re moving out.'],
-  zh: ['Mesiah 舰长', '敌方通讯', '通讯遭劫持', '飞行员，到舰桥来。我们出发。'],
-  ja: ['Mesiah 艦長', '敵からの通信', '回線乗っ取り', 'パイロット、艦橋へ。出るぞ。'],
-  ko: ['Mesiah 함장', '적 통신', '회선 탈취', '파일럿, 함교로. 출발한다.'],
+export const COMMS_COPY = {
+  en: { commander: 'Mesiah Commander', pilot: 'Pilot', enemy: 'Unidentified contact', override: 'Channel interrupted', bridge: 'Pilot, take the bridge. We’re moving out.' },
+  zh: { commander: 'Mesiah 舰长', pilot: '飞行员', enemy: '未知信号', override: '通讯中断', bridge: '飞行员，到舰桥来。我们出发。' },
+  ja: { commander: 'Mesiah 艦長', pilot: 'パイロット', enemy: '不明な通信', override: '通信割り込み', bridge: 'パイロット、艦橋へ。出るぞ。' },
+  ko: { commander: 'Mesiah 함장', pilot: '파일럿', enemy: '미확인 통신', override: '회선 차단', bridge: '파일럿, 함교로. 출발한다.' },
 } as const
 
-export function getHostileBriefing(language: LanguageCode, boss: BossKind, underway: boolean) {
-  const kind = boss === 'squid' || boss === 'snake' || boss === 'final' || boss === 'devil' ? boss : 'super'
-  const [commander, enemy, override, bridgeOrder] = channels[language]
-  const [contact, order, threat, reply] = exchanges[language][kind]
-  return {
-    override,
-    beats: [
-      [commander, contact],
-      [commander, order],
-      [enemy, threat],
-      [commander, underway ? `${reply} ${bridgeOrder}` : reply],
-    ] as const,
-  }
+export function getCarrierConversation(language: LanguageCode, mode: RaidMode, stage: number,
+  underway: boolean, boss?: BossKind): readonly Line[] {
+  const scene = boss ? boss === 'squid' || boss === 'snake' || boss === 'final' || boss === 'devil' ? boss : 'super'
+    : mode === 'campaign' && stage > 1 ? 'checkpoint' : mode
+  const [situation, pilot, reply, launch] = scenes[language][scene]
+  const departure = underway ? (boss ? `${launch} ${COMMS_COPY[language].bridge}` : COMMS_COPY[language].bridge) : launch
+  return [['commander', situation], ['pilot', pilot], [boss ? 'enemy' : 'commander', reply], ['commander', departure]]
 }
