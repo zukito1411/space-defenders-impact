@@ -3,11 +3,11 @@ import type { CoreLanderCombatModel, Shot } from './types'
 type Point = readonly [number, number]
 const palmPoint = (x: number, y: number): Point => [(x - 384) / 768, (y - 256) / 768]
 
-// Palm centers on the 768x512 charge and release cells. Coordinates are in
+// The gap between the two palms in each 768×512 release cell, expressed in
 // right-facing hull-width units around the center of the sprite.
 export const GOD_GUNDAM_PALMS = {
-  folded: { charge: palmPoint(471, 100), release: palmPoint(703, 153) },
-  burning: { charge: palmPoint(475, 128), release: palmPoint(680, 189) },
+  folded: { release: palmPoint(631, 216) },
+  burning: { release: palmPoint(625, 219) },
 } as const
 
 /** Measured on the landscape artwork in physical right-facing hull-size units. */
