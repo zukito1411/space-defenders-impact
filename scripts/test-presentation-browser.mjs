@@ -101,6 +101,10 @@ try {
         await general.locator('.raid__carrier-emblem').waitFor({ state: 'attached' })
         await page.waitForFunction(() => document.querySelector('.raid__carrier-hologram[data-channel=cfoc] img')?.naturalWidth > 0)
       }
+      if (beat === 7) {
+        assert.match(full, /Should I follow/)
+        await page.waitForFunction(() => document.querySelector('.raid__carrier-hologram[data-channel=pilot] img')?.naturalWidth > 0)
+      }
       if (beat === 8) assert.match(full, /covering their advance/)
       const reading=await page.locator('.raid__carrier-briefing').evaluate(el=>{
         const a=el.querySelector('.raid__carrier-mission').getBoundingClientRect(),b=el.querySelector('.raid__carrier-comms').getBoundingClientRect()
@@ -209,6 +213,7 @@ try {
     await recovery.screenshot({ path: 'presentation-review/mesiah-hostile-transmission.png' })
     await advance.click()
     assert.match(await paragraph.getAttribute('aria-label'), /This is our private channel/)
+    await recovery.waitForFunction(() => document.querySelector('.raid__carrier-hologram[data-channel=pilot] img')?.naturalWidth > 0)
     assert.equal(await briefing.getAttribute('data-hostile'), 'true')
     await finishLine()
     await advance.click()

@@ -14,7 +14,7 @@ import { DEFAULT_PICKUP_VOICE_SAMPLE_URL, PICKUP_VOICE_SAMPLE_URLS } from './aud
 import { SHIP_OPTIONS } from './constants'
 import { RAID_SOUNDTRACK_URLS } from './raidSoundtrack'
 import { BOSS_AUDIO_URLS } from './bossAudio'
-import { COMMANDER_HOLOGRAM_URL, GENERAL_HOLOGRAM_URL, HOSTILE_HOLOGRAM_URL } from './hostileBriefing'
+import { COMMANDER_HOLOGRAM_URL, GENERAL_HOLOGRAM_URL, HOSTILE_HOLOGRAM_URL, PILOT_HOLOGRAM_URL } from './hostileBriefing'
 import { getHomingMissileSprite, warmPowerPickupSpriteCache } from './effectsRender'
 import { getCoreBlastSprite, getHoneycombShieldSprite, warmRaidEngineExhaust } from './playerRender'
 import type { RaidAssetPreloadState } from './types'
@@ -24,7 +24,7 @@ export const RAID_IMAGE_CACHE_NAME = 'space-defender-raid-images-v1'
 
 export const RAID_AUDIO_CACHE_NAME = 'space-defender-audio-v1'
 
-export const RAID_PERSISTENT_CACHE_VERSION = 'gradius-raid-assets-v13'
+export const RAID_PERSISTENT_CACHE_VERSION = 'gradius-raid-assets-v14'
 
 export const RAID_PERSISTENT_CACHE_STORAGE_KEY = 'gradiusRaidPersistentAssetCache'
 
@@ -76,6 +76,7 @@ export function getRaidPersistentImageUrls() {
   urls.add(HOSTILE_HOLOGRAM_URL)
   urls.add(COMMANDER_HOLOGRAM_URL)
   urls.add(GENERAL_HOLOGRAM_URL)
+  urls.add(PILOT_HOLOGRAM_URL)
   urls.add(getPublicAssetUrl(SPACE_JET_FORCE_FIELD_ASSET_PATH))
   for (const url of [...RAID_COMBAT_ART_URLS, ...COSMOS_ART_URLS, ...SURFACE_ART_URLS, ...WRECK_ART_URLS]) urls.add(url)
   for (const art of CAMPAIGN_BOSS_ART) urls.add(getPublicAssetUrl(art.assetPath))

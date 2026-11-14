@@ -5,7 +5,7 @@ import { getCarrierMission } from './carrierMission'
 import { getCarrierSectorIntel } from './carrierIntel'
 import { playHostileChannel } from './carrierAudio'
 import { CAMPAIGN_COMMS_UI } from './campaignComms'
-import { COMMANDER_HOLOGRAM_URL, COMMS_COPY, GENERAL_HOLOGRAM_URL, getCarrierConversation, HOSTILE_HOLOGRAM_URL } from './hostileBriefing'
+import { COMMANDER_HOLOGRAM_URL, COMMS_COPY, GENERAL_HOLOGRAM_URL, getCarrierConversation, HOSTILE_HOLOGRAM_URL, PILOT_HOLOGRAM_URL } from './hostileBriefing'
 import './carrier.css'
 
 function FactionEmblem({ red }: { red: boolean }) {
@@ -43,8 +43,10 @@ export function RaidCarrierBriefing({ language, mode, stage, recoveryBoss, first
   const hostile = channel === 'enemy'
   const general = channel === 'general'
   const red = hostile || general
-  const faction = campaign && !hostile
-  const portrait = hostile ? HOSTILE_HOLOGRAM_URL : general ? GENERAL_HOLOGRAM_URL : COMMANDER_HOLOGRAM_URL
+  const pilot = speaker === 'pilot'
+  const faction = campaign && !hostile && (beat === 0 || beats[beat - 1][2] !== channel)
+  const portraitChannel = pilot ? 'pilot' : hostile ? 'enemy' : general ? 'cfoc' : 'command'
+  const portrait = pilot ? PILOT_HOLOGRAM_URL : hostile ? HOSTILE_HOLOGRAM_URL : general ? GENERAL_HOLOGRAM_URL : COMMANDER_HOLOGRAM_URL
   const speakerLabel = campaign && speaker === 'commander' ? story.commander : labels[speaker]
   useEffect(() => {
     if (hostile) return playHostileChannel(Boolean(cue))
@@ -87,8 +89,8 @@ export function RaidCarrierBriefing({ language, mode, stage, recoveryBoss, first
       <h2 id="carrier-mission-title">{debrief ? story.ending : intel.objective ?? mission.objective}</h2>
       {!debrief && <div className="raid__carrier-goals">{(intel.goals ?? mission.goals).map((goal, index) => <span key={goal}><b>0{index + 1}</b>{goal}</span>)}</div>}
     </div>
-    <div key={portrait} className="raid__carrier-hologram" data-channel={hostile ? 'enemy' : general ? 'cfoc' : 'command'}
-      data-faction={faction || undefined} data-listening={(hostile ? speaker !== 'enemy' && speaker !== 'reptilior' : speaker === 'pilot') || undefined} aria-hidden="true">
+    <div key={portrait} className="raid__carrier-hologram" data-channel={portraitChannel}
+      data-faction={faction || undefined} data-listening={(hostile && speaker === 'commander') || undefined} aria-hidden="true">
       {faction && <FactionEmblem red={general} />}
       <img src={portrait} alt="" />
     </div>

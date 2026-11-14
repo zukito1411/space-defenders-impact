@@ -4,6 +4,7 @@ import type { BossKind, RaidMode } from './types'
 import { getCampaignTransmission, type CommsLine } from './campaignComms'
 
 export const HOSTILE_HOLOGRAM_URL = getPublicAssetUrl('assets/ui/mesiah-hostile-hologram-v1.webp')
+export const PILOT_HOLOGRAM_URL = getPublicAssetUrl('assets/ui/mesiah-pilot-hologram-v1.webp')
 export const GENERAL_HOLOGRAM_URL = getPublicAssetUrl('assets/ui/cfoc-general-hologram-v1.webp')
 export const COMMANDER_HOLOGRAM_URL = getPublicAssetUrl('assets/ui/mesiah-commander-hologram-v1.webp')
 
