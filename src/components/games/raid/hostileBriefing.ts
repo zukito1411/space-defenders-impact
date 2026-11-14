@@ -9,11 +9,49 @@ type Speaker = 'commander' | 'pilot' | 'enemy'
 type Line = readonly [speaker: Speaker, body: string, channel?: 'enemy']
 type Scene = readonly [situation: string, pilot: string, reply: string, launch: string]
 type RecoveryBoss = 'squid' | 'snake' | 'final' | 'devil' | 'super'
-type Scenes = Record<RaidMode | RecoveryBoss | 'checkpoint', Scene>
+type Scenes = Record<Exclude<RaidMode, 'campaign'> | RecoveryBoss | 'checkpoint', Scene>
+
+const campaignOpening: Record<LanguageCode, readonly Line[]> = {
+  en: [
+    ['commander', 'Pilot, did you see Earth’s defense stations go dark? An invasion fleet hit them just before dawn.'],
+    ['pilot', 'I saw the lights go out. I thought we’d lost the feed. Did anyone get off the ground?'],
+    ['commander', 'Three civilian transports made it up. We’re hiding them behind Mesiah. The rest are still on the ground.'],
+    ['pilot', 'Why are the enemy ships holding here? They could go straight for the cities.'],
+    ['commander', 'They’re sealing the launch routes first. The carrier ahead is sending fighters after every ship that launches.'],
+    ['pilot', 'Can we turn around and get these three somewhere safe?'],
+    ['commander', 'We could. Everyone still on Earth would be trapped. Take out that carrier so we can get the next transports off the ground.'],
+  ],
+  zh: [
+    ['commander', '飞行员，看见地球防御站熄灯了吗？天快亮的时候，入侵舰队袭击了它们。'],
+    ['pilot', '我看见了，还以为是画面断了。有人撤出来吗？'],
+    ['commander', '有三艘民用运输船升空了，现在躲在 Mesiah 后面。其他人还在地面。'],
+    ['pilot', '敌舰为什么停在这儿？他们明明可以直奔城市。'],
+    ['commander', '他们要先封死撤离航线。每有一艘船升空，前面那艘航母就会派战机拦截。'],
+    ['pilot', '我们能掉头，先把这三艘船送到安全的地方吗？'],
+    ['commander', '可以，但地面上的人就走不了了。击沉那艘航母，我们才能让下一批运输船升空。'],
+  ],
+  ja: [
+    ['commander', 'パイロット、地球の防衛ステーションの灯が消えたのを見たか？ 夜明け前に侵攻艦隊が襲ってきた。'],
+    ['pilot', '見ました。映像が途切れたのかと。地上から脱出できた人は？'],
+    ['commander', '民間の輸送船が三隻上がった。今は Mesiah の陰にいる。他はまだ地上だ。'],
+    ['pilot', '敵はなぜここで止まってるんです？ 街に直行できるのに。'],
+    ['commander', '先に脱出路を塞ぐつもりだ。船が上がるたび、前の空母から迎撃機が出ている。'],
+    ['pilot', '引き返して、その三隻だけでも安全な所に連れていけませんか？'],
+    ['commander', 'できる。だが地上の人たちが取り残される。あの空母を落とせ。次の輸送船が離陸できるようにするんだ。'],
+  ],
+  ko: [
+    ['commander', '파일럿, 지구 방어 기지의 불이 꺼지는 걸 봤나? 동트기 직전에 침공 함대가 공격했다.'],
+    ['pilot', '봤습니다. 영상이 끊긴 줄 알았어요. 지상에서 빠져나온 사람은 있습니까?'],
+    ['commander', '민간 수송선 세 척이 올라왔다. 지금은 Mesiah 뒤에 숨어 있어. 나머지는 아직 지상이다.'],
+    ['pilot', '적은 왜 여기서 멈춘 거죠? 도시로 바로 갈 수 있잖아요.'],
+    ['commander', '탈출로부터 막으려는 거야. 배가 이륙할 때마다 저 앞의 항모에서 전투기를 보내고 있어.'],
+    ['pilot', '돌아가서 저 세 척이라도 안전한 곳으로 데려갈 수 없습니까?'],
+    ['commander', '그럴 수는 있어. 그럼 지상에 있는 사람들은 갇히게 돼. 저 항모를 격침시켜. 다음 수송선들이 이륙할 수 있게.'],
+  ],
+}
 
 const scenes: Record<LanguageCode, Scenes> = {
   en: {
-    campaign: ['Pilot, this is Mesiah. An enemy carrier just took up position between us and Earth. We’ve got evac ships coming in behind us.', 'Are the evac ships staying here?', 'Until you open a lane. Go after the carrier first. We’ll keep its escorts busy while you make your pass.', 'Deck, release the clamps. Pilot, you’re clear to go.'],
     endless: ['Pilot, another wave is on its way. The last transports are still loading.', 'How much time do they need?', 'As much as you can give them. Stay between the attackers and the transports. We’ll call you back when the last one clears.', 'Deck, clear the bay. Pilot, you’re up.'],
     bossRush: ['Pilot, we’ve found all three enemy command ships. We can reach the first one before the others close in.', 'Which one do you want me to hit first?', 'The one on your scope. Take it down and I’ll give you the next heading.', 'You’re clear to launch. Call me when you have eyes on it.'],
     checkpoint: ['Welcome back, pilot. We’ve picked up the next enemy formation ahead of our position.', 'Do I go straight through them?', 'Yes. Clear a lane and stay on this channel. I’ll call out the command ship as soon as we have it.', 'Deck, release the clamps. Pilot, you’re clear to go.'],
@@ -24,7 +62,6 @@ const scenes: Record<LanguageCode, Scenes> = {
     super: ['We’ve got a heavy carrier closing on the flight deck. There are still two of our fighters outside waiting to dock.', 'Can we take them in before it gets here?', 'I see both of them. Shut the bay now and I’ll let your carrier go.', 'Keep the bay open. Pilot, get its guns off our fighters. Once it’s looking at you, I can bring them in.'],
   },
   zh: {
-    campaign: ['飞行员，我是 Mesiah 舰长。敌方航母挡在地球前面，撤离船还在我们身后。','撤离船要留在这儿吗？','等你打开航道。先打航母，我们会拖住它的护航舰。','甲板，松开锁具。飞行员，可以出击。'],
     endless: ['飞行员，下一波敌军就要到了。最后几艘运输船还在登船。','他们还需要多久？','能撑多久就撑多久。挡在敌机和运输船之间，最后一艘离开后我会叫你回来。','甲板，清空航道。飞行员，轮到你了。'],
     bossRush: ['飞行员，三艘敌方指挥舰都找到了。我们能在另外两艘赶到前拦住第一艘。','先打哪一艘？','先打雷达上那艘。击沉它以后，我给你下一个航向。','可以出击。看到它就告诉我。'],
     checkpoint: ['欢迎回来，飞行员。前方发现了下一支敌方编队。','直接从他们中间打过去？','对，打开一条航道，保持联络。找到指挥舰就告诉你。','甲板，松开锁具。飞行员，可以出击。'],
@@ -35,7 +72,6 @@ const scenes: Record<LanguageCode, Scenes> = {
     super: ['一艘重型航母正在逼近飞行甲板。我们还有两架战机在外面等着回舰。','能在它到之前把战机接进来吗？','两架我都看见了。现在关上舱门，我就放过你们的航母。','舱门保持开启。飞行员，把炮火从战机身上引开。我来接他们。'],
   },
   ja: {
-    campaign: ['パイロット、こちら Mesiah。敵空母が地球への航路を塞いだ。後ろには避難船がいる。','避難船はここで待機ですか？','君が道を開くまでな。空母を先に叩け。護衛はこちらで引きつける。','甲板、クランプ解除。パイロット、発進していいぞ。'],
     endless: ['パイロット、次が来る。最後の輸送船はまだ人を乗せている。','あと何分必要ですか？','稼げるだけ頼む。敵と輸送船の間に入れ。最後の船が抜けたら呼び戻す。','甲板を空けろ。パイロット、出番だ。'],
     bossRush: ['パイロット、指揮艦三隻を捕捉した。残りが合流する前に先頭に届く。','どれから沈めますか？','レーダーに映っている艦だ。沈めたら次の方角を知らせる。','発進していいぞ。目視したら連絡を。'],
     checkpoint: ['おかえり、パイロット。前方に次の敵編隊を捕捉した。','正面から抜けますか？','そうだ。航路を開いて通信は切るな。指揮艦を見つけたら知らせる。','甲板、クランプ解除。発進していいぞ。'],
@@ -46,7 +82,6 @@ const scenes: Record<LanguageCode, Scenes> = {
     super: ['重空母が飛行甲板に迫っている。まだ二機が外で着艦を待っている。','敵が来る前に収容できますか？','二機とも見えている。今すぐ格納庫を閉めれば、母艦は見逃してやる。','格納庫は開けておけ。パイロット、砲火を引きつけろ。その間に二機を収容する。'],
   },
   ko: {
-    campaign: ['파일럿, 여기는 Mesiah. 적 항모가 지구로 가는 길을 막았다. 대피선들이 우리 뒤에 있어.','대피선은 여기서 기다립니까?','네가 길을 열 때까지는. 항모부터 공격해. 호위함은 우리가 붙잡아 둘게.','갑판, 고정 장치 풀어. 파일럿, 출격해도 된다.'],
     endless: ['파일럿, 다음 편대가 오고 있다. 마지막 수송선에 아직 사람들이 타고 있어.','얼마나 더 필요합니까?','벌어 줄 수 있는 만큼. 적과 수송선 사이를 막아 줘. 마지막 배가 빠지면 부르겠다.','갑판 비워. 파일럿, 네 차례야.'],
     bossRush: ['파일럿, 적 지휘함 세 척을 찾았다. 나머지가 합류하기 전에 첫 함선에 닿을 수 있어.','어느 쪽부터 칠까요?','레이더에 잡힌 함선. 격침시키면 다음 방향을 알려 줄게.','출격해도 된다. 직접 보이면 연락해.'],
     checkpoint: ['돌아왔군, 파일럿. 전방에서 다음 적 편대를 잡았다.','정면으로 뚫습니까?','그래. 길을 열고 통신은 유지해. 지휘함을 찾으면 바로 알려 줄게.','갑판, 고정 장치 풀어. 출격해도 된다.'],
@@ -64,6 +99,13 @@ export const COMMS_COPY = {
   ja: { commander: 'Mesiah 艦長', pilot: 'パイロット', enemy: '不明な通信', override: '通信割り込み', bridge: 'パイロット、艦橋へ。出るぞ。' },
   ko: { commander: 'Mesiah 함장', pilot: '파일럿', enemy: '미확인 통신', override: '회선 차단', bridge: '파일럿, 함교로. 출발한다.' },
 } as const
+
+const campaignClearance: Record<LanguageCode, string> = {
+  en: 'Deck, release the clamps. Pilot, you’re clear to go.',
+  zh: '甲板，松开锁具。飞行员，可以出击。',
+  ja: '甲板、クランプ解除。パイロット、発進していいぞ。',
+  ko: '갑판, 고정 장치 풀어. 파일럿, 출격해도 된다.',
+}
 
 type Interruption = {
   first: readonly [pilot: string, commander: string]
@@ -125,11 +167,14 @@ const interruptions: Record<LanguageCode, Interruption> = {
 
 export function getCarrierConversation(language: LanguageCode, mode: RaidMode, stage: number,
   underway: boolean, boss?: BossKind, firstInterception = true): readonly Line[] {
+  if (!boss && mode === 'campaign' && stage <= 1) {
+    return [...campaignOpening[language], ['commander', underway ? COMMS_COPY[language].bridge : campaignClearance[language]]]
+  }
   const scene = boss ? boss === 'squid' || boss === 'snake' || boss === 'final' || boss === 'devil' ? boss : 'super'
-    : mode === 'campaign' && stage > 1 ? 'checkpoint' : mode
+    : mode === 'campaign' ? 'checkpoint' : mode
   const [situation, pilot, reply, launch] = scenes[language][scene]
   const departure = underway ? (boss ? `${launch} ${COMMS_COPY[language].bridge}` : COMMS_COPY[language].bridge) : launch
-  if (scene === 'campaign' || scene === 'endless' || scene === 'bossRush' || scene === 'checkpoint') {
+  if (scene === 'endless' || scene === 'bossRush' || scene === 'checkpoint') {
     return [['commander', situation], ['pilot', pilot], ['commander', reply], ['commander', departure]]
   }
   const interruption = interruptions[language]
