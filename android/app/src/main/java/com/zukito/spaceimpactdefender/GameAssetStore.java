@@ -305,7 +305,13 @@ final class GameAssetStore {
             headers.put("Cache-Control", "no-store");
             if (range != null) headers.put("Content-Range", "bytes " + start + "-" + end + "/" + size);
             String extension = path.substring(path.lastIndexOf('.') + 1);
-            String mime = MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension);
+            String mime;
+            switch (extension) {
+                case "ogg": mime = "audio/ogg"; break;
+                case "wav": mime = "audio/wav"; break;
+                case "mp3": mime = "audio/mpeg"; break;
+                default: mime = MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension);
+            }
             if (mime == null) mime = "application/octet-stream";
             return new WebResourceResponse(mime, null, range == null ? 200 : 206,
                 range == null ? "OK" : "Partial Content", headers, openRange(blob(hash), start, count));

@@ -202,23 +202,51 @@ try {
   }
   const recovery = await browser.newPage({ viewport: { width: 844, height: 390 } })
   try {
+    const soundtrackPaths = ['/audio/mesiah/flight-deck.ogg', '/audio/bgm_scifi_loop.ogg', '/audio/bgm_boss_final.wav']
+    await recovery.route(url => soundtrackPaths.includes(url.pathname), route =>
+      route.request().resourceType() === 'media' ? route.abort() : route.continue())
     await recovery.addInitScript(() => {
       localStorage.setItem('raid-flight-view', 'landscape')
+      window.androidBridge = {}
+      const paths = new WeakMap()
+      const blob = Response.prototype.blob
+      Response.prototype.blob = async function () {
+        const content = await blob.call(this)
+        paths.set(content, new URL(this.url).pathname)
+        return content
+      }
+      const objectPaths = new Map()
+      const createObjectURL = URL.createObjectURL
+      URL.createObjectURL = content => {
+        const url = createObjectURL(content)
+        if (paths.has(content)) objectPaths.set(url, paths.get(content))
+        return url
+      }
+      const revokeObjectURL = URL.revokeObjectURL
+      URL.revokeObjectURL = url => {
+        objectPaths.delete(url)
+        revokeObjectURL(url)
+      }
       const play = HTMLMediaElement.prototype.play
       window.playedAudio = []
+      let currentMusic
       HTMLMediaElement.prototype.play = function () {
         if (this instanceof HTMLAudioElement && this.src) {
-          const path = new URL(this.src).pathname
-          window.playedAudio.push(path)
-          if (path.endsWith('/bgm_boss_final.wav')) window.finaleMusic = this
+          const localPath = objectPaths.get(this.src)
+          window.playedAudio.push(localPath ?? new URL(this.src).pathname)
+          if (localPath) currentMusic = this
         }
         return play.call(this)
       }
+      window.localMusicIsPlaying = path => currentMusic && objectPaths.get(currentMusic.src) === path &&
+        !currentMusic.paused && currentMusic.currentTime > 0.1 && currentMusic.volume > 0
     })
     await recovery.goto('http://127.0.0.1:5173/scripts/presentation-fixture.html?mode=endless')
     await recovery.locator('button.raid__start').first().click({ timeout: 120000 })
     const briefing = recovery.locator('.raid__carrier-briefing')
+    await recovery.waitForFunction(() => window.localMusicIsPlaying('/audio/mesiah/flight-deck.ogg'), {}, { timeout: 15000 })
     await briefing.locator('.raid__carrier-skip').click()
+    await recovery.waitForFunction(() => window.localMusicIsPlaying('/audio/bgm_scifi_loop.ogg'), {}, { timeout: 75000 })
     const raid = recovery.locator('.raid')
     await recovery.waitForFunction(() => document.querySelector('.raid')?.getAttribute('data-carrier-stage') === 'approach', {}, { timeout: 75000 })
     await recovery.screenshot({ path: 'presentation-review/mesiah-recovery-approach.png' })
@@ -265,8 +293,7 @@ try {
     for (const cue of ['flight-deck', 'hangar-bed', 'hostile-channel', 'thruster-heat', 'thruster-release']) {
       assert.ok(playedAudio.includes(`/audio/mesiah/${cue}.ogg`), `Mesiah sequence did not play ${cue}`)
     }
-    await recovery.waitForFunction(() => window.finaleMusic?.src.endsWith('/bgm_boss_final.wav') &&
-      !window.finaleMusic.paused && window.finaleMusic.currentTime > 0.1 && window.finaleMusic.volume > 0, {}, { timeout: 15000 })
+    await recovery.waitForFunction(() => window.localMusicIsPlaying('/audio/bgm_boss_final.wav'), {}, { timeout: 15000 })
     // The boss warning starts before Devil Gundam enters firing range. Software rendering can slow that approach.
     await recovery.waitForFunction(() => window.playedAudio.includes('/audio/boss/beam-charge.ogg') &&
       ['/audio/boss/beam-fire.ogg', '/audio/boss/creature-strike.ogg'].some(path => window.playedAudio.includes(path)), {}, { timeout: 90000 })
