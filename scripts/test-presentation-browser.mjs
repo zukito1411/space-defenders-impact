@@ -177,7 +177,15 @@ try {
     // Reduced motion cuts directly to space at departure, retaining the shared
     // simulation clock. SwiftShader needs a larger budget for that entire hold.
     await page.waitForFunction(()=>document.querySelector('.raid')?.dataset.carrierStage==='flight',{},{timeout:reduced?75000:45000})
-    if (name === 'portrait') await page.waitForFunction(() => window.stageOneMusicIsPlaying(), {}, { timeout: 15000 })
+    if (name === 'portrait') {
+      await page.waitForFunction(() => window.stageOneMusicIsPlaying(), {}, { timeout: 15000 })
+      await page.evaluate(async () => {
+        const audio = new Audio('/audio/sfx_boss_battle.mp3')
+        audio.muted = true
+        await audio.play()
+        audio.pause()
+      })
+    }
     await page.waitForTimeout(1000)
     await page.screenshot({path:`presentation-review/${name}-flight.png`})
     if(item.model&&landscape){
@@ -199,7 +207,11 @@ try {
       const play = HTMLMediaElement.prototype.play
       window.playedAudio = []
       HTMLMediaElement.prototype.play = function () {
-        if (this instanceof HTMLAudioElement && this.src) window.playedAudio.push(new URL(this.src).pathname)
+        if (this instanceof HTMLAudioElement && this.src) {
+          const path = new URL(this.src).pathname
+          window.playedAudio.push(path)
+          if (path.endsWith('/bgm_boss_final.wav')) window.finaleMusic = this
+        }
         return play.call(this)
       }
     })
@@ -253,7 +265,8 @@ try {
     for (const cue of ['flight-deck', 'hangar-bed', 'hostile-channel', 'thruster-heat', 'thruster-release']) {
       assert.ok(playedAudio.includes(`/audio/mesiah/${cue}.ogg`), `Mesiah sequence did not play ${cue}`)
     }
-    await recovery.waitForFunction(() => window.playedAudio.includes('/audio/bgm_boss_final.wav'), {}, { timeout: 10000 })
+    await recovery.waitForFunction(() => window.finaleMusic?.src.endsWith('/bgm_boss_final.wav') &&
+      !window.finaleMusic.paused && window.finaleMusic.currentTime > 0.1 && window.finaleMusic.volume > 0, {}, { timeout: 15000 })
     // The boss warning starts before Devil Gundam enters firing range. Software rendering can slow that approach.
     await recovery.waitForFunction(() => window.playedAudio.includes('/audio/boss/beam-charge.ogg') &&
       ['/audio/boss/beam-fire.ogg', '/audio/boss/creature-strike.ogg'].some(path => window.playedAudio.includes(path)), {}, { timeout: 90000 })

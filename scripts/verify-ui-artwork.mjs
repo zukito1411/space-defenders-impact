@@ -72,7 +72,7 @@ const required = [
   'audio/mesiah/hostile-channel.ogg',
   'assets/ui/mesiah-hostile-hologram-v1.webp',
   'assets/ui/mesiah-commander-hologram-v1.webp',
-  'audio/sfx_boss_battle.wav',
+  'audio/sfx_boss_battle.mp3',
   'audio/bgm_boss_squid.mp3',
   'audio/bgm_boss_snake.mp3',
   'audio/bgm_boss_final.wav',

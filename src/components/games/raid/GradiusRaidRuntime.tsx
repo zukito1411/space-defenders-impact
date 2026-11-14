@@ -1488,6 +1488,7 @@ export function GradiusRaid({
     raidBgmDuckRestoreTimerRef.current = 0
     raidBgmDuckAnimationRef.current = 0
     raidBgmPlayRef.current = null
+    audio.pause()
     audio.loop = true
     audio.preload = 'auto'
     audio.volume = 0
@@ -1512,11 +1513,13 @@ export function GradiusRaid({
       if (!document.hidden) resumeRaidBgm()
     }
     window.addEventListener('click', resumeRaidBgm)
+    window.addEventListener('pointerup', resumeRaidBgm)
     window.addEventListener('keydown', resumeRaidBgm)
     document.addEventListener('visibilitychange', retryVisibleAudio)
 
     return () => {
       window.removeEventListener('click', resumeRaidBgm)
+      window.removeEventListener('pointerup', resumeRaidBgm)
       window.removeEventListener('keydown', resumeRaidBgm)
       document.removeEventListener('visibilitychange', retryVisibleAudio)
     }

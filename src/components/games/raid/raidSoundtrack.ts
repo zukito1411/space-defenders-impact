@@ -10,7 +10,7 @@ const regionTracks = [
 ] as const
 const flightDeck = audio('flight-deck')
 const bossTracks = {
-  command: getPublicAssetUrl('audio/sfx_boss_battle.wav'),
+  command: getPublicAssetUrl('audio/sfx_boss_battle.mp3'),
   squid: getPublicAssetUrl('audio/bgm_boss_squid.mp3'),
   snake: getPublicAssetUrl('audio/bgm_boss_snake.mp3'),
   final: getPublicAssetUrl('audio/bgm_boss_final.wav'),
