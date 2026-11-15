@@ -18,7 +18,7 @@ import { RaidTravelMotion } from './travelMotion'
 import { getPublicAssetUrl } from '../sound'
 import type { GraphicsQuality } from '../sound'
 import { getRaidAlienSpriteUrl, getRaidEliteSpriteUrl, getRaidShipSpriteUrl } from '../RaidShipSprite'
-import { Application, Assets, Container, FillGradient, Graphics, Sprite, Texture, TilingSprite } from 'pixi.js'
+import { Application, Assets, Container, FillGradient, Graphics, Sprite, Texture, TilingSprite, WebGLRenderer } from 'pixi.js'
 import { RAID_OTHER_ASSET_PATHS, drawCanvasImageContain, getRaidOtherCanvasSprite, getRaidSideShipCanvasSprite } from './assets'
 import type { RaidOtherAssetKey } from './assets'
 import { COMET_ASSET_HEAD_ANGLE, DEG } from './constants'
@@ -935,6 +935,10 @@ export class PixiRaidBackground {
   private gpuTimerDisabled = false
   private lastGpuElapsedMs: number | null = null
 
+  private hasLostContext(app: Application) {
+    return app.renderer instanceof WebGLRenderer && app.renderer.context.isLost
+  }
+
   async init(host: HTMLDivElement) {
     try {
       const app = new Application()
@@ -1088,7 +1092,7 @@ export class PixiRaidBackground {
 
   render(frame: PixiRaidBackgroundFrame) {
     const app = this.app
-    if (!app) return false
+    if (!app || this.hasLostContext(app)) return false
 
     try {
       const { width, height, dpr, palette, quality, time, stageRush, bossIntensity, devilCorruption, finalBattleIntensity = 0 } = frame
@@ -1242,6 +1246,7 @@ export class PixiRaidBackground {
   }
 
   prewarmGpuBoss(kind: 'squid' | 'snake' | 'final' | 'devil' | null, width: number, height: number, time: number) {
+    if (!this.app || this.hasLostContext(this.app)) return
     this.gpuForeground.prewarmBoss(kind, width, height, time)
   }
 
@@ -1303,9 +1308,9 @@ export class PixiRaidBackground {
 
   renderForeground(frame: RaidGpuForegroundFrame) {
     const app = this.app
-    if (!app) return false
-    const foregroundReady = this.foregroundPrepared && this.gpuForeground.update(frame)
+    if (!app || this.hasLostContext(app)) return false
     try {
+      const foregroundReady = this.foregroundPrepared && this.gpuForeground.update(frame)
       // Present scenery even if the GPU actor layer fails; Canvas will draw
       // those actors itself, avoiding a black screen on unsupported devices.
       this.renderWithGpuTimer(app, frame.measureGpu, frame.time)
