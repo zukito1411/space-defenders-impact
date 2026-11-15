@@ -70,7 +70,7 @@ import { acquireHomingTarget, animateStageClearPlayer, applyRiftPullToPlayer, ap
 import { clampNetworkVelocity, cloneAsteroid, cloneDerelictWreck, cloneEnemy, cloneIonStrike, cloneMeteor, cloneRaidRandomEvent, cloneVec, compactPlayer, compactVec, getBufferedAsteroidVisuals, getBufferedEnemyVisuals, getBufferedPlayerVisual, getConnectionLabel, getGuestShotTtlMs, getOwnCorrectionBlend, getPlayerPickupAudioKind, getRemoteInterpolationDelayMs, hasClearedRaidInProgress, isNetworkVisible, keepNetworkVisibleInPlace, reconcilePlayerVisual, updateDerelictWreckMotion } from './network'
 import { drawRaidOptions, drawRaidPlayer, getCoreBlastSprite, getRaidPlayerFlightBank, warmRaidSideCosmetics } from './playerRender'
 import { getRaidAssetPreloadInitialState, preloadGradiusRaidAssets, warmRaidGeneratedEffectSprites } from './preload'
-import { clonePlayer, getCheckpointStage, getDefaultPlayerVisualShipKey, getGodGundamGameplayRenderSize, getHighScore, getInitialPlayer, getOptionSupportStacks, getPlayerCoreLanderCombatModel, getRaidGundamName, getRaidPlayerVisualShipKey, getShipByKey, getUnlockedStage, isCoreLanderAoeShot, isGodGundamBarragePilot, normalizeMesiahDrones, normalizeMesiahScoutDrones, powerColor, sanitizePlayerVisualShipKey, saveCheckpointStage, saveHighScore, saveUnlockedStage } from './state'
+import { activateScoutSupportPickup, clonePlayer, getCheckpointStage, getDefaultPlayerVisualShipKey, getGodGundamGameplayRenderSize, getHighScore, getInitialPlayer, getOptionSupportStacks, getPlayerCoreLanderCombatModel, getRaidGundamName, getRaidPlayerVisualShipKey, getShipByKey, getUnlockedStage, isCoreLanderAoeShot, isGodGundamBarragePilot, normalizeMesiahDrones, normalizeMesiahScoutDrones, powerColor, sanitizePlayerVisualShipKey, saveCheckpointStage, saveHighScore, saveUnlockedStage } from './state'
 import type { AsteroidHazard, BossDefeatExplosionEvent, BossKind, BossMessage, CameraShakeState, CoreLanderCombatModel, DerelictWreck, Enemy, EnemySpawnProfile, GamePhase, GodGundamBarrage, GodGundamPassiveStrike, IonStrike, MeteorHazard, MiniBossKind, MirageBossKind, MultiplayerAsteroidSnapshot, MultiplayerConnectionQuality, MultiplayerEnemySnapshot, MultiplayerHostState, MultiplayerInput, MultiplayerPlayerSnapshot, NukeStrike, Player, PowerKind, PowerUp, RaidAssetPreloadState, RaidBgmMode, RaidDifficulty, RaidMode, RaidMultiplayerSession, RaidRandomEvent, RaidRandomEventKind, RelayGameMessage, Ripple, ShipOption, Shot, Snapshot, Spark, Vec, WeaponKey } from './types'
 import { acquireRipple, acquireSpark, buildEnemyCollisionBuckets, clamp, collectShotCollisionCandidates, compactInPlace, createEnemyCollisionBuckets, distSq, drawRadialEllipse, getCachedProjectileOrbSprite, getCachedProjectileTrailSprite, getEliteEnemyChance, getMaxActiveEliteEnemies, pickEliteEnemyKind, readRaidPalette, recycleRipple, recycleRippleList, recycleSpark, recycleSparkList, takeLastFilteredMapped, updateRipplesInPlace, updateSparksInPlace } from './utils'
 import type { EnemyCollisionBuckets } from './utils'
@@ -3482,7 +3482,7 @@ export function GradiusRaid({
     const pickupScoutOffset = isSmallViewport ? 8.2 : 5
     const scoutScale = isArk ? 0.9 : 0.86
     const optionSupportStacks = getOptionSupportStacks(player)
-    const emitters: Array<{ x: number; y: number; scale: number; main: boolean; attackShipKey?: string; baseOnly?: boolean; target?: Enemy | null; rotation?: number; canFire?: boolean; supportWeaponMode?: 'laserHoming' }> = []
+    const emitters: Array<{ x: number; y: number; scale: number; main: boolean; attackShipKey?: string; baseOnly?: boolean; target?: Enemy | null; rotation?: number; canFire?: boolean; laserOnly?: boolean }> = []
 
     if (canFireMain) {
       emitters.push({ x: player.x, y: player.y, scale: 1, main: true })
@@ -3510,7 +3510,7 @@ export function GradiusRaid({
               scale: 0.72,
               main: false,
               attackShipKey: 'fast',
-              supportWeaponMode: 'laserHoming',
+              laserOnly: true,
               target,
               rotation: scout.rotation,
             })
@@ -3562,12 +3562,26 @@ export function GradiusRaid({
       })
     }
 
+    const fireHomingPair = (
+      emitter: { x: number; y: number; scale: number },
+      emitShot: typeof pushShot,
+      {
+        mountOffset = 5.4, mountY = -1.8,
+        launchSpeedX = 28, launchSpeedY = 46, speedStep = 4,
+        damageBonus = 4, radius = 2.1, turn = 5.2,
+      } = {},
+    ) => {
+      const damage = Math.ceil((baseDamage + damageBonus) * emitter.scale)
+      emitShot({ x: emitter.x - mountOffset, y: emitter.y + mountY, vx: -launchSpeedX, vy: -launchSpeedY, damage, kind: 'homing', radius, turn })
+      emitShot({ x: emitter.x + mountOffset, y: emitter.y + mountY, vx: launchSpeedX + speedStep, vy: -launchSpeedY - speedStep, damage, kind: 'homing', radius, turn })
+    }
+
     emitters.forEach((emitter) => {
       const emitShot = emitter.main ? emitMainShot : pushShot
       const damage = Math.max(1, Math.ceil(baseDamage * emitter.scale))
       const attackShipKey = emitter.attackShipKey ?? (isArk && !emitter.main ? 'rocket' : shipKey)
-      const activeWeapons = emitter.supportWeaponMode === 'laserHoming'
-        ? { ...EMPTY_WEAPON_FLAGS, laser: firingWeapons.laser, homing: firingWeapons.homing }
+      const activeWeapons = emitter.laserOnly
+        ? { ...EMPTY_WEAPON_FLAGS, laser: firingWeapons.laser }
         : emitter.baseOnly ? EMPTY_WEAPON_FLAGS : firingWeapons
 
       // -- MESIAH DRONE: detached Space Jet support fire for white Mesiah --
@@ -3621,13 +3635,7 @@ export function GradiusRaid({
             emitShot({ x: emitter.x + offset, y: emitter.y - 1, vx: offset * 1.7, vy: -72, damage: Math.ceil((baseDamage + 4 + stacks.rocket) * emitter.scale), kind: 'rocket', radius: 2.2 })
           })
         }
-        if ((emitter.main || emitter.supportWeaponMode === 'laserHoming') && activeWeapons.homing) {
-          const salvoOffsets = emitter.supportWeaponMode === 'laserHoming' ? [-3.4, 3.4] : [-5.4, 5.4, -7.2, 7.2]
-          salvoOffsets.forEach((offset, index) => {
-            const side = offset < 0 ? -1 : 1
-            emitShot({ x: emitter.x + offset, y: emitter.y + (index < 2 ? -1.8 : 0.8), vx: side * (28 + index * 4), vy: -46 - index * 4, damage: Math.ceil((baseDamage + 4) * emitter.scale), kind: 'homing', radius: 2.1, turn: 5.2 })
-          })
-        }
+        if (emitter.main && activeWeapons.homing) fireHomingPair(emitter, emitShot)
       }
 
       // -- RED WRAITH: rapid twin needle streams --
@@ -3658,13 +3666,7 @@ export function GradiusRaid({
             emitShot({ x: emitter.x + offset, y: emitter.y - 1, vx: offset * 1.7, vy: -72, damage: Math.ceil((baseDamage + 4 + stacks.rocket) * emitter.scale), kind: 'rocket', radius: 2.2 })
           })
         }
-        if ((emitter.main || emitter.supportWeaponMode === 'laserHoming') && activeWeapons.homing) {
-          const salvoOffsets = emitter.supportWeaponMode === 'laserHoming' ? [-3.4, 3.4] : [-5.4, 5.4, -7.2, 7.2]
-          salvoOffsets.forEach((offset, index) => {
-            const side = offset < 0 ? -1 : 1
-            emitShot({ x: emitter.x + offset, y: emitter.y + (index < 2 ? -1.8 : 0.8), vx: side * (28 + index * 4), vy: -46 - index * 4, damage: Math.ceil((baseDamage + 4) * emitter.scale), kind: 'homing', radius: 2.1, turn: 5.2 })
-          })
-        }
+        if (emitter.main && activeWeapons.homing) fireHomingPair(emitter, emitShot)
       }
 
       // -- MESIAH: Red Wraith stream plus default rocket pair --
@@ -3699,13 +3701,7 @@ export function GradiusRaid({
             emitShot({ x: emitter.x + offset, y: emitter.y - 1, vx: offset * 1.5, vy: -74, damage: Math.ceil((baseDamage + 8 + stacks.rocket) * emitter.scale), kind: 'rocket', radius: 2.35 })
           })
         }
-        if ((emitter.main || emitter.supportWeaponMode === 'laserHoming') && activeWeapons.homing) {
-          const salvoOffsets = emitter.supportWeaponMode === 'laserHoming' ? [-3.4, 3.4] : [-5.4, 5.4, -7.2, 7.2]
-          salvoOffsets.forEach((offset, index) => {
-            const side = offset < 0 ? -1 : 1
-            emitShot({ x: emitter.x + offset, y: emitter.y + (index < 2 ? -1.8 : 0.8), vx: side * (28 + index * 4), vy: -46 - index * 4, damage: Math.ceil((baseDamage + 5) * emitter.scale), kind: 'homing', radius: 2.1, turn: 5.6 })
-          })
-        }
+        if (emitter.main && activeWeapons.homing) fireHomingPair(emitter, emitShot, { damageBonus: 5, turn: 5.6 })
       }
 
       else if (attackShipKey === 'coreLander') {
@@ -3762,13 +3758,7 @@ export function GradiusRaid({
             emitShot({ x: emitter.x + offset, y: emitter.y - 1.6, vx: offset * 1.35, vy: -76, damage: Math.ceil((baseDamage + 5 + stacks.rocket) * emitter.scale), kind: 'rocket', radius: 2.18 })
           })
         }
-        if ((emitter.main || emitter.supportWeaponMode === 'laserHoming') && activeWeapons.homing) {
-          const salvoOffsets = emitter.supportWeaponMode === 'laserHoming' ? [-3.4, 3.4] : [-5.2, 5.2, -7, 7]
-          salvoOffsets.forEach((offset, index) => {
-            const side = offset < 0 ? -1 : 1
-            emitShot({ x: emitter.x + offset, y: emitter.y + (index < 2 ? -2 : 0.6), vx: side * (26 + index * 4), vy: -48 - index * 4, damage: Math.ceil((baseDamage + 4) * emitter.scale), kind: 'homing', radius: 2.05, turn: 5.4 })
-          })
-        }
+        if (emitter.main && activeWeapons.homing) fireHomingPair(emitter, emitShot, { mountOffset: 5.2, mountY: -2, launchSpeedX: 26, launchSpeedY: 48, radius: 2.05, turn: 5.4 })
       }
 
       else if (attackShipKey === 'gatling') {
@@ -3805,13 +3795,7 @@ export function GradiusRaid({
             emitShot({ x: emitter.x + offset, y: emitter.y - 1, vx: offset * 1.7, vy: -72, damage: Math.ceil((baseDamage + 4 + stacks.rocket) * emitter.scale), kind: 'rocket', radius: 2.2 })
           })
         }
-        if ((emitter.main || emitter.supportWeaponMode === 'laserHoming') && activeWeapons.homing) {
-          const salvoOffsets = emitter.supportWeaponMode === 'laserHoming' ? [-3.4, 3.4] : [-5.4, 5.4, -7.2, 7.2]
-          salvoOffsets.forEach((offset, index) => {
-            const side = offset < 0 ? -1 : 1
-            emitShot({ x: emitter.x + offset, y: emitter.y + (index < 2 ? -1.8 : 0.8), vx: side * (28 + index * 4), vy: -46 - index * 4, damage: Math.ceil((baseDamage + 4) * emitter.scale), kind: 'homing', radius: 2.1, turn: 5.2 })
-          })
-        }
+        if (emitter.main && activeWeapons.homing) fireHomingPair(emitter, emitShot)
       }
 
       // -- NIGHT LANCE: single thick slow piercing laser ray --
@@ -3826,22 +3810,8 @@ export function GradiusRaid({
           radius: 7.5,
           pierce: 6, // was 4
         })
-        // always fires homing salvo � signature ability
-        // default 2 salvo � all emitters including scouts
-        const defaultSalvo = [-5.4, 5.4]
-        defaultSalvo.forEach((offset, index) => {
-          const side = offset < 0 ? -1 : 1
-          emitShot({ x: emitter.x + offset, y: emitter.y + (index < 2 ? -1.8 : 0.8), vx: side * (28 + index * 4), vy: -46 - index * 4, damage: Math.ceil((baseDamage + 3) * emitter.scale), kind: 'homing', radius: 2.1, turn: 5.2 })
-        })
-
-        // pickup bonus � 4 extra salvos, main ship only, fires every shot like the default
-        if (emitter.main && stacks.homing > 0) {
-          const bonusSalvo = [-5.4, 5.4, -7.2, 7.2]
-          bonusSalvo.forEach((offset, index) => {
-            const side = offset < 0 ? -1 : 1
-            emitShot({ x: emitter.x + offset, y: emitter.y + (index < 2 ? -1.8 : 0.8), vx: side * (28 + index * 4), vy: -46 - index * 4, damage: Math.ceil((baseDamage + 4) * emitter.scale), kind: 'homing', radius: 2.1, turn: 5.2 })
-          })
-        }
+        // Night Lance's signature pair gains damage from the homing pickup.
+        if (emitter.main) fireHomingPair(emitter, emitShot, { damageBonus: stacks.homing > 0 ? 4 : 3 })
         if (activeWeapons.spread) {
           const fan = stacks.spread >= 2 ? [-34, -18, 18, 34] : [-24, 24]
           fan.forEach((vx) => emitShot({ x: emitter.x, y: emitter.y - 2.8, vx, vy: -86, damage, kind: 'spread', radius: 1.35 }))
@@ -3939,24 +3909,7 @@ export function GradiusRaid({
           })
         }
 
-        if ((emitter.main || emitter.supportWeaponMode === 'laserHoming') && activeWeapons.homing) {
-          const salvoOffsets = emitter.supportWeaponMode === 'laserHoming' ? [-3.4, 3.4] : [-5.4, 5.4, -7.2, 7.2]
-
-          salvoOffsets.forEach((offset, index) => {
-            const side = offset < 0 ? -1 : 1
-
-            emitShot({
-              x: emitter.x + offset,
-              y: emitter.y + (index < 2 ? -1.8 : 0.8),
-              vx: side * (22 + index * 3),
-              vy: -40 - index * 3,
-              damage: Math.ceil((baseDamage + 4) * emitter.scale),
-              kind: 'homing',
-              radius: 2.1,
-              turn: 5.2
-            })
-          })
-        }
+        if (emitter.main && activeWeapons.homing) fireHomingPair(emitter, emitShot, { launchSpeedX: 22, launchSpeedY: 40, speedStep: 3 })
       }
 
       // -- CROSSWING NOVA: forward-aligned S-foil cannons --
@@ -3991,13 +3944,7 @@ export function GradiusRaid({
             emitShot({ x: emitter.x + offset, y: emitter.y - 1, vx: offset * 1.7, vy: -72, damage: Math.ceil((baseDamage + 4 + stacks.rocket) * emitter.scale), kind: 'rocket', radius: 2.2 })
           })
         }
-        if ((emitter.main || emitter.supportWeaponMode === 'laserHoming') && activeWeapons.homing) {
-          const salvoOffsets = emitter.supportWeaponMode === 'laserHoming' ? [-3.4, 3.4] : [-5.4, 5.4, -7.2, 7.2]
-          salvoOffsets.forEach((offset, index) => {
-            const side = offset < 0 ? -1 : 1
-            emitShot({ x: emitter.x + offset, y: emitter.y + (index < 2 ? -1.8 : 0.8), vx: side * (28 + index * 4), vy: -46 - index * 4, damage: Math.ceil((baseDamage + 4) * emitter.scale), kind: 'homing', radius: 2.1, turn: 5.2 })
-          })
-        }
+        if (emitter.main && activeWeapons.homing) fireHomingPair(emitter, emitShot)
       }
 
       // -- SPACE JET: single thin fast green laser line --
@@ -4036,13 +3983,7 @@ export function GradiusRaid({
             emitShot({ x: emitter.x + offset, y: emitter.y - 1, vx: offset * 1.7, vy: -72, damage: Math.ceil((baseDamage + 4 + stacks.rocket) * emitter.scale), kind: 'rocket', radius: 2.2 })
           })
         }
-        if ((emitter.main || emitter.supportWeaponMode === 'laserHoming') && activeWeapons.homing) {
-          const salvoOffsets = emitter.supportWeaponMode === 'laserHoming' ? [-3.4, 3.4] : [-5.4, 5.4, -7.2, 7.2]
-          salvoOffsets.forEach((offset, index) => {
-            const side = offset < 0 ? -1 : 1
-            emitShot({ x: emitter.x + offset, y: emitter.y + (index < 2 ? -1.8 : 0.8), vx: side * (28 + index * 4), vy: -46 - index * 4, damage: Math.ceil((baseDamage + 4) * emitter.scale), kind: 'homing', radius: 2.1, turn: 5.2 })
-          })
-        }
+        if (emitter.main && activeWeapons.homing) fireHomingPair(emitter, emitShot)
       }
       // -- FALLBACK --
       else {
@@ -4290,7 +4231,7 @@ export function GradiusRaid({
     if (player.hp < player.maxHp) candidates.push('repair')
     if (player.forceField <= 1) candidates.push('forcefield', 'forcefield')
     if (player.shield < 2.5) candidates.push('shield')
-    if (!godGundamMeleeOnly && (player.ship.key === 'mesiah' ? (player.optionStacks ?? 0) < 2 : player.optionTimer <= 0)) candidates.push('option')
+    if (!godGundamMeleeOnly && getOptionSupportStacks(player) < (player.ship.key === 'mesiah' ? 2 : 1)) candidates.push('option')
     if (!godGundamMeleeOnly) {
       ; WEAPON_KEYS.forEach((key) => {
         const maxStack = WEAPON_STACK_CAPS[key]
@@ -7204,10 +7145,7 @@ export function GradiusRaid({
             targetPlayer.invuln = Math.max(targetPlayer.invuln, 0.9)
           } else if (powerUp.type === 'option') {
             if (!isGodGundamBarragePilot(targetPlayer, progressRef.current)) {
-              targetPlayer.optionTimer = 1
-              targetPlayer.optionStacks = targetPlayer.ship.key === 'mesiah'
-                ? Math.min(2, (targetPlayer.optionStacks ?? 0) + 1)
-                : 1
+              activateScoutSupportPickup(targetPlayer)
             }
           } else {
             if (!isGodGundamBarragePilot(targetPlayer, progressRef.current)) {

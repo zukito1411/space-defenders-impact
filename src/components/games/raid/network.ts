@@ -82,7 +82,8 @@ export function compactPlayer(player: Player): Player {
     x: roundNetworkNumber(player.x),
     y: roundNetworkNumber(player.y),
     invuln: roundNetworkNumber(player.invuln),
-    optionTimer: roundNetworkNumber(player.optionTimer),
+    // Keep near-expiry countdowns distinct from preset support with a zero timer.
+    optionTimer: player.optionTimer > 0 ? Math.max(0.01, roundNetworkNumber(player.optionTimer)) : 0,
     optionStacks: Math.round(player.optionStacks ?? (player.optionTimer > 0 ? 1 : 0)),
     fireCooldown: roundNetworkNumber(player.fireCooldown),
     specialCooldown: roundNetworkNumber(player.specialCooldown ?? 0),

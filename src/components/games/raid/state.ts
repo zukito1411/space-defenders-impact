@@ -3,7 +3,7 @@ import { getRaidShipBaseVisualKey, getRaidShipFrameKey } from './shipArtwork'
 import { getCoreLanderModel, getEquippedShipCosmetics, getMesiahShipColor, loadProgress } from '../../../progression'
 import { RAID_CORE_LANDER_BARRAGE_POSE_SCALES, RAID_CORE_LANDER_BARRAGE_SEQUENCES, RAID_GOD_GUNDAM_BARRAGE_FILTER, RAID_GOD_GUNDAM_BARRAGE_IMPACT_STOPS, RAID_GOD_GUNDAM_BARRAGE_SEQUENCE, RAID_GOD_GUNDAM_BURNING_BARRAGE_FILTER, RAID_GOD_GUNDAM_BURNING_BARRAGE_IMPACT_STOPS, RAID_SPIEGEL_BARRAGE_FILTER, RAID_SPIEGEL_BARRAGE_IMPACT_STOPS } from './assets'
 import type { GodGundamBarragePose } from './assets'
-import { EMPTY_WEAPONS, EMPTY_WEAPON_TIMERS, MAX_RAID_STAGE, RAID_CHECKPOINT_STORAGE_KEY, RAID_UNLOCK_STORAGE_KEY, SHIP_OPTIONS, SPACE_ET_PASSIVE_FORCE_FIELD_CHARGES, STORAGE_KEY } from './constants'
+import { EMPTY_WEAPONS, EMPTY_WEAPON_TIMERS, MAX_RAID_STAGE, RAID_CHECKPOINT_STORAGE_KEY, RAID_UNLOCK_STORAGE_KEY, SCOUT_SUPPORT_PICKUP_SECONDS, SHIP_OPTIONS, SPACE_ET_PASSIVE_FORCE_FIELD_CHARGES, STORAGE_KEY } from './constants'
 import type { CoreLanderCombatModel, MesiahDroneUnit, MesiahScoutUnit, Player, PowerKind, Shot } from './types'
 import { clamp } from './utils'
 
@@ -209,9 +209,16 @@ export function getShipByKey(shipKey: string | undefined, fallback = SHIP_OPTION
 }
 
 export function getOptionSupportStacks(player: Player) {
-  if (player.optionTimer <= 0) return 0
-  if (player.ship.key === 'mesiah') return clamp(Math.round(player.optionStacks ?? 1), 0, 2)
-  return 1
+  const stacks = player.optionStacks ?? (player.optionTimer > 0 ? 1 : 0)
+  return clamp(Math.round(stacks), 0, player.ship.key === 'mesiah' ? 2 : 1)
+}
+
+export function activateScoutSupportPickup(player: Player) {
+  const stacks = getOptionSupportStacks(player)
+  // Preset full loadouts have active Scouts with no pickup countdown.
+  if (stacks > 0 && player.optionTimer === 0) return
+  player.optionStacks = Math.min(stacks + 1, player.ship.key === 'mesiah' ? 2 : 1)
+  player.optionTimer = SCOUT_SUPPORT_PICKUP_SECONDS
 }
 
 export function getRaidPlayerVisualShipKey(player: Player, progress: ReturnType<typeof loadProgress>) {

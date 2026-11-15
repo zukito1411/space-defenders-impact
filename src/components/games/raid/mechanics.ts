@@ -156,7 +156,7 @@ export function fullyBuffRaidPlayer(player: Player) {
     player.weapons[key] = WEAPON_STACK_CAPS[key]
     player.weaponCooldowns[key] = 0
   }
-  player.optionTimer = 1
+  player.optionTimer = 0
   player.optionStacks = player.ship.key === 'mesiah' ? 2 : 1
   player.mesiahDroneCooldown = 0
   player.mesiahDroneFireCooldown = 0
@@ -301,6 +301,13 @@ export function updatePlayerTimers(player: Player, dt: number, enemies: Enemy[],
     player.mesiahDroneCooldown = 0
     player.mesiahDroneFireCooldown = 0
     player.mesiahRocketCooldown = 0
+  }
+  if (player.optionTimer > 0) {
+    player.optionTimer = Math.max(0, player.optionTimer - dt)
+    if (player.optionTimer <= 1e-6) {
+      player.optionTimer = 0
+      player.optionStacks = 0
+    }
   }
   updateMesiahDrones(player, enemies, dt, isSmallViewport)
   updateMesiahScoutDrones(player, enemies, dt, isSmallViewport)
