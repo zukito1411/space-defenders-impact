@@ -216,6 +216,24 @@ try {
     await page.waitForFunction(()=>document.querySelector('.raid')?.dataset.carrierStage==='flight',{},{timeout:reduced?75000:45000})
     if (name === 'portrait') {
       await page.waitForFunction(() => window.stageOneMusicIsPlaying(), {}, { timeout: 15000 })
+      await page.evaluate(() => {
+        const context = CanvasRenderingContext2D.prototype
+        const clear = context.clearRect
+        const probe = window.raidFrameRecovery = { failed: false, frames: 0 }
+        context.clearRect = function (...args) {
+          if (!this.canvas.classList.contains('raid__fx-canvas')) return clear.apply(this, args)
+          if (!probe.failed) {
+            probe.failed = true
+            throw new DOMException('Injected transient combat canvas failure', 'InvalidStateError')
+          }
+          const result = clear.apply(this, args)
+          if (++probe.frames === 3) context.clearRect = clear
+          return result
+        }
+      })
+      await page.waitForFunction(() => window.raidFrameRecovery.failed && window.raidFrameRecovery.frames === 3)
+      assert.equal(await page.locator('.raid__panel--pause').count(), 0, 'a transient draw failure must recover in flight')
+      console.log('Combat frame recovery passed')
       await page.evaluate(async () => {
         const audio = new Audio('/audio/sfx_boss_battle.mp3')
         audio.muted = true

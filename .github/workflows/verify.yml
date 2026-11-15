@@ -21,6 +21,8 @@ jobs:
           cache: npm
       - name: Install locked dependencies
         run: npm ci
+      - name: Test Air Raid frame recovery
+        run: node --experimental-strip-types scripts/test-raid-frame-loop.mjs
       - name: Test Air Raid collision broad phase
         run: node scripts/test-raid-spatial-hash.mjs
       - name: Test account progression and cosmetic preferences

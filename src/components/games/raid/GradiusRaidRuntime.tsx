@@ -75,6 +75,7 @@ import type { AsteroidHazard, BossDefeatExplosionEvent, BossKind, BossMessage, C
 import { acquireRipple, acquireSpark, buildEnemyCollisionBuckets, clamp, collectShotCollisionCandidates, compactInPlace, createEnemyCollisionBuckets, distSq, drawRadialEllipse, getCachedProjectileOrbSprite, getCachedProjectileTrailSprite, getEliteEnemyChance, getMaxActiveEliteEnemies, pickEliteEnemyKind, readRaidPalette, recycleRipple, recycleRippleList, recycleSpark, recycleSparkList, takeLastFilteredMapped, updateRipplesInPlace, updateSparksInPlace } from './utils'
 import type { EnemyCollisionBuckets } from './utils'
 import { RaidFrameTimings } from './frameTimings'
+import { startRaidFrameLoop } from './frameLoop'
 
 const canvasBossArtSpec: GpuBossProjectileSpec = { kind: 'squidBubble', width: 0, height: 0, rotation: 0, alpha: 1, x: 0, y: 0 }
 
@@ -201,7 +202,6 @@ export function GradiusRaid({
     backgroundMs: 0, gpuSubmitMs: 0, canvasMs: 0, bossMs: 0,
   })
   const drawCostsRef = useRef({ backgroundMs: 0, gpuSubmitMs: 0, canvasMs: 0, bossMs: 0 })
-  const rafRef = useRef(0)
   const lastTimeRef = useRef(0)
   const lastRenderTimeRef = useRef(0)
   const lastVisualRetirementRef = useRef(0)
@@ -3407,7 +3407,7 @@ export function GradiusRaid({
     syncSnapshot()
   }, [syncSnapshot])
 
-  const pauseGame = useDoorCallback(() => {
+  const pauseFlight = useCallback(() => {
     const session = multiplayerSessionRef.current
     if (session && !session.isHost) return
     if (phaseRef.current !== 'playing') return
@@ -3415,7 +3415,8 @@ export function GradiusRaid({
     stopBossAttackAudio()
     stopRaidBgm()
     syncSnapshot()
-  })
+  }, [syncSnapshot])
+  const pauseGame = useDoorCallback(pauseFlight)
 
   const resumeGame = useDoorCallback(() => {
     const session = multiplayerSessionRef.current
@@ -7431,7 +7432,11 @@ export function GradiusRaid({
   }, [activateNuke, activateRaidBackControl, activateRaidFocusedControl, moveRaidMenuFocus, pauseGame, resetGame, resumeGame])
 
   useEffect(() => {
+    let frameStep: 'update' | 'draw' | 'snapshot' = 'update'
+    let lastFailureAt = -Infinity
+    let consecutiveDrawFailures = 0
     const tick = (time: number) => {
+      frameStep = 'update'
       const frameDelta = lastTimeRef.current > 0 ? Math.max(0, time - lastTimeRef.current) : 0
       // Keep the existing long-frame simulation guard; high-refresh displays
       // receive their actual shorter dt rather than repeated 60 Hz positions.
@@ -7464,7 +7469,10 @@ export function GradiusRaid({
       const simulationMs = measured ? performance.now() - simulationStart : 0
       const phase = phaseRef.current
       const drawStart = measured ? performance.now() : 0
+      frameStep = 'draw'
       drawFxCanvas(time)
+      consecutiveDrawFailures = 0
+      frameStep = 'snapshot'
       const drawMs = measured ? performance.now() - drawStart : 0
       if (measured) {
         frameTimingsRef.current!.sample(frameDelta)
@@ -7531,30 +7539,32 @@ export function GradiusRaid({
         lastRenderTimeRef.current = time
         if (!session || session.isHost) syncSnapshot()
       }
-      rafRef.current = requestAnimationFrame(tick)
     }
 
-    // Pause the animation loop when the browser tab / app is hidden to conserve CPU, GPU, and battery.
-    const handleVisibilityChange = () => {
-      if (document.hidden) {
-        stopGameSounds()
-        cancelAnimationFrame(rafRef.current)
-        rafRef.current = 0
-      } else if (rafRef.current === 0) {
-        // Reset last-time so the first tick after resuming doesn't produce a huge dt spike.
-        lastTimeRef.current = performance.now()
-        rafRef.current = requestAnimationFrame(tick)
+    const handleFrameError = (error: unknown) => {
+      const now = performance.now()
+      if (now - lastFailureAt >= 2000) {
+        lastFailureAt = now
+        console.error(`Air Raid frame failed during ${frameStep} (stage ${stageRef.current}, ${phaseRef.current})`, error)
       }
+      if (frameStep === 'draw') {
+        consecutiveDrawFailures += 1
+        // A failed draw may leave the Canvas transform, clipping, or save stack half applied.
+        if (consecutiveDrawFailures === 1) {
+          const canvas = fxCanvasRef.current
+          if (canvas) canvas.width = canvas.width
+          fxCanvasContextRef.current = null
+          fxCanvasSmoothingQualityRef.current = null
+        }
+      }
+      if (frameStep === 'update' || (frameStep === 'draw' && consecutiveDrawFailures === 3)) pauseFlight()
     }
-
-    document.addEventListener('visibilitychange', handleVisibilityChange)
-    rafRef.current = requestAnimationFrame(tick)
+    const stopLoop = startRaidFrameLoop(tick, handleFrameError, stopGameSounds, () => { lastTimeRef.current = 0 })
     return () => {
-      cancelAnimationFrame(rafRef.current)
-      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      stopLoop()
       clearNormalEnemyRasters()
     }
-  }, [advanceGuestVisuals, drawFxCanvas, pollRaidGamepads, predictGuestPlayer, sendMultiplayerInput, sendMultiplayerState, syncSnapshot, updateGame, updateMultiplayerConnection])
+  }, [advanceGuestVisuals, drawFxCanvas, pauseFlight, pollRaidGamepads, predictGuestPlayer, sendMultiplayerInput, sendMultiplayerState, syncSnapshot, updateGame, updateMultiplayerConnection])
 
   useEffect(() => {
     const p1Keys = new Set(['w', 'a', 's', 'd'])
