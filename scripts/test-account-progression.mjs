@@ -18,6 +18,8 @@ const window = Object.assign(new EventTarget(), {
   },
 })
 globalThis.window = window
+const navigator = { onLine: false }
+Object.defineProperty(globalThis, 'navigator', { configurable: true, value: navigator })
 const accounts = moduleUrl(read('src/leaderboards.ts').replaceAll('import.meta.env', '({})'))
 const progress = dev => import(moduleUrl(read('src/progression.ts')
   .replaceAll('import.meta.env.DEV', String(dev))
@@ -61,6 +63,19 @@ assert.notEqual(registration.playerId, previousId)
 assert.equal(registration.recoveryCode, '')
 assert.equal(account.getOrCreateStoredPlayerId(), previousId, 'Pending registration must not swap the active ID')
 assert.equal(released.getPendingProgressSyncToken(), pendingBefore)
+
+navigator.onLine = true
+globalThis.fetch = async (_url, options) => {
+  const { playerName, playerId } = JSON.parse(options.body)
+  assert.equal(playerName, 'New Pilot')
+  assert.notEqual(playerId, previousId)
+  return Response.json({ registered: true, playerId, playerName, recoveryCode: 'NEW-CODE' })
+}
+const online = await account.registerPlayerName('New Pilot', true)
+assert.equal(online.offline, undefined)
+assert.equal(online.recoveryCode, 'NEW-CODE')
+assert.equal(account.getStoredRecoveryCode(), 'PREVIOUS-CODE')
+assert.equal(account.getOrCreateStoredPlayerId(), previousId)
 
 for (const key of ['gradiusRaidUnlockedStage', 'gradiusRaidCheckpointStage', 'spaceImpactDefenseEndlessUnlocked']) {
   window.localStorage.setItem(key, 'true')
