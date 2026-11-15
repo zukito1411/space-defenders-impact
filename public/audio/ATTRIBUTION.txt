@@ -88,3 +88,7 @@ Boss attack sounds (game edits, level adjustments, and Ogg encodes)
   https://opengameart.org/content/big-scary-troll-sounds
 - Pressure Hiss by unfa (CC0), venom.ogg
   https://freesound.org/people/unfa/sounds/211096/
+- Radio Sign Off / Squelch by JovianSounds (CC0), transmission-link.ogg (shortened and filtered)
+  https://freesound.org/people/JovianSounds/sounds/524205/
+- Old Air Conditioner Loop by loganzsound (CC0), hangar-ventilation.ogg (filtered and encoded)
+  https://freesound.org/people/loganzsound/sounds/873136/

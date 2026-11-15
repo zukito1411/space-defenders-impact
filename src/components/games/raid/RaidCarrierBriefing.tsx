@@ -3,7 +3,7 @@ import type { LanguageCode } from '../../../i18n'
 import type { BossKind, RaidMode } from './types'
 import { getCarrierMission } from './carrierMission'
 import { getCarrierSectorIntel } from './carrierIntel'
-import { playHostileChannel } from './carrierAudio'
+import { useTransmission } from './carrierAudio'
 import { CAMPAIGN_COMMS_UI } from './campaignComms'
 import { COMMANDER_HOLOGRAM_URL, COMMS_COPY, GENERAL_HOLOGRAM_URL, getCarrierConversation, HOSTILE_HOLOGRAM_URL, PILOT_HOLOGRAM_URL } from './hostileBriefing'
 import './carrier.css'
@@ -48,9 +48,8 @@ export function RaidCarrierBriefing({ language, mode, stage, recoveryBoss, first
   const portraitChannel = pilot ? 'pilot' : hostile ? 'enemy' : general ? 'cfoc' : 'command'
   const portrait = pilot ? PILOT_HOLOGRAM_URL : hostile ? HOSTILE_HOLOGRAM_URL : general ? GENERAL_HOLOGRAM_URL : COMMANDER_HOLOGRAM_URL
   const speakerLabel = campaign && speaker === 'commander' ? story.commander : labels[speaker]
-  useEffect(() => {
-    if (hostile || sound) return playHostileChannel(sound === 'laugh')
-  }, [hostile, sound])
+  const feed = channel ?? 'command'
+  useTransmission(sound ?? (hostile ? 'static' : 'link'), feed)
   useEffect(() => {
     if (hostile && canLaunch) onInterception()
   }, [hostile, canLaunch, onInterception])

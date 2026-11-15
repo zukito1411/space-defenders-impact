@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { getGameAudioMixSettings, getGameSoundEnabled } from '../sound'
 import { CARRIER_DEPARTURE_START, CARRIER_IGNITION_START } from './carrierLaunch'
 import { CARRIER_AUDIO } from './raidSoundtrack'
@@ -17,18 +18,49 @@ function resumeSample(audio: HTMLAudioElement) {
   void audio.play().catch(() => {}).finally(() => pending.delete(audio))
 }
 
-export function playHostileChannel(laugh = false) {
+const transmission = {
+  link: { url: CARRIER_AUDIO.link, gain: .42 },
+  static: { url: CARRIER_AUDIO.interruption, gain: .55 },
+  laugh: { url: CARRIER_AUDIO.reptiliorLaugh, gain: .72 },
+} as const
+
+export function useTransmission(cue: keyof typeof transmission | null, signal: string | number = '') {
+  useEffect(() => {
+    if (!cue || document.hidden) return
+    return playTransmission(cue)
+  }, [cue, signal])
+}
+
+function playTransmission(cue: keyof typeof transmission) {
   const { master, ui } = getGameAudioMixSettings()
   if (!getGameSoundEnabled() || master * ui === 0) return
-  const audio = new Audio(laugh ? CARRIER_AUDIO.reptiliorLaugh : CARRIER_AUDIO.interruption)
-  audio.volume = (laugh ? .72 : .55) * master * ui
-  void audio.play().catch(() => {})
-  return () => audio.pause()
+  const { url, gain } = transmission[cue]
+  const audio = new Audio(url)
+  audio.volume = gain * master * ui
+  const retry = () => {
+    if (getGameSoundEnabled() && !document.hidden && audio.paused && !audio.ended) {
+      void audio.play().catch(() => {})
+    }
+  }
+  const pausedWhenHidden = () => { if (document.hidden) audio.pause() }
+  window.addEventListener('click', retry, { once: true })
+  document.addEventListener('visibilitychange', pausedWhenHidden)
+  retry()
+  return () => {
+    window.removeEventListener('click', retry)
+    document.removeEventListener('visibilitychange', pausedWhenHidden)
+    audio.pause()
+  }
 }
+
+const hangarLayers = [
+  { url: CARRIER_AUDIO.ambience, gain: .19 },
+  { url: CARRIER_AUDIO.ventilation, gain: .20 },
+] as const
 
 /** Sample the same launch clock on the host and on a guest. */
 export class CarrierAudio {
-  private bed: HTMLAudioElement | null = null
+  private beds: HTMLAudioElement[] = []
   private cue: HTMLAudioElement | null = null
   private activeCue: typeof cueWindows[number] | undefined
 
@@ -41,23 +73,26 @@ export class CarrierAudio {
       this.cue = null
       this.activeCue = cue
     }
-    if (!insideBay && this.bed) {
-      this.bed.pause()
-      this.bed = null
+    if (!insideBay && this.beds.length) {
+      this.beds.forEach(audio => audio.pause())
+      this.beds = []
     }
     if (paused || gain === 0) {
-      this.bed?.pause()
+      this.beds.forEach(audio => audio.pause())
       this.cue?.pause()
       return
     }
-    if (insideBay && !this.bed) {
-      this.bed = new Audio(CARRIER_AUDIO.ambience)
-      this.bed.loop = true
+    if (insideBay && !this.beds.length) {
+      this.beds = hangarLayers.map(({ url }) => {
+        const audio = new Audio(url)
+        audio.loop = true
+        return audio
+      })
     }
-    if (this.bed) {
-      this.bed.volume = (cue ? .10 : .19) * gain
-      resumeSample(this.bed)
-    }
+    this.beds.forEach((audio, index) => {
+      audio.volume = hangarLayers[index].gain * (cue ? .48 : 1) * gain
+      resumeSample(audio)
+    })
     if (cue && launchAge !== null) {
       if (!this.cue) {
         this.cue = new Audio(cue.url)
@@ -69,10 +104,26 @@ export class CarrierAudio {
   }
 
   stop() {
-    this.bed?.pause()
+    this.beds.forEach(audio => audio.pause())
     this.cue?.pause()
-    this.bed = null
+    this.beds = []
     this.cue = null
     this.activeCue = undefined
   }
+}
+
+export function useHangarAmbience(active: boolean) {
+  useEffect(() => {
+    if (!active) return
+    const audio = new CarrierAudio()
+    const sync = () => audio.update(true, null, document.hidden)
+    sync()
+    const timer = window.setInterval(sync, 300)
+    document.addEventListener('visibilitychange', sync)
+    return () => {
+      window.clearInterval(timer)
+      document.removeEventListener('visibilitychange', sync)
+      audio.stop()
+    }
+  }, [active])
 }
