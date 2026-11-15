@@ -24,6 +24,15 @@ for(const profile of m.COMMAND_BOSS_PROFILES) {
  assert.equal(m.getCommandBossHpScale(m.getCampaignBossKind(profile.stage),profile.stage,10,20),m.getCommandBossHpScale(m.getCampaignBossKind(profile.stage),profile.stage,15))
 }
 for(const kind of ['squid','snake','final','devil'])assert.equal(m.getCommandBossHpScale(kind,15,20),1)
+for (const difficulty of ['easy', 'normal']) {
+ const enemy = boss(1)
+ const bursts = new Set()
+ for (let i = 0; i < 1800; i++) {
+  const event = m.advanceCommandBoss(enemy, 1/60, [{ x: 50, y: 82 }], difficulty, 120, () => {})
+  if (event & m.COMMAND_WARNING) bursts.add(enemy.bossBurstCount)
+ }
+ assert.deepEqual([...bursts].sort(), difficulty === 'easy' ? [1] : [1, 2])
+}
 // Warnings latch target, origin, phase, speed and duration. HP loss cannot shorten a committed warning.
 for(const p of m.COMMAND_BOSS_PROFILES) {
  const e=boss(p.stage),emit=()=>assert.fail('unexpected early volley')

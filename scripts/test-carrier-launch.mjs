@@ -112,7 +112,7 @@ for (const language of ['en', 'zh', 'ja', 'ko']) {
 const runtime=read('src/components/games/raid/GradiusRaidRuntime.tsx')
 assert.match(runtime,/stageEntryRef.current = underway \? MESIAH_ENTRY_SECONDS : CARRIER_LAUNCH_SECONDS/)
 assert.match(runtime,/carrierLaunch: initialLaunchRef.current/)
-assert.match(runtime,/if \(carrierActive\) \{[\s\S]*?renderCarrierPilot\(ownShipRef[\s\S]*?return/)
+assert.match(runtime,/if \(carrier\) \{[\s\S]*?renderCarrierPilot\(ownShipRef[\s\S]*?return/)
 const assets=read('src/components/games/raid/carrierAssets.ts')
 for(const path of assets.matchAll(/'([^']+\.webp)'/g))assert.ok(readFileSync(new URL('../public/'+path[1],import.meta.url)).length>10000)
 console.log('Carrier: dock/ignition/release/flight/settle at 30/60/120Hz, reduced motion, co-op clock fields and localized campaign and arcade transmissions passed')

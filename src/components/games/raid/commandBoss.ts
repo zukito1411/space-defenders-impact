@@ -109,7 +109,7 @@ export function writeCommandVolley(enemy: Enemy, out: CommandShot[], burstIndex 
       const sx = x + sign * 12
       const angle = Math.atan2(Math.max(24, aimY - y), aimX - sx)
       aimed(sx, y + 5, angle + sign * (.2 - burstIndex * .045), 'needle', speed + 1, 1.4)
-      aimed(x + sign * 6, y + 7, heading - sign * .22, 'blade', speed * .94, 1.7)
+      aimed(x + sign * 6, y + 7, heading - sign * .22 + side * burstIndex * .1, 'blade', speed * .94, 1.7)
     }
   } else if (pattern === 'sweep') {
     const sweep = side * (burstIndex - ((enemy.bossBurstCount ?? 1) - 1) / 2) * .22
@@ -172,7 +172,9 @@ function beginAttack(enemy: Enemy, profile: CommandBossProfile, targets: readonl
   enemy.bossAttackTimer = enemy.bossWarningSeconds - elapsed
   enemy.bossShotSpeed = Math.min(COMMAND_MAX_SHOT_SPEED, (profile.speed + phase * 2.5) * tune.speed)
   enemy.bossBurstIndex = 0
-  enemy.bossBurstCount = isCommandBeam(pattern) ? 1 : pattern === 'hydra' ? 3 : Math.min(3, profile.bursts + (phase > 0 ? 1 : 0) + (phase === 2 && difficulty !== 'easy' ? 1 : 0))
+  const followUp = difficulty !== 'easy' && phase === 0 && profile.bursts === 1 &&
+    (pattern === 'fan' || pattern === 'snipe' || pattern === 'pincer' || pattern === 'sweep') && mixed % 3 !== 0 ? 1 : 0
+  enemy.bossBurstCount = isCommandBeam(pattern) ? 1 : pattern === 'hydra' ? 3 : Math.min(3, profile.bursts + followUp + (phase > 0 ? 1 : 0) + (phase === 2 && difficulty !== 'easy' ? 1 : 0))
   enemy.bossRecoverySeconds = Math.max(.48, profile.recovery * tune.recovery * (1 - phase * .11) - (difficulty === 'easy' ? .12 : .23))
   return COMMAND_WARNING | (changed ? COMMAND_PHASE : 0)
 }
@@ -220,7 +222,8 @@ export function advanceCommandBoss(enemy: Enemy, dt: number, targets: readonly V
   if (count > 0) enemy.bossLastVolleyAge = enemy.bossEncounterAge
   enemy.bossBurstIndex = (enemy.bossBurstIndex ?? 0) + 1
   if (enemy.bossBurstIndex < (enemy.bossBurstCount ?? 1)) {
-    enemy.bossAttackState = 'burst'; enemy.bossAttackTimer = (difficulty === 'easy' ? .31 : .27 - (enemy.bossCombatPhase ?? 0) * .015) - overshoot
+    const stagger = ((enemy.bossAttackSerial ?? 0) + enemy.bossBurstIndex) % 2 ? .035 : 0
+    enemy.bossAttackState = 'burst'; enemy.bossAttackTimer = (difficulty === 'easy' ? .31 : .26 + stagger - (enemy.bossCombatPhase ?? 0) * .015) - overshoot
   } else {
     enemy.bossAttackState = 'recovery'; enemy.bossAttackTimer = (enemy.bossRecoverySeconds ?? 1) - overshoot
   }
