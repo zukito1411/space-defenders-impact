@@ -145,6 +145,24 @@ let bgmDuckRestoreAt = 0
 const recentSfxTimesMs: number[] = []
 const lastKindPlayMs: Partial<Record<GameSoundKind, number>> = {}
 const gameSoundDuckers = new Set<GameSoundDucker>()
+const activeSamples = new Set<{ kind: GameSoundKind; stop: () => void }>()
+const activeSynthSources = new Set<AudioScheduledSourceNode>()
+
+function trackGameSoundSource(source: AudioScheduledSourceNode) {
+  activeSynthSources.add(source)
+  source.onended = () => { activeSynthSources.delete(source); source.disconnect() }
+}
+
+/** Cancel transient effects, including delayed synth notes and pending media playback. */
+export function stopGameSounds() {
+  for (const sample of activeSamples) sample.stop()
+  for (const source of activeSynthSources) {
+    try { source.stop(); source.disconnect() } catch { /* Already ended. */ }
+  }
+  activeSynthSources.clear()
+  recentSfxTimesMs.length = 0
+  for (const kind of Object.keys(lastKindPlayMs) as GameSoundKind[]) delete lastKindPlayMs[kind]
+}
 
 const MAX_SFX_OUTPUT = 0.78
 const KIND_OUTPUT_GAIN: Partial<Record<GameSoundKind, number>> = {
@@ -154,7 +172,8 @@ const KIND_OUTPUT_GAIN: Partial<Record<GameSoundKind, number>> = {
   explosion: 0.68,
   explosion_big: 0.6,
   nuke_explosion: 0.74,
-  destroyed_explosion: 0.46,
+  destroyed_explosion: 0.28,
+  gameover: 0.42,
   g_atk_punch_1: 0.52,
   g_atk_punch_2: 0.52,
   g_atk_kick: 0.5,
@@ -168,7 +187,7 @@ const BGM_STINGER_DUCK_ATTACK_MS = 80
 const BGM_STINGER_DUCK_HOLD_MS = 760
 const BGM_STINGER_DUCK_RELEASE_MS = 620
 const RAPID_FIRE_MIN_INTERVAL_MS: Partial<Record<GameSoundKind, number>> = {
-  laser: 32,
+  laser: 75,
   shoot: 26,
   pop: 30,
   hit: 28,
@@ -227,6 +246,7 @@ export function setGameSoundEnabled(enabled: boolean) {
     localStorage.setItem(SOUND_ENABLED_STORAGE_KEY, enabled ? '1' : '0')
   }
   if (!enabled) {
+    stopGameSounds()
     stopBGM()
   }
   if (typeof window !== 'undefined') window.dispatchEvent(new Event('game-audio-settings'))
@@ -478,10 +498,38 @@ function tryPlaySample(kind: GameSoundKind, eventGain = 1) {
   try {
     const a = new Audio(sampleUrl)
     a.preload = 'auto'
+    a.loop = false
     a.volume = clamp01((pack.sfxVolume ?? 0.7) * getKindBusGain(kind) * eventGain * MAX_SFX_OUTPUT)
-    void a.play().catch(() => {
-      // Ignore playback errors; synth fallback handles the event.
-    })
+    // Short defeat cues keep their attack, then fade instead of playing long noisy tails.
+    const limit = kind === 'gameover' ? 1100 : kind === 'destroyed_explosion' ? 1500 : 0
+    const fadeMs = kind === 'gameover' ? 180 : 220
+    const maxVoices = kind === 'laser' ? 3 : limit ? 1 : Infinity
+    const matching = [...activeSamples].filter(sample => sample.kind === kind)
+    while (matching.length >= maxVoices) matching.shift()!.stop()
+    let timer = 0, fade = 0
+    const sample = { kind, stop: () => {
+      activeSamples.delete(sample)
+      window.clearTimeout(timer); window.clearInterval(fade)
+      a.onended = null; a.onerror = null
+      a.pause()
+      try { a.currentTime = 0 } catch { /* Metadata may still be loading. */ }
+    } }
+    activeSamples.add(sample)
+    a.onended = sample.stop
+    a.onerror = sample.stop
+    void a.play().then(() => {
+      // A late play() completion must not resurrect a closed game or muted effect.
+      if (!activeSamples.has(sample)) { a.pause(); return }
+      if (!limit) return
+      timer = window.setTimeout(() => {
+        const started = nowMs(), volume = a.volume
+        fade = window.setInterval(() => {
+          const progress = clamp01((nowMs() - started) / fadeMs)
+          a.volume = volume * (1 - progress)
+          if (progress >= 1) sample.stop()
+        }, 20)
+      }, limit - fadeMs)
+    }).catch(sample.stop)
     return true
   } catch {
     return false
@@ -510,6 +558,7 @@ function playExplosionBoom(big: boolean, eventGain = 1) {
 
   // Body: short low-end thump with a steep downward pitch sweep.
   const bodyOsc = ctx.createOscillator()
+  trackGameSoundSource(bodyOsc)
   bodyOsc.type = 'triangle'
   bodyOsc.frequency.setValueAtTime(big ? 170 : 210, now)
   bodyOsc.frequency.exponentialRampToValueAtTime(big ? 42 : 58, now + dur)
@@ -531,6 +580,7 @@ function playExplosionBoom(big: boolean, eventGain = 1) {
 
   // Crack: very short high-passed noise burst for impact definition.
   const crack = ctx.createBufferSource()
+  trackGameSoundSource(crack)
   crack.buffer = getNoiseBuffer(ctx)
   const crackHP = ctx.createBiquadFilter()
   crackHP.type = 'highpass'
@@ -548,6 +598,7 @@ function playExplosionBoom(big: boolean, eventGain = 1) {
 
   // Debris tail: short band-passed noise to mimic brittle crash fragments.
   const debris = ctx.createBufferSource()
+  trackGameSoundSource(debris)
   debris.buffer = getNoiseBuffer(ctx)
   const debrisBP = ctx.createBiquadFilter()
   debrisBP.type = 'bandpass'
@@ -593,6 +644,7 @@ function tone(
   const endAt = startAt + durationMs / 1000
 
   const oscillator = ctx.createOscillator()
+  trackGameSoundSource(oscillator)
   oscillator.type = type
   oscillator.frequency.setValueAtTime(frequency, startAt)
 
@@ -692,6 +744,7 @@ export function playRaidCue(kind: keyof typeof RAID_CUES, pan = 0, delay = 0) {
     if (!ctx) return
     const start = ctx.currentTime + delay
     const oscillator = ctx.createOscillator()
+    trackGameSoundSource(oscillator)
     const envelope = ctx.createGain()
     oscillator.type = wave
     oscillator.frequency.setValueAtTime(from, start)

@@ -90,7 +90,7 @@ export class RaidScenePresentation {
       : Math.min(1, alive.length / 22 + state.hostileShots / 100)
     this.pressure += (target - this.pressure) * (target > this.pressure ? .24 : .14)
     this.score.update(state.bgm, state.track, this.pressure, active && !state.stageClear)
-    if (!active) { this.sounds.stopLoops(); return }
+    if (!active) { this.sounds.stop(); return }
     const now = performance.now()
     const engine = (pilot: Player | null, slot: string, gain: number) => {
       const clip = pilot ? `engine-${pilot.ship.key}` as ImmersionClip : null

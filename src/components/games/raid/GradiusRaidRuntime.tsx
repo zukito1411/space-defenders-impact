@@ -40,7 +40,7 @@ import { isCreatorPlayerName, submitLeaderboardScore } from '../../../leaderboar
 import { getEquippedShipCosmetics, hasProgressionUnlockOverride, isCoreLanderUnlocked, loadProgress } from '../../../progression'
 import type { RunResult, RunStatus, ShipCosmeticEquipState } from '../../../progression'
 import { RAID_ELITE_SPRITE_COUNT, getRaidAlienSpriteUrl, getRaidEliteSpriteUrl, RaidShipSprite } from '../RaidShipSprite'
-import { getGameAudioMixSettings, getGameSoundBgmDuckProfile, getGameSoundEnabled, getGraphicsQuality, getPublicAssetUrl, playGameSound, playRaidCue, registerGameSoundDucker, setGameAudioMixSettings, setGraphicsQuality, stopBGM } from '../sound'
+import { getGameAudioMixSettings, getGameSoundBgmDuckProfile, getGameSoundEnabled, getGraphicsQuality, getPublicAssetUrl, playGameSound, playRaidCue, registerGameSoundDucker, setGameAudioMixSettings, setGraphicsQuality, stopBGM, stopGameSounds } from '../sound'
 import type { AudioMixSettings, GraphicsQuality } from '../sound'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRaidFlightView } from './flightView'
@@ -3102,6 +3102,7 @@ export function GradiusRaid({
     const session = multiplayerSessionRef.current
     const sameScreen = sameScreenCoopRef.current
     if (session && !session.isHost) return
+    stopGameSounds()
     await preloadRaidAssetsForMenu(true)
     if (rendererPreparationRef.current) await rendererPreparationRef.current
     if (!rootRef.current?.isConnected) return
@@ -4042,7 +4043,7 @@ export function GradiusRaid({
     if (mesiahDroneFired) player.mesiahDroneFireCooldown = MESIAH_DRONE_FIRE_INTERVAL_SECONDS
     if (mesiahRocketsFired) player.mesiahRocketCooldown = MESIAH_ROCKET_FIRE_INTERVAL_SECONDS
     if (!canFireMain) {
-      if (mesiahDroneFired) playGameSound('shoot')
+      if (mesiahDroneFired) playGameSound('laser')
       return
     }
 
@@ -4069,7 +4070,7 @@ export function GradiusRaid({
     player.fireCooldown = shipKey === 'coreLander'
       ? coreLanderFireInterval
       : Math.max(minFireCooldown, (tunedBaseInterval - Math.min(0.045, totalStacks * 0.006)) / player.ship.fireRate)
-    playGameSound(stacks.laser > 0 || shipKey === 'laser' || shipKey === 'xwing' ? 'laser' : 'shoot')
+    playGameSound('laser')
     if (shipKey === 'dreadnought') playRaidCue('heavy', raidStereoPan(player.x, player.y, landscapeRef.current))
   }, [pushShot])
   // Keep the stable ref current so predictGuestPlayer can call firePlayer without a forward-reference issue
@@ -4405,8 +4406,10 @@ export function GradiusRaid({
       submitRaidLeaderboardScore(score)
       reportRaidRunComplete('exit')
     }
+    stopGameSounds()
+    scenePresentation.stop()
     onClose()
-  }, [onClose, reportRaidRunComplete, submitRaidLeaderboardScore])
+  }, [onClose, reportRaidRunComplete, scenePresentation, submitRaidLeaderboardScore])
 
   const damagePlayer = useCallback((amount: number, targetPlayer = playerRef.current, contact?: Vec) => {
     const player = targetPlayer
@@ -4442,7 +4445,6 @@ export function GradiusRaid({
     if (player.hp <= 0) {
       player.hp = 0
       playGameSound('destroyed_explosion')
-      playGameSound('gameover')
       spawnSparks(player.x, player.y, '#fb7185', 62, 8)
       addRipple(player.x, player.y, '#fb7185', 18)
       const ally = player === playerRef.current ? remotePlayerRef.current : playerRef.current
@@ -4454,6 +4456,7 @@ export function GradiusRaid({
       }
 
       phaseRef.current = 'gameover'
+      playGameSound('gameover')
       stopBGM()
       stopRaidBgm()
       if (!coOpRunRef.current && player.score > highScoreRef.current) {
@@ -4489,7 +4492,6 @@ export function GradiusRaid({
     player.shield = 0
     player.invuln = 2.2
     playGameSound('destroyed_explosion')
-    playGameSound('gameover')
     spawnSparks(player.x, player.y, '#fb7185', 76, 9)
     addRipple(player.x, player.y, '#fb7185', 21)
 
@@ -4498,6 +4500,7 @@ export function GradiusRaid({
     if (allyAlive) return
 
     phaseRef.current = 'gameover'
+    playGameSound('gameover')
     stopBossAttackAudio()
     stopBGM()
     stopRaidBgm()
@@ -7519,6 +7522,7 @@ export function GradiusRaid({
     // Pause the animation loop when the browser tab / app is hidden to conserve CPU, GPU, and battery.
     const handleVisibilityChange = () => {
       if (document.hidden) {
+        stopGameSounds()
         cancelAnimationFrame(rafRef.current)
         rafRef.current = 0
       } else if (rafRef.current === 0) {
@@ -7663,7 +7667,12 @@ export function GradiusRaid({
     }
   }, [scenePresentation])
 
+  useEffect(() => {
+    if (snapshot.phase !== 'playing' && snapshot.phase !== 'gameover') stopGameSounds()
+  }, [snapshot.phase])
+
   useEffect(() => () => {
+    stopGameSounds()
     stopBossAttackAudio()
     stopBGM()
     stopRaidBgm()

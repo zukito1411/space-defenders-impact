@@ -12,7 +12,7 @@ const code = ts.transpileModule([
   const clamp = (value, low, high) => Math.max(low, Math.min(high, value))
   const activeShotOwnerRef={current:null};
   const playerRef = {}, remotePlayerRef = {}, devilAssistPlayerRef = {}, fireCaptureRef = {}, viewportMetricsRef = {}, landscapeRef = { current: false }
-  const shots = [], colors = [], stageRef = { current: 1 }, progressRef = {}, enemiesRef = { current: [] }
+  const shots = [], colors = [], sounds = [], stageRef = { current: 1 }, progressRef = {}, enemiesRef = { current: [] }
   const PLAYER_COLOR = 'red', ALLY_PLAYER_COLOR = 'cyan'
   const WEAPON_KEYS = ['spread', 'laser', 'scatter', 'rocket', 'homing']
   const EMPTY_WEAPON_FLAGS = Object.fromEntries(WEAPON_KEYS.map(key => [key, false]))
@@ -22,7 +22,7 @@ const code = ts.transpileModule([
   const isCoreLanderBurning = () => false, getPlayerCoreLanderCombatModel = player => player.combatModel
   const isGodGundamBarragePilot = () => false, getCoreLanderFireInterval = () => .2
   const getPlayerBaseAttack = () => 8, getOptionSupportStacks = () => 0, normalizeMesiahDrones = () => []
-  const raidStereoPan=()=>0,playRaidCue=()=>{}, playGameSound = () => {}, getRaidFighter = variant => variant >= 8
+  const raidStereoPan=()=>0,playRaidCue=()=>{}, playGameSound = kind => sounds.push(kind), getRaidFighter = variant => variant >= 8
   const getRaidPlayerFlightBank = color => { colors.push(color); return bank }
   let shotId = 3, bank = 0
   const pushShot = shot => shots.push(shot)
@@ -38,6 +38,7 @@ const code = ts.transpileModule([
     viewportMetricsRef.current = viewport
     shots.length = 0
     colors.length = 0
+    sounds.length = 0
     const player = {
       ship: { key, fireRate: 1 }, x: 50, y: 80, hp: 5, fireCooldown: 0,
       mesiahDroneFireCooldown: 1, mesiahRocketCooldown: armed ? 0 : 1, combatModel,
@@ -48,7 +49,7 @@ const code = ts.transpileModule([
     remotePlayerRef.current = guest || ally ? player : undefined
     fireCaptureRef.current = guest ? [] : null
     firePlayer(player)
-    return { shots: [...shots], colors: [...colors] }
+    return { shots: [...shots], colors: [...colors], sounds: [...sounds] }
   }
   `,
 ].join('\n'), { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText
@@ -58,7 +59,9 @@ const close = (actual, expected) => assert.ok(Math.abs(actual - expected) < 1e-9
 for (const [cssWidth, cssHeight] of [[360, 800], [720, 390], [1440, 900]]) {
   const viewport = { cssWidth, cssHeight }
   for (const key of ['rocket', 'spaceEt', 'fast', 'gatling', 'laser', 'dreadnought', 'xwing', 'mesiah', 'coreLander']) {
-    const { shots } = fire(key, viewport, 0)
+    const { shots, sounds } = fire(key, viewport, 0)
+    assert.ok(sounds.includes('laser'), 'basic beams must use the existing laser sound')
+    assert.ok(!sounds.includes('shoot'), 'basic beams replayed the old chirp')
     const { shots: baseline } = fire(key, null, 0)
     assert.ok(shots.length)
     assert.deepEqual(shots.map(({ x, y, ...shot }) => shot), baseline.map(({ x, y, ...shot }) => shot))

@@ -99,7 +99,8 @@ assert.equal(stem.paused, true, 'late play completion resurrected a paused score
 score.stop()
 
 const cues = []
-class Sounds { play(...args) { cues.push(args) } loop() {} stop() {} stopLoops() {} }
+let fullStops = 0
+class Sounds { play(...args) { cues.push(args) } loop() {} stop() { fullStops++ } stopLoops() {} }
 class Score { update() {} stop() {} }
 const fakeAudio = { SampleScene: Sounds, AdaptiveScore: Score, warmImmersionAudio() {} }
 const condition = load('raid/playerCondition.ts', {
@@ -138,6 +139,21 @@ for (const [field, shield, expected, remaining] of [[3,0,'field-hit',2],[1,0,'fi
   damageContext.damagePlayer(1, target, { x: 0, y: 0 })
   assert.equal(target.feedback.serial, serial, 'invulnerable collision replayed a hit')
 }
+// Losing one co-op pilot is not a lost run; announce defeat only once both are down.
+const deathSounds = []
+Object.assign(damageContext, { coOpRunRef: { current: true }, remotePlayerRef: { current: { hp: 5, score: 0 } },
+  playerRef: { current: null }, phaseRef: { current: 'playing' }, highScoreRef: { current: 999 },
+  playGameSound: kind => deathSounds.push(kind), stopBGM() {}, stopRaidBgm() {},
+  submitRaidLeaderboardScore() {}, reportRaidRunComplete() {} })
+for (const allyAlive of [true, false]) {
+  deathSounds.length = 0
+  const target = { x: 10, y: 10, hp: 1, maxHp: 1, invuln: 0, forceField: 0, shield: 0, score: 0 }
+  damageContext.playerRef.current = target
+  damageContext.remotePlayerRef.current.hp = allyAlive ? 5 : 0
+  damageContext.damagePlayer(1, target)
+  assert.equal(deathSounds.filter(kind => kind === 'gameover').length, allyAlive ? 0 : 1)
+  assert.equal(damageContext.phaseRef.current, allyAlive ? 'playing' : 'gameover')
+}
 function context() { return { globalAlpha: 1, points: [], save() {}, restore() {}, translate() {}, scale() {}, beginPath() {},
   moveTo(...point) { this.points.push(point) }, lineTo(...point) { this.points.push(point) }, stroke() {}, fill() {}, rect() {}, clip() {}, drawImage() {} } }
 const draw = (phase, time) => { const ctx = context(); condition.drawPlayerCondition(ctx, player, phase, 0, 0, 192, time, 'pilot', {}, false); return ctx.points }
@@ -158,6 +174,11 @@ scene.ingest(scene.snapshot())
 scene.defeat({ id: 40 })
 scene.ingest([{ serial: 9999, x: 1, y: 1, radius: 3, tier: 'fighter', seed: NaN }])
 assert.equal(cues.length, count, 'duplicate or malformed destruction event replayed audio')
+for (const phase of ['gameover', 'briefing', 'victory']) {
+  const before = fullStops
+  scene.update({ phase, enemies: [], player, stage: 1, landscape: false, stageClear: false })
+  assert.ok(fullStops > before, 'leaving flight retained destruction one-shots or pending decodes')
+}
 const { DefensePresentation } = load('towerDefense/presentation.ts', { '../presentationAudio': fakeAudio }, { document, performance: { now: () => now } })
 const defense = new DefensePresentation()
 assert.deepEqual(Array.from(defense.update(true, true, .8, 1, [{ id: 1, active: true }], null)), [1])

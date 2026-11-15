@@ -46,6 +46,7 @@ const mockAudio = `
 export const events = [];
 export const config = { enabled: true, pan: true, master: 1 };
 const MAX_SFX_OUTPUT = .5;
+const trackGameSoundSource = () => {};
 const getGameSoundEnabled = () => config.enabled;
 const getGameAudioMixSettings = () => ({ master: config.master, beam: 1, impact: 1, ui: 1 });
 const param = () => ({ setValueAtTime() {}, exponentialRampToValueAtTime() {} });
