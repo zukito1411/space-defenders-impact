@@ -1777,6 +1777,7 @@ export function GradiusRaid({
         quality: gfxQuality,
         stageTheme: backgroundStageTheme,
         landscape: landscapeRef.current,
+        paused: phaseRef.current === 'paused',
         runToken: sceneryRunTokenRef.current,
         stageNumber: sceneryStage,
         raidMode: raidModeRef.current,

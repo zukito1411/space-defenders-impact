@@ -1,4 +1,5 @@
 import { orbitalShadowCoverage, sampleCapitalFlyby, sampleOrbitalShadow, type OrbitalShadow } from './flightEffects'
+import { LandscapePlanetAtmosphere } from './landscapeAtmosphere'
 import { COMBAT_TILE, getRaidCombatFrame } from './combatArt'
 import { getWreckTexture, preloadWreckArt } from './wreckArt'
 import { sceneryWreckDesign, wreckRunSeed } from './wreckVariety'
@@ -781,6 +782,7 @@ export type PixiRaidBackgroundFrame = RaidJourneyInput & {
   quality: GraphicsQuality
   stageTheme: number
   landscape?: boolean
+  paused?: boolean
   dpr: number
   stageRush: number
   bossIntensity: number
@@ -877,6 +879,7 @@ export class PixiRaidBackground {
   private readonly speedLineGraphics = new Graphics()
   private readonly speedLineSprites = BACKGROUND_SPEED_LINES.map(() => new Sprite(Texture.WHITE))
   private readonly surfaceGraphics = new Graphics()
+  private readonly landscapeAtmosphere = new LandscapePlanetAtmosphere()
   private readonly atmosphereMoons = [new Sprite(Texture.WHITE), new Sprite(Texture.WHITE)]
   private readonly wateryIslandSprites = createWorldSurfaceSprites(WATERY_WORLD_ISLAND_LAYERS.length)
   private readonly wateryCloudSprites = createWorldSurfaceSprites(WATERY_WORLD_CLOUD_LAYERS.length)
@@ -981,6 +984,7 @@ export class PixiRaidBackground {
       })
       this.worldScene.addChild(this.journeySurfaceSprite)
       this.worldScene.addChild(this.surfaceGraphics)
+      this.worldScene.addChild(this.landscapeAtmosphere.root)
       this.atmosphereMoons.forEach((sprite) => { sprite.visible = false; this.worldScene.addChild(sprite) })
       // Speed lines are added above the world plane below.
       this.speedLineSprites.forEach((sprite) => {
@@ -1021,6 +1025,7 @@ export class PixiRaidBackground {
       host.appendChild(canvas)
       await this.loadAssets()
       if (this.app !== app) return false
+      this.landscapeAtmosphere.warm()
       const cancelled = new Promise<boolean>((resolve) => {
         this.cancelForegroundPreparation = () => resolve(false)
       })
@@ -1056,6 +1061,7 @@ export class PixiRaidBackground {
     this.gradientCache.forEach((gradient) => gradient.destroy())
     this.gradientCache.clear()
     this.gpuForeground.destroy()
+    this.landscapeAtmosphere.destroy()
     this.app?.destroy({ removeView: true }, { children: true })
     for (const texture of this.backgroundSideShipTextures.values()) texture.destroy(true)
     this.backgroundSideShipTextures.clear()
@@ -1197,12 +1203,12 @@ export class PixiRaidBackground {
         // clouds upright on screen and remove the overhead terrain landmarks.
         for (const sprite of this.wateryIslandSprites) sprite.visible = false
         for (const sprite of this.volcanicIslandSprites) sprite.visible = false
-        for (const sprite of this.wateryCloudSprites) if (sprite.visible) sprite.rotation -= Math.PI / 2
-        for (const sprite of this.volcanicCloudSprites) if (sprite.visible) sprite.rotation -= Math.PI / 2
+        for (const sprite of this.wateryCloudSprites) sprite.visible = false
+        for (const sprite of this.volcanicCloudSprites) sprite.visible = false
       }
       // Water and volcanic clouds keep their time-based drift, but do not
       // follow the player's steering. Island/terrain parallax remains intact.
-      this.updateJourneyWorld(width, height, groundTheme, Boolean(frame.landscape), seconds)
+      this.updateJourneyWorld(width, height, groundTheme, Boolean(frame.landscape), seconds, quality, frame.paused)
       this.updateOrbitalEffects(width, height, frame.stageNumber ?? 1, frame.stageAge ?? 0, frame.stageRush,
         bossIntensity, isLow, isMedium, !space, frame.landscape)
       // Present with the foreground once per rAF, not twice. Geometry,
@@ -1634,7 +1640,7 @@ export class PixiRaidBackground {
     }
   }
 
-  private updateJourneyWorld(width: number, height: number, groundTheme: number, landscape = false, seconds = 0) {
+  private updateJourneyWorld(width: number, height: number, groundTheme: number, landscape = false, seconds = 0, quality: GraphicsQuality = 'high', paused = false) {
     const world = isWateryWorldTheme(groundTheme) || isVolcanicWorldTheme(groundTheme)
     const alpha = this.journey.enabled ? this.journey.worldAlpha : (world ? 1 : 0)
     this.worldScene.visible = world && alpha > 0
@@ -1642,6 +1648,9 @@ export class PixiRaidBackground {
     this.skyScene.visible = alpha < 0.999
     this.solidScenery.visible = alpha < 0.999
     const atmospheric = landscape && world
+    if (atmospheric) this.landscapeAtmosphere.update(width, height, seconds * 1000,
+      isWateryWorldTheme(groundTheme) ? 'pelagic' : 'cinder', quality, this.reducedMotion, paused)
+    else this.landscapeAtmosphere.hide()
     const zoom = this.reducedMotion || atmospheric ? 1 : this.journey.worldZoom
     this.worldScene.pivot.set(width * 0.5, height * 0.5)
     this.worldScene.position.set(width * 0.5, height * 0.5)
@@ -1656,9 +1665,9 @@ export class PixiRaidBackground {
       moon.visible = atmospheric && Boolean(moonTexture)
       if (moon.visible && moonTexture) {
         const size = Math.min(width, height) * (i === 0 ? 0.19 : 0.095)
-        const drift = this.reducedMotion ? 0 : Math.sin(seconds * 0.035 + i) * height * 0.012
-        setPixiSpriteContain(moon, moonTexture, width * (i === 0 ? 0.19 : 0.34), height * (i === 0 ? 0.76 : 0.28) + drift, size, size, 0.82, -Math.PI / 2)
-        moon.tint = isWateryWorldTheme(groundTheme) ? 0xcfc1ff : 0xffc1a1
+        const drift = this.reducedMotion ? 0 : Math.sin(this.landscapeAtmosphere.seconds * 0.035 + i) * height * 0.012
+        setPixiSpriteContain(moon, moonTexture, width * (i === 0 ? 0.19 : 0.34), height * (i === 0 ? 0.76 : 0.28) + drift, size, size, 0.58, -Math.PI / 2)
+        moon.tint = isWateryWorldTheme(groundTheme) ? 0xb6c7e4 : 0xffbfa1
       }
     }
     if (texture && !atmospheric) {
@@ -1894,16 +1903,7 @@ export class PixiRaidBackground {
     const isMedium = quality === 'medium'
     const isWorld = isWateryWorldTheme(stageTheme) || isVolcanicWorldTheme(stageTheme)
     if (isWorld && landscape) {
-      const watery = isWateryWorldTheme(stageTheme)
-      // Logical X becomes screen Y after the landscape playfield rotation.
-      const sky = this.getGradient(watery ? 'landscape-ocean-sky' : 'landscape-volcanic-sky', {
-        type: 'linear', start: { x: 0, y: 0 }, end: { x: 1, y: 0 },
-        colorStops: watery
-          ? [{ offset: 0, color: '#101129' }, { offset: 0.55, color: '#30204f' }, { offset: 1, color: '#182e49' }]
-          : [{ offset: 0, color: '#180f20' }, { offset: 0.55, color: '#59302d' }, { offset: 1, color: '#a05030' }],
-      })
-      graphics.visible = true
-      graphics.rect(0, 0, width, height).fill(sky)
+      graphics.visible = false
       return
     }
     if (isWorld && (getSurfaceTerrain(isWateryWorldTheme(stageTheme) ? 0 : 1) ?? getJourneySurface(isWateryWorldTheme(stageTheme) ? 0 : 1))) { graphics.visible = false; return }

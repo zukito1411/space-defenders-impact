@@ -83,6 +83,7 @@ class Texture {static WHITE=frame}
 class Container {constructor(){this.position={set(){}};this.pivot={set(){}};this.scale={set(){}}} }
 class Graphics {constructor(){this.position={set(){}}} clear(){} }
 class RaidGpuForeground {}
+class LandscapePlanetAtmosphere {root=new Container();seconds=0;warm(){} update(w,h,time){this.seconds=time/1000} hide(){} destroy(){}}
 class RaidTravelMotion {x=0;y=0;drift=0;}
 `+source
 const background=await load(source)
