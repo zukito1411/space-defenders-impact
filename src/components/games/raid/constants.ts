@@ -41,9 +41,7 @@ export function getNextBossRushStage(stage: number) {
 
 export const STORAGE_KEY = 'gradiusRaidHighScore'
 
-export const RAID_UNLOCK_STORAGE_KEY = 'gradiusRaidUnlockedStage'
-
-export const RAID_CHECKPOINT_STORAGE_KEY = 'gradiusRaidCheckpointStage'
+export { RAID_UNLOCK_STORAGE_KEY, RAID_CHECKPOINT_STORAGE_KEY } from './progressStorage'
 
 export const PLAYER_COLOR = '#ef233c'
 
