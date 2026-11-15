@@ -1,4 +1,5 @@
 import { ENDLESS_UNLOCK_STORAGE_KEY } from './components/games/towerDefense/config'
+import { RAID_CHECKPOINT_STORAGE_KEY, RAID_UNLOCK_STORAGE_KEY } from './components/games/raid/progressStorage'
 import { isCreatorPlayerName, PLAYER_NAME_STORAGE_KEY, type LeaderboardMode } from './leaderboards'
 
 export type RunStatus = 'victory' | 'gameover' | 'exit'
@@ -519,15 +520,18 @@ export function saveProgress(progress: ProgressState, markForCloudSync = true) {
   if (markForCloudSync) markProgressSyncPending()
 }
 
-export function resetProgressForNewAccount(): ProgressState {
+export function resetProgressForNewAccount(markForCloudSync = true): ProgressState {
   if (typeof window !== 'undefined') {
     window.localStorage.removeItem(ENDLESS_UNLOCK_STORAGE_KEY)
+    window.localStorage.removeItem(RAID_CHECKPOINT_STORAGE_KEY)
+    window.localStorage.removeItem(RAID_UNLOCK_STORAGE_KEY)
+    window.localStorage.removeItem(PROGRESS_SYNC_PENDING_KEY)
   }
   const progress = {
     ...createEmptyProgress(),
     towerDefenseEndlessUnlocked: false,
   }
-  saveProgress(progress)
+  saveProgress(progress, markForCloudSync)
   return progress
 }
 
@@ -822,7 +826,7 @@ export function getCompletionPercent(progress: ProgressState) {
 }
 
 export function isLocalProgressionTestHost() {
-  if (typeof window === 'undefined') return false
+  if (!import.meta.env.DEV || typeof window === 'undefined') return false
   return ['localhost', '127.0.0.1', '0.0.0.0', '::1'].includes(window.location.hostname)
 }
 
@@ -1076,8 +1080,11 @@ function normalizeEquippedCosmetics(
   shipMastery: Record<string, ShipMasteryRecord>,
 ) {
   const normalized: Record<string, ShipCosmeticEquipState> = {}
-  Object.entries(shipMastery).forEach(([shipKey, mastery]) => {
-    normalized[shipKey] = autoEquipNewCosmetics(equippedCosmetics[shipKey], mastery)
-  })
+  for (const [shipKey, choices] of Object.entries(equippedCosmetics)) {
+    normalized[shipKey] = { ...choices }
+  }
+  for (const [shipKey, mastery] of Object.entries(shipMastery)) {
+    normalized[shipKey] = autoEquipNewCosmetics(normalized[shipKey], mastery)
+  }
   return normalized
 }

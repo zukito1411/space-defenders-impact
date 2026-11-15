@@ -102,11 +102,13 @@ export function getOrCreateStoredPlayerId(): string {
   const existing = window.localStorage.getItem(PLAYER_ID_STORAGE_KEY)?.trim()
   if (existing) return existing
 
-  const nextId = typeof window.crypto?.randomUUID === 'function'
+  return saveStoredPlayerId(createPlayerId())
+}
+
+function createPlayerId(): string {
+  return typeof window !== 'undefined' && typeof window.crypto?.randomUUID === 'function'
     ? window.crypto.randomUUID()
     : `player-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`
-  window.localStorage.setItem(PLAYER_ID_STORAGE_KEY, nextId)
-  return nextId
 }
 
 export function saveStoredPlayerId(value: string): string {
@@ -124,8 +126,9 @@ export function getStoredRecoveryCode(): string {
 
 export function saveStoredRecoveryCode(value: string): string {
   const recoveryCode = value.trim().toUpperCase()
-  if (typeof window !== 'undefined' && recoveryCode) {
-    window.localStorage.setItem(PLAYER_RECOVERY_CODE_STORAGE_KEY, recoveryCode)
+  if (typeof window !== 'undefined') {
+    if (recoveryCode) window.localStorage.setItem(PLAYER_RECOVERY_CODE_STORAGE_KEY, recoveryCode)
+    else window.localStorage.removeItem(PLAYER_RECOVERY_CODE_STORAGE_KEY)
   }
   return recoveryCode
 }
@@ -199,13 +202,13 @@ export async function fetchLeaderboards(): Promise<LeaderboardMap> {
   return normalizeLeaderboardMap(data.leaderboards)
 }
 
-export async function registerPlayerName(value: string): Promise<PlayerNameRegistrationResult> {
+export async function registerPlayerName(value: string, newAccount = false): Promise<PlayerNameRegistrationResult> {
   const playerName = sanitizePlayerName(value)
-  const playerId = getOrCreateStoredPlayerId()
+  const playerId = newAccount ? createPlayerId() : getOrCreateStoredPlayerId()
   const apiBase = getLeaderboardApiBase()
   const localProfile = (): PlayerNameRegistrationResult => ({
     registered: true, available: true, taken: false, offline: true,
-    playerId, playerName, recoveryCode: getStoredRecoveryCode(),
+    playerId, playerName, recoveryCode: newAccount ? '' : getStoredRecoveryCode(),
   })
   if (!apiBase || (typeof navigator !== 'undefined' && !navigator.onLine)) return localProfile()
 
@@ -236,9 +239,9 @@ export async function registerPlayerName(value: string): Promise<PlayerNameRegis
       registered: true,
       available: true,
       taken: false,
-      playerId: typeof data.playerId === 'string' ? saveStoredPlayerId(data.playerId) : playerId,
+      playerId: typeof data.playerId === 'string' ? data.playerId : playerId,
       playerName: typeof data.playerName === 'string' ? sanitizePlayerName(data.playerName) : playerName,
-      recoveryCode: typeof data.recoveryCode === 'string' ? saveStoredRecoveryCode(data.recoveryCode) : getStoredRecoveryCode(),
+      recoveryCode: typeof data.recoveryCode === 'string' ? data.recoveryCode : newAccount ? '' : getStoredRecoveryCode(),
       progress: data.progress ?? null,
     }
   } catch {
@@ -272,9 +275,9 @@ export async function restorePlayerName(value: string, recoveryCodeValue: string
       restored: true,
       available: true,
       taken: false,
-      playerId: typeof data.playerId === 'string' ? saveStoredPlayerId(data.playerId) : playerId,
+      playerId: typeof data.playerId === 'string' ? data.playerId : playerId,
       playerName: typeof data.playerName === 'string' ? sanitizePlayerName(data.playerName) : playerName,
-      recoveryCode: typeof data.recoveryCode === 'string' ? saveStoredRecoveryCode(data.recoveryCode) : recoveryCode,
+      recoveryCode: typeof data.recoveryCode === 'string' ? data.recoveryCode : recoveryCode,
       progress: data.progress ?? null,
     }
   } catch {

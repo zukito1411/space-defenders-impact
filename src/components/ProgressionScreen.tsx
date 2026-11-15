@@ -471,7 +471,11 @@ export function ProgressionScreen({
                             type="button"
                             className={equippedCosmetics[cosmetic.key] ? 'progress-cosmetic progress-cosmetic--equipped' : cosmetic.unlocked ? 'progress-cosmetic progress-cosmetic--unlocked' : 'progress-cosmetic'}
                             disabled={lockedShip || !cosmetic.unlocked}
-                            onClick={() => onProgressChange(setShipCosmeticEquipped(shipKey, cosmetic.key, !equippedCosmetics[cosmetic.key]))}
+                            aria-pressed={equippedCosmetics[cosmetic.key]}
+                            onClick={() => {
+                              setPreviewCosmeticShip(null)
+                              onProgressChange(setShipCosmeticEquipped(shipKey, cosmetic.key, !equippedCosmetics[cosmetic.key]))
+                            }}
                           >
                             <span>{cosmetic.label}</span>
                             <i>{cosmetic.unlocked ? equippedCosmetics[cosmetic.key] ? text.cosmeticEquipped : text.cosmeticEquip : `${text.cosmeticLocked}: ${cosmetic.requirement}`}</i>

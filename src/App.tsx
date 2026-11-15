@@ -28,7 +28,7 @@ import {
   saveLanguage,
   type LanguageCode,
 } from './i18n'
-import { getStoredPlayerName, getStoredRecoveryCode, hasStoredPlayerName, isCreatorPlayerName, registerPlayerName, restorePlayerName, saveStoredPlayerName, uploadPlayerProgress, type PlayerNameRegistrationResult } from './leaderboards'
+import { getOrCreateStoredPlayerId, getStoredPlayerName, getStoredRecoveryCode, hasStoredPlayerName, isCreatorPlayerName, registerPlayerName, restorePlayerName, sanitizePlayerName, saveStoredPlayerId, saveStoredPlayerName, saveStoredRecoveryCode, uploadPlayerProgress, type PlayerNameRegistrationResult } from './leaderboards'
 import { CORE_LANDER_GOD_GUNDAM_UNLOCK_SCORE, CORE_LANDER_UNLOCK_GRADIUS_ENDLESS_SCORE, getEquippedShipCosmetics, getStoredTowerDefenseEndlessUnlock, isCoreLanderGodGundamUnlocked, isCoreLanderUnlocked, isGradiusRaidEndlessUnlocked, isShipCosmeticUnlocked, loadProgress, normalizeProgress, mergeProgressForSync, markProgressSyncPending, getPendingProgressSyncToken, clearPendingProgressSyncToken, recordRunResult, resetProgressForNewAccount, saveProgress, setCoreLanderModel, SHIP_COSMETIC_SINGLE_RUN_SCORE, SHIP_COSMETIC_TOTAL_SCORE, type ProgressState, type ProgressUpdate, type RunResult } from './progression'
 import { useEffect, useMemo, useState, useRef, type CSSProperties } from 'react'
 
@@ -389,9 +389,12 @@ function App() {
   const applyRegisteredPlayer = (
     result: PlayerNameRegistrationResult,
     fallbackName: string,
-    options: { uploadLocalWhenEmpty?: boolean; resetLocalWhenEmpty?: boolean } = {},
+    newAccount: boolean,
   ) => {
-    const { uploadLocalWhenEmpty = true, resetLocalWhenEmpty = false } = options
+    const switchingAccount = newAccount || Boolean(result.playerId && result.playerId !== getOrCreateStoredPlayerId())
+    const localProgress = switchingAccount ? resetProgressForNewAccount(false) : loadProgress()
+    if (result.playerId) saveStoredPlayerId(result.playerId)
+    if (result.recoveryCode !== undefined || switchingAccount) saveStoredRecoveryCode(result.recoveryCode ?? '')
     const nextName = saveStoredPlayerName(result.playerName ?? fallbackName)
     setPlayerName(nextName)
     setPlayerNameDraft(nextName)
@@ -402,34 +405,15 @@ function App() {
     cloudConnectedRef.current = !result.offline
     setCloudSyncStatus(result.offline ? 'offline' : 'connected')
 
-    if (result.progress && !result.offline) {
-      const pending = getPendingProgressSyncToken()
-      const cloudProgress = normalizeProgress(result.progress)
-      const nextProgress = pending ? mergeProgressForSync(loadProgress(), cloudProgress) : cloudProgress
-      // Hydrating cloud state must not itself mark a new local modification.
-      saveProgress(nextProgress, false)
-      setProgress(nextProgress)
-      setEndlessUnlocked(nextProgress.towerDefenseEndlessUnlocked)
-      if (pending) syncCloudProgress(nextProgress)
-      return
-    }
-
-    if (resetLocalWhenEmpty) {
-      const freshProgress = resetProgressForNewAccount()
-      setProgress(freshProgress)
-      setEndlessUnlocked(freshProgress.towerDefenseEndlessUnlocked)
-      if (!result.offline) syncCloudProgress(freshProgress)
-      return
-    }
-
-    const localProgress = loadProgress()
-    setProgress(localProgress)
-    setEndlessUnlocked(localProgress.towerDefenseEndlessUnlocked)
-    // A new remote account has no save yet. Queue local state without discarding it.
-    if (!result.offline && uploadLocalWhenEmpty) {
-      if (!getPendingProgressSyncToken()) markProgressSyncPending()
-      syncCloudProgress(localProgress)
-    }
+    const pending = getPendingProgressSyncToken()
+    const cloudProgress = !newAccount && !result.offline && result.progress ? normalizeProgress(result.progress) : null
+    const nextProgress = cloudProgress
+      ? pending ? mergeProgressForSync(localProgress, cloudProgress) : cloudProgress
+      : localProgress
+    saveProgress(nextProgress, false)
+    setProgress(nextProgress)
+    setEndlessUnlocked(nextProgress.towerDefenseEndlessUnlocked)
+    if (!result.offline && !cloudProgress && !pending) markProgressSyncPending()
   }
 
   useEffect(() => {
@@ -447,8 +431,9 @@ function App() {
       try {
         if (!cloudConnectedRef.current) {
           const requestedName = getStoredPlayerName()
+          const requestedId = getOrCreateStoredPlayerId()
           const result = await registerPlayerName(requestedName)
-          if (!active || getStoredPlayerName() !== requestedName) return
+          if (!active || getStoredPlayerName() !== requestedName || getOrCreateStoredPlayerId() !== requestedId) return
           if (result.offline || !result.registered) {
             setCloudSyncStatus(result.taken ? 'conflict' : 'offline')
             return
@@ -466,15 +451,17 @@ function App() {
           } else if (!pending) {
             markProgressSyncPending()
           }
-          if (result.recoveryCode) setRecoveryCode(result.recoveryCode)
+          if (result.playerId) saveStoredPlayerId(result.playerId)
+          if (result.recoveryCode) setRecoveryCode(saveStoredRecoveryCode(result.recoveryCode))
           cloudConnectedRef.current = true
         }
 
         const token = getPendingProgressSyncToken()
         if (token) {
           const requestedName = getStoredPlayerName()
+          const requestedId = getOrCreateStoredPlayerId()
           const upload = await uploadPlayerProgress(loadProgress())
-          if (!active || getStoredPlayerName() !== requestedName) return
+          if (!active || getStoredPlayerName() !== requestedName || getOrCreateStoredPlayerId() !== requestedId) return
           if (!upload.saved) {
             cloudConnectedRef.current = false
             setCloudSyncStatus('offline')
@@ -891,12 +878,14 @@ function App() {
   }
 
   const savePlayerName = async () => {
-    if (!playerNameDraft.trim()) return
+    if (!playerNameDraft.trim() || playerNameSaving) return
+    const newAccount = !playerNameRestoreMode && cloudSyncStatus !== 'conflict' &&
+      (!hasStoredPlayerName() || sanitizePlayerName(playerNameDraft).toLowerCase() !== getStoredPlayerName().toLowerCase())
     setPlayerNameSaving(true)
     setPlayerNameError('')
     const result = playerNameRestoreMode
       ? await restorePlayerName(playerNameDraft, recoveryCodeDraft)
-      : await registerPlayerName(playerNameDraft)
+      : await registerPlayerName(playerNameDraft, newAccount)
     setPlayerNameSaving(false)
 
     if (!result.registered) {
@@ -909,10 +898,7 @@ function App() {
       return
     }
 
-    const preserveUnsyncedPilot = cloudSyncStatus === 'conflict'
-    applyRegisteredPlayer(result, playerNameDraft, {
-      resetLocalWhenEmpty: !playerNameRestoreMode && !preserveUnsyncedPilot,
-    })
+    applyRegisteredPlayer(result, playerNameDraft, newAccount)
     if (!result.offline) syncCloudProgress(loadProgress())
   }
 
