@@ -54,7 +54,7 @@ import { DEFAULT_RAID_PALETTE, PixiRaidBackground, RAID_BOSS_BACKGROUND_THEME_FI
 import type { RaidPalette } from './background'
 import { forEachDevilBossBeamLane, forEachFinalBossBeamLane, getDevilBossBeamRadius, getDevilBossChargeDuration, getFinalBossBeamLaneCount, getFinalBossBeamRadius } from './bossAttacks'
 import { clearNormalEnemyRasters, drawRaidEnemy, getNormalEnemyFilter, pruneNormalEnemyRasters } from './bossRender'
-import { ALLY_PLAYER_COLOR, ASTEROID_CLUSTER_SPAWN_DELAY_SECONDS, ASTEROID_CLUSTER_WARNING_SECONDS, BOSS_COLORS, BOSS_ENTRANCE_SLAM_SECONDS, BOSS_ENTRANCE_SLOWMO_SCALE, BOSS_RESPAWN_SECONDS, BOSS_RUSH_ATTACK_COOLDOWN_SCALE, BOSS_RUSH_ENTRY_SPEED_SCALE, BOSS_RUSH_MOTION_SCALE, BOSS_RUSH_SPECIAL_RECHARGE_SCALE, BOSS_RUSH_STAGES, CORE_LANDER_AOE_RADIUS, DARK_ENEMY_COLORS, DEG, DEVIL_BOSS_MAX_STAGE_GAP, DEVIL_BOSS_MIN_STAGE_GAP, DIFFICULTY_CONFIGS, EMPTY_WEAPON_FLAGS, EMPTY_WEAPON_TIMERS, FINAL_BOSS_BEAM_CHARGE_SECONDS, FINAL_BOSS_BEAM_LIFE_SECONDS, FORCE_FIELD_ARMOR, GAMEPLAY_ALERT_SNAPSHOT_INTERVAL_MS, GAMEPLAY_SNAPSHOT_INTERVAL_MS, GOD_GUNDAM_BARRAGE_DURATION_SECONDS, GOD_GUNDAM_BARRAGE_HIT_INTERVAL_SECONDS, GOD_GUNDAM_DEFEAT_HOLD_SECONDS, GOD_GUNDAM_MELEE_DAMAGE_PER_SECOND, GOD_GUNDAM_MELEE_EXHAUST_COOLDOWN_SECONDS, GOD_GUNDAM_MELEE_EXHAUST_LIMIT_SECONDS, GOD_GUNDAM_MELEE_HEAT_RECOVERY_PER_SECOND, GOD_GUNDAM_MELEE_VISUAL_DURATION_SECONDS, GOD_GUNDAM_MELEE_VISUAL_INTERVAL_SECONDS, HEIGHT, HOMING_RETARGET_SECONDS, HOMING_RETARGET_STAGGER_SECONDS, IDLE_SNAPSHOT_INTERVAL_MS, MAX_ASTEROIDS, MAX_ION_STRIKES, MAX_METEORS, MAX_RAID_STAGE, MAX_WRECKS, MESIAH_DRONE_FIRE_INTERVAL_SECONDS, MESIAH_ROCKET_FIRE_INTERVAL_SECONDS, MINI_BOSS_COLORS, MULTIPLAYER_BOSS_HP_MULTIPLIER, MULTIPLAYER_CONNECTION_CHECK_MS, MULTIPLAYER_CORRECTION_DRAIN_RATE, MULTIPLAYER_ENTITY_MARGIN, MULTIPLAYER_GUEST_SNAP_DISTANCE_SQ, MULTIPLAYER_GUEST_STALE_MS, MULTIPLAYER_HEARTBEAT_INTERVAL_MS, MULTIPLAYER_HEARTBEAT_TIMEOUT_MS, MULTIPLAYER_INPUT_INTERVAL_MS, MULTIPLAYER_MAX_ASTEROIDS, MULTIPLAYER_MAX_BUFFERED_BYTES, MULTIPLAYER_MAX_ENEMIES, MULTIPLAYER_MAX_ENEMY_SHOTS, MULTIPLAYER_MAX_GUEST_CORRECTION, MULTIPLAYER_MAX_ION_STRIKES, MULTIPLAYER_MAX_METEORS, MULTIPLAYER_MAX_POWERUPS, MULTIPLAYER_MAX_RIPPLES, MULTIPLAYER_MAX_SHOTS, MULTIPLAYER_MAX_SPARKS, MULTIPLAYER_MAX_WRECKS, MULTIPLAYER_REMOTE_BUFFER_MAX, MULTIPLAYER_REMOTE_CORRECTION_BLEND, MULTIPLAYER_REMOTE_INPUT_BLEND, MULTIPLAYER_REMOTE_INPUT_SNAP_DISTANCE_SQ, MULTIPLAYER_STATE_INTERVAL_MS, MULTIPLAYER_STATE_LOST_MS, MULTIPLAYER_STATE_STALE_MS, NORMAL_POWER_DROP_COOLDOWN, NUKE_FLASH_SECONDS, NUKE_MISSILE_SECONDS, PLAYER_COLOR, PLAYER_MAX_RANK, POWER_PITY_KILLS, RAID_BACKGROUND_THEME_COUNT, RAID_CHECKPOINTS, RANDOM_EVENT_WARNING_SECONDS, SHIP_OPTIONS, SIDE_VALUES, SPACE_ET_PASSIVE_FORCE_FIELD_CHARGES, SPIEGEL_KUNAI_DAMAGE_MULTIPLIER, SPIEGEL_KUNAI_SPLASH_DAMAGE_MULTIPLIER, SPIEGEL_SHADOW_CLONE_OFFSET, STAGE_CLEAR_SECONDS, STAGE_ENTRY_SECONDS, VICTORY_BLACKOUT_SECONDS, WEAPON_FIRE_INTERVALS, WEAPON_KEYS, WEAPON_STACK_CAPS, WIDTH, getBossRushStage, getNextBossRushStage, getShipSpriteSize, pickEndlessBossKind, shouldForceLocalDerelictWreckTest, shouldForceLocalDevilBossTest } from './constants'
+import { ALLY_PLAYER_COLOR, ASTEROID_CLUSTER_SPAWN_DELAY_SECONDS, ASTEROID_CLUSTER_WARNING_SECONDS, BOSS_COLORS, BOSS_ENTRANCE_SLAM_SECONDS, BOSS_ENTRANCE_SLOWMO_SCALE, BOSS_RESPAWN_SECONDS, BOSS_RUSH_ATTACK_COOLDOWN_SCALE, BOSS_RUSH_ENTRY_SPEED_SCALE, BOSS_RUSH_MOTION_SCALE, BOSS_RUSH_SPECIAL_RECHARGE_SCALE, BOSS_RUSH_STAGES, CORE_LANDER_AOE_RADIUS, DARK_ENEMY_COLORS, DEG, DEVIL_BOSS_MAX_STAGE_GAP, DEVIL_BOSS_MIN_STAGE_GAP, DIFFICULTY_CONFIGS, ELITE_POWER_DROP_CHANCE, EMPTY_WEAPON_FLAGS, EMPTY_WEAPON_TIMERS, FINAL_BOSS_BEAM_CHARGE_SECONDS, FINAL_BOSS_BEAM_LIFE_SECONDS, FORCE_FIELD_ARMOR, GAMEPLAY_ALERT_SNAPSHOT_INTERVAL_MS, GAMEPLAY_SNAPSHOT_INTERVAL_MS, GOD_GUNDAM_BARRAGE_DURATION_SECONDS, GOD_GUNDAM_BARRAGE_HIT_INTERVAL_SECONDS, GOD_GUNDAM_DEFEAT_HOLD_SECONDS, GOD_GUNDAM_MELEE_DAMAGE_PER_SECOND, GOD_GUNDAM_MELEE_EXHAUST_COOLDOWN_SECONDS, GOD_GUNDAM_MELEE_EXHAUST_LIMIT_SECONDS, GOD_GUNDAM_MELEE_HEAT_RECOVERY_PER_SECOND, GOD_GUNDAM_MELEE_VISUAL_DURATION_SECONDS, GOD_GUNDAM_MELEE_VISUAL_INTERVAL_SECONDS, HEIGHT, HOMING_RETARGET_SECONDS, HOMING_RETARGET_STAGGER_SECONDS, IDLE_SNAPSHOT_INTERVAL_MS, MAX_ASTEROIDS, MAX_ION_STRIKES, MAX_METEORS, MAX_RAID_STAGE, MAX_WRECKS, MESIAH_DRONE_FIRE_INTERVAL_SECONDS, MESIAH_ROCKET_FIRE_INTERVAL_SECONDS, MINI_BOSS_COLORS, MULTIPLAYER_BOSS_HP_MULTIPLIER, MULTIPLAYER_CONNECTION_CHECK_MS, MULTIPLAYER_CORRECTION_DRAIN_RATE, MULTIPLAYER_ENTITY_MARGIN, MULTIPLAYER_GUEST_SNAP_DISTANCE_SQ, MULTIPLAYER_GUEST_STALE_MS, MULTIPLAYER_HEARTBEAT_INTERVAL_MS, MULTIPLAYER_HEARTBEAT_TIMEOUT_MS, MULTIPLAYER_INPUT_INTERVAL_MS, MULTIPLAYER_MAX_ASTEROIDS, MULTIPLAYER_MAX_BUFFERED_BYTES, MULTIPLAYER_MAX_ENEMIES, MULTIPLAYER_MAX_ENEMY_SHOTS, MULTIPLAYER_MAX_GUEST_CORRECTION, MULTIPLAYER_MAX_ION_STRIKES, MULTIPLAYER_MAX_METEORS, MULTIPLAYER_MAX_POWERUPS, MULTIPLAYER_MAX_RIPPLES, MULTIPLAYER_MAX_SHOTS, MULTIPLAYER_MAX_SPARKS, MULTIPLAYER_MAX_WRECKS, MULTIPLAYER_REMOTE_BUFFER_MAX, MULTIPLAYER_REMOTE_CORRECTION_BLEND, MULTIPLAYER_REMOTE_INPUT_BLEND, MULTIPLAYER_REMOTE_INPUT_SNAP_DISTANCE_SQ, MULTIPLAYER_STATE_INTERVAL_MS, MULTIPLAYER_STATE_LOST_MS, MULTIPLAYER_STATE_STALE_MS, NORMAL_POWER_DROP_COOLDOWN, NUKE_FLASH_SECONDS, NUKE_MISSILE_SECONDS, PLAYER_COLOR, PLAYER_MAX_RANK, POWER_PITY_KILLS, RAID_BACKGROUND_THEME_COUNT, RAID_CHECKPOINTS, RANDOM_EVENT_WARNING_SECONDS, SHIP_OPTIONS, SIDE_VALUES, SPACE_ET_PASSIVE_FORCE_FIELD_CHARGES, SPIEGEL_KUNAI_DAMAGE_MULTIPLIER, SPIEGEL_KUNAI_SPLASH_DAMAGE_MULTIPLIER, SPIEGEL_SHADOW_CLONE_OFFSET, STAGE_CLEAR_SECONDS, STAGE_ENTRY_SECONDS, VICTORY_BLACKOUT_SECONDS, WEAPON_FIRE_INTERVALS, WEAPON_KEYS, WEAPON_STACK_CAPS, WIDTH, getBossRushStage, getNextBossRushStage, getShipSpriteSize, pickEndlessBossKind, shouldForceLocalDerelictWreckTest, shouldForceLocalDevilBossTest } from './constants'
 import { drawAsteroidHazard, drawAsteroidWarning, drawDerelictWreck, drawDevilChargeWarnings, drawFinalChargeLines, drawGodGundamBarrage, drawGodGundamPassiveStrikes, drawIonStrike, drawMeteorHazard, drawNukeBlast, drawNukeMissile, drawHomingTargetLock, drawPowerUpCanvas, drawRandomEventOverlay, drawRandomEventWarning, getHomingMissileSprite, godBarrageDamageTargetsScratch } from './effectsRender'
 import { createAsteroidHazard, getAsteroidClusterInterval, getRandomEventDuration, getRandomEventInterval, getRaidAmbushLane, getRaidAmbushWaveSize, RAID_AMBUSH_WAVE_SPACING, pickNextRandomRaidEventKind, splitAsteroidHazard } from './events'
 import { RAID_FX_CANVAS_CONTEXT_SETTINGS, getRaidGraphicsProfile, makeRaidViewportMetrics } from './graphics'
@@ -1692,11 +1692,20 @@ export function GradiusRaid({
     const recovery = approaching && stop
       ? sampleCarrierRecovery(CARRIER_RECOVERY_SECONDS - stop.remaining, landscapeRef.current, reducedMotion, cssHeight < 700, underway)
       : null
-    const carrier = recovery ?? sampleCarrierLaunch(carrierAge, landscapeRef.current, reducedMotion, cssHeight < 700, underway)
-    root.dataset.carrierStage = carrierActive ? briefing ? (underway ? 'underway' : 'docked') : carrier.phase : 'flight'
-    root.style.setProperty('--raid-launch-opacity', String(carrierActive ? carrier.backdrop : 0))
-    root.style.setProperty('--carrier-shift-x', `${landscapeRef.current ? -carrier.shift * cssHeight : 0}px`)
-    root.style.setProperty('--carrier-shift-y', `${landscapeRef.current ? 0 : carrier.shift * cssHeight}px`)
+    const carrier = carrierActive
+      ? recovery ?? sampleCarrierLaunch(carrierAge, landscapeRef.current, reducedMotion, cssHeight < 700, underway)
+      : null
+    if (carrier) {
+      root.dataset.carrierStage = briefing ? (underway ? 'underway' : 'docked') : carrier.phase
+      root.style.setProperty('--raid-launch-opacity', String(carrier.backdrop))
+      root.style.setProperty('--carrier-shift-x', `${landscapeRef.current ? -carrier.shift * cssHeight : 0}px`)
+      root.style.setProperty('--carrier-shift-y', `${landscapeRef.current ? 0 : carrier.shift * cssHeight}px`)
+    } else if (root.dataset.carrierStage !== 'flight') {
+      root.dataset.carrierStage = 'flight'
+      root.style.setProperty('--raid-launch-opacity', '0')
+      root.style.setProperty('--carrier-shift-x', '0px')
+      root.style.setProperty('--carrier-shift-y', '0px')
+    }
     const toX = (value: number) => (value / WIDTH) * cssWidth
     const toY = (value: number) => (value / HEIGHT) * cssHeight
     // Actual viewport dimensions decide which sprites reach the renderer.
@@ -1759,7 +1768,7 @@ export function GradiusRaid({
     // PixiRaidBackground.render keeps expensive vector tessellation cached.
     if (pixiBackground) {
       const stageRush = stageClearRef.current > 0 ? clamp(stageClearRef.current / STAGE_CLEAR_SECONDS, 0, 1) : 0
-      const thrust = carrierActive ? (briefing && stop ? 0 : carrier.engine) : ownShipRef?.engineBoost ?? 0
+      const thrust = carrier ? (briefing && stop ? 0 : carrier.engine) : ownShipRef?.engineBoost ?? 0
       const thrustRush = playing && (ownShipRef?.hp ?? 0) > 0 ? clamp((thrust - .35) * .46, 0, .46) : 0
       const bossIntensity = activeBoss ? 1 : bossAlertRef.current > 0 ? clamp(bossAlertRef.current / 2.4, 0, 1) : 0
       const devilCorruption = activeBoss?.bossKind === 'devil' ? clamp(0.45 + (1 - activeBoss.hp / Math.max(1, activeBoss.maxHp)) * 0.75, 0, 1) : 0
@@ -1824,7 +1833,7 @@ export function GradiusRaid({
     }) ?? false
     costs.gpuSubmitMs = measured ? performance.now() - gpuStart : 0
     const canvasStart = measured ? performance.now() : 0
-    if (carrierActive) {
+    if (carrier) {
       if (recovery && recovery.exteriorAlpha > 0) {
         const side = landscapeRef.current ? getRaidSideShipCanvasSprite('mesiah') : null
         const sprite = side?.loaded ? side : getShipCanvasSprite('mesiahBlack')
@@ -4262,14 +4271,14 @@ export function GradiusRaid({
       if (powerDropCooldownRef.current > 0) return
 
       const pityBonus =
-        killsSincePowerRef.current >= POWER_PITY_KILLS + 6 ? 0.5 :
-          killsSincePowerRef.current >= POWER_PITY_KILLS ? 0.25 :
+        killsSincePowerRef.current >= POWER_PITY_KILLS + 6 ? 0.42 :
+          killsSincePowerRef.current >= POWER_PITY_KILLS ? 0.21 :
             0
       const lowHullBonus = player.hp <= Math.ceil(player.maxHp * 0.35) ? 0.06 : 0
       const chance = clamp(
-        0.115 + waveRef.current * 0.004 + lowHullBonus + pityBonus - powerScore * 0.006,
-        0.055,
-        0.42,
+        0.10 + waveRef.current * 0.0035 + lowHullBonus + pityBonus - powerScore * 0.006,
+        0.05,
+        0.38,
       )
 
       if (Math.random() > chance) return
@@ -4284,12 +4293,12 @@ export function GradiusRaid({
     if (!godGundamMeleeOnly) {
       ; WEAPON_KEYS.forEach((key) => {
         const maxStack = WEAPON_STACK_CAPS[key]
-        const copies = player.weapons[key] === 0 ? 3 : player.weapons[key] >= maxStack ? 1 : 2
+        const copies = player.weapons[key] === 0 ? 3 : player.weapons[key] >= maxStack ? 0 : 2
         for (let i = 0; i < copies; i += 1) candidates.push(key)
       })
     }
 
-    const type = candidates[Math.floor(Math.random() * candidates.length)] ?? (godGundamMeleeOnly ? 'repair' : 'spread')
+    const type = candidates[Math.floor(Math.random() * candidates.length)] ?? 'repair'
     killsSincePowerRef.current = 0
     powerDropCooldownRef.current = guaranteed ? NORMAL_POWER_DROP_COOLDOWN * 0.7 : NORMAL_POWER_DROP_COOLDOWN + powerScore * 0.55
     powerUpsRef.current.push({ id: powerId++, type, x, y, vy: 11, radius: 3, spin: Math.random() * 360 })
@@ -5439,7 +5448,7 @@ export function GradiusRaid({
       const bossAttackCooldownScale = bossRushAggressive ? BOSS_RUSH_ATTACK_COOLDOWN_SCALE : 1
       if (enemy.isBoss && enemy.hp > 0) playBossCriticalStinger(enemy)
       const finalRage = bossKind === 'final' ? clamp((0.55 - enemy.hp / Math.max(1, enemy.maxHp)) / 0.55, 0, 1) : 0
-      const bossX =
+      const bossX = !enemy.isBoss || (commandProfile && enemy.bossEncounterAge !== undefined) ? enemy.x :
         bossKind === 'devil' ? 50 :
           bossKind === 'carrier' ? 50 + Math.sin(bossMotionT * 0.7) * 26 :
             bossKind === 'orb' ? 50 + Math.sin(bossMotionT * 1.4) * 18 :
@@ -5451,7 +5460,7 @@ export function GradiusRaid({
                         bossKind === 'gate' ? 50 + Math.sin(bossMotionT * 0.38) * 14 :
                           bossKind === 'final' ? 50 + Math.sin(bossMotionT * (0.26 + finalRage * 0.08)) * (24 + finalRage * 2.5) + Math.sin(bossMotionT * (0.92 + finalRage * 0.18)) * (3.5 + finalRage * 1.5) :
                             50 + Math.sin(bossMotionT * 0.42) * 30
-      const bossYTarget =
+      const bossYTarget = !enemy.isBoss ? enemy.y :
         bossKind === 'devil' ? 21 + Math.sin(bossMotionT * 0.42) * 1.8 :
           bossKind === 'final' ? 17 + Math.sin(bossMotionT * (0.52 + finalRage * 0.16)) * (2.2 + finalRage * 0.9) :
             bossKind === 'squid' ? 18 + Math.sin(bossMotionT * 0.75) * 3 :
@@ -5464,23 +5473,25 @@ export function GradiusRaid({
                           bossKind === 'orb' ? 17 + Math.sin(bossMotionT * 1.8) * 4 :
                             18
       const fighter = !enemy.isBoss && !enemy.isMiniBoss ? getRaidFighter(enemy.variant) : undefined
-      if (fighter) {
+      const fighterTarget = fighter ? getNearestLivingPlayerThisTick(enemy) : undefined
+      if (fighterTarget) {
         enemy.formationAge = (enemy.formationAge ?? 0) + dt
-        commitRaidFighterManeuver(enemy, getNearestLivingPlayerThisTick(enemy))
+        commitRaidFighterManeuver(enemy, fighterTarget)
       }
       const trainT = (enemy.y - enemy.trainSlot * 6.2) * enemy.pathSpeed + enemy.phase
-      const trainX = fighter ? getRaidFighterPathX(enemy, getNearestLivingPlayerThisTick(enemy)) :
+      const trainX = enemy.isBoss || enemy.isMiniBoss ? enemy.x :
+        fighterTarget ? getRaidFighterPathX(enemy, fighterTarget) :
         enemy.pattern === 0 ? enemy.originX + Math.sin(trainT) * enemy.amplitude :
           enemy.pattern === 1 ? enemy.originX + Math.sin(trainT) * enemy.amplitude + Math.sin(trainT * 2.1) * 5 :
             enemy.pattern === 2 ? enemy.originX + Math.sin(trainT * 0.72) * enemy.amplitude * 0.7 :
               enemy.originX + Math.cos(trainT) * enemy.amplitude
       const miniKind = enemy.miniBossKind ?? 'stalker'
       const eliteTarget = enemy.isMiniBoss ? getNearestLivingPlayerThisTick(enemy) : player
-      const miniBossX =
+      const miniBossX = !enemy.isMiniBoss ? enemy.x :
         miniKind === 'brood' ? enemy.originX + Math.sin(t * 0.72) * enemy.amplitude + Math.sin(t * 1.9) * 4 + (eliteTarget.x - enemy.originX) * 0.1 :
           miniKind === 'lancer' ? eliteTarget.x + Math.sin(t * 1.55) * enemy.amplitude :
             eliteTarget.x + Math.sin(t * 1.05) * enemy.amplitude
-      const miniBossYTarget =
+      const miniBossYTarget = !enemy.isMiniBoss ? enemy.y :
         miniKind === 'brood' ? clamp(eliteTarget.y - 58 + Math.sin(t * 0.8) * 4, 18, 34) :
           miniKind === 'lancer' ? clamp(eliteTarget.y - 50 + Math.cos(t * 1.35) * 5, 20, 40) :
             clamp(eliteTarget.y - 54 + Math.sin(t * 1.2) * 5, 18, 36)
@@ -5641,7 +5652,7 @@ export function GradiusRaid({
               chargePattern = 'diagonal'
             } else {
               if (!volleyActive) {
-                const volleyChance = hpRatio <= 0.36 ? 0.62 : hpRatio <= 0.62 ? 0.34 : hpRatio <= 0.78 ? 0.18 : 0.08
+                const volleyChance = hpRatio <= 0.36 ? 0.68 : hpRatio <= 0.62 ? 0.40 : hpRatio <= 0.78 ? 0.23 : 0.12
                 if (Math.random() < volleyChance) beamVolleyLeft = hpRatio <= 0.36 ? 3 + Math.floor(Math.random() * 2) : hpRatio <= 0.62 ? 2 + Math.floor(Math.random() * 2) : 2
               }
               const skillVolleyActive = beamVolleyLeft > 0
@@ -5740,7 +5751,7 @@ export function GradiusRaid({
           if (chargeCooldown <= 0) {
             const hpRatio = enemy.hp / enemy.maxHp
             const roll = Math.random()
-            const volleyChance = hpRatio < 0.36 ? 0.45 : hpRatio < 0.72 ? 0.28 : 0.18
+            const volleyChance = hpRatio < 0.36 ? 0.52 : hpRatio < 0.72 ? 0.34 : 0.24
             if (beamVolleyRecovery <= 0 && beamVolleyLeft <= 0 && Math.random() < volleyChance) {
               beamVolleyLeft = 2 + Math.floor(Math.random() * (hpRatio < 0.36 ? 3 : 2))
             }
@@ -5753,6 +5764,9 @@ export function GradiusRaid({
                 : hpRatio < 0.68
                   ? roll < 0.2 ? 'single' : roll < 0.38 ? 'pincer' : roll < 0.55 ? 'trident' : roll < 0.68 ? 'diagonal' : roll < 0.8 ? 'horizontal' : roll < 0.92 ? 'cross' : 'rotate'
                   : roll < 0.34 ? 'single' : roll < 0.58 ? 'pincer' : roll < 0.76 ? 'trident' : roll < 0.87 ? 'diagonal' : roll < 0.96 ? 'horizontal' : 'rotate'
+            if (beamVolleyLeft > 0 && chargePattern === enemy.chargePattern) {
+              chargePattern = chargePattern === 'trident' ? 'pincer' : 'trident'
+            }
             chargeLane =
               chargePattern === 'horizontal'
                 ? clamp(player.y + (Math.random() - 0.5) * 14, 27, 86)
@@ -5803,7 +5817,7 @@ export function GradiusRaid({
               spawnSparks(enemy.x, enemy.y + 10, '#f0abfc', 42, 8)
               addRipple(enemy.x, enemy.y + 14, '#f472b6', 22)
               markBossAttack(enemy, 'strike')
-              chargeCooldown = 3.65 + Math.random() * 1.05
+              chargeCooldown = 3.4 + Math.random() * 1.1
               fireCooldown = Math.max(fireCooldown, 1.25)
             } else {
               for (const target of livingPlayersThisTick) {
@@ -5820,7 +5834,7 @@ export function GradiusRaid({
               spawnSparks(chargeLane, chargeTargetY, '#f472b6', 44, 8)
               addRipple(chargeLane, chargeTargetY, '#f472b6', 18)
               markBossAttack(enemy, 'strike')
-              chargeCooldown = 2.2 + Math.random() * 1.05
+              chargeCooldown = 2.0 + Math.random() * 1.15
               fireCooldown = Math.max(fireCooldown, 1.05)
             }
           }
@@ -5838,8 +5852,8 @@ export function GradiusRaid({
           }
           const bubbleTarget = slapTarget ?? getNearestLivingPlayerThisTick(enemy)
           const squidSpecialStep = bossKind === 'squid' ? Math.max(0, Math.floor(beamVolleyLeft ?? 0)) : 0
-          const forceStageSquidBubble = bossKind === 'squid' && squidSpecialStep % 4 === 0
-          const shouldBubble = chargeCooldown <= 0 && (forceStageSquidBubble || Math.random() < 0.38)
+          const forceStageSquidBubble = bossKind === 'squid' && squidSpecialStep === 0
+          const shouldBubble = chargeCooldown <= 0 && (forceStageSquidBubble || (chargePattern !== 'rotate' && Math.random() < 0.46))
           if (shouldBubble) {
             chargeTimer = 0.78
             chargePattern = 'rotate'
@@ -5962,18 +5976,16 @@ export function GradiusRaid({
           if (chargeCooldown <= 0) {
             const target = getNearestLivingPlayerThisTick(enemy)
             const hpRatio = enemy.hp / enemy.maxHp
-            const snakeSpecialStep = bossKind === 'snake' ? Math.max(0, Math.floor(beamVolleyLeft ?? 0)) : -1
             const roll = Math.random()
-            if (snakeSpecialStep >= 0 && snakeSpecialStep % 3 === 1) {
-              chargePattern = 'cross'
-            } else if (snakeSpecialStep >= 0 && snakeSpecialStep % 3 === 2) {
-              chargePattern = 'horizontal'
-            } else if (bossKind === 'final' && attackBossKind === 'snake' && roll < 0.46) {
-              chargePattern = roll < 0.23 ? 'cross' : 'horizontal'
+            const trapChance = hpRatio < 0.50 ? .52 : .42
+            const previousPattern = chargePattern
+            if (roll < trapChance) {
+              const trap = roll < trapChance / 2 ? 'cross' : 'horizontal'
+              chargePattern = trap === previousPattern ? (trap === 'cross' ? 'horizontal' : 'cross') : trap
             } else {
-              chargePattern = hpRatio < 0.38
-                ? roll < 0.28 ? 'pincer' : roll < 0.58 ? 'trident' : roll < 0.82 ? 'single' : 'scatter'
-                : roll < 0.38 ? 'single' : roll < 0.68 ? 'pincer' : roll < 0.9 ? 'trident' : 'scatter'
+              const spread = (roll - trapChance) / (1 - trapChance)
+              chargePattern = spread < .24 ? 'single' : spread < .48 ? 'pincer' : spread < .75 ? 'trident' : 'scatter'
+              if (chargePattern === previousPattern) chargePattern = chargePattern === 'trident' ? 'pincer' : 'trident'
             }
             chargeTimer = chargePattern === 'horizontal' ? 1.18 : chargePattern === 'cross' ? 1.08 : chargePattern === 'scatter' ? 1.08 : 0.95
             chargeLane = clamp(target.x + (Math.random() - 0.5) * (chargePattern === 'scatter' ? 20 : 12), 14, 86)
@@ -5983,7 +5995,6 @@ export function GradiusRaid({
                 ? clamp(target.y + 4, 26, 78)
                 : enemy.y + 32
             chargeCooldown = 999
-            if (bossKind === 'snake') beamVolleyLeft = snakeSpecialStep + 1
             addRipple(chargeLane, chargePattern === 'horizontal' || chargePattern === 'cross' ? chargeTargetY : enemy.y + 32, chargePattern === 'horizontal' || chargePattern === 'cross' ? '#84cc16' : '#22d3ee', chargePattern === 'scatter' ? 20 : 17)
             spawnSparks(enemy.x, enemy.y + 3, '#38bdf8', 36, 7)
             markBossAttack(enemy, 'charge', chargeTimer)
@@ -6203,7 +6214,7 @@ export function GradiusRaid({
             spawnSparks(enemy.x, enemy.y, enemy.isMiniBoss ? '#c084fc' : '#fb7185', enemy.isMiniBoss ? 42 : 18, enemy.isMiniBoss ? 7 : 5)
             addRipple(enemy.x, enemy.y, enemy.isMiniBoss ? '#a855f7' : '#f97316', enemy.isMiniBoss ? 14 : 9)
             if (enemy.isMiniBoss) {
-              spawnPowerUp(enemy.x, enemy.y, Math.random() < 0.55)
+              spawnPowerUp(enemy.x, enemy.y, Math.random() < ELITE_POWER_DROP_CHANCE)
             } else {
               spawnPowerUp(enemy.x, enemy.y)
             }
@@ -6359,7 +6370,7 @@ export function GradiusRaid({
       spawnSparks(enemy.x, enemy.y, enemy.isBoss ? '#fda4af' : enemy.isMiniBoss ? '#c084fc' : '#fb7185', enemy.isBoss ? 60 : enemy.isMiniBoss ? 42 : 18, enemy.isBoss ? 8 : enemy.isMiniBoss ? 7 : 5)
       addRipple(enemy.x, enemy.y, enemy.isBoss ? '#fb7185' : enemy.isMiniBoss ? '#a855f7' : '#f97316', enemy.isBoss ? 18 : enemy.isMiniBoss ? 14 : 9)
       if (enemy.isMiniBoss) {
-        spawnPowerUp(enemy.x, enemy.y, Math.random() < 0.55)
+        spawnPowerUp(enemy.x, enemy.y, Math.random() < ELITE_POWER_DROP_CHANCE)
       } else if (!enemy.isBoss) spawnPowerUp(enemy.x, enemy.y)
       if (!enemy.isBoss) enemy.defeatTimer = Math.max(enemy.defeatTimer ?? 0, GOD_GUNDAM_DEFEAT_HOLD_SECONDS)
       if (enemy.isBoss) {
@@ -6853,7 +6864,7 @@ export function GradiusRaid({
             spawnSparks(enemy.x, enemy.y, enemy.isBoss ? '#fda4af' : enemy.isMiniBoss ? '#c084fc' : '#fb7185', enemy.isBoss ? 60 : enemy.isMiniBoss ? 42 : 18, enemy.isBoss ? 8 : enemy.isMiniBoss ? 7 : 5)
             addRipple(enemy.x, enemy.y, enemy.isBoss ? '#fb7185' : enemy.isMiniBoss ? '#a855f7' : '#f97316', enemy.isBoss ? 18 : enemy.isMiniBoss ? 14 : 9)
             if (enemy.isMiniBoss) {
-              spawnPowerUp(enemy.x, enemy.y, Math.random() < 0.55)
+              spawnPowerUp(enemy.x, enemy.y, Math.random() < ELITE_POWER_DROP_CHANCE)
             } else if (!enemy.isBoss) spawnPowerUp(enemy.x, enemy.y)
             if (enemy.isBoss) {
               playBossCriticalStinger(enemy, true)
@@ -7280,9 +7291,12 @@ export function GradiusRaid({
   }, [exitRaid, pauseGame, resumeGame, syncSnapshot])
 
   const pollRaidGamepads = useCallback((time: number) => {
-    const gamepads = typeof navigator.getGamepads === 'function'
-      ? Array.from(navigator.getGamepads()).filter((gamepad): gamepad is Gamepad => Boolean(gamepad?.connected))
-      : []
+    const inputs = typeof navigator.getGamepads === 'function' ? navigator.getGamepads() : null
+    let gamepads: Gamepad[] | undefined
+    for (let index = 0; inputs && index < inputs.length; index += 1) {
+      const input = inputs[index]
+      if (input?.connected) (gamepads ??= []).push(input)
+    }
     const clearPilotGamepadPointer = (pilot: 'p1' | 'p2') => {
       const activeRef = gamepadPointerActiveRef.current
       if (!activeRef[pilot]) return
@@ -7292,11 +7306,12 @@ export function GradiusRaid({
       visualRef.current = null
       activeRef[pilot] = false
     }
-    if (!gamepads.length) {
+    if (!gamepads) {
       clearPilotGamepadPointer('p1')
       clearPilotGamepadPointer('p2')
-      gamepadButtonsRef.current = new Map()
-      gamepadPilotAssignmentsRef.current = { p1: null, p2: null }
+      gamepadButtonsRef.current.clear()
+      gamepadPilotAssignmentsRef.current.p1 = null
+      gamepadPilotAssignmentsRef.current.p2 = null
       return
     }
     const connectedIndexes = new Set(gamepads.map((gamepad) => gamepad.index))
