@@ -1,4 +1,5 @@
 import { RAID_ELITE_FRAME_KEYS } from './shipArtwork'
+import { IMMERSION_AUDIO_URLS } from '../presentationAssets'
 import { CAMPAIGN_BOSS_ART } from './bossCatalog'
 import { WRECK_ART_URLS, preloadWreckArt } from './wreckArt'
 import { SURFACE_ART_URLS, preloadSurfaceArt } from './surfaceArt'
@@ -16,7 +17,7 @@ import { RAID_SOUNDTRACK_URLS } from './raidSoundtrack'
 import { BOSS_AUDIO_URLS } from './bossAudio'
 import { COMMANDER_HOLOGRAM_URL, GENERAL_HOLOGRAM_URL, HOSTILE_HOLOGRAM_URL, PILOT_HOLOGRAM_URL } from './hostileBriefing'
 import { getHomingMissileSprite, warmPowerPickupSpriteCache } from './effectsRender'
-import { getCoreBlastSprite, getHoneycombShieldSprite, warmRaidEngineExhaust } from './playerRender'
+import { getCoreBlastSprite, warmRaidEngineExhaust } from './playerRender'
 import type { RaidAssetPreloadState } from './types'
 import { getCachedProjectileOrbSprite, getCachedProjectileTrailSprite } from './utils'
 
@@ -24,7 +25,7 @@ export const RAID_IMAGE_CACHE_NAME = 'space-defender-raid-images-v1'
 
 export const RAID_AUDIO_CACHE_NAME = 'space-defender-audio-v1'
 
-export const RAID_PERSISTENT_CACHE_VERSION = 'gradius-raid-assets-v14'
+export const RAID_PERSISTENT_CACHE_VERSION = 'gradius-raid-assets-v15'
 
 export const RAID_PERSISTENT_CACHE_STORAGE_KEY = 'gradiusRaidPersistentAssetCache'
 
@@ -106,6 +107,7 @@ export function getRaidPersistentImageUrls() {
 
 export function getRaidPersistentAudioUrls() {
   return [
+    ...IMMERSION_AUDIO_URLS,
     COSMOS_AMBIENCE_URL,
     ...RAID_SOUNDTRACK_URLS,
     ...BOSS_AUDIO_URLS,
@@ -141,9 +143,6 @@ export function getRaidPersistentAudioUrls() {
 export function warmRaidGeneratedEffectSprites() {
   if (typeof document === 'undefined') return
 
-  for (const size of [58, 76, 96, 124, 156]) {
-    getHoneycombShieldSprite(size)
-  }
   for (const radius of [8, 10.5, 13.5, 17.5, 22]) {
     for (const burning of [false, true]) {
       for (const frameBucket of [0, 0.25, 0.5, 0.75]) {

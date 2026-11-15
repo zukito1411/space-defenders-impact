@@ -1,0 +1,902 @@
+{
+  "version": 1,
+  "method": "Offline editing of bundled recordings; HPSS stems stay aligned to original scores.",
+  "files": [
+    {
+      "file": "audio/immersion/armored-death.ogg",
+      "bytes": 11448,
+      "sha256": "b866602682884a681a5a699452de4aa4594fbd0286864e97872650867ddd2328",
+      "seconds": 1.45,
+      "sampleRate": 32000,
+      "channels": 1,
+      "loop": false,
+      "peak": 0.54904,
+      "rms": 0.09299,
+      "sources": [
+        "mesiah/hangar-bed.ogg",
+        "mesiah/thruster-release.ogg",
+        "mesiah/thruster-heat.ogg",
+        "mesiah/hangar-ventilation.ogg",
+        "boss/beam-charge.ogg",
+        "boss/cannon.ogg",
+        "boss/venom.ogg",
+        "mesiah/hostile-channel.ogg",
+        "mesiah/transmission-link.ogg"
+      ]
+    },
+    {
+      "file": "audio/immersion/capital-death.ogg",
+      "bytes": 14236,
+      "sha256": "ab37c11b821deb8ed28b65d6eb686c8f3ff29c07b37e2a0e20fdf44f5e264e6f",
+      "seconds": 3.2,
+      "sampleRate": 32000,
+      "channels": 1,
+      "loop": false,
+      "peak": 0.54904,
+      "rms": 0.10502,
+      "sources": [
+        "mesiah/hangar-bed.ogg",
+        "mesiah/thruster-release.ogg",
+        "mesiah/thruster-heat.ogg",
+        "mesiah/hangar-ventilation.ogg",
+        "boss/beam-charge.ogg",
+        "boss/cannon.ogg",
+        "boss/venom.ogg",
+        "mesiah/hostile-channel.ogg",
+        "mesiah/transmission-link.ogg"
+      ]
+    },
+    {
+      "file": "audio/immersion/cargo.ogg",
+      "bytes": 15423,
+      "sha256": "35d9c8419870e659dac4f155aeef52437a04e1b295b84cadccf2bf7f974c988a",
+      "seconds": 2.8,
+      "sampleRate": 32000,
+      "channels": 1,
+      "loop": false,
+      "peak": 0.54904,
+      "rms": 0.08605,
+      "sources": [
+        "mesiah/hangar-bed.ogg",
+        "mesiah/thruster-release.ogg",
+        "mesiah/thruster-heat.ogg",
+        "mesiah/hangar-ventilation.ogg",
+        "boss/beam-charge.ogg",
+        "boss/cannon.ogg",
+        "boss/venom.ogg",
+        "mesiah/hostile-channel.ogg",
+        "mesiah/transmission-link.ogg"
+      ]
+    },
+    {
+      "file": "audio/immersion/combined-break.ogg",
+      "bytes": 9293,
+      "sha256": "37b91d580f0bfbd89e8a37d4afab2a1d913cda51a70c087ad67f625849bec557",
+      "seconds": 1.2,
+      "sampleRate": 32000,
+      "channels": 1,
+      "loop": false,
+      "peak": 0.54904,
+      "rms": 0.11786,
+      "sources": [
+        "mesiah/hangar-bed.ogg",
+        "mesiah/thruster-release.ogg",
+        "mesiah/thruster-heat.ogg",
+        "mesiah/hangar-ventilation.ogg",
+        "boss/beam-charge.ogg",
+        "boss/cannon.ogg",
+        "boss/venom.ogg",
+        "mesiah/hostile-channel.ogg",
+        "mesiah/transmission-link.ogg"
+      ]
+    },
+    {
+      "file": "audio/immersion/combined-hit.ogg",
+      "bytes": 6971,
+      "sha256": "b18f7a14e9c94480a71ace096bb1718e8580f9d8cda322a58eb8febcecfcb933",
+      "seconds": 0.65,
+      "sampleRate": 32000,
+      "channels": 1,
+      "loop": false,
+      "peak": 0.54904,
+      "rms": 0.11761,
+      "sources": [
+        "mesiah/hangar-bed.ogg",
+        "mesiah/thruster-release.ogg",
+        "mesiah/thruster-heat.ogg",
+        "mesiah/hangar-ventilation.ogg",
+        "boss/beam-charge.ogg",
+        "boss/cannon.ogg",
+        "boss/venom.ogg",
+        "mesiah/hostile-channel.ogg",
+        "mesiah/transmission-link.ogg"
+      ]
+    },
+    {
+      "file": "audio/immersion/crew-tools.ogg",
+      "bytes": 9454,
+      "sha256": "0f39b7966acf5292275257b0f5d2f64eba4ef8aea390b542f8be1eeb732b33a4",
+      "seconds": 1.0,
+      "sampleRate": 32000,
+      "channels": 1,
+      "loop": false,
+      "peak": 0.54904,
+      "rms": 0.09282,
+      "sources": [
+        "mesiah/hangar-bed.ogg",
+        "mesiah/thruster-release.ogg",
+        "mesiah/thruster-heat.ogg",
+        "mesiah/hangar-ventilation.ogg",
+        "boss/beam-charge.ogg",
+        "boss/cannon.ogg",
+        "boss/venom.ogg",
+        "mesiah/hostile-channel.ogg",
+        "mesiah/transmission-link.ogg"
+      ]
+    },
+    {
+      "file": "audio/immersion/deploy.ogg",
+      "bytes": 7888,
+      "sha256": "92fa4a85012c01a6d5a48feaccd105037436c38d3cb1cf5da93fe11edf86f242",
+      "seconds": 0.9,
+      "sampleRate": 32000,
+      "channels": 1,
+      "loop": false,
+      "peak": 0.54904,
+      "rms": 0.13273,
+      "sources": [
+        "mesiah/hangar-bed.ogg",
+        "mesiah/thruster-release.ogg",
+        "mesiah/thruster-heat.ogg",
+        "mesiah/hangar-ventilation.ogg",
+        "boss/beam-charge.ogg",
+        "boss/cannon.ogg",
+        "boss/venom.ogg",
+        "mesiah/hostile-channel.ogg",
+        "mesiah/transmission-link.ogg"
+      ]
+    },
+    {
+      "file": "audio/immersion/engine-coreLander.ogg",
+      "bytes": 15041,
+      "sha256": "3e8f247a4fc90c7dc0ee4f8580762476aa1c23d0d260868bc442a0852b004e74",
+      "seconds": 5.75,
+      "sampleRate": 32000,
+      "channels": 1,
+      "loop": true,
+      "peak": 0.35861,
+      "rms": 0.09089,
+      "sources": [
+        "mesiah/hangar-bed.ogg",
+        "mesiah/thruster-release.ogg",
+        "mesiah/thruster-heat.ogg",
+        "mesiah/hangar-ventilation.ogg",
+        "boss/beam-charge.ogg",
+        "boss/cannon.ogg",
+        "boss/venom.ogg",
+        "mesiah/hostile-channel.ogg",
+        "mesiah/transmission-link.ogg"
+      ]
+    },
+    {
+      "file": "audio/immersion/engine-dreadnought.ogg",
+      "bytes": 10865,
+      "sha256": "95e5e33eeb3619a22ba0505e7a2ab900eb150f35f7716e47fdf1939dbf41b8c3",
+      "seconds": 5.75,
+      "sampleRate": 32000,
+      "channels": 1,
+      "loop": true,
+      "peak": 0.35861,
+      "rms": 0.10179,
+      "sources": [
+        "mesiah/hangar-bed.ogg",
+        "mesiah/thruster-release.ogg",
+        "mesiah/thruster-heat.ogg",
+        "mesiah/hangar-ventilation.ogg",
+        "boss/beam-charge.ogg",
+        "boss/cannon.ogg",
+        "boss/venom.ogg",
+        "mesiah/hostile-channel.ogg",
+        "mesiah/transmission-link.ogg"
+      ]
+    },
+    {
+      "file": "audio/immersion/engine-fast.ogg",
+      "bytes": 15602,
+      "sha256": "174f7c8a9befcfe993399b5b844252a8728717859ba4f459b9db3d215496c4d0",
+      "seconds": 5.75,
+      "sampleRate": 32000,
+      "channels": 1,
+      "loop": true,
+      "peak": 0.35861,
+      "rms": 0.08842,
+      "sources": [
+        "mesiah/hangar-bed.ogg",
+        "mesiah/thruster-release.ogg",
+        "mesiah/thruster-heat.ogg",
+        "mesiah/hangar-ventilation.ogg",
+        "boss/beam-charge.ogg",
+        "boss/cannon.ogg",
+        "boss/venom.ogg",
+        "mesiah/hostile-channel.ogg",
+        "mesiah/transmission-link.ogg"
+      ]
+    },
+    {
+      "file": "audio/immersion/engine-gatling.ogg",
+      "bytes": 12177,
+      "sha256": "8980d6523f107cd086634e505d58707b2bc4d3f36ee4e17a555f38fd54c50afd",
+      "seconds": 5.75,
+      "sampleRate": 32000,
+      "channels": 1,
+      "loop": true,
+      "peak": 0.35861,
+      "rms": 0.09916,
+      "sources": [
+        "mesiah/hangar-bed.ogg",
+        "mesiah/thruster-release.ogg",
+        "mesiah/thruster-heat.ogg",
+        "mesiah/hangar-ventilation.ogg",
+        "boss/beam-charge.ogg",
+        "boss/cannon.ogg",
+        "boss/venom.ogg",
+        "mesiah/hostile-channel.ogg",
+        "mesiah/transmission-link.ogg"
+      ]
+    },
+    {
+      "file": "audio/immersion/engine-laser.ogg",
+      "bytes": 16357,
+      "sha256": "231d061aecf24a1b46d31b53613135873a1d20126e1785644bbc64ebd1536c4b",
+      "seconds": 5.75,
+      "sampleRate": 32000,
+      "channels": 1,
+      "loop": true,
+      "peak": 0.35861,
+      "rms": 0.08898,
+      "sources": [
+        "mesiah/hangar-bed.ogg",
+        "mesiah/thruster-release.ogg",
+        "mesiah/thruster-heat.ogg",
+        "mesiah/hangar-ventilation.ogg",
+        "boss/beam-charge.ogg",
+        "boss/cannon.ogg",
+        "boss/venom.ogg",
+        "mesiah/hostile-channel.ogg",
+        "mesiah/transmission-link.ogg"
+      ]
+    },
+    {
+      "file": "audio/immersion/engine-mesiah.ogg",
+      "bytes": 11875,
+      "sha256": "48a2ce27cb83140ec603213bf26186a10d47dce39e7dcc642b1a3feafcbd83a1",
+      "seconds": 5.75,
+      "sampleRate": 32000,
+      "channels": 1,
+      "loop": true,
+      "peak": 0.35861,
+      "rms": 0.09971,
+      "sources": [
+        "mesiah/hangar-bed.ogg",
+        "mesiah/thruster-release.ogg",
+        "mesiah/thruster-heat.ogg",
+        "mesiah/hangar-ventilation.ogg",
+        "boss/beam-charge.ogg",
+        "boss/cannon.ogg",
+        "boss/venom.ogg",
+        "mesiah/hostile-channel.ogg",
+        "mesiah/transmission-link.ogg"
+      ]
+    },
+    {
+      "file": "audio/immersion/engine-rocket.ogg",
+      "bytes": 13209,
+      "sha256": "9752ee29c635f79c99c6b6bc1a72ed1106255d708f5df5e8ec721b3658104b92",
+      "seconds": 5.75,
+      "sampleRate": 32000,
+      "channels": 1,
+      "loop": true,
+      "peak": 0.35861,
+      "rms": 0.08964,
+      "sources": [
+        "mesiah/hangar-bed.ogg",
+        "mesiah/thruster-release.ogg",
+        "mesiah/thruster-heat.ogg",
+        "mesiah/hangar-ventilation.ogg",
+        "boss/beam-charge.ogg",
+        "boss/cannon.ogg",
+        "boss/venom.ogg",
+        "mesiah/hostile-channel.ogg",
+        "mesiah/transmission-link.ogg"
+      ]
+    },
+    {
+      "file": "audio/immersion/engine-spaceEt.ogg",
+      "bytes": 17077,
+      "sha256": "119404c1017cee9e78b559212f3072d7a8503a64664b9a6cb6208cdeee60df63",
+      "seconds": 5.75,
+      "sampleRate": 32000,
+      "channels": 1,
+      "loop": true,
+      "peak": 0.35861,
+      "rms": 0.08384,
+      "sources": [
+        "mesiah/hangar-bed.ogg",
+        "mesiah/thruster-release.ogg",
+        "mesiah/thruster-heat.ogg",
+        "mesiah/hangar-ventilation.ogg",
+        "boss/beam-charge.ogg",
+        "boss/cannon.ogg",
+        "boss/venom.ogg",
+        "mesiah/hostile-channel.ogg",
+        "mesiah/transmission-link.ogg"
+      ]
+    },
+    {
+      "file": "audio/immersion/engine-xwing.ogg",
+      "bytes": 14042,
+      "sha256": "17c01caab7cb3d62ef957d3dd2cc365eb6bc3d1c7e28e2c356eb57ff36fa06ad",
+      "seconds": 5.75,
+      "sampleRate": 32000,
+      "channels": 1,
+      "loop": true,
+      "peak": 0.35861,
+      "rms": 0.08658,
+      "sources": [
+        "mesiah/hangar-bed.ogg",
+        "mesiah/thruster-release.ogg",
+        "mesiah/thruster-heat.ogg",
+        "mesiah/hangar-ventilation.ogg",
+        "boss/beam-charge.ogg",
+        "boss/cannon.ogg",
+        "boss/venom.ogg",
+        "mesiah/hostile-channel.ogg",
+        "mesiah/transmission-link.ogg"
+      ]
+    },
+    {
+      "file": "audio/immersion/field-break.ogg",
+      "bytes": 9066,
+      "sha256": "33172fff54bb58834793e66f9da386282f1457ed35029d890e208009fb9321db",
+      "seconds": 1.0,
+      "sampleRate": 32000,
+      "channels": 1,
+      "loop": false,
+      "peak": 0.54904,
+      "rms": 0.10301,
+      "sources": [
+        "mesiah/hangar-bed.ogg",
+        "mesiah/thruster-release.ogg",
+        "mesiah/thruster-heat.ogg",
+        "mesiah/hangar-ventilation.ogg",
+        "boss/beam-charge.ogg",
+        "boss/cannon.ogg",
+        "boss/venom.ogg",
+        "mesiah/hostile-channel.ogg",
+        "mesiah/transmission-link.ogg"
+      ]
+    },
+    {
+      "file": "audio/immersion/field-hit.ogg",
+      "bytes": 7680,
+      "sha256": "1ee10679f32c2f9c094818712d55647de3b9c52bd3bb4490a7264404be3dec30",
+      "seconds": 0.52,
+      "sampleRate": 32000,
+      "channels": 1,
+      "loop": false,
+      "peak": 0.54904,
+      "rms": 0.10524,
+      "sources": [
+        "mesiah/hangar-bed.ogg",
+        "mesiah/thruster-release.ogg",
+        "mesiah/thruster-heat.ogg",
+        "mesiah/hangar-ventilation.ogg",
+        "boss/beam-charge.ogg",
+        "boss/cannon.ogg",
+        "boss/venom.ogg",
+        "mesiah/hostile-channel.ogg",
+        "mesiah/transmission-link.ogg"
+      ]
+    },
+    {
+      "file": "audio/immersion/fighter-death.ogg",
+      "bytes": 8234,
+      "sha256": "76b9301852938c443fdd48782f754d7daedc59838f3b63a304574f161e9f7dc1",
+      "seconds": 0.64,
+      "sampleRate": 32000,
+      "channels": 1,
+      "loop": false,
+      "peak": 0.54904,
+      "rms": 0.13649,
+      "sources": [
+        "mesiah/hangar-bed.ogg",
+        "mesiah/thruster-release.ogg",
+        "mesiah/thruster-heat.ogg",
+        "mesiah/hangar-ventilation.ogg",
+        "boss/beam-charge.ogg",
+        "boss/cannon.ogg",
+        "boss/venom.ogg",
+        "mesiah/hostile-channel.ogg",
+        "mesiah/transmission-link.ogg"
+      ]
+    },
+    {
+      "file": "audio/immersion/hq-warning.ogg",
+      "bytes": 6991,
+      "sha256": "ad1d3faae96af25a2caa361631eaca340f4f5e54656d15c24a4000a1fcfe337b",
+      "seconds": 0.8,
+      "sampleRate": 32000,
+      "channels": 1,
+      "loop": false,
+      "peak": 0.54904,
+      "rms": 0.11127,
+      "sources": [
+        "mesiah/hangar-bed.ogg",
+        "mesiah/thruster-release.ogg",
+        "mesiah/thruster-heat.ogg",
+        "mesiah/hangar-ventilation.ogg",
+        "boss/beam-charge.ogg",
+        "boss/cannon.ogg",
+        "boss/venom.ogg",
+        "mesiah/hostile-channel.ogg",
+        "mesiah/transmission-link.ogg"
+      ]
+    },
+    {
+      "file": "audio/immersion/hull-hit.ogg",
+      "bytes": 6476,
+      "sha256": "0b218cadcb5975a99b6e872d80044442523b6c40a753aebc361cc0974c08903f",
+      "seconds": 0.55,
+      "sampleRate": 32000,
+      "channels": 1,
+      "loop": false,
+      "peak": 0.54904,
+      "rms": 0.13016,
+      "sources": [
+        "mesiah/hangar-bed.ogg",
+        "mesiah/thruster-release.ogg",
+        "mesiah/thruster-heat.ogg",
+        "mesiah/hangar-ventilation.ogg",
+        "boss/beam-charge.ogg",
+        "boss/cannon.ogg",
+        "boss/venom.ogg",
+        "mesiah/hostile-channel.ogg",
+        "mesiah/transmission-link.ogg"
+      ]
+    },
+    {
+      "file": "audio/immersion/hull-tick.ogg",
+      "bytes": 6559,
+      "sha256": "29ff972cf7a86d29e09d6f78a697a4ffd2134ae003de155c3e7d89eb31b3f1f5",
+      "seconds": 0.5,
+      "sampleRate": 32000,
+      "channels": 1,
+      "loop": false,
+      "peak": 0.54904,
+      "rms": 0.10068,
+      "sources": [
+        "mesiah/hangar-bed.ogg",
+        "mesiah/thruster-release.ogg",
+        "mesiah/thruster-heat.ogg",
+        "mesiah/hangar-ventilation.ogg",
+        "boss/beam-charge.ogg",
+        "boss/cannon.ogg",
+        "boss/venom.ogg",
+        "mesiah/hostile-channel.ogg",
+        "mesiah/transmission-link.ogg"
+      ]
+    },
+    {
+      "file": "audio/immersion/pa-clear-lane.ogg",
+      "bytes": 18374,
+      "sha256": "d457b9ef4b7ff7e7849426f42e716e56cbbb5ee05c30eae8451b559bf1164c3b",
+      "seconds": 4.284,
+      "sampleRate": 32000,
+      "channels": 1,
+      "loop": false,
+      "peak": 0.46822,
+      "rms": 0.0419,
+      "sources": [
+        "original scripted Windows Zira voice; dialogue recorded locally"
+      ]
+    },
+    {
+      "file": "audio/immersion/pa-maintenance.ogg",
+      "bytes": 21930,
+      "sha256": "221474f362fcd7bd8eae38e3e108ee7964db348c76c8dcc2e0edc6ef2b045a2f",
+      "seconds": 4.7889,
+      "sampleRate": 32000,
+      "channels": 1,
+      "loop": false,
+      "peak": 0.46822,
+      "rms": 0.05885,
+      "sources": [
+        "original scripted Windows Zira voice; dialogue recorded locally"
+      ]
+    },
+    {
+      "file": "audio/immersion/radio-fragment.ogg",
+      "bytes": 10227,
+      "sha256": "d57be3a9dab79a9f374fb163b017cba885ac5ca108f61a119bf4a1f64b6e73b8",
+      "seconds": 1.5,
+      "sampleRate": 32000,
+      "channels": 1,
+      "loop": false,
+      "peak": 0.54904,
+      "rms": 0.26973,
+      "sources": [
+        "mesiah/hangar-bed.ogg",
+        "mesiah/thruster-release.ogg",
+        "mesiah/thruster-heat.ogg",
+        "mesiah/hangar-ventilation.ogg",
+        "boss/beam-charge.ogg",
+        "boss/cannon.ogg",
+        "boss/venom.ogg",
+        "mesiah/hostile-channel.ogg",
+        "mesiah/transmission-link.ogg"
+      ]
+    },
+    {
+      "file": "audio/immersion/repair.ogg",
+      "bytes": 11095,
+      "sha256": "a1484d258c37c0b0517e901a4d49a91a540003c574618df6ebd1713f0df24342",
+      "seconds": 1.15,
+      "sampleRate": 32000,
+      "channels": 1,
+      "loop": false,
+      "peak": 0.54904,
+      "rms": 0.09915,
+      "sources": [
+        "mesiah/hangar-bed.ogg",
+        "mesiah/thruster-release.ogg",
+        "mesiah/thruster-heat.ogg",
+        "mesiah/hangar-ventilation.ogg",
+        "boss/beam-charge.ogg",
+        "boss/cannon.ogg",
+        "boss/venom.ogg",
+        "mesiah/hostile-channel.ogg",
+        "mesiah/transmission-link.ogg"
+      ]
+    },
+    {
+      "file": "audio/immersion/score-amber.ogg",
+      "bytes": 139886,
+      "sha256": "7fb68f4ddb624271513392ef8e0c02e330168cf920ae58b439f6acdc69e29353",
+      "seconds": 19.2,
+      "sampleRate": 32000,
+      "channels": 1,
+      "loop": true,
+      "peak": 0.48959,
+      "rms": 0.03056,
+      "sources": [
+        "mesiah/amber-ringway.ogg",
+        "phase-aligned percussive separation of the bundled score; original attribution and license retained"
+      ]
+    },
+    {
+      "file": "audio/immersion/score-command.ogg",
+      "bytes": 1064296,
+      "sha256": "2060872c2fe3a467c65ffe3f7d6be9dc430827da1c12aed2ac4743cff4623ad8",
+      "seconds": 144.216,
+      "sampleRate": 32000,
+      "channels": 1,
+      "loop": true,
+      "peak": 0.48959,
+      "rms": 0.03649,
+      "sources": [
+        "sfx_boss_battle.mp3",
+        "phase-aligned percussive separation of the bundled score; original attribution and license retained"
+      ]
+    },
+    {
+      "file": "audio/immersion/score-cruise.ogg",
+      "bytes": 442794,
+      "sha256": "344fc3a71e4d1c2ba98066f5f434fb9db6521051ffd030f8ebc096d04da864a1",
+      "seconds": 57.6,
+      "sampleRate": 32000,
+      "channels": 1,
+      "loop": true,
+      "peak": 0.48959,
+      "rms": 0.03801,
+      "sources": [
+        "bgm_scifi_loop.ogg",
+        "phase-aligned percussive separation of the bundled score; original attribution and license retained"
+      ]
+    },
+    {
+      "file": "audio/immersion/score-final.ogg",
+      "bytes": 199029,
+      "sha256": "7825d7aa08d3f5985dd637c22ce715da417ce1586c811a061f3808440a56f0e1",
+      "seconds": 26.4828,
+      "sampleRate": 32000,
+      "channels": 1,
+      "loop": true,
+      "peak": 0.48959,
+      "rms": 0.03995,
+      "sources": [
+        "bgm_boss_final.wav",
+        "phase-aligned percussive separation of the bundled score; original attribution and license retained"
+      ]
+    },
+    {
+      "file": "audio/immersion/score-silent.ogg",
+      "bytes": 208932,
+      "sha256": "c85c917102c3600db3d1019db5d0f0c345016cb04a4c6a61c4266de76636a40b",
+      "seconds": 38.4,
+      "sampleRate": 32000,
+      "channels": 1,
+      "loop": true,
+      "peak": 0.48959,
+      "rms": 0.01136,
+      "sources": [
+        "mesiah/silent-fleet.ogg",
+        "phase-aligned percussive separation of the bundled score; original attribution and license retained"
+      ]
+    },
+    {
+      "file": "audio/immersion/score-snake.ogg",
+      "bytes": 884775,
+      "sha256": "7f2dd5ca59b6ff5301e5954060ca8ab1051dd23126ea84e0041b3048b9f8b08a",
+      "seconds": 125.9363,
+      "sampleRate": 32000,
+      "channels": 1,
+      "loop": true,
+      "peak": 0.48959,
+      "rms": 0.05382,
+      "sources": [
+        "bgm_boss_snake.mp3",
+        "phase-aligned percussive separation of the bundled score; original attribution and license retained"
+      ]
+    },
+    {
+      "file": "audio/immersion/score-squid.ogg",
+      "bytes": 1204564,
+      "sha256": "0dce6b18805033cfb807a6bfedd09c36bdfed226513162927f9fc657c507ddc9",
+      "seconds": 151.416,
+      "sampleRate": 32000,
+      "channels": 1,
+      "loop": true,
+      "peak": 0.48959,
+      "rms": 0.04665,
+      "sources": [
+        "bgm_boss_squid.mp3",
+        "phase-aligned percussive separation of the bundled score; original attribution and license retained"
+      ]
+    },
+    {
+      "file": "audio/immersion/score-violet.ogg",
+      "bytes": 287456,
+      "sha256": "a38ef4f37a8f37603e3f9c86844741c4b343cc23339db15e1a605cc931ea9db8",
+      "seconds": 36.9231,
+      "sampleRate": 32000,
+      "channels": 1,
+      "loop": true,
+      "peak": 0.48959,
+      "rms": 0.05319,
+      "sources": [
+        "mesiah/violet-deepfield.ogg",
+        "phase-aligned percussive separation of the bundled score; original attribution and license retained"
+      ]
+    },
+    {
+      "file": "audio/immersion/sector-asteroid.ogg",
+      "bytes": 106215,
+      "sha256": "a0e577bcc81dce4f321095204c9e8e70eed7040812a08be31142adc69f0b637c",
+      "seconds": 13.75,
+      "sampleRate": 32000,
+      "channels": 2,
+      "loop": true,
+      "peak": 0.35861,
+      "rms": 0.08469,
+      "sources": [
+        "mesiah/hangar-bed.ogg",
+        "mesiah/thruster-release.ogg",
+        "mesiah/thruster-heat.ogg",
+        "mesiah/hangar-ventilation.ogg",
+        "boss/beam-charge.ogg",
+        "boss/cannon.ogg",
+        "boss/venom.ogg",
+        "mesiah/hostile-channel.ogg",
+        "mesiah/transmission-link.ogg"
+      ]
+    },
+    {
+      "file": "audio/immersion/sector-ion.ogg",
+      "bytes": 153260,
+      "sha256": "ca1a237896698b24aabcb7893530049408d7f08f4e4ff61efd4c1ae37a09c38c",
+      "seconds": 13.75,
+      "sampleRate": 32000,
+      "channels": 2,
+      "loop": true,
+      "peak": 0.35861,
+      "rms": 0.0728,
+      "sources": [
+        "mesiah/hangar-bed.ogg",
+        "mesiah/thruster-release.ogg",
+        "mesiah/thruster-heat.ogg",
+        "mesiah/hangar-ventilation.ogg",
+        "boss/beam-charge.ogg",
+        "boss/cannon.ogg",
+        "boss/venom.ogg",
+        "mesiah/hostile-channel.ogg",
+        "mesiah/transmission-link.ogg"
+      ]
+    },
+    {
+      "file": "audio/immersion/sector-ocean.ogg",
+      "bytes": 120229,
+      "sha256": "cafe9c78960c0097dbcb43cc41e9183f6b903f821f7971227339c3a522a29f8e",
+      "seconds": 13.75,
+      "sampleRate": 32000,
+      "channels": 2,
+      "loop": true,
+      "peak": 0.35861,
+      "rms": 0.08001,
+      "sources": [
+        "mesiah/hangar-bed.ogg",
+        "mesiah/thruster-release.ogg",
+        "mesiah/thruster-heat.ogg",
+        "mesiah/hangar-ventilation.ogg",
+        "boss/beam-charge.ogg",
+        "boss/cannon.ogg",
+        "boss/venom.ogg",
+        "mesiah/hostile-channel.ogg",
+        "mesiah/transmission-link.ogg"
+      ]
+    },
+    {
+      "file": "audio/immersion/sector-station.ogg",
+      "bytes": 113074,
+      "sha256": "1c9a8fe29f8174d2765e031321684cc1dfbcd20e7af22a875767cdd3d48fda71",
+      "seconds": 13.75,
+      "sampleRate": 32000,
+      "channels": 2,
+      "loop": true,
+      "peak": 0.35861,
+      "rms": 0.08118,
+      "sources": [
+        "mesiah/hangar-bed.ogg",
+        "mesiah/thruster-release.ogg",
+        "mesiah/thruster-heat.ogg",
+        "mesiah/hangar-ventilation.ogg",
+        "boss/beam-charge.ogg",
+        "boss/cannon.ogg",
+        "boss/venom.ogg",
+        "mesiah/hostile-channel.ogg",
+        "mesiah/transmission-link.ogg"
+      ]
+    },
+    {
+      "file": "audio/immersion/sector-stellar.ogg",
+      "bytes": 119539,
+      "sha256": "c7b90aaf1ebbc406049658172d2ed701f8d03e71227b77d0c4f562d62663aa8c",
+      "seconds": 13.75,
+      "sampleRate": 32000,
+      "channels": 2,
+      "loop": true,
+      "peak": 0.35861,
+      "rms": 0.08207,
+      "sources": [
+        "mesiah/hangar-bed.ogg",
+        "mesiah/thruster-release.ogg",
+        "mesiah/thruster-heat.ogg",
+        "mesiah/hangar-ventilation.ogg",
+        "boss/beam-charge.ogg",
+        "boss/cannon.ogg",
+        "boss/venom.ogg",
+        "mesiah/hostile-channel.ogg",
+        "mesiah/transmission-link.ogg"
+      ]
+    },
+    {
+      "file": "audio/immersion/sector-volcanic.ogg",
+      "bytes": 99444,
+      "sha256": "86e0f4bd0e26b6a55cdc67e740e6d3c6b173a6d3e8965c7a5cc0b417067ed2bb",
+      "seconds": 13.75,
+      "sampleRate": 32000,
+      "channels": 2,
+      "loop": true,
+      "peak": 0.35861,
+      "rms": 0.08295,
+      "sources": [
+        "mesiah/hangar-bed.ogg",
+        "mesiah/thruster-release.ogg",
+        "mesiah/thruster-heat.ogg",
+        "mesiah/hangar-ventilation.ogg",
+        "boss/beam-charge.ogg",
+        "boss/cannon.ogg",
+        "boss/venom.ogg",
+        "mesiah/hostile-channel.ogg",
+        "mesiah/transmission-link.ogg"
+      ]
+    },
+    {
+      "file": "audio/immersion/sector-wreck.ogg",
+      "bytes": 113745,
+      "sha256": "1eb2b58d86f51507afb42787b032c50826b8276b5711a8f322ab996afa5dce1c",
+      "seconds": 13.75,
+      "sampleRate": 32000,
+      "channels": 2,
+      "loop": true,
+      "peak": 0.35861,
+      "rms": 0.08083,
+      "sources": [
+        "mesiah/hangar-bed.ogg",
+        "mesiah/thruster-release.ogg",
+        "mesiah/thruster-heat.ogg",
+        "mesiah/hangar-ventilation.ogg",
+        "boss/beam-charge.ogg",
+        "boss/cannon.ogg",
+        "boss/venom.ogg",
+        "mesiah/hostile-channel.ogg",
+        "mesiah/transmission-link.ogg"
+      ]
+    },
+    {
+      "file": "audio/immersion/shield-break.ogg",
+      "bytes": 9819,
+      "sha256": "51d361e5e6de64a7e7d1ba9caf52d01ab93dd4d3237c6732236334a0a418cde1",
+      "seconds": 1.1,
+      "sampleRate": 32000,
+      "channels": 1,
+      "loop": false,
+      "peak": 0.54904,
+      "rms": 0.09006,
+      "sources": [
+        "mesiah/hangar-bed.ogg",
+        "mesiah/thruster-release.ogg",
+        "mesiah/thruster-heat.ogg",
+        "mesiah/hangar-ventilation.ogg",
+        "boss/beam-charge.ogg",
+        "boss/cannon.ogg",
+        "boss/venom.ogg",
+        "mesiah/hostile-channel.ogg",
+        "mesiah/transmission-link.ogg"
+      ]
+    },
+    {
+      "file": "audio/immersion/shield-hit.ogg",
+      "bytes": 6425,
+      "sha256": "d41952424ba583f17c9c1cc7cb4f04862ce1ee926caf08a1c7d7af82597514a3",
+      "seconds": 0.5,
+      "sampleRate": 32000,
+      "channels": 1,
+      "loop": false,
+      "peak": 0.54904,
+      "rms": 0.10226,
+      "sources": [
+        "mesiah/hangar-bed.ogg",
+        "mesiah/thruster-release.ogg",
+        "mesiah/thruster-heat.ogg",
+        "mesiah/hangar-ventilation.ogg",
+        "boss/beam-charge.ogg",
+        "boss/cannon.ogg",
+        "boss/venom.ogg",
+        "mesiah/hostile-channel.ogg",
+        "mesiah/transmission-link.ogg"
+      ]
+    },
+    {
+      "file": "audio/immersion/synergy.ogg",
+      "bytes": 6988,
+      "sha256": "07c423812013e3f1738905649a30944785f47ed680c72a830e88dcce9aabfacf",
+      "seconds": 0.7,
+      "sampleRate": 32000,
+      "channels": 1,
+      "loop": false,
+      "peak": 0.54904,
+      "rms": 0.10857,
+      "sources": [
+        "mesiah/hangar-bed.ogg",
+        "mesiah/thruster-release.ogg",
+        "mesiah/thruster-heat.ogg",
+        "mesiah/hangar-ventilation.ogg",
+        "boss/beam-charge.ogg",
+        "boss/cannon.ogg",
+        "boss/venom.ogg",
+        "mesiah/hostile-channel.ogg",
+        "mesiah/transmission-link.ogg"
+      ]
+    }
+  ]
+}

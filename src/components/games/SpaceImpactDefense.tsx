@@ -1,4 +1,7 @@
 import { useDoorState } from '../ui/SpaceDoor'
+import { DefensePresentation } from './towerDefense/presentation'
+import './towerDefense/presentation.css'
+import { getCurrentGameBgm } from './sound'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type * as React from 'react'
 import { GameDialog } from '../ui/GameDialog'
@@ -165,6 +168,9 @@ export function SpaceImpactDefense({ availableCoins, onClose, initialMode = 'nor
   })
   const [cell, setCell] = useState(() => calcCell(mobileLayoutMode))
   const [soundOn, setSoundOn] = useState(getGameSoundEnabled)
+  const [defensePresentation] = useState(() => new DefensePresentation())
+  const deploymentNodes = useRef(new WeakSet<HTMLDivElement>())
+  const synergyNodes = useRef(new Map<number, HTMLDivElement>())
   const [audioMix, setAudioMix] = useState<AudioMixSettings>(getGameAudioMixSettings)
   const [graphicsQuality, setGraphicsQualityState] = useState<GraphicsQuality>(getGraphicsQuality)
   const [showSettingsModal, setShowSettingsModal] = useDoorState(false)
@@ -667,7 +673,8 @@ export function SpaceImpactDefense({ availableCoins, onClose, initialMode = 'nor
     if (sourceTower) grantTowerXp(sourceTower, e.isBoss ? 40 : 1.5)
     spawnSplitterChildren(e)
     triggerEnemyDeath(e, towerType, e.isBoss, goldRef, scoreRef, particlesRef.current, floatingTextRef.current, screenFlashRef, coinFlowRef, setScreenFlashState, shockwavesRef.current)
-    if (soundOn) playGameSound(comboSound ? 'combo' : 'pop')
+    defensePresentation.destroy(e.isBoss, e.trait === 'armored' || e.maxHp >= 150, e.x)
+    if (soundOn && comboSound) playGameSound('combo')
   }
 
   const submitDefenseLeaderboardScore = useCallback((score: number) => {
@@ -1708,6 +1715,7 @@ export function SpaceImpactDefense({ availableCoins, onClose, initialMode = 'nor
     }
     towersRef.current.push(newTower)
     towerCreationTimeRef.current.set(newTower.id, 0)
+    defensePresentation.deploy(col)
     setUiTowers([...towersRef.current])
     setUiGold(goldRef.current)
     playGameSound('select')
@@ -2064,6 +2072,39 @@ export function SpaceImpactDefense({ availableCoins, onClose, initialMode = 'nor
 
   // Tile and path DOM elements are static for most frames. Reuse them while
   // enemies, particles and shots continue animating every requestAnimationFrame.
+  useEffect(() => {
+    defensePresentation.warm()
+    const tick = () => {
+      const active = !document.hidden && stateRef.current !== 'gameover' && stateRef.current !== 'victory'
+      const inWave = stateRef.current === 'wave'
+      let threat = 0
+      for (const enemy of enemiesRef.current) if (!enemy.dead && !enemy.leaked) {
+        const length = pathsRef.current[enemy.pathIdx]?.length ?? 1
+        threat = Math.max(threat, (enemy.pathIndex + enemy.progress) / Math.max(1, length - 1))
+      }
+      const hull = livesRef.current / getHqMaxLives()
+      const linked = defensePresentation.update(active, inWave, threat, hull,
+        towersRef.current.map(tower => ({ id: tower.id, active: getTowerSynergy(tower).active })), getCurrentGameBgm())
+      if (gameRootRef.current) gameRootRef.current.dataset.hqThreat = active && inWave ? hull < .3 ? 'critical' : threat > .73 ? 'high' : '' : ''
+      for (const id of linked) {
+        const node = synergyNodes.current.get(id)
+        const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+        node?.animate(reduced ? [{ opacity: .75 }, { opacity: 0 }] : [
+          { opacity: 0, transform: 'scale(.96)' }, { opacity: .9, transform: 'scale(1)', offset: .2 },
+          { opacity: .6, transform: 'scale(1.03)', offset: .65 }, { opacity: 0, transform: 'scale(1.08)' },
+        ], { duration: reduced ? 300 : 1100, easing: 'ease-out' })
+        const tower = towersRef.current.find(tower => tower.id === id)
+        if (tower && (stateRef.current === 'playing' || stateRef.current === 'wave')) {
+          const center = getTowerCenter(tower)
+          floatingTextRef.current.push({ x: center.x, y: center.y - .4, text: defenseText.sidebar.synergyOnline, time: 0, maxTime: 1.2, color: '#99f6e4' })
+        }
+      }
+    }
+    const timer = window.setInterval(tick, 200)
+    document.addEventListener('visibilitychange', tick)
+    return () => { clearInterval(timer); document.removeEventListener('visibilitychange', tick); defensePresentation.stop() }
+  }, [defensePresentation, defenseText.sidebar.synergyOnline])
+
   const tileOccupancyKey = uiTowers.map(t => `${t.id}:${t.col},${t.row}:${t.type}`).join('|')
   const gridCells = useMemo(() => (
     <>
@@ -2277,6 +2318,8 @@ export function SpaceImpactDefense({ availableCoins, onClose, initialMode = 'nor
 
           {/* Grid cells — retain element identities between battlefield changes */}
           {gridCells}
+          {uiPath.length > 0 && <div className="defense-hq-threat" style={{ left: uiPath[uiPath.length - 1][0] * cell - 3,
+            top: uiPath[uiPath.length - 1][1] * cell - 3, width: cell + 6, height: cell + 6 }} />}
 
           {/* Laser beams */}
           {renderedLaserBeams.length > 0 && (
@@ -2344,6 +2387,19 @@ export function SpaceImpactDefense({ availableCoins, onClose, initialMode = 'nor
                 }}
                 title={tower.towerDef.label}
               >
+                <div className="defense-deployment-clamps" ref={node => {
+                  if (!node || deploymentNodes.current.has(node)) return
+                  deploymentNodes.current.add(node)
+                  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+                  node.animate(reduced ? [{ opacity: .7 }, { opacity: 0 }] : [
+                    { opacity: 0, transform: 'scale(1.38)' }, { opacity: .95, transform: 'scale(1)', offset: .3 },
+                    { opacity: .6, transform: 'scale(1)', offset: .65 }, { opacity: 0, transform: 'scale(.97)' },
+                  ], { duration: reduced ? 250 : 900, easing: 'cubic-bezier(.18,.72,.2,1)' })
+                }} />
+                <div className="defense-synergy-flash" aria-label={defenseText.sidebar.synergyOnline} ref={node => {
+                  if (node) synergyNodes.current.set(tower.id, node)
+                  else synergyNodes.current.delete(tower.id)
+                }} />
                 <div
                   ref={node => {
                     if (node) firingRingNodesRef.current.set(tower.id, node)

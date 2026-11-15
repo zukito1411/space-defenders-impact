@@ -92,3 +92,20 @@ Boss attack sounds (game edits, level adjustments, and Ogg encodes)
   https://freesound.org/people/JovianSounds/sounds/524205/
 - Old Air Conditioner Loop by loganzsound (CC0), hangar-ventilation.ogg (filtered and encoded)
   https://freesound.org/people/loganzsound/sounds/873136/
+
+Immersion presentation pack (audio/immersion/, November 2026)
+
+- Protection, destruction, engine, environment, deployment and carrier foley:
+  layered, filtered, time-edited derivatives of the CC0 Mesiah deck/radio and
+  boss recordings credited above. No additional downloaded recordings.
+- score-cruise, score-amber, score-silent, score-violet, score-command,
+  score-squid, score-snake and score-final: percussive stems separated from
+  the respective bundled scores. All original music attribution and license
+  obligations listed above continue to apply, including Kevin MacLeod's
+  Space Fighter Loop (CC BY 4.0) for score-command.
+- pa-clear-lane and pa-maintenance: original flight-deck dialogue, synthesized
+  locally with Windows Microsoft Zira Desktop, then filtered and reverberated.
+  Dialogue: "Flight deck. Keep the launch lane clear."
+  "Maintenance team. Report to the aft service deck."
+- manifest.json records each derived file's source recordings, duration,
+  channel count, sample rate, byte length and SHA-256 digest.

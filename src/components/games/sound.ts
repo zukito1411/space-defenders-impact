@@ -229,6 +229,7 @@ export function setGameSoundEnabled(enabled: boolean) {
   if (!enabled) {
     stopBGM()
   }
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event('game-audio-settings'))
 }
 
 function clamp01(v: number) {
@@ -290,8 +291,11 @@ export function setGameAudioMixSettings(settings: Partial<AudioMixSettings>) {
   audioMixCache = mergeAudioMix(DEFAULT_AUDIO_MIX, settings)
   if (typeof window !== 'undefined') {
     localStorage.setItem(AUDIO_MIX_STORAGE_KEY, JSON.stringify(audioMixCache))
+    window.dispatchEvent(new Event('game-audio-settings'))
   }
 }
+
+export function getCurrentGameBgm() { return bgmElement }
 
 export function registerGameSoundDucker(ducker: GameSoundDucker) {
   gameSoundDuckers.add(ducker)

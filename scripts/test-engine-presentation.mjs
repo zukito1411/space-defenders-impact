@@ -2,9 +2,9 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import ts from 'typescript'
 let source=readFileSync(new URL('../src/components/games/raid/playerRender.ts',import.meta.url),'utf8')
-source=source.replace(/^import .*\n/gm,'')
+source=source.replace(/^import[^\r\n]*\r?\n/gm,'')
 const artwork=readFileSync(new URL('../src/components/games/raid/shipArtwork.ts',import.meta.url),'utf8')
-const muzzle=readFileSync(new URL('../src/components/games/raid/playerMuzzle.ts',import.meta.url),'utf8').replace(/^import .*\n/gm,'')
+const muzzle=readFileSync(new URL('../src/components/games/raid/playerMuzzle.ts',import.meta.url),'utf8').replace(/^import[^\r\n]*\r?\n/gm,'')
 source=`
 const WIDTH=100, HEIGHT=100, DEG=Math.PI/180, PLAYER_COLOR='#ef233c';
 const updateFlightPose=(pose)=>{pose.maneuverJet=globalThis.testManeuverJet??0;return 0};
@@ -13,6 +13,7 @@ const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const isCoreLanderBurning=()=>false, getCoreLanderBurningRage=()=>0;
 const getCoreLanderFireInterval=()=>.5,sampleMechAttack=()=>({frame:3,stage:'idle'}),drawMechAction=()=>false,getMechActionAtlas=()=>({});
 const getShipCanvasSprite=()=>({});
+const warmSpaceJetForceField=()=>{};
 const getRaidSideShipCanvasSprite=()=>({loaded:true}),getRaidSideShipNozzles=()=>[[.10,.22,.05]],drawCanvasSpriteContain=(ctx,sprite,x,y,size)=>ctx.hulls.push(size);
 const getOptionSupportStacks=()=>1,getShipSpriteSize=()=>30;
 const getRaidCombatFrame=()=>({source:{resource:{}}});
@@ -28,7 +29,7 @@ function context(){
  drawImage(...args){this.images.push(args)},fillRect(){},
  save(){this.depth++},restore(){this.depth--},translate(){},rotate(){},
  createLinearGradient(){this.gradients++;return {addColorStop(){}}},
- beginPath(){},moveTo(){},bezierCurveTo(){},closePath(){},fill(){}}
+ beginPath(){},moveTo(){},lineTo(){},bezierCurveTo(){},closePath(){},fill(){}}
  return ctx
 }
 const player={x:50,y:70,hp:3,ship:{key:'rocket'},engineBoost:1,forceField:0,shield:0,invuln:0}
@@ -135,18 +136,20 @@ const renderSignature = (visualKey,time,boost) => {
 }
 const signatureIdle=renderSignature('dreadnought',0,0)
 const signatureBoost=renderSignature('dreadnought',0,1.35)
-assert.equal(signatureIdle[0],signatureBoost[0])
-assert.ok(Math.abs(signatureBoost[4]/signatureIdle[4]-(1+1.35*.36))<1e-9,'signature trail lost its original boost response')
-assert.equal(renderSignature('dreadnoughtElite',1500,0)[0],signatureIdle[0])
-assert.equal(masteryCanvases.length,2)
-const [wake,texture]=masteryCanvases
-assert.equal(wake.ctx.gradients,2,'original core and bloom are baked into the signature')
-assert.equal(texture.ctx.gradients,1)
-assert.equal(wake.ctx.images[0][0],texture,'signature texture was not combined with the original bloom')
-assert.equal(texture.ctx.globalCompositeOperation,'source-in','atlas plume should take the ship palette')
+assert.notEqual(signatureIdle[0],signatureBoost[0],'boost should heat the signature core')
+assert.ok(signatureBoost[4]/signatureIdle[4]>2,'signature boost should have the full engine response')
+assert.equal(renderSignature('dreadnoughtElite',0,0)[0],signatureIdle[0])
+for(let frame=0;frame<240;frame++)renderSignature('dreadnoughtElite',frame*16,frame%3*.5)
+assert.equal(masteryCanvases.length,4,'signature animation should reuse four baked phases')
+for(const wake of masteryCanvases) {
+ assert.equal(wake.ctx.gradients,0,'signature texture must preserve flame luminance')
+ assert.equal(wake.ctx.images.length,2,'signature needs the textured flame and hot core')
+ assert.notEqual(wake.ctx.globalCompositeOperation,'source-in','flat alpha tint erases the flame detail')
+}
 const [,left,top,width,length]=signatureIdle
 assert.equal(left+width/2,500)
-assert.ok(Math.abs(top+length*18/116-(350+62*1.16*(274-144)/288))<1e-9,'signature trail detached from the Ark outlet')
+assert.ok(Math.abs(top+length*64/256-(350+62*1.16*(274-144)/288))<1e-9,'signature trail detached from the Ark outlet')
+assert.equal(signatureIdle[3],signatureBoost[3],'throttle must not widen the outlet')
 delete globalThis.document
 
 const heatCanvases=[]
@@ -157,9 +160,11 @@ globalThis.document={createElement(){
  return canvas
 }}
 warmRaidEngineExhaust()
+const warmedCount=heatCanvases.length
 warmRaidEngineExhaust()
-assert.equal(heatCanvases.length,7)
-assert.equal(new Set(heatCanvases.map(({ctx})=>ctx.filter)).size,7)
+assert.equal(heatCanvases.length,warmedCount,'warming exhaust should be idempotent')
+assert.ok(warmedCount<=7+12*4,'exhaust warmup exceeded its bounded palette budget')
+assert.equal(new Set(heatCanvases.slice(0,7).map(({ctx})=>ctx.filter)).size,7)
 const thermalDraw = (boost) => {
  const ctx=context()
  ctx.drawImage=(...args)=>ctx.images.push(args)

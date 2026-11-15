@@ -1,4 +1,7 @@
 import { getRaidPlayerHullSize } from './playerMuzzle'
+import { drawShipProtection, warmShipProtection } from './shipProtection'
+import { drawPlayerCondition } from './playerCondition'
+import type { ProtectionHull } from './shipProtection'
 import { drawMechAction, getMechActionAtlas, sampleMechAttack } from './mechAttack'
 import { drawMechDockPose, getMechDockAtlas, getMechDockNozzles, sampleMechDock } from './mechDock'
 import { getRaidSideShipNozzles } from './sideArtwork'
@@ -6,7 +9,7 @@ import { getRaidExhaustScale, getRaidShipBaseVisualKey, getRaidShipNozzles, uses
 import { updateFlightPose, type FlightPose } from './combatFeel'
 import { COMBAT_TILE, drawRaidCombatTexture, getRaidCombatFrame } from './combatArt'
 import type { ShipCosmeticEquipState } from '../../../progression'
-import { drawCanvasSprite, drawCanvasSpriteContain, drawSpriteGlow, getCanvasSpriteDimensions, getCanvasSpriteSource, getRaidSideShipCanvasSprite, getShipCanvasSprite, getSpaceJetForceFieldSprite } from './assets'
+import { drawCanvasSprite, drawCanvasSpriteContain, drawSpriteGlow, getCanvasSpriteDimensions, getCanvasSpriteSource, getRaidSideShipCanvasSprite, getShipCanvasSprite } from './assets'
 import type { CanvasSpriteEntry } from './assets'
 import { hexToRgba } from './bossRender'
 import { ALLY_PLAYER_COLOR, FORCE_FIELD_ARMOR, GOD_GUNDAM_BURNING_BODY_SCALE, GOD_GUNDAM_BURNING_BODY_Y_OFFSET, GOD_GUNDAM_BURNING_HALO_SCALE, GOD_GUNDAM_BURNING_HALO_Y_OFFSET, MESIAH_DRONE_HOME_OFFSET, MESIAH_DRONE_MAX_FIRE_RANGE, MESIAH_DRONE_MIN_FIRE_RANGE, MESIAH_DRONE_MOBILE_HOME_OFFSET, PLAYER_COLOR, SPACE_ET_PASSIVE_FORCE_FIELD_CHARGES, SPIEGEL_AFTERIMAGE_CAP, getShipSpriteSize } from './constants'
@@ -16,8 +19,6 @@ import { getCoreLanderBurningRage, getCoreLanderFireInterval, isCoreLanderBurnin
 import { getCoreLanderCombatModelFromVisualShipKey, getOptionSupportStacks, normalizeMesiahDrones, normalizeMesiahScoutDrones } from './state'
 import type { CoreLanderCombatModel, Enemy, GamePhase, MesiahDroneUnit, MesiahScoutUnit, Player, PowerKind, SpiegelAfterimage, Vec } from './types'
 import { clamp, distSq, drawRadialEllipse } from './utils'
-
-export const honeycombShieldSpriteCache = new Map<number, HTMLCanvasElement>()
 
 export const coreLanderBurningHaloSpriteCache = new Map<string, HTMLCanvasElement>()
 
@@ -373,6 +374,7 @@ export function warmRaidEngineExhaust() {
     sprites.push(canvas)
   }
   engineHeatSprites = sprites
+  for (const style of Object.values(MASTERY_VISUAL_STYLES)) getMasteryWakeSprites(style, texture)
 }
 
 function getEngineLengthScale(engineBoost: number, time: number) {
@@ -779,96 +781,6 @@ export function drawInvulnerabilityShimmer(ctx: CanvasRenderingContext2D, x: num
   ctx.restore()
 }
 
-export function getHoneycombShieldSprite(size: number) {
-  const spriteSize = Math.max(48, Math.round(size))
-  const cached = honeycombShieldSpriteCache.get(spriteSize)
-  if (cached) return cached
-
-  const radius = spriteSize * 0.53
-  const pad = Math.ceil(spriteSize * 0.18)
-  const canvas = document.createElement('canvas')
-  canvas.width = Math.ceil(radius * 2 + pad * 2)
-  canvas.height = canvas.width
-  const ctx = canvas.getContext('2d')
-  if (!ctx) return canvas
-
-  ctx.translate(canvas.width / 2, canvas.height / 2)
-  ctx.globalCompositeOperation = 'lighter'
-
-  const shell = ctx.createRadialGradient(0, 0, radius * 0.16, 0, 0, radius * 1.08)
-  shell.addColorStop(0, 'rgba(255,251,235,0.12)')
-  shell.addColorStop(0.54, 'rgba(252,211,77,0.11)')
-  shell.addColorStop(0.9, 'rgba(245,158,11,0.22)')
-  shell.addColorStop(1, 'rgba(245,158,11,0)')
-  ctx.fillStyle = shell
-  ctx.beginPath()
-  ctx.arc(0, 0, radius * 1.08, 0, Math.PI * 2)
-  ctx.fill()
-
-  const cell = spriteSize * 0.145
-  const hexRadius = cell * 0.54
-  const hexHeight = Math.sqrt(3) * cell
-  const cols = Math.ceil(radius / (cell * 1.5)) + 1
-  const rows = Math.ceil(radius / hexHeight) + 1
-  ctx.save()
-  ctx.beginPath()
-  ctx.arc(0, 0, radius, 0, Math.PI * 2)
-  ctx.clip()
-  ctx.strokeStyle = 'rgba(252,211,77,0.52)'
-  ctx.lineWidth = Math.max(0.8, spriteSize * 0.011)
-  for (let col = -cols; col <= cols; col += 1) {
-    for (let row = -rows; row <= rows; row += 1) {
-      const hx = col * cell * 1.5
-      const hy = (row + (Math.abs(col) % 2) * 0.5) * hexHeight
-      if (Math.hypot(hx, hy) > radius - hexRadius * 0.2) continue
-      ctx.save()
-      ctx.translate(hx, hy)
-      traceRegularPolygon(ctx, 6, hexRadius, Math.PI / 6)
-      ctx.stroke()
-      ctx.restore()
-    }
-  }
-  ctx.restore()
-
-  ctx.strokeStyle = 'rgba(255,251,235,0.68)'
-  ctx.lineWidth = Math.max(1.3, spriteSize * 0.018)
-  ctx.shadowBlur = 8
-  ctx.shadowColor = 'rgba(252,211,77,0.45)'
-  ctx.beginPath()
-  ctx.arc(0, 0, radius, 0, Math.PI * 2)
-  ctx.stroke()
-
-  honeycombShieldSpriteCache.set(spriteSize, canvas)
-  return canvas
-}
-
-export function drawHoneycombShield(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, time: number, strength: number) {
-  const pulse = 0.985 + Math.sin(time / 620) * 0.025
-  const radius = size * 0.53
-  const sprite = getHoneycombShieldSprite(size)
-
-  ctx.save()
-  ctx.translate(x, y)
-  ctx.scale(pulse, pulse)
-  ctx.globalCompositeOperation = 'lighter'
-  ctx.globalAlpha = 0.66 + strength * 0.34
-  ctx.drawImage(sprite, -sprite.width / 2, -sprite.height / 2)
-  ctx.globalAlpha = 1
-
-  ctx.lineCap = 'round'
-  ctx.lineWidth = Math.max(1.1, size * 0.016)
-  ctx.shadowBlur = 4
-  ctx.shadowColor = 'rgba(252,211,77,0.36)'
-  for (let index = 0; index < 3; index += 1) {
-    const angle = time / 740 + index * Math.PI * 0.42
-    ctx.strokeStyle = index % 2 === 0 ? 'rgba(255,255,255,0.5)' : 'rgba(251,191,36,0.58)'
-    ctx.beginPath()
-    ctx.arc(0, 0, radius * (0.88 + (index % 2) * 0.08), angle, angle + Math.PI * 0.16)
-    ctx.stroke()
-  }
-  ctx.restore()
-}
-
 export function tracePlasmaLoop(ctx: CanvasRenderingContext2D, radius: number, phase: number, wobble: number, segments = 48) {
   ctx.beginPath()
   for (let index = 0; index <= segments; index += 1) {
@@ -884,155 +796,6 @@ export function tracePlasmaLoop(ctx: CanvasRenderingContext2D, radius: number, p
     else ctx.lineTo(px, py)
   }
   ctx.closePath()
-}
-
-export function drawPlasmaForceField(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, time: number, charge: number) {
-  const phase = time / 310
-  const pulse = 0.96 + Math.sin(time / 260) * 0.055
-  const radius = size * (0.64 + charge * 0.035) * pulse
-  const wobble = size * (0.02 + charge * 0.007)
-
-  ctx.save()
-  ctx.translate(x, y)
-  ctx.globalCompositeOperation = 'lighter'
-
-  const core = ctx.createRadialGradient(0, 0, radius * 0.14, 0, 0, radius * 1.24)
-  core.addColorStop(0, 'rgba(255,255,255,0.03)')
-  core.addColorStop(0.48, 'rgba(34,211,238,0.06)')
-  core.addColorStop(0.76, 'rgba(217,70,239,0.13)')
-  core.addColorStop(1, 'rgba(34,211,238,0)')
-  ctx.fillStyle = core
-  tracePlasmaLoop(ctx, radius * 1.08, phase * 0.8, wobble * 0.5, 40)
-  ctx.fill()
-
-  const colors = ['rgba(165,243,252,0.84)', 'rgba(217,70,239,0.5)']
-  for (let layer = 0; layer < 2; layer += 1) {
-    ctx.shadowBlur = 13 - layer * 3
-    ctx.shadowColor = layer === 1 ? 'rgba(217,70,239,0.52)' : 'rgba(34,211,238,0.72)'
-    ctx.strokeStyle = colors[layer]
-    ctx.lineWidth = Math.max(1, size * (0.024 - layer * 0.004))
-    tracePlasmaLoop(ctx, radius * (1 + layer * 0.075), phase * (layer % 2 ? -1.15 : 1), wobble * (1.1 - layer * 0.24), layer === 0 ? 46 : 38)
-    ctx.stroke()
-  }
-
-  ctx.lineCap = 'round'
-  ctx.shadowBlur = 6
-  for (let arc = 0; arc < 4; arc += 1) {
-    const angle = phase * 0.7 + arc * Math.PI * 0.58
-    const arcRadius = radius * (0.86 + (arc % 3) * 0.055)
-    ctx.strokeStyle = arc % 2 === 0 ? 'rgba(34,211,238,0.66)' : 'rgba(244,114,182,0.48)'
-    ctx.lineWidth = Math.max(1.2, size * 0.013)
-    ctx.beginPath()
-    ctx.arc(0, 0, arcRadius, angle, angle + Math.PI * (0.12 + (arc % 2) * 0.08))
-    ctx.stroke()
-  }
-
-  ctx.shadowBlur = 5
-  for (let spark = 0; spark < 4; spark += 1) {
-    const angle = phase * 1.35 + spark * Math.PI * 0.5
-    const sparkRadius = radius * (0.92 + Math.sin(phase + spark) * 0.08)
-    ctx.fillStyle = spark % 2 === 0 ? 'rgba(255,255,255,0.82)' : 'rgba(34,211,238,0.78)'
-    ctx.shadowColor = 'rgba(34,211,238,0.82)'
-    ctx.beginPath()
-    ctx.arc(Math.cos(angle) * sparkRadius, Math.sin(angle) * sparkRadius, Math.max(1.2, size * 0.018), 0, Math.PI * 2)
-    ctx.fill()
-  }
-  ctx.restore()
-}
-
-export function drawCometForceField(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, time: number, charge: number) {
-  const shield = getSpaceJetForceFieldSprite()
-  if (shield.loaded) {
-    const { source } = getCanvasSpriteDimensions(shield)
-    const pulse = 0.98 + Math.sin(time / 620) * 0.02
-    ctx.save()
-    ctx.translate(x, y)
-    // Sprite is horizontal; align its long axis with the logical flight axis.
-    ctx.rotate(Math.PI / 2)
-    ctx.globalAlpha *= 0.65 + clamp(charge, 0, 1) * 0.3
-    ctx.drawImage(source, -size * pulse, -size * pulse * 0.5, size * pulse * 2, size * pulse)
-    ctx.restore()
-    return
-  }
-  const energy = clamp(charge, 0.35, 1)
-  const pulse = 0.98 + Math.sin(time / 165) * 0.055
-  const radiusX = size * (0.41 + energy * 0.045) * pulse
-  const radiusY = size * (0.58 + energy * 0.05) * pulse
-  const tail = size * (1.12 + energy * 0.34)
-  const streakPhase = time / 82
-
-  ctx.save()
-  ctx.translate(x, y)
-  ctx.rotate(Math.sin(time / 260) * 0.018)
-  ctx.globalCompositeOperation = 'lighter'
-
-  const tailGradient = ctx.createLinearGradient(0, tail * 1.08, 0, -radiusY * 0.9)
-  tailGradient.addColorStop(0, 'rgba(34,211,238,0)')
-  tailGradient.addColorStop(0.2, 'rgba(34,211,238,0.12)')
-  tailGradient.addColorStop(0.48, 'rgba(74,222,128,0.24)')
-  tailGradient.addColorStop(0.72, 'rgba(250,204,21,0.14)')
-  tailGradient.addColorStop(1, 'rgba(240,253,244,0.08)')
-  ctx.fillStyle = tailGradient
-  ctx.shadowBlur = 18
-  ctx.shadowColor = 'rgba(45,212,191,0.55)'
-  ctx.beginPath()
-  ctx.moveTo(-radiusX * 0.5, -radiusY * 0.04)
-  ctx.bezierCurveTo(-radiusX * 0.78, tail * 0.24, -radiusX * 0.28, tail * 0.94, 0, tail * 1.02)
-  ctx.bezierCurveTo(radiusX * 0.28, tail * 0.94, radiusX * 0.78, tail * 0.24, radiusX * 0.5, -radiusY * 0.04)
-  ctx.closePath()
-  ctx.fill()
-
-  const coreGradient = ctx.createLinearGradient(0, tail * 0.86, 0, -radiusY * 0.25)
-  coreGradient.addColorStop(0, 'rgba(45,212,191,0)')
-  coreGradient.addColorStop(0.34, 'rgba(134,239,172,0.24)')
-  coreGradient.addColorStop(0.64, 'rgba(255,255,255,0.44)')
-  coreGradient.addColorStop(1, 'rgba(103,232,249,0.12)')
-  ctx.fillStyle = coreGradient
-  ctx.shadowBlur = 12
-  ctx.shadowColor = 'rgba(187,247,208,0.66)'
-  ctx.beginPath()
-  ctx.ellipse(0, tail * 0.32, radiusX * 0.22, tail * 0.54, 0, 0, Math.PI * 2)
-  ctx.fill()
-
-  const shell = ctx.createRadialGradient(0, -radiusY * 0.12, radiusX * 0.16, 0, 0, radiusY * 1.12)
-  shell.addColorStop(0, 'rgba(255,255,255,0.2)')
-  shell.addColorStop(0.38, 'rgba(103,232,249,0.2)')
-  shell.addColorStop(0.7, 'rgba(74,222,128,0.24)')
-  shell.addColorStop(1, 'rgba(21,128,61,0)')
-  ctx.fillStyle = shell
-  ctx.beginPath()
-  ctx.ellipse(0, 0, radiusX, radiusY, 0, 0, Math.PI * 2)
-  ctx.fill()
-
-  ctx.lineCap = 'round'
-  for (let index = 0; index < 7; index += 1) {
-    const offset = ((streakPhase + index * 0.17) % 1) * tail
-    const xOffset = Math.sin(streakPhase * 1.4 + index * 1.85) * radiusX * (0.14 + (index % 3) * 0.06)
-    const yOffset = tail * 0.9 - offset
-    const alpha = 0.24 + (index % 2) * 0.16
-    ctx.strokeStyle = index % 3 === 0 ? `rgba(255,255,255,${alpha})` : index % 2 === 0 ? `rgba(125,249,255,${alpha})` : `rgba(134,239,172,${alpha})`
-    ctx.lineWidth = Math.max(1.15, size * (0.011 + index * 0.0009))
-    ctx.beginPath()
-    ctx.moveTo(xOffset, yOffset + tail * 0.16)
-    ctx.bezierCurveTo(xOffset * 0.7, yOffset - tail * 0.02, xOffset * 0.24, yOffset - tail * 0.2, 0, yOffset - tail * 0.34)
-    ctx.stroke()
-  }
-
-  ctx.strokeStyle = 'rgba(240,253,250,0.64)'
-  ctx.lineWidth = Math.max(1.1, size * 0.014)
-  ctx.shadowBlur = 8
-  ctx.shadowColor = 'rgba(125,249,255,0.62)'
-  ctx.beginPath()
-  ctx.ellipse(0, 0, radiusX * 0.9, radiusY * 0.9, 0, Math.PI * 1.12, Math.PI * 1.88)
-  ctx.stroke()
-
-  ctx.strokeStyle = 'rgba(250,204,21,0.22)'
-  ctx.lineWidth = Math.max(0.9, size * 0.01)
-  ctx.beginPath()
-  ctx.ellipse(0, radiusY * 0.04, radiusX * 0.58, radiusY * 0.76, 0, Math.PI * 1.08, Math.PI * 1.92)
-  ctx.stroke()
-
-  ctx.restore()
 }
 
 export function drawSpiegelBurningMirage(
@@ -1250,16 +1013,36 @@ export function drawRaidPlayer(
     }
   }
 
-  if (!presentation?.hideCombatFx && player.shield > 0) drawHoneycombShield(ctx, x, y, renderSize, time, clamp(player.shield / 8, 0, 1))
-  else if (!presentation?.hideCombatFx && player.invuln > 0) drawInvulnerabilityShimmer(ctx, x, y, renderSize, time)
-
-  if (!presentation?.hideCombatFx && player.forceField > 0) {
-    const forceCharge = player.ship.key === 'spaceEt'
-      ? clamp(player.forceField / SPACE_ET_PASSIVE_FORCE_FIELD_CHARGES, 0.42, 1)
-      : clamp(player.forceField / FORCE_FIELD_ARMOR, 0, 1)
-    if (player.ship.key === 'spaceEt') drawCometForceField(ctx, x, y, renderSize, time, forceCharge)
-    else drawPlasmaForceField(ctx, x, y, renderSize, time, forceCharge)
+  const protectionAttackPose = coreLanderCombatModel && sideSprite?.loaded && !presentation?.hideCombatFx && !isDown &&
+    (phase === 'playing' || phase === 'paused') && (player.godMeleeCloak ?? 0) <= 0
+    ? sampleMechAttack(coreLanderCombatModel, player.fireCooldown, getCoreLanderFireInterval(player), reducedMotion) : null
+  let conditionHull: ProtectionHull | null = null
+  let conditionSize = renderSize, conditionY = y
+  if (!presentation?.hideCombatFx && (player.forceField > 0 || player.shield > 0 || player.feedback || player.hp <= player.maxHp * .35)) {
+    const capacity = player.ship.key === 'spaceEt' ? SPACE_ET_PASSIVE_FORCE_FIELD_CHARGES : FORCE_FIELD_ARMOR
+    let protectionSize = renderSize, protectionY = y
+    let protectionHull: ProtectionHull = sideSprite?.loaded
+      ? { sprite: sideSprite, contain: true, rotation: -Math.PI / 2 }
+      : { sprite: getShipCanvasSprite(sideVisualKey) }
+    if (coreLanderCombatModel && protectionAttackPose) {
+      const atlas = getMechActionAtlas(coreLanderCombatModel, coreLanderBurning)
+      if (atlas.loaded) protectionHull = { sprite: atlas, contain: true, rotation: -Math.PI / 2,
+        columns: coreLanderCombatModel === 'godGundam' ? 3 : 2, rows: 2, frame: protectionAttackPose.frame }
+    } else if (coreLanderCombatModel === 'godGundam' && coreLanderBurningBlend >= .5) {
+      if (sideBurningSprite?.loaded) protectionHull = { sprite: sideBurningSprite, contain: true, rotation: -Math.PI / 2 }
+      else if (!sideSprite?.loaded) {
+        protectionHull = { sprite: getShipCanvasSprite('godGundamBurning') }
+        protectionSize *= GOD_GUNDAM_BURNING_BODY_SCALE
+        protectionY += renderSize * GOD_GUNDAM_BURNING_BODY_Y_OFFSET
+      }
+    }
+    conditionHull = protectionHull
+    conditionSize = protectionSize
+    conditionY = protectionY
+    drawShipProtection(ctx, x, protectionY, protectionSize, time,
+      clamp(player.forceField / capacity, 0, 1), clamp(player.shield / 8, 0, 1), protectionHull, reducedMotion, capacity)
   }
+  if (!presentation?.hideCombatFx && player.shield <= 0 && player.invuln > 0) drawInvulnerabilityShimmer(ctx, x, y, renderSize, time)
 
   const normalFilter = remasteredHull ? 'none' : cosmetics.frame
     ? getShipFrameSpriteFilter(cosmeticShipKey)
@@ -1273,16 +1056,14 @@ export function drawRaidPlayer(
         ? `rgba(${Math.round(226 - 74 * coreLanderBurningRage)},${Math.round(232 - 119 * coreLanderBurningRage)},${Math.round(240 - 127 * coreLanderBurningRage)},${(0.18 + coreLanderBurningRage * 0.1).toFixed(2)})`
         : `rgba(251,${Math.round(191 - 74 * coreLanderBurningRage)},${Math.round(36 - 20 * coreLanderBurningRage)},${(0.28 + coreLanderBurningRage * 0.16).toFixed(2)})`
       : 'rgba(251,191,36,0.28)'
-    : player.forceField > 0
-    ? player.ship.key === 'spaceEt' ? 'rgba(125,249,255,0.46)' : 'rgba(34,211,238,0.34)'
-    : player.shield > 0 ? 'rgba(252,211,77,0.16)' : player.invuln > 0 ? 'rgba(226,232,240,0.1)' : null
+    : player.forceField > 0 || player.shield > 0 ? null : player.invuln > 0 ? 'rgba(226,232,240,0.1)' : null
   // Diffuse portrait-space lighting appears as a detached ring beside thin side-view ships.
   if (!landscape && sunSide && eclipse < .86 && !isDown) {
     drawSpriteGlow(ctx, x + sunSide * renderSize * .18, y - renderSize * .13, renderSize * .71,
       'rgba(255,226,178,.27)', .62 * Math.abs(sunlight) * (1 - eclipse))
   }
   if (spriteGlow) drawSpriteGlow(ctx, x, y, renderSize, spriteGlow, 0.68)
-  else if (!isDown && !landscape) drawSpriteGlow(ctx, x, y, renderSize, environmentRim ?? hexToRgba(color, 0.09), 0.55)
+  else if (!isDown && !landscape && player.forceField <= 0 && player.shield <= 0) drawSpriteGlow(ctx, x, y, renderSize, environmentRim ?? hexToRgba(color, 0.09), 0.55)
   if(dockReady&&dockPose&&coreLanderCombatModel){
     if((presentation?.engine??0)>0){
       const nozzle=getMechDockNozzles(coreLanderCombatModel,dockPose.frame),wake=renderSize*.55
@@ -1295,8 +1076,7 @@ export function drawRaidPlayer(
     // The playfield turns clockwise; rotate the right-facing art into its
     // logical upward flight direction before the camera transform.
     const attackActive = !presentation?.hideCombatFx && !isDown && (phase === 'playing' || phase === 'paused') && (player.godMeleeCloak ?? 0) <= 0
-    const attackPose = coreLanderCombatModel && attackActive
-      ? sampleMechAttack(coreLanderCombatModel, player.fireCooldown, getCoreLanderFireInterval(player), reducedMotion) : null
+    const attackPose = attackActive ? protectionAttackPose : null
     // Pick one form and one registered pose. Alpha crossfades between displaced arms
     // would draw a ghost arm, and would not correspond to the actual release point.
     const actionDrawn = coreLanderCombatModel && attackPose && drawMechAction(ctx, coreLanderCombatModel, coreLanderBurning, attackPose.frame, x, y, renderSize, alpha, rotation, scale)
@@ -1406,6 +1186,7 @@ export function drawRaidPlayer(
     }
     ctx.restore()
   }
+  if (conditionHull) drawPlayerCondition(ctx, player, phase, x, conditionY, conditionSize, time, color, conditionHull, reducedMotion)
   } finally { ctx.restore() }
 }
 
@@ -1582,73 +1363,89 @@ function drawCrossfadeExhaust(ctx: CanvasRenderingContext2D, x: number, y: numbe
   ctx.restore()
 }
 
-const masteryWakeSprites = new WeakMap<MasteryVisualStyle, HTMLCanvasElement>()
-const MASTERY_WAKE_X = 44
-const MASTERY_WAKE_Y = 18
-const MASTERY_WAKE_LENGTH = 72
-const MASTERY_WAKE_WIDTH = 16
+// Four reusable thermal phases per ship palette; no live filters or new particles.
+const masteryWakeSprites = new WeakMap<MasteryVisualStyle, readonly HTMLCanvasElement[]>()
+const MASTERY_WAKE_X = 72
+const MASTERY_WAKE_Y = 64
+const MASTERY_WAKE_LENGTH = 208
+const MASTERY_WAKE_WIDTH = 96
 
-function bakeMasteryWake(style: MasteryVisualStyle, exhaust: NonNullable<ReturnType<typeof getRaidCombatFrame>>) {
-  const wake = document.createElement('canvas')
-  wake.width = 88
-  wake.height = 116
-  const wakeCtx = wake.getContext('2d')
-  if (!wakeCtx) return null
-  paintMasteryWake(wakeCtx, style, MASTERY_WAKE_X, MASTERY_WAKE_Y, MASTERY_WAKE_LENGTH, MASTERY_WAKE_WIDTH, 100)
-
-  // Color the authored plume with the ship's signature palette before merging
-  // it with the original bloom and hot core. Each nozzle draws one bitmap.
-  const texture = document.createElement('canvas')
-  texture.width = wake.width
-  texture.height = wake.height
-  const textureCtx = texture.getContext('2d')
-  if (!textureCtx) return wake
-  const plumeWidth = 70
-  const plumeLength = 123
-  if (!drawRaidCombatTexture(textureCtx, exhaust,
-    MASTERY_WAKE_X + plumeWidth * (.5 - EXHAUST_ORIGIN_X),
-    MASTERY_WAKE_Y + plumeLength * (.5 - EXHAUST_ORIGIN_Y),
-    plumeLength, plumeWidth, -Math.PI / 2, false)) return wake
-  const tint = textureCtx.createLinearGradient(0, MASTERY_WAKE_Y, 0, MASTERY_WAKE_Y + MASTERY_WAKE_LENGTH)
-  tint.addColorStop(0, style.accent)
-  tint.addColorStop(.25, style.core)
-  tint.addColorStop(.63, style.paint)
-  tint.addColorStop(1, 'rgba(0,0,0,0)')
-  textureCtx.globalCompositeOperation = 'source-in'
-  textureCtx.fillStyle = tint
-  textureCtx.fillRect(0, 0, texture.width, texture.height)
-  wakeCtx.globalCompositeOperation = 'lighter'
-  wakeCtx.globalAlpha = .74
-  wakeCtx.drawImage(texture, 0, 0)
-  return wake
+function getMasteryWakeSprites(style: MasteryVisualStyle, exhaust: NonNullable<ReturnType<typeof getRaidCombatFrame>>) {
+  const cached = masteryWakeSprites.get(style)
+  if (cached) return cached
+  if (typeof document === 'undefined') return undefined
+  const rgb = parseInt(style.paint.slice(1), 16)
+  const r = (rgb >> 16 & 255) / 255, g = (rgb >> 8 & 255) / 255, b = (rgb & 255) / 255
+  const max = Math.max(r, g, b), delta = max - Math.min(r, g, b)
+  const hue = delta === 0 ? 190 : ((max === r ? (g - b) / delta : max === g ? (b - r) / delta + 2 : (r - g) / delta + 4) * 60 + 360) % 360
+  const frames: HTMLCanvasElement[] = []
+  for (let phase = 0; phase < 4; phase += 1) {
+    const canvas = document.createElement('canvas')
+    canvas.width = 144
+    canvas.height = 256
+    const bake = canvas.getContext('2d')
+    if (!bake) return undefined
+    // Color filters retain the authored flame's luminance and turbulent edges.
+    // Alpha masking with a flat color would erase that detail again.
+    const heat = (1 - Math.cos(phase * Math.PI / 2)) * .065
+    bake.filter = `grayscale(1) sepia(1) saturate(5) hue-rotate(${hue - 46 + heat * 60}deg) brightness(${1.1 + heat})`
+    const centerX = MASTERY_WAKE_X + MASTERY_WAKE_WIDTH * (.5 - EXHAUST_ORIGIN_X)
+    const centerY = MASTERY_WAKE_Y + MASTERY_WAKE_LENGTH * (.5 - EXHAUST_ORIGIN_Y)
+    if (!drawRaidCombatTexture(bake, exhaust, centerX, centerY,
+      MASTERY_WAKE_LENGTH, MASTERY_WAKE_WIDTH, -Math.PI / 2, false)) return undefined
+    bake.filter = 'grayscale(1) brightness(2.1)'
+    drawRaidCombatTexture(bake, exhaust,
+      MASTERY_WAKE_X + MASTERY_WAKE_WIDTH * .38 * (.5 - EXHAUST_ORIGIN_X),
+      MASTERY_WAKE_Y + MASTERY_WAKE_LENGTH * .83 * (.5 - EXHAUST_ORIGIN_Y),
+      MASTERY_WAKE_LENGTH * .83, MASTERY_WAKE_WIDTH * .38, -Math.PI / 2, true, .65 + heat * .6)
+    bake.filter = 'none'
+    bake.globalCompositeOperation = 'lighter'
+    bake.shadowColor = style.paint
+    bake.shadowBlur = 7
+    // Compact shock diamonds sit inside the plume, downstream of the outlet.
+    for (let diamond = 0; diamond < 3; diamond += 1) {
+      const y = MASTERY_WAKE_Y + 14 + diamond * 19
+      const halfWidth = 2.6 - diamond * .55
+      const halfHeight = 5.2 - diamond * .8
+      bake.fillStyle = diamond === 0 ? 'rgba(255,255,255,.92)' : style.accent
+      bake.beginPath()
+      bake.moveTo(MASTERY_WAKE_X, y - halfHeight)
+      bake.lineTo(MASTERY_WAKE_X + halfWidth, y)
+      bake.lineTo(MASTERY_WAKE_X, y + halfHeight)
+      bake.lineTo(MASTERY_WAKE_X - halfWidth, y)
+      bake.closePath()
+      bake.fill()
+    }
+    frames.push(canvas)
+  }
+  masteryWakeSprites.set(style, frames)
+  return frames
 }
 
 export function drawSingleMasteryEngineTrail(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, time: number, color: string, shipKey: string, engineBoost = 0, nozzleWidth?: number) {
   const style = getMasteryVisualStyle(shipKey, color)
-  const pulse = .96 + Math.sin(time / 180) * .05
-  const tailScale = shipKey === 'spaceEt' ? 1.18 : shipKey === 'dreadnought' ? .92 : shipKey === 'mesiah' ? 1.05 : 1
+  const throttle = clamp(engineBoost / 1.35, 0, 1)
+  const tailScale = shipKey === 'spaceEt' ? 1.15 : shipKey === 'dreadnought' ? 1.04 : shipKey === 'mesiah' ? 1.1 : 1.08
   const top = y + size * .34
-  const length = size * .72 * tailScale * pulse * (1 + clamp(engineBoost, 0, 1.35) * .36)
-  const width = nozzleWidth === undefined ? size * (shipKey === 'dreadnought' ? .15 : .13) : nozzleWidth / 1.16
-
-  if (nozzleWidth !== undefined && typeof document !== 'undefined') {
-    let wake = masteryWakeSprites.get(style)
-    if (!wake) {
-      const exhaust = getRaidCombatFrame(COMBAT_TILE.exhaust)
-      wake = exhaust ? bakeMasteryWake(style, exhaust) ?? undefined : undefined
-      if (wake) masteryWakeSprites.set(style, wake)
-    }
-    if (wake) {
-      const scaleX = width / MASTERY_WAKE_WIDTH
-      const scaleY = length / MASTERY_WAKE_LENGTH
-      ctx.save()
-      ctx.globalCompositeOperation = 'lighter'
-      ctx.drawImage(wake, x - MASTERY_WAKE_X * scaleX, top - MASTERY_WAKE_Y * scaleY, wake.width * scaleX, wake.height * scaleY)
-      ctx.restore()
-      return
-    }
+  const length = size * getEngineLengthScale(engineBoost, time) * tailScale
+  const width = nozzleWidth === undefined ? size * .36 : nozzleWidth / .12
+  const exhaust = getRaidCombatFrame(COMBAT_TILE.exhaust)
+  const frames = exhaust ? getMasteryWakeSprites(style, exhaust) : undefined
+  if (frames) {
+    const phase = (Math.floor(time / 72) + Math.round(throttle * 3)) % frames.length
+    const wake = frames[phase]
+    const scaleX = width / MASTERY_WAKE_WIDTH
+    const scaleY = length / MASTERY_WAKE_LENGTH
+    ctx.save()
+    ctx.globalCompositeOperation = 'lighter'
+    ctx.globalAlpha *= .82 + throttle * .16
+    ctx.drawImage(wake, x - MASTERY_WAKE_X * scaleX, top - MASTERY_WAKE_Y * scaleY,
+      wake.width * scaleX, wake.height * scaleY)
+    ctx.restore()
+    return
   }
-  paintMasteryWake(ctx, style, x, top, length, width, size)
+  // A missing atlas still gets a nozzle-sized flame rather than a giant fallback.
+  paintMasteryWake(ctx, style, x, top, length * .52, nozzleWidth ?? size * .11, size)
 }
 
 function paintMasteryWake(ctx: CanvasRenderingContext2D, style: MasteryVisualStyle, x: number, top: number, length: number, width: number, size: number) {
@@ -1707,12 +1504,25 @@ function getSideAuraSprite(sprite: CanvasSpriteEntry) {
 }
 
 export function warmRaidSideCosmetics(visualShipKey: string, aura = true) {
-  if (visualShipKey === 'godGundam' || visualShipKey === 'spiegel') {
-    getMechActionAtlas(visualShipKey)
-    if (visualShipKey === 'godGundam') getMechActionAtlas(visualShipKey, true)
+  const portrait = getShipCanvasSprite(visualShipKey)
+  void portrait.ready.then(() => { warmShipProtection({ sprite: portrait }) })
+  const model = visualShipKey.startsWith('godGundam') ? 'godGundam' : visualShipKey === 'spiegel' ? 'spiegel' : null
+  if (model) {
+    for (const burning of model === 'godGundam' ? [false, true] : [false]) {
+      const atlas = getMechActionAtlas(model, burning)
+      void atlas.ready.then(() => {
+        const columns = model === 'godGundam' ? 3 : 2
+        for (let frame = 0; frame < columns * 2; frame++) warmShipProtection({
+          sprite: atlas, contain: true, rotation: -Math.PI / 2, columns, rows: 2, frame,
+        })
+      })
+    }
   }
   const sprite = getRaidSideShipCanvasSprite(visualShipKey)
-  if (sprite && aura) void sprite.ready.then(() => { getSideAuraSprite(sprite) })
+  if (sprite) void sprite.ready.then(() => {
+    warmShipProtection({ sprite, contain: true, rotation: -Math.PI / 2 })
+    if (aura) getSideAuraSprite(sprite)
+  })
 }
 
 function drawSideBurningWake(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, time: number, alpha: number, visualShipKey: string, cosmeticShipKey: string, boost: number) {

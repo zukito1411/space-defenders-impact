@@ -1,3 +1,4 @@
+import { RaidScenePresentation } from './scenePresentation'
 import { Capacitor } from '@capacitor/core'
 import { commandBossReleaseCue, markBossAttack, playGuestBossAttack, stopBossAttackAudio } from './bossAudio'
 import { CarrierAudio } from './carrierAudio'
@@ -357,6 +358,7 @@ export function GradiusRaid({
   const highScoreRef = useRef(getHighScore())
   const unlockedStageRef = useRef(getUnlockedStage())
   const [carrierAudio] = useState(() => new CarrierAudio())
+  const [scenePresentation] = useState(() => new RaidScenePresentation())
   const raidBgmElementRef = useRef<HTMLAudioElement | null>(null)
   const raidBgmLoadRef = useRef<AbortController | null>(null)
   const raidBgmObjectUrlRef = useRef<string | null>(null)
@@ -588,6 +590,7 @@ export function GradiusRaid({
 
   const buildMultiplayerState = useCallback((): MultiplayerHostState => ({
     seq: ++multiplayerStateSeqRef.current,
+    presentationEvents: scenePresentation.snapshot(),
     phase: phaseRef.current,
     hostPlayer: compactPlayer(playerRef.current),
     guestPlayer: remotePlayerRef.current ? compactPlayer(remotePlayerRef.current) : null,
@@ -756,6 +759,9 @@ export function GradiusRaid({
     } else {
       remotePlayerRef.current = nextGuestPlayer
     }
+    if (Array.isArray(state.presentationEvents)) scenePresentation.ingest(state.presentationEvents)
+    scenePresentation.observePlayer(state.hostPlayer)
+    if (state.guestPlayer) scenePresentation.observePlayer(state.guestPlayer)
     shotsRef.current = state.shots.map((shot) => ({ ...shot }))
     enemyShotsRef.current = state.enemyShots.map((shot) => ({ ...shot }))
     enemiesRef.current = state.enemies.map((enemy) => ({ ...enemy }))
@@ -2688,6 +2694,7 @@ export function GradiusRaid({
     ].rim
     const sameScreenIdentityAura = sameScreenCoopRef.current
     const sunlight = pixiBackground?.getOrbitalSunlight() ?? 0
+    scenePresentation.draw(ctx, time, phaseRef.current, toX, toY, cssWidth, reducedMotion, gfxQuality === 'low')
     if (ownShipRef && !hideOwnShipForBarrage) drawRaidPlayer(ctx, ownShipRef, phaseRef.current, toX, toY, cssWidth, time, PLAYER_COLOR, getCachedEquippedCosmetics(ownShipRef.ship.key), getRaidPlayerVisualShipKey(ownShipRef, progressRef.current), sameScreenIdentityAura ? PLAYER_COLOR : null, journeyRim, pixiBackground?.getEclipseAt(toX(ownShipRef.x), toY(ownShipRef.y)), sunlight, reducedMotion, landscapeRef.current)
     if (allyShipRef && !hideAllyShipForBarrage) drawRaidPlayer(ctx, allyShipRef, phaseRef.current, toX, toY, cssWidth, time, ALLY_PLAYER_COLOR, getCachedEquippedCosmetics(allyShipRef.ship.key), getRaidPlayerVisualShipKey(allyShipRef, progressRef.current), sameScreenIdentityAura ? ALLY_PLAYER_COLOR : null, journeyRim, pixiBackground?.getEclipseAt(toX(allyShipRef.x), toY(allyShipRef.y)), sunlight, reducedMotion, landscapeRef.current)
     if (devilAssistShipRef && !hideDevilAssistForBarrage) drawRaidPlayer(ctx, devilAssistShipRef, phaseRef.current, toX, toY, cssWidth, time, '#facc15', getCachedEquippedCosmetics(devilAssistShipRef.ship.key), getRaidPlayerVisualShipKey(devilAssistShipRef, progressRef.current), null, journeyRim, pixiBackground?.getEclipseAt(toX(devilAssistShipRef.x), toY(devilAssistShipRef.y)), sunlight, reducedMotion, landscapeRef.current)
@@ -2907,6 +2914,7 @@ export function GradiusRaid({
 
       destroyed += 1
       enemiesDestroyedRef.current += 1
+      scenePresentation.defeat(enemy)
       const scoreValue = 95 + waveRef.current * 14
       player.score += Math.round(scoreValue * scoreMult)
       if (remotePlayerRef.current) {
@@ -4399,18 +4407,18 @@ export function GradiusRaid({
     onClose()
   }, [onClose, reportRaidRunComplete, submitRaidLeaderboardScore])
 
-  const damagePlayer = useCallback((amount: number, targetPlayer = playerRef.current) => {
+  const damagePlayer = useCallback((amount: number, targetPlayer = playerRef.current, contact?: Vec) => {
     const player = targetPlayer
     if (player.hp <= 0 || player.invuln > 0) return
     const scaledAmount = Math.max(1, Math.round(amount * enemyDamageMultRef.current))
     if (player.forceField > 0) {
+      const combined = player.shield > 0
       player.forceField = Math.max(0, player.forceField - scaledAmount)
       player.invuln = 0.22
       spawnSparks(player.x, player.y, '#22d3ee', 24, 7)
       addRipple(player.x, player.y, '#22d3ee', player.forceField > 0 ? 12 : 17)
       if (player.forceField <= 0) triggerScreenShake(1.2, 150)
-      if (player.forceField > 0) playRaidCue('shield', raidStereoPan(player.x, player.y, landscapeRef.current))
-      else playGameSound('explosion')
+      scenePresentation.playerEvent(player, player.forceField <= 0 ? combined ? 'combined-break' : 'field-break' : combined ? 'combined-hit' : 'field-hit', contact)
       return
     }
     if (player.shield > 0) {
@@ -4418,12 +4426,13 @@ export function GradiusRaid({
       player.invuln = 0.35
       spawnSparks(player.x, player.y, '#fcd34d', 20, 6)
       addRipple(player.x, player.y, '#fcd34d', 9)
-      playRaidCue('shield', raidStereoPan(player.x, player.y, landscapeRef.current))
+      scenePresentation.playerEvent(player, player.shield > 0 ? 'shield-hit' : 'shield-break', contact)
       return
     }
     triggerScreenShake(player.hp <= scaledAmount ? 2.4 : 0.85, player.hp <= scaledAmount ? 230 : 100)
     const wasCritical = needsRepair(player)
     player.hp -= scaledAmount
+    scenePresentation.playerEvent(player, 'hull-hit', contact)
     if (!wasCritical && needsRepair(player)) playRaidCue('alarm')
     player.invuln = 1.05
     spawnSparks(player.x, player.y, '#fca5a5', 22, 6)
@@ -6183,6 +6192,7 @@ export function GradiusRaid({
           spawnSparks(enemy.x, enemy.y, spiegelKunai ? '#cbd5e1' : enemy.isBoss ? '#fdba74' : '#fb923c', enemy.isBoss ? 12 : enemy.isMiniBoss ? 9 : 5, enemy.isBoss || enemy.isMiniBoss ? 6 : 4)
           if (enemy.hp <= 0 && !enemy.isBoss) {
             enemiesDestroyedRef.current += 1
+            scenePresentation.defeat(enemy)
             const scoreValue = enemy.isMiniBoss ? 260 + waveRef.current * 32 : 95 + waveRef.current * 14
             player.score += Math.round(scoreValue * scoreMult)
             if (remotePlayer) remotePlayer.score += Math.round(scoreValue * scoreMult)
@@ -6326,6 +6336,7 @@ export function GradiusRaid({
     let completedRun = false
     const markEnemyDefeatedByBarrage = (enemy: Enemy) => {
       enemiesDestroyedRef.current += 1
+      scenePresentation.defeat(enemy)
       if (enemy.isBoss) {
         bossesDefeatedRef.current += 1
         enemy.defeatTimer = STAGE_CLEAR_SECONDS
@@ -6401,7 +6412,7 @@ export function GradiusRaid({
       playGameSound('combo')
       window.setTimeout(() => playGameSound('score'), 180)
     }
-    playGameSound(enemy.isBoss ? 'destroyed_explosion' : enemy.isMiniBoss ? 'explosion_big' : 'explosion')
+
     }
     const spawnGodGundamPassiveStrike = (owner: Player, target: Vec & { radius: number }, visualIndex: number, sourceOverride?: Vec, preserveChain = false, attackSideOverride?: -1 | 1) => {
       const model = getPlayerCoreLanderCombatModel(owner, progressRef.current) ?? 'godGundam'
@@ -6819,6 +6830,7 @@ export function GradiusRaid({
           }
           if (enemy.hp <= 0) {
             enemiesDestroyedRef.current += 1
+            scenePresentation.defeat(enemy)
             if (enemy.isBoss) {
               bossesDefeatedRef.current += 1
               enemy.defeatTimer = STAGE_CLEAR_SECONDS
@@ -6891,7 +6903,7 @@ export function GradiusRaid({
               playGameSound('combo')
               window.setTimeout(() => playGameSound('score'), 180)
             }
-            playGameSound(enemy.isBoss || enemy.isMiniBoss ? 'explosion_big' : 'explosion')
+
           }
           break
         }
@@ -7000,7 +7012,7 @@ export function GradiusRaid({
             ? Math.abs(enemyShot.x - targetPlayer.x) <= beamHitRange
             : Math.abs((targetPlayer.x - enemyShot.x) * Math.sin(enemyShot.angle) - (targetPlayer.y - enemyShot.y) * Math.cos(enemyShot.angle)) <= beamHitRange
           if (beamHits) {
-            damagePlayer(enemyShot.damage, targetPlayer)
+            damagePlayer(enemyShot.damage, targetPlayer, enemyShot)
           }
           continue
         }
@@ -7013,8 +7025,9 @@ export function GradiusRaid({
             splitSquidBubble({ ...enemyShot })
             enemyShot.life = 0
           }
+          const contact = { x: enemyShot.x, y: enemyShot.y }
           enemyShot.y = HEIGHT + 99
-          damagePlayer(enemyShot.kind === 'boss' || enemyShot.kind === 'plasma' || enemyShot.kind === 'blade' || enemyShot.kind === 'orbShot' || enemyShot.kind === 'superShot' || enemyShot.kind === 'beam' || enemyShot.kind === 'scatterBoss' || enemyShot.kind === 'poisonCloud' ? 1 : enemyShot.damage, targetPlayer)
+          damagePlayer(enemyShot.kind === 'boss' || enemyShot.kind === 'plasma' || enemyShot.kind === 'blade' || enemyShot.kind === 'orbShot' || enemyShot.kind === 'superShot' || enemyShot.kind === 'beam' || enemyShot.kind === 'scatterBoss' || enemyShot.kind === 'poisonCloud' ? 1 : enemyShot.damage, targetPlayer, contact)
           break
         }
       }
@@ -7043,6 +7056,9 @@ export function GradiusRaid({
             if ((enemy.isBoss || enemy.isMiniBoss) && targetPlayer.invuln > 0) continue
             const armorCost = enemy.isBoss ? 2 : 1
             targetPlayer.forceField = Math.max(0, targetPlayer.forceField - armorCost)
+            scenePresentation.playerEvent(targetPlayer, targetPlayer.forceField <= 0
+              ? targetPlayer.shield > 0 ? 'combined-break' : 'field-break'
+              : targetPlayer.shield > 0 ? 'combined-hit' : 'field-hit', enemy)
             targetPlayer.invuln = 0.16
             if (enemy.isBoss || enemy.isMiniBoss) {
               enemy.hp = Math.max(1, enemy.hp - (enemy.isBoss ? 28 + waveRef.current * 8 : 34 + waveRef.current * 7))
@@ -7053,16 +7069,17 @@ export function GradiusRaid({
             }
             spawnSparks(enemy.x, enemy.y, '#22d3ee', enemy.isBoss || enemy.isMiniBoss ? 40 : 18, 7)
             addRipple(enemy.x, enemy.y, '#22d3ee', enemy.isBoss || enemy.isMiniBoss ? 15 : 10)
-            playGameSound(enemy.isBoss || enemy.isMiniBoss ? 'hit' : 'explosion')
+            if (enemy.isBoss || enemy.isMiniBoss) playGameSound('hit')
           } else {
             if (enemy.isBoss || enemy.isMiniBoss) {
               enemy.hp = Math.max(1, enemy.hp - (enemy.isBoss ? 22 + waveRef.current * 6 : 30 + waveRef.current * 6))
             } else {
               enemy.hp = 0
             }
-            damagePlayer(enemy.isBoss ? 2 : 1, targetPlayer)
+            damagePlayer(enemy.isBoss ? 2 : 1, targetPlayer, enemy)
             spawnSparks(enemy.x, enemy.y, '#fb7185', enemy.isBoss || enemy.isMiniBoss ? 35 : 14, 6)
           }
+          if (enemy.hp <= 0 && !enemy.isBoss) scenePresentation.defeat(enemy)
           break
         }
       }
@@ -7078,7 +7095,7 @@ export function GradiusRaid({
           Math.abs(asteroid.y - targetPlayer.y) <= hitRange &&
           distSq(asteroid, targetPlayer) <= hitRange * hitRange
         ) {
-          damagePlayer(asteroid.tier === 2 ? 2 : 1, targetPlayer)
+          damagePlayer(asteroid.tier === 2 ? 2 : 1, targetPlayer, asteroid)
           breakAsteroid(asteroid, false)
           break
         }
@@ -7158,7 +7175,9 @@ export function GradiusRaid({
               if (levelTarget.hp > 0) levelUpPlayer(levelTarget)
             }
           } else if (powerUp.type === 'repair') {
+            const previousHull = targetPlayer.hp
             targetPlayer.hp = Math.min(targetPlayer.maxHp, targetPlayer.hp + 1)
+            if (targetPlayer.hp > previousHull) scenePresentation.playerEvent(targetPlayer, 'repair')
           } else if (powerUp.type === 'shield') {
             targetPlayer.shield = Math.min(8, targetPlayer.shield + 3)
             targetPlayer.invuln = Math.max(targetPlayer.invuln, 0.8)
@@ -7608,7 +7627,7 @@ export function GradiusRaid({
         ? CARRIER_LAUNCH_SECONDS - stageEntryRef.current : null
       const insideBay = carrierScene && !underway && (stop?.remaining ?? 0) < 2.5
         && (launchAge === null || launchAge < CARRIER_DEPARTURE_START)
-      carrierAudio.update(insideBay, launchAge, phase === 'paused' || document.hidden)
+      carrierAudio.update(insideBay, launchAge, phase === 'paused' || document.hidden, language)
     }
     const timer = window.setInterval(syncCarrierAudio, 80)
     document.addEventListener('visibilitychange', syncCarrierAudio)
@@ -7617,7 +7636,31 @@ export function GradiusRaid({
       document.removeEventListener('visibilitychange', syncCarrierAudio)
       carrierAudio.stop()
     }
-  }, [carrierAudio])
+  }, [carrierAudio, language])
+
+  useEffect(() => {
+    scenePresentation.warm()
+    const sync = () => {
+      const session = multiplayerSessionRef.current
+      const own = session && !session.isHost ? remotePlayerRef.current ?? playerRef.current : playerRef.current
+      const ally = session && !session.isHost ? playerRef.current : remotePlayerRef.current
+      scenePresentation.update({ phase: phaseRef.current, stage: stageRef.current,
+        carrier: Boolean(initialLaunchRef.current || carrierStopRef.current?.remaining), stageClear: stageClearRef.current > 0,
+        player: own, ally, enemies: enemiesRef.current, hostileShots: enemyShotsRef.current.length,
+        event: randomEventRef.current?.kind, landscape: landscapeRef.current,
+        elite: getCachedEquippedCosmetics(own.ship.key).frame,
+        bgm: raidBgmElementRef.current, track: raidBgmTrackRef.current ?? '',
+      })
+    }
+    const timer = window.setInterval(sync, 180)
+    document.addEventListener('visibilitychange', sync)
+    sync()
+    return () => {
+      window.clearInterval(timer)
+      document.removeEventListener('visibilitychange', sync)
+      scenePresentation.stop()
+    }
+  }, [scenePresentation])
 
   useEffect(() => () => {
     stopBossAttackAudio()

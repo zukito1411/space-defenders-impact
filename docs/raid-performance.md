@@ -15,16 +15,20 @@ The player's selected quality profile still controls its existing DPR and effect
 - Numeric projectile keys replace per-frame source-prefix strings. Boss projectile transforms reuse one scratch record. Color parsing is cached. Each normal alien variant uses one high-detail raster rather than generating new size buckets after rotation or resizing.
 - Original shockwave rings remain, with additional textured shock fronts, impact coronas and fire-to-smoke animation. Existing sparks gain textured streaks and fragments. Short muzzle flashes are local visual feedback, not additional network events.
 - Cosmetic visibility culling does not remove authoritative combat objects. Existing broad-phase collision indexing, cosmetic retirement and bounded Canvas caches remain in place.
+- Mastery engine trails retain the authored flame luminance and turbulence. Four cached thermal phases per ship palette combine the colored flame, white-hot core and compact shock diamonds. The normal engine's throttle length and flicker drive the trail; every outlet still submits one bitmap with a fixed nozzle root and width. Palette filtering runs during warmup rather than during flight.
+- Force fields and shields use hull-fitted alpha contours for every normal/elite ship and mech action frame. Selected-ship warmup builds the outlines and four cached textures (force field, shield, combined and hull-clipped repair seams). A bounded 24-profile cache is shared across draw sizes; flight submits one shell bitmap, two short contour highlights and charge markers. After warmup, drawing performs no pixel reads, hex tessellation or blur filtering. Reduced motion freezes the highlights.
 - Expensive background vector tessellation retains its existing 40/80 ms cache cadence; scrolling world sprites and foreground transforms update on every submitted frame. This is a geometry cache, not a foreground frame cap.
 
 ## Optional instrumentation
 
 The performance HUD records frame intervals in a fixed 256-sample ring. It sorts a scratch copy once per report and shows p50/p95/p99 frame intervals alongside CPU simulation/draw timings, GPU submission time, draw-layer costs, object counts and DPR. These intervals describe callback pacing, not proof that every submitted frame reached the display.
 
-GPU timing queries run only while the HUD is enabled, at most once every 300 ms, and are read only after the driver reports completion. Ordinary play does not poll GPU timing. No synchronous GPU wait or pixel readback is introduced.
+GPU timing queries run only while the HUD is enabled, at most once every 300 ms, and are read only after the driver reports completion. Ordinary play does not poll GPU timing. The instrumentation introduces no synchronous GPU wait or flight-time pixel readback.
 
 ## Verification boundary
 
-Validation for this change is TypeScript checking only. The game was not launched; Playwright, device profiling and production builds were not run. No before/after FPS, percentile improvement, zero-stutter guarantee or hardware-performance claim has been established.
+The elite-trail and Space Jet shield update passed the production build and source regression checks. Browser captures compared the production drawing functions across normal and elite hulls, idle and boost, shield charge states, and both orientations. A live Space Jet carrier launch and flight check passed at 844x390 without page errors or horizontal overflow. The existing Windows source-extraction tests required in-memory LF normalization; the focused engine and shield scripts also passed directly.
+
+No physical Android profiling, before/after FPS comparison, percentile improvement, zero-stutter guarantee or hardware-performance claim has been established.
 
 A later authorized device comparison should use the same viewport, display rate, quality, ship/loadout and busy-wave/boss/co-op scenario. Check frame percentiles, texture upload behavior, memory, input response, warning readability and WebGL/Canvas fallback before claiming a measured improvement.

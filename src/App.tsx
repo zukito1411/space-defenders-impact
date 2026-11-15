@@ -331,7 +331,7 @@ function App() {
   }
 
   useTransmission(screen === 'raidStory' ? 'link' : null, raidStoryIndex)
-  useHangarAmbience(screen === 'raidHangar')
+  useHangarAmbience(screen === 'raidHangar', language)
 
   useEffect(() => {
     if (sameScreenShipOptions.some((ship) => ship.key === sameScreenGuestShipKey)) return

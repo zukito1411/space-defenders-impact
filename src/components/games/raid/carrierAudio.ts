@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { getGameAudioMixSettings, getGameSoundEnabled } from '../sound'
 import { CARRIER_DEPARTURE_START, CARRIER_IGNITION_START } from './carrierLaunch'
 import { CARRIER_AUDIO } from './raidSoundtrack'
+import { SampleScene } from '../presentationAudio'
 
 const cueWindows = [
   { start: CARRIER_IGNITION_START, end: CARRIER_DEPARTURE_START, url: CARRIER_AUDIO.ignition, gain: .66 },
@@ -63,8 +64,13 @@ export class CarrierAudio {
   private beds: HTMLAudioElement[] = []
   private cue: HTMLAudioElement | null = null
   private activeCue: typeof cueWindows[number] | undefined
+  private foley = new SampleScene()
+  private wasInside = false
+  private nextFoley = 0
+  private nextAnnouncement = 0
+  private foleyStep = 0
 
-  update(insideBay: boolean, launchAge: number | null, paused: boolean) {
+  update(insideBay: boolean, launchAge: number | null, paused: boolean, language = 'en') {
     const { master, ui } = getGameAudioMixSettings()
     const gain = getGameSoundEnabled() ? master * ui : 0
     const cue = launchAge === null ? undefined : cueWindows.find(({ start, end }) => launchAge >= start && launchAge < end)
@@ -80,8 +86,31 @@ export class CarrierAudio {
     if (paused || gain === 0) {
       this.beds.forEach(audio => audio.pause())
       this.cue?.pause()
+      this.foley.stop()
       return
     }
+    const now = performance.now()
+    if (insideBay && !this.wasInside) {
+      this.nextFoley = now + 5500
+      this.nextAnnouncement = now + 38000
+    }
+    if (insideBay && launchAge === null) {
+      if (now >= this.nextFoley) {
+        this.foleyStep++
+        this.nextFoley = now + 9000 + this.foleyStep % 3 * 2300
+        this.foley.play(this.foleyStep % 3 ? 'crew-tools' : 'cargo', .13,
+          this.foleyStep % 2 ? -.48 : .45, 'ui', 0, 0, 6000)
+      }
+      if (language === 'en' && now >= this.nextAnnouncement) {
+        this.nextAnnouncement = now + 48000
+        this.foley.play(this.foleyStep % 2 ? 'pa-clear-lane' : 'pa-maintenance', .14, -.12, 'ui', 0, 0, 40000)
+      }
+    }
+    if (!insideBay && this.wasInside) {
+      this.foley.stop()
+      if (launchAge !== null) this.foley.play('deploy', .18, 0, 'ui', 1, 0, 4000)
+    }
+    this.wasInside = insideBay
     if (insideBay && !this.beds.length) {
       this.beds = hangarLayers.map(({ url }) => {
         const audio = new Audio(url)
@@ -109,14 +138,16 @@ export class CarrierAudio {
     this.beds = []
     this.cue = null
     this.activeCue = undefined
+    this.foley.stop()
+    this.wasInside = false
   }
 }
 
-export function useHangarAmbience(active: boolean) {
+export function useHangarAmbience(active: boolean, language = 'en') {
   useEffect(() => {
     if (!active) return
     const audio = new CarrierAudio()
-    const sync = () => audio.update(true, null, document.hidden)
+    const sync = () => audio.update(true, null, document.hidden, language)
     sync()
     const timer = window.setInterval(sync, 300)
     document.addEventListener('visibilitychange', sync)
@@ -125,5 +156,5 @@ export function useHangarAmbience(active: boolean) {
       document.removeEventListener('visibilitychange', sync)
       audio.stop()
     }
-  }, [active])
+  }, [active, language])
 }

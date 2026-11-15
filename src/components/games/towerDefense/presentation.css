@@ -1,0 +1,30 @@
+.defense-deployment-clamps {
+  position: absolute; inset: -5px; pointer-events: none; opacity: 0;
+  background:
+    linear-gradient(#fef3c7,#b7792b) left top/24% 3px,
+    linear-gradient(#fef3c7,#b7792b) left top/3px 24%,
+    linear-gradient(#fef3c7,#b7792b) right top/24% 3px,
+    linear-gradient(#fef3c7,#b7792b) right top/3px 24%,
+    linear-gradient(#fef3c7,#b7792b) left bottom/24% 3px,
+    linear-gradient(#fef3c7,#b7792b) left bottom/3px 24%,
+    linear-gradient(#fef3c7,#b7792b) right bottom/24% 3px,
+    linear-gradient(#fef3c7,#b7792b) right bottom/3px 24%;
+  background-repeat: no-repeat;
+}
+.defense-hq-threat {
+  position: absolute; pointer-events: none; z-index: 5; opacity: 0;
+  border: 1px solid #fbbf24; border-radius: 35%; box-shadow: 0 0 13px #f59e0b66, inset 0 0 9px #f59e0b22;
+}
+.defense-synergy-flash {
+  position: absolute; inset: -7px; pointer-events: none; opacity: 0;
+  border: 1px solid #99f6e4; border-radius: 8px;
+  box-shadow: 0 0 12px #2dd4bf77, inset 0 0 8px #2dd4bf33;
+}
+.defense-game[data-hq-threat="high"] .defense-hq-threat,
+.defense-game[data-hq-threat="critical"] .defense-hq-threat { animation: defense-hq-pressure 1.7s ease-in-out infinite; }
+.defense-game[data-hq-threat="critical"] .defense-hq-threat { border-color:#fb7185;box-shadow:0 0 16px #e11d4877,inset 0 0 9px #e11d4822;animation-duration:1.1s; }
+@keyframes defense-hq-pressure { 0%,100%{opacity:.28;transform:scale(.98)} 50%{opacity:.8;transform:scale(1.06)} }
+@media(prefers-reduced-motion:reduce){
+  .defense-game[data-hq-threat="high"] .defense-hq-threat,
+  .defense-game[data-hq-threat="critical"] .defense-hq-threat { animation:none;opacity:.6; }
+}

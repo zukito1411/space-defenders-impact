@@ -33,6 +33,8 @@ jobs:
         run: |
           node scripts/test-raid-ship-size.mjs
           node scripts/test-engine-presentation.mjs
+          node scripts/test-space-jet-force-field.mjs
+          node scripts/test-immersion-presentation.mjs
           node scripts/test-raid-travel.mjs
       - name: Test flight presentation and boss feedback
         run: |

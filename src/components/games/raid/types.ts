@@ -63,6 +63,8 @@ export type SpiegelAfterimage = Vec & {
 }
 
 export type Player = Vec & {
+  /** Cosmetic contact event, copied by host snapshots; it never changes collision or damage. */
+  feedback?: PlayerFeedback
   /** Visual and collision scale; missing on older multiplayer clients. */
   sizeScale?: number
   hp: number
@@ -101,6 +103,10 @@ export type Player = Vec & {
   godMeleeChainY: number
   godMeleeLastTargetKey: string
 }
+
+export type PlayerFeedbackKind = 'field-hit' | 'shield-hit' | 'combined-hit' | 'field-break' | 'shield-break' | 'combined-break' | 'hull-hit' | 'repair'
+export type PlayerFeedback = { serial: number; kind: PlayerFeedbackKind; dx: number; dy: number }
+export type DestructionPresentationEvent = { serial: number; x: number; y: number; radius: number; tier: 'fighter' | 'armored' | 'capital'; seed: number }
 
 export type Shot = Vec & {
   id: number
@@ -371,6 +377,7 @@ export type MultiplayerInput = {
 }
 
 export type MultiplayerHostState = {
+  presentationEvents?: DestructionPresentationEvent[]
   seq: number
   phase: GamePhase
   hostPlayer: Player
