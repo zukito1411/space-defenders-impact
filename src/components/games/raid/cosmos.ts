@@ -37,4 +37,4 @@ export function edgeFlyby(seconds: number, slot: number) {
   return age < 3.2 ? age / 3.2 : -1
 }
 // A full 512px RGBA terrain mip chain uses 1,398,100 bytes.
-export const COSMOS_TEXTURE_BYTES = 3 * 1024 * 1024 * 4 + 512 * 512 * 4 + 512 * 256 * 4 + 2 * 1398100
+export const COSMOS_TEXTURE_BYTES = 3 * 2048 * 2048 * 4 + 512 * 512 * 4 + 512 * 256 * 4 + 2 * 1398100

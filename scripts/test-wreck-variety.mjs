@@ -39,8 +39,8 @@ for(let previous=-1;previous<9;previous++) {
 const loader=varietySource+`
 export let imagesMade=0,roots=0,crops=0;
 class Image {
- constructor(){imagesMade++;this.naturalWidth=this.naturalHeight=1024}
- set src(url){this.url=url;queueMicrotask(()=>url.includes(globalThis.__failedWreck??'__none__')?this.onerror():this.onload())}
+ constructor(){imagesMade++;this.naturalWidth=this.naturalHeight=2048}
+ set src(url){this.url=url;this.naturalWidth=this.naturalHeight=url.includes('remaster')?2048:1024;queueMicrotask(()=>url.includes(globalThis.__failedWreck??'__none__')||(globalThis.__failedHdWreck&&url.includes('remaster'))?this.onerror():this.onload())}
 }
 const document={createElement:()=>({getContext:()=>({drawImage(){crops++}})})};
 class Rectangle {constructor(x,y,width,height){Object.assign(this,{x,y,width,height})}}
@@ -54,9 +54,9 @@ assert.equal(art.imagesMade,2);assert.equal(art.roots,2);assert.equal(art.crops,
 for(let i=0;i<8;i++) {
  assert.equal(entries[i],art.getWreckCanvasSprite(i))
  assert.equal(entries[i].loaded,true)
- assert.equal(entries[i].processedImage.width,464)
+ assert.equal(entries[i].processedImage.width,928)
  const t=art.getWreckTexture(i)
- assert.deepEqual([t.frame.x,t.frame.y,t.frame.width,t.frame.height],[(i%2)*512+24,Math.floor((i%4)/2)*512+24,464,464])
+ assert.deepEqual([t.frame.x,t.frame.y,t.frame.width,t.frame.height],[(i%2)*1024+48,Math.floor((i%4)/2)*1024+48,928,928])
  assert.equal(t.source,art.getWreckTexture(Math.floor(i/4)*4).source)
  assert.equal(t.source.autoGenerateMipmaps,false)
 }
@@ -72,6 +72,14 @@ await Promise.all([missing.ready,available.ready])
 assert.equal(missing.loaded,false);assert.equal(missing.processedImage,undefined)
 assert.equal(available.loaded,true);assert.equal(failed.getWreckTexture(0),undefined)
 delete globalThis.__failedWreck
+globalThis.__failedHdWreck=true
+try{
+ const fallback=await load(loader+'\n// original wreck artwork fallback')
+ await fallback.preloadWreckArt()
+ assert.equal(fallback.getWreckTexture(0).frame.width,464)
+ const original=fallback.getWreckCanvasSprite(0);await original.ready
+ assert.equal(original.loaded,true);assert.equal(original.processedImage.width,464)
+}finally{delete globalThis.__failedHdWreck}
 console.log('Wreck variety: 9 designs, family permutations, no consecutive gameplay repeats, 2 shared sources, bounded Canvas crops and missing-art fallback passed')
 // Run the actual gameplay draw function against Canvas and sprite stand-ins.
 let effects=read('src/components/games/raid/effectsRender.tsx')

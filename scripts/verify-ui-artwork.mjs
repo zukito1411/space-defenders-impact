@@ -5,6 +5,8 @@ import { join } from 'node:path'
 // if the shared menu artwork was not copied from public/ into dist/.
 const campaignBossAssets = JSON.parse(readFileSync('docs/campaign-boss-art-manifest.json', 'utf8')).assets
 const required = [
+  'assets/raid-fx/planet-weather-atlas-v1.webp',
+  'assets/raid-fx/celestial-detail-atlas-v1.webp',
   'audio/immersion/manifest.json',
   ...JSON.parse(readFileSync('public/audio/immersion/manifest.json', 'utf8')).files.map(entry => entry.file),
   'assets/carrier/dock-clamp-atlas-v2.png',
@@ -59,6 +61,11 @@ const required = [
   'assets/raid-fx/terrain-basalt-v1.webp',
   'assets/raid-fx/destination-worlds-v1.webp',
   'assets/raid-fx/cosmos-regions-v1.webp',
+  'assets/raid-fx/cosmos-regions-remaster-v2.webp',
+  'assets/raid-fx/cosmos-landmarks-remaster-v2.webp',
+  'assets/raid-fx/destination-worlds-remaster-v2.webp',
+  'assets/raid-fx/wreck-ships-remaster-v2.webp',
+  'assets/raid-fx/wreck-stations-remaster-v2.webp',
   'assets/raid-fx/cosmos-landmarks-v1.webp',
   'audio/cosmos-hull-v1.ogg',
   'audio/mesiah/amber-ringway.ogg',

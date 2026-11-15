@@ -1,0 +1,54 @@
+{
+  "file": "public/assets/raid-fx/cosmos-regions-remaster-v2.webp",
+  "dimensions": [
+    2048,
+    2048
+  ],
+  "bytes": 1291158,
+  "sha256": "d264b0dfc983a4f648be9e240b06bc94f0b8401b6154e5ab06eae8e0c36e6587",
+  "source": "public/assets/raid-fx/cosmos-regions-v1.webp",
+  "sourceSha256": "7a71f3c7bb328be6dd9af0465b671c05fad69bb0bbd706ae2883226236d39167",
+  "sourceDimensions": [
+    1024,
+    1024
+  ],
+  "sourceContentPerRegion": 504,
+  "outputContentPerRegion": 1008,
+  "gutter": 8,
+  "method": "2x Lanczos resampling, restrained offline unsharp mask, extruded gutters, lossless WebP",
+  "limitation": "Upscaled existing art; no additional native detail or newly generated pixels from a model.",
+  "comparison": [
+    {
+      "region": 0,
+      "meanAbsRgbErrorAtSourceSize": [
+        0.16,
+        0.159,
+        0.185
+      ]
+    },
+    {
+      "region": 1,
+      "meanAbsRgbErrorAtSourceSize": [
+        0.19,
+        0.162,
+        0.169
+      ]
+    },
+    {
+      "region": 2,
+      "meanAbsRgbErrorAtSourceSize": [
+        0.083,
+        0.08,
+        0.091
+      ]
+    },
+    {
+      "region": 3,
+      "meanAbsRgbErrorAtSourceSize": [
+        0.114,
+        0.091,
+        0.14
+      ]
+    }
+  ]
+}

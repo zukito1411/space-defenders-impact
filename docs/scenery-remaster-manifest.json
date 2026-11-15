@@ -1,0 +1,60 @@
+{
+  "assets": [
+    {
+      "source": "public/assets/raid-fx/cosmos-landmarks-v1.webp",
+      "sourceSha256": "d6b54edbb18147196097a6c4e19aaa3b59928f2677a23d9e71dfc2a79ab91b97",
+      "file": "public/assets/raid-fx/cosmos-landmarks-remaster-v2.webp",
+      "sha256": "01b64bdfcfee963faf0faba39b9f01e9f036eede0e2ce892ef85d4b5c11fc245",
+      "bytes": 2106476,
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "scale": 2,
+      "method": "isolated-cell Lanczos resampling, restrained RGB-only sharpening, resampled alpha retained, lossless WebP",
+      "limitation": "Existing upscaled pixels, not additional native HD detail."
+    },
+    {
+      "source": "public/assets/raid-fx/destination-worlds-v1.webp",
+      "sourceSha256": "985518f71ebcc263b00177870c2f2c0494ca89469aadae0bbb483e92de1d86cc",
+      "file": "public/assets/raid-fx/destination-worlds-remaster-v2.webp",
+      "sha256": "42913cd717bcf72f2dd069c934386e298463642c86d412bfef2cce5d244d2bf8",
+      "bytes": 3132628,
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "scale": 2,
+      "method": "isolated-cell Lanczos resampling, restrained RGB-only sharpening, resampled alpha retained, lossless WebP",
+      "limitation": "Existing upscaled pixels, not additional native HD detail."
+    },
+    {
+      "source": "public/assets/raid-fx/wreck-ships-v1.webp",
+      "sourceSha256": "6151fb0f00c9f2c997225883f64e2cffd7bb88b7b1a52be01a2cc5711cecf852",
+      "file": "public/assets/raid-fx/wreck-ships-remaster-v2.webp",
+      "sha256": "c8727e04c92e9d64132c1270cc8c5658a5bc2574c63d45dfcd9d198ee0dd456c",
+      "bytes": 2033274,
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "scale": 2,
+      "method": "isolated-cell Lanczos resampling, restrained RGB-only sharpening, resampled alpha retained, lossless WebP",
+      "limitation": "Existing upscaled pixels, not additional native HD detail."
+    },
+    {
+      "source": "public/assets/raid-fx/wreck-stations-v1.webp",
+      "sourceSha256": "23899b189bf35ec233a027bce4354d280cb8f6161971e8241f165d445ededefa",
+      "file": "public/assets/raid-fx/wreck-stations-remaster-v2.webp",
+      "sha256": "2a0f1a10aa441d3bcf845bb35343910e27700a8da45a26c2a6f4d5a5331ff2fe",
+      "bytes": 2024366,
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "scale": 2,
+      "method": "isolated-cell Lanczos resampling, restrained RGB-only sharpening, resampled alpha retained, lossless WebP",
+      "limitation": "Existing upscaled pixels, not additional native HD detail."
+    }
+  ]
+}

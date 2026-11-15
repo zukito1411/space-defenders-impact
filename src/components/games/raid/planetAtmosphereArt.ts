@@ -99,6 +99,6 @@ export function sampleLandscapeAtmosphere(logicalWidth: number, logicalHeight: n
   out.horizon = out.height * .685
   out.seconds = reduced ? 0 : Math.max(0, time / 1000)
   out.cloudCount = quality === 'low' ? 4 : quality === 'medium' ? 6 : 8
-  out.moteCount = reduced ? 0 : quality === 'low' ? 8 : quality === 'medium' ? 16 : 26
+  out.moteCount = reduced ? 0 : quality === 'low' ? 18 : quality === 'medium' ? 42 : 72
   return out
 }

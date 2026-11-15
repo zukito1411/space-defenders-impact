@@ -36,6 +36,8 @@ jobs:
           node scripts/test-space-jet-force-field.mjs
           node scripts/test-immersion-presentation.mjs
           node scripts/test-planet-atmosphere.mjs
+          node scripts/test-celestial-animation.mjs
+          node scripts/test-ultra-scenery.mjs
           node scripts/test-raid-travel.mjs
       - name: Test flight presentation and boss feedback
         run: |
@@ -53,6 +55,8 @@ jobs:
           node scripts/test-command-bosses.mjs
       - name: Typecheck and build
         run: npm run build
+      - name: Verify Android media packaging with production assets
+        run: python3 scripts/test-android-asset-packaging.py --built-assets
 
   android-release-smoke:
     # Compile a real release variant with an ephemeral CI-only key.
@@ -153,6 +157,8 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: node scripts/test-presentation-browser.mjs
       - run: node scripts/test-startup-browser.mjs
+      - run: npm run build
+      - run: node scripts/test-pwa-browser.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:

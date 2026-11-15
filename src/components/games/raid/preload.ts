@@ -1,9 +1,10 @@
 import { RAID_ELITE_FRAME_KEYS } from './shipArtwork'
 import { IMMERSION_AUDIO_URLS } from '../presentationAssets'
+import { CELESTIAL_ART_URLS, preloadCelestialArt } from './celestialArt'
 import { CAMPAIGN_BOSS_ART } from './bossCatalog'
 import { WRECK_ART_URLS, preloadWreckArt } from './wreckArt'
 import { SURFACE_ART_URLS, preloadSurfaceArt } from './surfaceArt'
-import { COSMOS_ART_URLS, preloadCosmosArt } from './cosmosArt'
+import { COSMOS_ART_URLS, COSMOS_FALLBACK_ART_URLS, preloadCosmosArt } from './cosmosArt'
 import { COSMOS_AMBIENCE_URL } from './CosmosPresentation'
 import { getRaidAlienSpriteUrl, getRaidEliteSpriteUrl, getRaidShipSpriteUrl, RAID_ALIEN_SPRITE_COUNT, RAID_ELITE_SPRITE_COUNT } from '../RaidShipSprite'
 import { getPublicAssetUrl } from '../sound'
@@ -25,7 +26,7 @@ export const RAID_IMAGE_CACHE_NAME = 'space-defender-raid-images-v1'
 
 export const RAID_AUDIO_CACHE_NAME = 'space-defender-audio-v1'
 
-export const RAID_PERSISTENT_CACHE_VERSION = 'gradius-raid-assets-v15'
+export const RAID_PERSISTENT_CACHE_VERSION = 'gradius-raid-assets-v19'
 
 export const RAID_PERSISTENT_CACHE_STORAGE_KEY = 'gradiusRaidPersistentAssetCache'
 
@@ -78,8 +79,9 @@ export function getRaidPersistentImageUrls() {
   urls.add(COMMANDER_HOLOGRAM_URL)
   urls.add(GENERAL_HOLOGRAM_URL)
   urls.add(PILOT_HOLOGRAM_URL)
+  for (const url of COSMOS_FALLBACK_ART_URLS) urls.add(url)
   urls.add(getPublicAssetUrl(SPACE_JET_FORCE_FIELD_ASSET_PATH))
-  for (const url of [...RAID_COMBAT_ART_URLS, ...COSMOS_ART_URLS, ...SURFACE_ART_URLS, ...WRECK_ART_URLS]) urls.add(url)
+  for (const url of [...RAID_COMBAT_ART_URLS, ...COSMOS_ART_URLS, ...SURFACE_ART_URLS, ...WRECK_ART_URLS, ...CELESTIAL_ART_URLS]) urls.add(url)
   for (const art of CAMPAIGN_BOSS_ART) urls.add(getPublicAssetUrl(art.assetPath))
   urls.add(getPublicAssetUrl(RAID_FINAL_BOSS_ASSET_PATH))
   urls.add(getPublicAssetUrl(RAID_SQUID_BOSS_ASSET_PATH))
@@ -287,6 +289,7 @@ export function getRaidPixiBackgroundAssetUrls() {
     ...RAID_COMBAT_ART_URLS,
     ...COSMOS_ART_URLS,
     ...SURFACE_ART_URLS,
+    ...CELESTIAL_ART_URLS,
     ...WRECK_ART_URLS,
     ...Object.values(RAID_OTHER_ASSET_PATHS).map((path) => getPublicAssetUrl(path)),
     getRaidShipSpriteUrl('rocket'),
@@ -326,6 +329,7 @@ export function preloadRaidPixiBackgroundAssets(onProgress?: (loaded: number, to
       else if (COSMOS_ART_URLS.includes(url)) await preloadCosmosArt()
       else if (WRECK_ART_URLS.includes(url)) await preloadWreckArt()
       else if (SURFACE_ART_URLS.includes(url)) await preloadSurfaceArt()
+      else if (CELESTIAL_ART_URLS.includes(url)) await preloadCelestialArt()
       else await Assets.load(url)
     } catch {
       // Keep preload progress moving; missing Pixi textures simply do not render.

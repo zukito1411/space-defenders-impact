@@ -1,0 +1,23 @@
+{
+  "file": "public/assets/raid-fx/celestial-detail-atlas-v1.webp",
+  "dimensions": [
+    1536,
+    1024
+  ],
+  "bytes": 388200,
+  "sha256": "c72f622aa4984e6d945a3e5679d080e2abe599e7c4b0e2f57f29b1613bc8ecb3",
+  "sourceSha256": "38d33e336ac48b35d6a76e5ccbeeba76a8fb1e1b137d59a600738fa63740ba0d",
+  "generation": "built-in imagegen",
+  "layout": {
+    "columns": 2,
+    "rows": 2,
+    "cells": [
+      "optical-star",
+      "cyan-dust-filament",
+      "violet-gas-ribbon",
+      "amber-dust"
+    ]
+  },
+  "normalization": "Original dimensions and alpha retained; WebP quality 91. No generated shapes, keying, or background compositing.",
+  "prompt": "Four isolated transparent cinematic game VFX sprites: compact realistic white-blue optical star, intricate cyan interstellar dust filament, translucent violet nebula gas ribbon, and sparse amber cosmic dust. Fine telescope-photography texture, subdued exposure, transparent gutters, no planets, ships, text, icons, scenery or vector shapes."
+}

@@ -1,7 +1,7 @@
 import { Rectangle, Texture } from 'pixi.js'
 import { getPublicAssetUrl } from '../sound'
 import type { CanvasSpriteEntry } from './assets'
-import { WRECK_ATLAS_PATHS, WRECK_ATLAS_FRAME } from './wreckVariety'
+import { WRECK_ATLAS_PATHS, WRECK_FALLBACK_PATHS, WRECK_ATLAS_FRAME } from './wreckVariety'
 
 export const WRECK_ART_URLS = WRECK_ATLAS_PATHS.map(getPublicAssetUrl)
 const images: Array<{ image: HTMLImageElement; ready: Promise<boolean> }> = []
@@ -12,8 +12,13 @@ function atlasImage(atlas: number) {
   if (!images[atlas]) {
     const image = new Image()
     const ready = new Promise<boolean>((resolve) => {
-      image.onload = () => resolve(image.naturalWidth === 1024 && image.naturalHeight === 1024)
-      image.onerror = () => resolve(false)
+      image.onload = () => resolve((image.naturalWidth === 1024 || image.naturalWidth === 2048) && image.naturalHeight === image.naturalWidth)
+      let fallback = false
+      image.onerror = () => {
+        if (fallback) { resolve(false); return }
+        fallback = true
+        image.src = getPublicAssetUrl(WRECK_FALLBACK_PATHS[atlas])
+      }
     })
     images[atlas] = { image, ready }
     image.src = WRECK_ART_URLS[atlas]
@@ -22,7 +27,8 @@ function atlasImage(atlas: number) {
 }
 function rect(index: number) {
   const cell = index % 4
-  return new Rectangle((cell % 2) * 512 + 24, Math.floor(cell / 2) * 512 + 24, WRECK_ATLAS_FRAME, WRECK_ATLAS_FRAME)
+  const scale = (images[Math.floor(index / 4)]?.image.naturalWidth ?? 1024) / 1024
+  return new Rectangle(((cell % 2) * 512 + 24) * scale, (Math.floor(cell / 2) * 512 + 24) * scale, WRECK_ATLAS_FRAME * scale, WRECK_ATLAS_FRAME * scale)
 }
 /** Two shared decodes and two GPU sources; no canvas extraction or texture allocation per frame. */
 export function preloadWreckArt() {
@@ -46,14 +52,14 @@ export function getWreckCanvasSprite(index: number): CanvasSpriteEntry | undefin
   if (index < 0 || index >= 8) return undefined
   if (canvasFrames[index]) return canvasFrames[index]
   const source = atlasImage(Math.floor(index / 4))
-  const entry: CanvasSpriteEntry = { cacheKey: `wreck-atlas-v1:${index}`, image: source.image, loaded: false, ready: Promise.resolve() }
+  const entry: CanvasSpriteEntry = { cacheKey: `wreck-atlas-v2:${index}`, image: source.image, loaded: false, ready: Promise.resolve() }
   entry.ready = source.ready.then((ok) => {
     if (!ok) return
     const canvas = document.createElement('canvas')
-    canvas.width = canvas.height = WRECK_ATLAS_FRAME
+    const box = rect(index)
+    canvas.width = canvas.height = box.width
     const ctx = canvas.getContext('2d')
     if (!ctx) return
-    const box = rect(index)
     ctx.drawImage(source.image, box.x, box.y, box.width, box.height, 0, 0, canvas.width, canvas.height)
     entry.processedImage = canvas
     entry.loaded = true

@@ -1,16 +1,22 @@
 import { bakeSceneryLighting } from './sceneryLighting'
 import { Assets, Rectangle, Texture } from 'pixi.js'
 import { getPublicAssetUrl } from '../sound'
-export const COSMOS_ART_URLS = ['assets/raid-fx/cosmos-regions-v1.webp', 'assets/raid-fx/cosmos-landmarks-v1.webp', 'assets/raid-fx/destination-worlds-v1.webp'].map(getPublicAssetUrl)
+export const COSMOS_ART_URLS = ['assets/raid-fx/cosmos-regions-remaster-v2.webp', 'assets/raid-fx/cosmos-landmarks-remaster-v2.webp', 'assets/raid-fx/destination-worlds-remaster-v2.webp'].map(getPublicAssetUrl)
+export const COSMOS_FALLBACK_ART_URLS = ['assets/raid-fx/cosmos-regions-v1.webp', 'assets/raid-fx/cosmos-landmarks-v1.webp', 'assets/raid-fx/destination-worlds-v1.webp'].map(getPublicAssetUrl)
+export const COSMOS_BACKDROP_FALLBACK_URL = COSMOS_FALLBACK_ART_URLS[0]
 const frames: Texture[][] = [[], [], []]
 let bloomFrames: Texture[] = []
 let journeyBloomFrames: Texture[] = []
 let pending: Promise<void> | null = null
-/** Three primary 1024px sources plus two 512px local bloom atlases; allocated once at load. */
+/** Three 2048px remasters with proportional frame gutters and original-art fallbacks. */
 export function preloadCosmosArt(): Promise<void> {
   if (!pending) pending = Promise.all(COSMOS_ART_URLS.map(async (url, atlas) => {
     try {
-      let root = await Assets.load<Texture>(url)
+      let root: Texture
+      try { root = await Assets.load<Texture>(url) }
+      catch (error) {
+        root = await Assets.load<Texture>(COSMOS_FALLBACK_ART_URLS[atlas])
+      }
       if (atlas >= 1) {
         const lighting = bakeSceneryLighting(root, atlas === 1)
         if (lighting) {
@@ -23,9 +29,10 @@ export function preloadCosmosArt(): Promise<void> {
       // Avoid mip bleed across atlas cells and keep the GPU allocation bounded.
       root.source.autoGenerateMipmaps = false
       const tile = root.width / 2
-      const inset = atlas === 0 ? 4 : 24
+      const scale = root.width / 1024
+      const inset = (atlas === 0 ? 4 : 24) * scale
       frames[atlas] = Array.from({ length: 4 }, (_, i) => {
-        const gutter = atlas === 2 && i >= 2 ? 4 : inset
+        const gutter = atlas === 2 && i >= 2 ? 4 * scale : inset
         return new Texture({ source: root.source,
           frame: new Rectangle((i % 2) * tile + gutter, Math.floor(i / 2) * tile + gutter, tile - gutter * 2, tile - gutter * 2) })
       })

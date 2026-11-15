@@ -1,0 +1,23 @@
+{
+  "file": "public/assets/raid-fx/planet-weather-atlas-v1.webp",
+  "dimensions": [
+    1536,
+    1024
+  ],
+  "bytes": 364884,
+  "sha256": "2d2ed787ba1836b992955d484e6431bb88d782a7f3a48cb97a4b273377e98a83",
+  "sourceSha256": "ec09344ff6b6808806d3d6c239e9e233dbc5e3d56cc04d61161e82fe46b03801",
+  "generation": "built-in imagegen",
+  "layout": {
+    "columns": 2,
+    "rows": 2,
+    "cells": [
+      "ocean-storm-bank",
+      "volcanic-ash-bank",
+      "ocean-spray",
+      "eruption-smoke"
+    ]
+  },
+  "normalization": "WebP quality 91; original 1536x1024 dimensions and alpha retained. No keying, recoloring or background compositing.",
+  "prompt": "Four isolated atmospheric VFX sprites on transparent RGBA: cold ocean storm bank, warm volcanic ash bank, sea mist and spray, and eruption plume. Cinematic vapor detail, subdued lighting, transparent gutters. No scenery, planets, ships, text or frames."
+}

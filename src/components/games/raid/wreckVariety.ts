@@ -3,7 +3,8 @@ export const WRECK_DESIGNS = [
   'fractured-carrier', 'cargo-hauler', 'exploration-cruiser', 'alien-husk',
   'broken-habitat', 'solar-research', 'orbital-refinery', 'communications-hub', 'legacy-station',
 ] as const
-export const WRECK_ATLAS_PATHS = ['assets/raid-fx/wreck-ships-v1.webp', 'assets/raid-fx/wreck-stations-v1.webp'] as const
+export const WRECK_ATLAS_PATHS = ['assets/raid-fx/wreck-ships-remaster-v2.webp', 'assets/raid-fx/wreck-stations-remaster-v2.webp'] as const
+export const WRECK_FALLBACK_PATHS = ['assets/raid-fx/wreck-ships-v1.webp', 'assets/raid-fx/wreck-stations-v1.webp'] as const
 export const WRECK_ATLAS_FRAME = 464
 const mod = (value: number, count: number) => ((Math.trunc(value) % count) + count) % count
 /** Quantize only on run change, never use a changing random number in rendering. */

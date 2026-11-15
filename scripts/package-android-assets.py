@@ -10,6 +10,7 @@ from pathlib import Path
 RELEASE = "android-assets-v1"
 BASE_URL = f"https://github.com/zukito1411/space-defenders-impact/releases/download/{RELEASE}/"
 LOGO = "assets/brand/zuki-logo-v1.png"
+MEDIA_METADATA_SUFFIXES = {".txt", ".json"}
 
 
 def package(public, dist, output):
@@ -19,7 +20,10 @@ def package(public, dist, output):
     for media_root in ("assets", "audio"):
         for source in sorted((public / media_root).rglob("*")):
             name = source.relative_to(public).as_posix()
-            if not source.is_file() or name == LOGO or source.suffix.lower() == ".txt":
+            # Credits and asset manifests remain ordinary APK files. Only binary
+            # media is extracted into download packs; metadata must stay readable
+            # before the native media store has been installed.
+            if not source.is_file() or name == LOGO or source.suffix.lower() in MEDIA_METADATA_SUFFIXES:
                 continue
             if source.suffix.lower() not in {".png", ".jpg", ".jpeg", ".webp", ".svg", ".mp3", ".wav", ".ogg"}:
                 raise ValueError(f"Unrecognized Android media: {name}")

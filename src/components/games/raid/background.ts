@@ -1,5 +1,8 @@
 import { orbitalShadowCoverage, sampleCapitalFlyby, sampleOrbitalShadow, type OrbitalShadow } from './flightEffects'
 import { LandscapePlanetAtmosphere } from './landscapeAtmosphere'
+import { CelestialScenery } from './celestialScenery'
+import { CelestialClock } from './celestialMotion'
+import { preloadCelestialArt } from './celestialArt'
 import { COMBAT_TILE, getRaidCombatFrame } from './combatArt'
 import { getWreckTexture, preloadWreckArt } from './wreckArt'
 import { sceneryWreckDesign, wreckRunSeed } from './wreckVariety'
@@ -849,6 +852,7 @@ export class PixiRaidBackground {
   private cancelForegroundPreparation: (() => void) | null = null
   private readonly scene = new Container()
   private readonly skyScene = new Container()
+  private readonly nebulaScene = new Container()
   private readonly worldScene = new Container()
   private readonly journeySurfaceSprite = new TilingSprite({ texture: Texture.WHITE, width: 1, height: 1 })
   private readonly surfaceCamera = createSurfaceCameraFrame()
@@ -867,6 +871,7 @@ export class PixiRaidBackground {
   private readonly nebulaGraphics = new Graphics()
   private readonly bossTintGraphics = new Graphics()
   private readonly ambientGlowGraphics = new Graphics()
+  private readonly nebulaSprites = [new Sprite(Texture.WHITE), new Sprite(Texture.WHITE)]
   private readonly galaxySprites = [new Sprite(Texture.WHITE), new Sprite(Texture.WHITE)]
   private readonly planetSprites = [new Sprite(Texture.WHITE), new Sprite(Texture.WHITE), new Sprite(Texture.WHITE)]
   private readonly wreckSprites = Array.from({ length: RAID_BACKGROUND_MAX_WRECKS }, () => new Sprite(Texture.WHITE))
@@ -880,6 +885,8 @@ export class PixiRaidBackground {
   private readonly speedLineSprites = BACKGROUND_SPEED_LINES.map(() => new Sprite(Texture.WHITE))
   private readonly surfaceGraphics = new Graphics()
   private readonly landscapeAtmosphere = new LandscapePlanetAtmosphere()
+  private readonly celestialScenery = new CelestialScenery()
+  private readonly celestialClock = new CelestialClock()
   private readonly atmosphereMoons = [new Sprite(Texture.WHITE), new Sprite(Texture.WHITE)]
   private readonly wateryIslandSprites = createWorldSurfaceSprites(WATERY_WORLD_ISLAND_LAYERS.length)
   private readonly wateryCloudSprites = createWorldSurfaceSprites(WATERY_WORLD_CLOUD_LAYERS.length)
@@ -954,10 +961,16 @@ export class PixiRaidBackground {
       app.stage.addChild(this.gpuForeground.root)
       this.scene.addChild(this.skyScene)
       this.skyScene.addChild(this.baseGraphics)
+      // Only nebula art inherits this gain; the original galaxies remain above it.
+      this.nebulaScene.alpha = .3
+      this.skyScene.addChild(this.nebulaScene)
+      this.nebulaSprites.forEach((sprite) => this.nebulaScene.addChild(sprite))
+      this.nebulaScene.addChild(this.nebulaGraphics)
+      this.nebulaScene.addChild(this.celestialScenery.nebulaRoot)
       this.galaxySprites.forEach((sprite) => this.skyScene.addChild(sprite))
-      this.skyScene.addChild(this.nebulaGraphics)
       this.skyScene.addChild(this.bossTintGraphics)
       this.skyScene.addChild(this.ambientGlowGraphics)
+      this.skyScene.addChild(this.celestialScenery.root)
       this.farStarLayers.forEach((layer) => this.skyScene.addChild(layer))
       this.nearStarLayers.forEach((layer) => this.skyScene.addChild(layer))
       // Bake a small soft point once; never blur or rebuild stars per frame.
@@ -1062,6 +1075,7 @@ export class PixiRaidBackground {
     this.gradientCache.clear()
     this.gpuForeground.destroy()
     this.landscapeAtmosphere.destroy()
+    this.celestialScenery.destroy()
     this.app?.destroy({ removeView: true }, { children: true })
     for (const texture of this.backgroundSideShipTextures.values()) texture.destroy(true)
     this.backgroundSideShipTextures.clear()
@@ -1079,6 +1093,7 @@ export class PixiRaidBackground {
     try {
       const { width, height, dpr, palette, quality, time, stageRush, bossIntensity, devilCorruption, finalBattleIntensity = 0 } = frame
       const seconds = time / 1000
+      const celestialSeconds = this.celestialClock.advance(time, Boolean(frame.paused), this.reducedMotion)
       if (frame.landscape && !this.backgroundSideShipsRequested) this.preloadBackgroundSideShips()
       if (this.journeyRun !== (frame.runToken ?? 0)) {
         this.wreckSeed = wreckRunSeed(frame.runToken ?? 0)
@@ -1137,8 +1152,8 @@ export class PixiRaidBackground {
       }
 
       this.updateBaseGraphics(palette, width, height, quality, dpr)
-      // An opaque region plate replaces the base quad, rather than covering it.
-      this.baseGraphics.visible = !getCosmosBackdrop(this.cosmosRegion) || !shouldDrawRaidGalaxies(stageTheme)
+      // The dark sky stays opaque beneath the translucent nebula layer.
+      this.baseGraphics.visible = true
 
       // Graphics.clear() followed by complex gradients and polygon generation
       // is expensive on Android WebView. Rebuild these layers at 25 Hz,
@@ -1175,6 +1190,9 @@ export class PixiRaidBackground {
       // starfield, scrolling scenery and background ships remain smooth.
       this.updateGalaxies(width, height, seconds, stageTheme, isLow, isMedium)
       this.updateStarfield(width, height, quality, dpr, palette.starTint, palette.streak, stageTheme)
+      if (shouldDrawRaidStars(stageTheme)) this.celestialScenery.update(width, height, celestialSeconds, this.cosmosRegion,
+        quality, this.reducedMotion)
+      else this.celestialScenery.hide()
       this.updateSpeedLines(width, height, isLow, isMedium, stageTheme)
       this.updatePlanets(width, height, seconds, palette, stageTheme, isLow, isMedium)
       this.updateWrecks(width, height, seconds, stageTheme, isLow, isMedium)
@@ -1303,7 +1321,7 @@ export class PixiRaidBackground {
   }
 
   private async loadAssets() {
-    await Promise.all([preloadCosmosArt(), preloadSurfaceArt(), preloadWreckArt()])
+    await Promise.all([preloadCosmosArt(), preloadSurfaceArt(), preloadWreckArt(), preloadCelestialArt()])
     const entries = (Object.entries(RAID_OTHER_ASSET_PATHS) as Array<[PixiRaidAssetKey, string]>).filter(([key]) => key !== 'nukeMissile')
     await Promise.all(entries.map(async ([key, path]) => {
       try {
@@ -1490,13 +1508,15 @@ export class PixiRaidBackground {
   }
 
   private updateGalaxies(width: number, height: number, seconds: number, stageTheme: number, isLow: boolean, isMedium: boolean) {
+    // The regional nebula is a base plate, not a replacement for distant galaxies.
+    for (const sprite of this.nebulaSprites) sprite.visible = false
     const backdrop = getCosmosBackdrop(this.cosmosRegion)
     if (backdrop && shouldDrawRaidGalaxies(stageTheme)) {
       const age = Math.max(0, seconds - this.cosmosEntered)
       const previous = getCosmosBackdrop(this.cosmosPrevious)
       const fade = Math.min(1, age / 2.4)
-      for (let i = 0; i < this.galaxySprites.length; i++) {
-        const sprite = this.galaxySprites[i]
+      for (let i = 0; i < this.nebulaSprites.length; i++) {
+        const sprite = this.nebulaSprites[i]
         const outgoing = i === 1
         sprite.visible = !outgoing || (!isLow && fade < 1 && this.cosmosPrevious !== this.cosmosRegion && Boolean(previous))
         if (!sprite.visible) continue
@@ -1508,7 +1528,6 @@ export class PixiRaidBackground {
         sprite.scale.set(width * 1.04 / texture.width, height * 1.04 / texture.height)
         sprite.tint = 0xffffff
       }
-      return
     }
     const scene = getRaidBackgroundScene(stageTheme)
     const drift = Math.sin(seconds / 120)
@@ -1649,7 +1668,7 @@ export class PixiRaidBackground {
     this.solidScenery.visible = alpha < 0.999
     const atmospheric = landscape && world
     if (atmospheric) this.landscapeAtmosphere.update(width, height, seconds * 1000,
-      isWateryWorldTheme(groundTheme) ? 'pelagic' : 'cinder', quality, this.reducedMotion, paused)
+      isWateryWorldTheme(groundTheme) ? 'pelagic' : 'cinder', quality, this.reducedMotion, paused, this.travel.rush)
     else this.landscapeAtmosphere.hide()
     const zoom = this.reducedMotion || atmospheric ? 1 : this.journey.worldZoom
     this.worldScene.pivot.set(width * 0.5, height * 0.5)

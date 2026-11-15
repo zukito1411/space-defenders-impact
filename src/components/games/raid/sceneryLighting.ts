@@ -32,12 +32,13 @@ export function bakeSceneryLighting(root: Texture, shadePlanets = true): { surfa
     const glowContext = glow.getContext('2d')
     if (!glowContext) return { surface: lit, bloom: [] }
     const sourceTile = surface.width / 2
+    const sourceGutter = 24 * surface.width / 1024
     // Each 256px cell has a 192px footprint plus enough padding for the blur.
     glowContext.filter = 'blur(7px)'
     for (let i = 0; i < bloomCount; i++) {
       const x = (i % 2) * 256, y = Math.floor(i / 2) * 256
-      glowContext.drawImage(bright, (i % 2) * sourceTile + 24, Math.floor(i / 2) * sourceTile + 24,
-        sourceTile - 48, sourceTile - 48, x + 32, y + 32, 192, 192)
+      glowContext.drawImage(bright, (i % 2) * sourceTile + sourceGutter, Math.floor(i / 2) * sourceTile + sourceGutter,
+        sourceTile - sourceGutter * 2, sourceTile - sourceGutter * 2, x + 32, y + 32, 192, 192)
     }
     const texture = Texture.from(glow)
     texture.source.scaleMode = 'linear'

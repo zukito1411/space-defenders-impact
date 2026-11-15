@@ -77,7 +77,7 @@ export function getRaidGraphicsProfile(quality: GraphicsQuality, isSmallViewport
     }
   } else {
     profile = {
-      dprCap: isMultiplayer ? 1.35 : 2,
+      dprCap: 2,
       maxSparks: MAX_SPARKS,
       sparkScale: 1,
       maxRipples: isMultiplayer ? 4 : MAX_RIPPLES,

@@ -580,19 +580,19 @@ export function processGalaxy2Asset(image: HTMLImageElement) {
 }
 
 export function processPlanetAsset(image: HTMLImageElement) {
-  const canvas = makeSpriteProcessingCanvas(image, 900)
+  const canvas = makeSpriteProcessingCanvas(image, 1536)
   if (!canvas) return null
   return trimTransparentCanvas(canvas, 4)
 }
 
 export function processPlanet3Asset(image: HTMLImageElement) {
-  const canvas = makeSpriteProcessingCanvas(image, 620)
+  const canvas = makeSpriteProcessingCanvas(image, 1536)
   if (!canvas) return null
   return trimTransparentCanvas(canvas, 4)
 }
 
 export function processPlanetNebulaAsset(image: HTMLImageElement) {
-  const canvas = makeSpriteProcessingCanvas(image, 820)
+  const canvas = makeSpriteProcessingCanvas(image, 1536)
   if (!canvas) return null
   return trimTransparentCanvas(canvas, 4)
 }
@@ -616,13 +616,13 @@ export function processSunAsset(image: HTMLImageElement) {
 }
 
 export function processRingedPlanetAsset(image: HTMLImageElement) {
-  const canvas = makeSpriteProcessingCanvas(image, 720)
+  const canvas = makeSpriteProcessingCanvas(image, 1536)
   if (!canvas) return null
   return trimTransparentCanvas(canvas, 4)
 }
 
 export function processSpaceStationAsset(image: HTMLImageElement) {
-  const canvas = makeSpriteProcessingCanvas(image, 760)
+  const canvas = makeSpriteProcessingCanvas(image, 1536)
   // Preserve dark hull panels; black surface paint is not transparent space.
   return canvas ? trimTransparentCanvas(canvas, 3) : null
 }

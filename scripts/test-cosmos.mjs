@@ -2,8 +2,15 @@ import { TilingSprite as RealTilingSprite, Texture as RealTexture, TextureSource
 const { setUvs: realTilingUvs } = await import(new URL('./scene/sprite-tiling/utils/setUvs.mjs', import.meta.resolve('pixi.js')))
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
+import { createHash } from 'node:crypto'
 import ts from 'typescript'
 const read = (file) => readFileSync(new URL('../'+file,import.meta.url),'utf8')
+const remaster = JSON.parse(read('docs/cosmos-remaster-manifest.json'))
+assert.equal(createHash('sha256').update(readFileSync(remaster.file)).digest('hex'),remaster.sha256)
+assert.equal(createHash('sha256').update(readFileSync(remaster.source)).digest('hex'),remaster.sourceSha256,'original art changed during remastering')
+assert.deepEqual(remaster.dimensions,[2048,2048])
+assert.equal(remaster.outputContentPerRegion,1008)
+assert.ok(remaster.comparison.every(region=>region.meanAbsRgbErrorAtSourceSize.every(error=>error<2)), 'remaster changed the established scene colors/composition')
 const load = (source, jsx=false) => import('data:text/javascript;base64,'+Buffer.from(ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022,jsx:jsx?ts.JsxEmit.React:undefined}}).outputText).toString('base64'))
 const surface = await load(read('src/components/games/raid/surfaceMotion.ts'))
 const material = await load(read('src/components/games/raid/sceneryMaterial.ts'))
@@ -25,7 +32,7 @@ art=`
 export let loads=0, made=0;
 class Rectangle { constructor(x,y,width,height){Object.assign(this,{x,y,width,height})} }
 class Texture {constructor(options){made++;Object.assign(this,options)}}
-const Assets={load:async()=>{loads++;return {width:1024,height:1024,source:{}}}};
+const Assets={load:async(url)=>{loads++;if((globalThis.__failCosmosRemaster&&url.includes('cosmos-regions-remaster'))||(globalThis.__failAllRemasters&&url.includes('remaster')))throw new Error('missing remaster');const size=url.includes('remaster')?2048:1024;return {width:size,height:size,source:{}}}};
 const getPublicAssetUrl=p=>p;
 const bakeSceneryLighting=()=>null;
 `+art
@@ -34,15 +41,32 @@ await Promise.all([atlas.preloadCosmosArt(),atlas.preloadCosmosArt()])
 assert.equal(atlas.loads,3);assert.equal(atlas.made,12)
 assert.equal(atlas.getJourneyPlanet(0).source,atlas.getJourneyPlanet(1).source)
 assert.equal(atlas.getJourneyPlanet(0).source,atlas.getJourneySurface(0).source)
-assert.equal(atlas.getJourneyPlanet(0).frame.width,464)
-assert.equal(atlas.getJourneySurface(1).frame.width,504)
+assert.equal(atlas.getJourneyPlanet(0).frame.width,928)
+assert.equal(atlas.getJourneySurface(1).frame.width,1008)
 for(let i=0;i<4;i++) {
  const tile=atlas.getCosmosBackdrop(i),landmark=atlas.getCosmosLandmark(i)
- assert.equal(tile.frame.width,504);assert.equal(landmark.frame.width,464)
+ assert.equal(tile.frame.width,1008);assert.equal(landmark.frame.width,928)
+ assert.equal(tile.frame.x%1024,8,'remastered background lost its sampling gutter')
  assert.equal(tile.source.autoGenerateMipmaps,false)
  assert.equal(tile.source,atlas.getCosmosBackdrop(0).source)
  assert.equal(landmark.source,atlas.getCosmosLandmark(0).source)
 }
+globalThis.__failCosmosRemaster=true
+try {
+ const fallback=await load(art+'\n// original nebula fallback scenario')
+ await fallback.preloadCosmosArt()
+ assert.equal(fallback.loads,4,'failed remaster did not load the original nebula')
+ for(let i=0;i<4;i++)assert.equal(fallback.getCosmosBackdrop(i).frame.width,504,'region nebula vanished after HD load failure')
+} finally {delete globalThis.__failCosmosRemaster}
+globalThis.__failAllRemasters=true
+try {
+ const fallback=await load(art+'\n// all original scenery fallback scenario')
+ await fallback.preloadCosmosArt()
+ assert.equal(fallback.loads,6)
+ assert.equal(fallback.getCosmosLandmark(0).frame.width,464)
+ assert.equal(fallback.getJourneyPlanet(0).frame.width,464)
+ assert.equal(fallback.getJourneySurface(0).frame.width,504)
+} finally {delete globalThis.__failAllRemasters}
 // Use real scene methods, stubbing Pixi objects only: no browser/device FPS claim.
 let source=read('src/components/games/raid/background.ts').replace(/^import .*\n/gm,'')
 source=read('src/components/games/raid/wreckVariety.ts')+read('src/components/games/raid/flightEffects.ts')+`
@@ -84,12 +108,14 @@ class Container {constructor(){this.position={set(){}};this.pivot={set(){}};this
 class Graphics {constructor(){this.position={set(){}}} clear(){} }
 class RaidGpuForeground {}
 class LandscapePlanetAtmosphere {root=new Container();seconds=0;warm(){} update(w,h,time){this.seconds=time/1000} hide(){} destroy(){}}
+class CelestialScenery {root=new Container();nebulaRoot=new Container();update(){}hide(){}destroy(){}}
+class CelestialClock {advance(time){return time/1000}}
 class RaidTravelMotion {x=0;y=0;drift=0;}
 `+source
 const background=await load(source)
 const scene=new background.PixiRaidBackground()
 scene.planetSprites.forEach((sprite,i)=>sprite.zIndex=material.PLANET_DEPTH[i])
-for(const key of ['asteroid','planet1','planet2','planet3','planet4','planet5','planetNebula','spaceStation','sun'])scene.assetTextures.set(key,{width:400,height:400})
+for(const key of ['galaxy','galaxy2','galaxy3','galaxy4','asteroid','planet1','planet2','planet3','planet4','planet5','planetNebula','spaceStation','sun'])scene.assetTextures.set(key,{width:400,height:400})
 const count=background.sprites
 for(const [stage,region] of [[1,0],[5,1],[9,2],[13,3],[9101,1],[9102,2],[9103,3]]) for(const quality of ['low','medium','high']) {
  scene.cosmosRegion=region;scene.cosmosPrevious=(region+3)%4;scene.cosmosEntered=0
@@ -103,11 +129,21 @@ for(const [stage,region] of [[1,0],[5,1],[9,2],[13,3],[9101,1],[9102,2],[9103,3]
   for(const sprite of [...scene.planetSprites,...scene.wreckSprites,...scene.scenicSprites,...scene.asteroidSprites,...scene.debrisSprites].filter(s=>s.visible)) assert.equal(sprite.alpha,1,'solid scenery became transparent')
   assert.ok(scene.sceneryBloomSprites.filter(s=>s.visible).length <= (quality==='low'?0:quality==='medium'?1:2))
   const galaxies=scene.galaxySprites.filter(s=>s.visible)
+  const nebulae=scene.nebulaSprites.filter(s=>s.visible)
   if(stage!==9101&&stage!==9102) {
-   assert.equal(galaxies.length,quality==='low'||seconds>=2.4?1:2)
+   assert.equal(nebulae.length,quality==='low'||seconds>=2.4?1:2)
+   assert.equal(galaxies.length,quality==='low'?0:quality==='medium'?1:2,'nebula replaced the original distant galaxies')
+   const authored=background.getRaidBackgroundScene(stage).galaxies
+   for(let i=0;i<galaxies.length;i++) {
+    assert.equal(galaxies[i].texture,scene.assetTextures.get(authored[i].asset),'galaxy was assigned a nebula plate')
+    assert.equal(galaxies[i].alpha,authored[i].alpha*(quality==='medium'?.78:1),'nebula opacity leaked into the original galaxy material')
+   }
    assert.equal(scene.baseGraphics!==undefined,true)
-  } else assert.equal(galaxies.length,0,'space art must not overwrite surface arenas')
-  const all=[...scene.galaxySprites,...scene.planetSprites,...scene.scenicSprites,...scene.asteroidSprites,...scene.debrisSprites]
+  } else {
+   assert.equal(galaxies.length,0,'space art must not overwrite surface arenas')
+   assert.equal(nebulae.length,0,'nebula must not overwrite surface arenas')
+  }
+  const all=[...scene.nebulaSprites,...scene.galaxySprites,...scene.planetSprites,...scene.scenicSprites,...scene.asteroidSprites,...scene.debrisSprites]
   for(const sprite of all.filter(s=>s.visible)) {
    assert.ok(Number.isFinite(sprite.x)&&Number.isFinite(sprite.y)&&Number.isFinite(sprite.scaleX))
    assert.ok(sprite.alpha>=0&&sprite.alpha<=1)
