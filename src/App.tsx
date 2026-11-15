@@ -17,6 +17,7 @@ import { GradiusRaid, preloadGradiusRaidAssets, type RaidAssetPreloadState } fro
 import { getRaidAlienSpriteUrl, getRaidEliteSpriteUrl, RaidShipSprite, useLandscapeScreen } from './components/games/RaidShipSprite'
 import { SpaceImpactDefense } from './components/games/SpaceImpactDefense'
 import { getPublicAssetUrl } from './components/games/sound'
+import { useHangarAmbience, useTransmission } from './components/games/raid/carrierAudio'
 import {
   getInitialLanguage,
   getLanguageText,
@@ -328,6 +329,9 @@ function App() {
       setRaidStoryFading(false)
     }, RAID_STORY_FADE_MS)
   }
+
+  useTransmission(screen === 'raidStory' ? 'link' : null, raidStoryIndex)
+  useHangarAmbience(screen === 'raidHangar')
 
   useEffect(() => {
     if (sameScreenShipOptions.some((ship) => ship.key === sameScreenGuestShipKey)) return
@@ -1234,9 +1238,11 @@ function App() {
           </div>
 
           <section className="raid-story__panel" aria-labelledby="raid-story-title">
-            <div className="raid-story__eyebrow">{currentRaidStoryScene.eyebrow}</div>
-            <h1 id="raid-story-title">{currentRaidStoryScene.title}</h1>
-            <p>{currentRaidStoryScene.text}</p>
+            <div className="raid-story__copy" key={raidStoryIndex} tabIndex={0}>
+              <div className="raid-story__eyebrow">{currentRaidStoryScene.eyebrow}</div>
+              <h1 id="raid-story-title">{currentRaidStoryScene.title}</h1>
+              <p>{currentRaidStoryScene.text}</p>
+            </div>
 
             <div className="raid-story__meta">
               <div className="raid-story__progress" aria-label={text.raidStory.progress}>

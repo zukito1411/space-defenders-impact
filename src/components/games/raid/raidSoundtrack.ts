@@ -18,6 +18,8 @@ const bossTracks = {
 
 export const CARRIER_AUDIO = {
   ambience: audio('hangar-bed'),
+  ventilation: audio('hangar-ventilation'),
+  link: audio('transmission-link'),
   ignition: audio('thruster-heat'),
   departure: audio('thruster-release'),
   interruption: audio('hostile-channel'),

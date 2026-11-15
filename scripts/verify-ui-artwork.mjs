@@ -67,6 +67,8 @@ const required = [
   'audio/mesiah/industrial-command.ogg',
   'audio/mesiah/devil-gundam.ogg',
   'audio/mesiah/hangar-bed.ogg',
+  'audio/mesiah/hangar-ventilation.ogg',
+  'audio/mesiah/transmission-link.ogg',
   'audio/mesiah/thruster-heat.ogg',
   'audio/mesiah/thruster-release.ogg',
   'audio/mesiah/hostile-channel.ogg',

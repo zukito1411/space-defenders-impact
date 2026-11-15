@@ -327,7 +327,7 @@ try {
     await recovery.locator('.raid__boss-warning').waitFor({ timeout: 75000 })
     assert.equal(await briefing.count(), 0)
     const playedAudio = await recovery.evaluate(() => window.playedAudio)
-    for (const cue of ['flight-deck', 'hangar-bed', 'hostile-channel', 'thruster-heat', 'thruster-release']) {
+    for (const cue of ['flight-deck', 'hangar-bed', 'hangar-ventilation', 'transmission-link', 'hostile-channel', 'thruster-heat', 'thruster-release']) {
       assert.ok(playedAudio.includes(`/audio/mesiah/${cue}.ogg`), `Mesiah sequence did not play ${cue}`)
     }
     await recovery.waitForFunction(() => window.localMusicIsPlaying('/audio/bgm_boss_final.wav'), {}, { timeout: 15000 })

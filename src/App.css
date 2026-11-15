@@ -2493,11 +2493,8 @@ body {
 }
 
 .raid-story__hud {
-  position: absolute;
+  position: relative;
   z-index: 3;
-  top: 18px;
-  left: 18px;
-  right: 18px;
   display: flex;
   justify-content: space-between;
   gap: 12px;
@@ -2527,32 +2524,52 @@ body {
 .raid-story__panel {
   position: relative;
   z-index: 2;
-  width: min(1180px, calc(100vw - 36px));
+  width: min(1180px, 100%);
   margin: 0 auto;
-  min-height: 100vh;
-  min-height: 100dvh;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  padding: clamp(88px, 12vw, 160px) 0 clamp(64px, 10vw, 120px);
+  min-height: 0;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  justify-items: start;
+  align-content: stretch;
   opacity: 1;
   transform: translateY(0);
   transition: opacity 720ms ease, transform 720ms ease, align-items 720ms ease;
 }
 
+.raid-story {
+  height: 100vh;
+  height: 100dvh;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: clamp(8px, 3dvh, 28px);
+  padding: max(12px, env(safe-area-inset-top)) max(18px, env(safe-area-inset-right))
+    max(12px, env(safe-area-inset-bottom)) max(18px, env(safe-area-inset-left));
+}
+
+.raid-story__copy {
+  box-sizing: border-box;
+  min-height: 0;
+  align-self: center;
+  max-height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  padding: 4px 2px;
+}
+
 .raid-story--scene-1 .raid-story__panel,
 .raid-story--scene-4 .raid-story__panel {
-  align-items: flex-start;
+  justify-items: start;
   text-align: left;
 }
 
 .raid-story--scene-2 .raid-story__panel {
-  align-items: flex-end;
+  justify-items: end;
   text-align: right;
 }
 
 .raid-story--scene-3 .raid-story__panel {
-  align-items: center;
+  justify-items: center;
   text-align: center;
 }
 
@@ -2589,7 +2606,7 @@ body {
 }
 
 .raid-story__panel h1 {
-  font-size: clamp(2.8rem, 8vw, 6.8rem);
+  font-size: clamp(2rem, min(8vw, 12dvh), 6.8rem);
 }
 
 .raid-hangar__intro h1 {
@@ -2617,7 +2634,7 @@ body {
   display: flex;
   align-items: center;
   gap: 16px;
-  margin-top: 30px;
+  margin-top: clamp(8px, 3dvh, 30px);
   flex-wrap: wrap;
   justify-content: flex-start;
 }
@@ -3456,9 +3473,7 @@ body {
   }
 
   .raid-story__hud {
-    top: 12px;
-    left: 12px;
-    right: 12px;
+    gap: 8px;
   }
 
   .raid-story__earth {
@@ -3496,16 +3511,11 @@ body {
     transform-origin: right top;
   }
 
-  .raid-story__panel {
-    width: calc(100% - 28px);
-    padding-top: 104px;
-  }
-
   .raid-story--scene-1 .raid-story__panel,
   .raid-story--scene-2 .raid-story__panel,
   .raid-story--scene-3 .raid-story__panel,
   .raid-story--scene-4 .raid-story__panel {
-    align-items: flex-start;
+    justify-items: start;
     text-align: left;
   }
 
@@ -3516,6 +3526,7 @@ body {
 
   .raid-story__panel h1 {
     max-width: 9ch;
+    font-size: clamp(2rem, min(14vw, 12dvh), 4.4rem);
   }
 
   .raid-hangar__intro h1 {

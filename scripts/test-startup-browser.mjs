@@ -88,6 +88,30 @@ try{
    console.log('Studio opening:',mode,'passed')
   }finally{entry.open();art.open();await context.close()}
  }
+ const story = await browser.newPage({viewport:{width:874,height:403},hasTouch:true})
+ try {
+   await story.addInitScript(() => localStorage.setItem('space-defenders-player-name', 'Presentation QA'))
+   await story.route('**/*', route => new URL(route.request().url()).origin === base ? route.continue() : route.abort())
+   await story.goto(base)
+   await story.locator('#startup-splash').waitFor({state:'detached',timeout:30000})
+   await story.locator('.start-screen__actions [data-menu-default]').click({timeout:120000})
+   await story.locator('.mode-screen__actions--raid [data-menu-default]').click()
+   const next = story.locator('.raid-story__next')
+   for (const [width,height] of [[874,403],[640,320],[360,640]]) {
+     await story.setViewportSize({width,height})
+     await next.waitFor()
+     for (const control of ['.raid-story__skip', '.raid-story__skip--launch', '.raid-story__next']) {
+       const box = await story.locator(control).first().boundingBox()
+       assert.ok(box && box.y >= 0 && box.y+box.height <= height, `Story control clipped at ${width}×${height}`)
+     }
+   }
+   await story.setViewportSize({width:874,height:403})
+   await next.click()
+   await story.locator('.raid-story--scene-2').waitFor()
+   console.log('Raid story controls fit the reported Android aspect ratio, compact landscape, and portrait')
+ } finally {
+   await story.close()
+ }
 }finally{
  await browser?.close()
  server.kill();await exited
