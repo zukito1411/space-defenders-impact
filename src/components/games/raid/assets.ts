@@ -902,6 +902,10 @@ export function makeImageCanvasSprite(cacheKey: string, src: string, processor?:
   return entry
 }
 
+export function releaseCanvasSprite(sprite: CanvasSpriteEntry) {
+  if (canvasSpriteCache.get(sprite.cacheKey) === sprite) canvasSpriteCache.delete(sprite.cacheKey)
+}
+
 export function getCanvasSpriteSource(sprite: CanvasSpriteEntry) {
   return sprite.processedImage ?? sprite.image
 }
