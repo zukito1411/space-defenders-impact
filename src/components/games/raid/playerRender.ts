@@ -226,14 +226,14 @@ export function updateMesiahScoutDrones(player: Player, enemies: Enemy[], dt: nu
   }
 }
 
-export function drawSupportEngineTrail(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, time: number, rotation = 0, alpha = 0.82, shipKey = '', throttle = .28, landscape = false) {
+export function drawSupportEngineTrail(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, time: number, rotation = 0, alpha = 0.82, shipKey = '', throttle = .28, landscape = false, projectedNozzles?: RaidBankingFrame['nozzles']) {
   if (shipKey === 'coreLander') return
   ctx.save()
   ctx.translate(x, y)
   ctx.rotate(rotation)
   ctx.globalAlpha *= alpha
   const wakeScale = shipKey === 'godGundam' || shipKey === 'spiegel' ? undefined : .65
-  drawHullExhaust(ctx, 0, 0, size, time, throttle, shipKey, wakeScale, undefined, shipKey, landscape)
+  drawHullExhaust(ctx, 0, 0, size, time, throttle, shipKey, wakeScale, undefined, shipKey, landscape, projectedNozzles)
   ctx.restore()
 }
 
@@ -254,6 +254,7 @@ export function drawRaidOptions(
   const isMesiahSortie = isMesiah
   const supportStacks = getOptionSupportStacks(player)
   const supportSizeScale = typeof player.sizeScale === 'number' && Number.isFinite(player.sizeScale) ? Math.max(1, Math.min(1.5, player.sizeScale)) : 1
+  const formationBank = getRaidPlayerFlightBank(color, player.x)
   if (supportStacks <= 0 && !isArk && !isMesiah) return
 
   const drawSupportPair = (shipKey: string, offset: number, yOffset: number, maxBox: number, scale: number, filter: string) => {
@@ -261,16 +262,18 @@ export function drawRaidOptions(
     const drawSize = Math.min(optionShipSize * scale, maxBox) * (landscape ? 1.15 : 1) * supportSizeScale
     const sprite = getShipCanvasSprite(shipKey)
     const sideSprite = landscape ? getRaidSideShipCanvasSprite(shipKey) : null
+    const banking = getRaidBankingFrame(shipKey, formationBank, landscape, false)
 
     for (const side of [-1, 1]) {
       const x = toX(clamp(player.x + offset * side, 4, 96))
       const y = toY(player.y + yOffset) + Math.sin(time / 900 + (side > 0 ? 0.18 : 0)) * 2.5
       const trailOverHull = shipKey === 'godGundam' || shipKey === 'spiegel'
       const throttle = .14 + (player.engineBoost ?? 0) * .58
-      if (!trailOverHull) drawSupportEngineTrail(ctx, x, y, drawSize, time, 0, 0.9, shipKey, throttle, Boolean(sideSprite?.loaded))
-      if (sideSprite?.loaded) drawCanvasSpriteContain(ctx, sideSprite, x, y, drawSize, 'none', 1, -Math.PI / 2, 1, color)
+      if (!trailOverHull) drawSupportEngineTrail(ctx, x, y, drawSize, time, 0, 0.9, shipKey, throttle, Boolean(sideSprite?.loaded), banking?.nozzles)
+      if (banking) drawBankedHull(ctx, banking, x, y, drawSize, 1, 'none')
+      else if (sideSprite?.loaded) drawCanvasSpriteContain(ctx, sideSprite, x, y, drawSize, 'none', 1, -Math.PI / 2, 1, color)
       else drawCanvasSprite(ctx, sprite, x, y, drawSize, filter, 1, 0, 1, color)
-      if (trailOverHull) drawSupportEngineTrail(ctx, x, y, drawSize, time, 0, .7, shipKey, throttle, Boolean(sideSprite?.loaded))
+      if (trailOverHull) drawSupportEngineTrail(ctx, x, y, drawSize, time, 0, .7, shipKey, throttle, Boolean(sideSprite?.loaded), banking?.nozzles)
     }
   }
 
@@ -310,8 +313,16 @@ export function drawRaidOptions(
       const filter = idle
         ? 'brightness(0.86) contrast(1.08) saturate(0.92)'
         : 'brightness(1.08) contrast(1.18) saturate(1.35)'
-      drawSupportEngineTrail(ctx, x, y, drawSize * scale, time, idle ? 0 : drone.rotation, idle ? 0.7 : 0.92, droneShipKey, idle ? .06 : .70, Boolean(sideSprite?.loaded))
-      if (sideSprite?.loaded) drawCanvasSpriteContain(ctx, sideSprite, x, y, drawSize, 'none', alpha, (idle ? 0 : drone.rotation) - Math.PI / 2, scale, color)
+      const banking = getRaidBankingFrame(droneShipKey, idle ? 0 : clamp(drone.rotation, -.14, .14), landscape, false)
+      drawSupportEngineTrail(ctx, x, y, drawSize * scale, time, idle ? 0 : drone.rotation, idle ? 0.7 : 0.92, droneShipKey, idle ? .06 : .70, Boolean(sideSprite?.loaded), banking?.nozzles)
+      if (banking) {
+        ctx.save()
+        ctx.translate(x, y)
+        ctx.rotate(idle ? 0 : drone.rotation)
+        ctx.translate(-x, -y)
+        drawBankedHull(ctx, banking, x, y, drawSize * scale, alpha, 'none')
+        ctx.restore()
+      } else if (sideSprite?.loaded) drawCanvasSpriteContain(ctx, sideSprite, x, y, drawSize, 'none', alpha, (idle ? 0 : drone.rotation) - Math.PI / 2, scale, color)
       else drawCanvasSprite(ctx, sprite, x, y, drawSize, filter, alpha, idle ? 0 : drone.rotation, scale, color)
     }
   }
@@ -327,8 +338,16 @@ export function drawRaidOptions(
         if (!scout.active || scout.stack >= supportStacks) continue
         const x = toX(scout.x)
         const y = toY(scout.y)
-        drawSupportEngineTrail(ctx, x, y, scoutSize, time, scout.rotation, 0.9, scoutShipKey, scout.canFire ? .48 : .78, Boolean(sideScoutSprite?.loaded))
-        if (sideScoutSprite?.loaded) drawCanvasSpriteContain(ctx, sideScoutSprite, x, y, scoutSize, 'none', 1, scout.rotation - Math.PI / 2, 1, color)
+        const banking = getRaidBankingFrame(scoutShipKey, clamp(scout.rotation, -.14, .14), landscape, false)
+        drawSupportEngineTrail(ctx, x, y, scoutSize, time, scout.rotation, 0.9, scoutShipKey, scout.canFire ? .48 : .78, Boolean(sideScoutSprite?.loaded), banking?.nozzles)
+        if (banking) {
+          ctx.save()
+          ctx.translate(x, y)
+          ctx.rotate(scout.rotation)
+          ctx.translate(-x, -y)
+          drawBankedHull(ctx, banking, x, y, scoutSize, 1, 'none')
+          ctx.restore()
+        } else if (sideScoutSprite?.loaded) drawCanvasSpriteContain(ctx, sideScoutSprite, x, y, scoutSize, 'none', 1, scout.rotation - Math.PI / 2, 1, color)
         else drawCanvasSprite(ctx, scoutSprite, x, y, scoutSize, 'brightness(1.14) contrast(1.16) saturate(1.34)', 1, scout.rotation, 1, color)
       }
     } else {
@@ -958,7 +977,9 @@ export function drawRaidPlayer(
     (mechAttackStage === 'recover' || mechAttackStage === 'windup'))
   const flightBank = phase === 'playing' ? bank : 0
   const bankingKey = sideBurningKey && coreLanderBurningBlend >= .5 ? sideBurningKey : sideVisualKey
-  const banking = !presentation && !isDown && (phase === 'playing' || phase === 'paused') &&
+  // Carrier ignition and the playable phase share the exact same 3D hull.
+  // Dock/mech poses still take precedence when the carrier explicitly animates them.
+  const banking = !isDown && (Boolean(presentation) || phase === 'playing' || phase === 'paused') &&
     (!coreLanderCombatModel || mayBankMech)
     ? getRaidBankingFrame(bankingKey, flightBank, landscape, reducedMotion) : null
   const nozzles = banking?.nozzles ?? (landscape ? getRaidSideShipNozzles(sideVisualKey) : undefined) ?? getRaidShipNozzles(sideVisualKey)
