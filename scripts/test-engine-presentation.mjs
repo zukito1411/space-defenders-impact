@@ -14,7 +14,8 @@ const isCoreLanderBurning=()=>false, getCoreLanderBurningRage=()=>0;
 const getCoreLanderFireInterval=()=>.5,sampleMechAttack=()=>({frame:3,stage:'idle'}),drawMechAction=()=>false,getMechActionAtlas=()=>({});
 const getShipCanvasSprite=()=>({});
 // Exercise the existing sprite/exhaust fallback; banking atlases are tested separately.
-const getRaidBankingFrame=()=>null;
+const getRaidBankingFrame=()=>globalThis.testBankingEnabled?{sprite:{loaded:true,cacheKey:'banking-test'},frame:3,nozzles:[[0,.22,.05]]}:null;
+const drawRaidBankingCell=(ctx)=>{ctx.bankedCells=(ctx.bankedCells??0)+1;};
 const warmSpaceJetForceField=()=>{};
 const getRaidSideShipCanvasSprite=()=>({loaded:true}),getRaidSideShipNozzles=()=>[[.10,.22,.05]],drawCanvasSpriteContain=(ctx,sprite,x,y,size)=>ctx.hulls.push(size);
 const getOptionSupportStacks=()=>1,getShipSpriteSize=()=>30;
@@ -200,6 +201,21 @@ for(const key of ['mesiahRaptorBlack','mesiahRaptorWhite','rocket','spaceEt','go
  }
 }
 delete globalThis.document
+
+// A loaded 3D atlas must remain in use through carrier ignition. Both Scout
+// companions must share the same projected 3D hull instead of the old sprite.
+globalThis.testBankingEnabled=true
+try {
+ const launch=context()
+ launch.canvas={dataset:null}
+ drawRaidPlayer(launch,player,'playing',v=>v*10,v=>v*5,420,1100,'#ef233c',regularCosmetics,'rocket',
+   null,null,0,0,false,true,{scale:1,engine:0,hideCombatFx:true})
+ assert.equal(launch.bankedCells,1,'carrier ignition reverted to 2D ship art')
+
+ const scouts=context()
+ drawRaidOptions(scouts,{...player,optionStacks:1},v=>v*10,v=>v*5,420,1100,'#ef233c','rocket',true)
+ assert.equal(scouts.bankedCells,2,'Scout escorts reverted to 2D sprites')
+} finally { delete globalThis.testBankingEnabled }
 console.log('Engine: shorter idle, heat ramp, mounted scout exhaust, aligned atlas hot core, layered signature, and bounded bitmap draws passed')
 
 } catch(error) { console.error(error.message); process.exit(1) }
