@@ -1,4 +1,5 @@
 import { getRaidSideShipNozzles, getRaidSideShipSpriteUrl } from './components/games/raid/sideArtwork'
+import { getRaidBankingNozzles } from './components/games/raid/bankingArt'
 import { getRaidExhaustScale, getRaidShipNozzles } from './components/games/raid/shipArtwork'
 import { getDefaultPlayerVisualShipKey, getRaidGundamName } from './components/games/raid/state'
 import { useDoorState } from './components/ui/SpaceDoor'
@@ -1356,7 +1357,8 @@ function App() {
     const selectedCosmetics = getEquippedShipCosmetics(progress, selectedShip.key)
     const selectedSpriteKey = getDefaultPlayerVisualShipKey(selectedShip.key, progress)
     const previewSide = landscapeScreen && !!getRaidSideShipSpriteUrl(selectedSpriteKey)
-    const previewNozzles = previewSide ? getRaidSideShipNozzles(selectedSpriteKey) : getRaidShipNozzles(selectedSpriteKey)
+    const bankedPreviewNozzles = getRaidBankingNozzles(selectedSpriteKey, landscapeScreen)
+    const previewNozzles = bankedPreviewNozzles ?? (previewSide ? getRaidSideShipNozzles(selectedSpriteKey) : getRaidShipNozzles(selectedSpriteKey))
     const previewTrailOverHull = selectedSpriteKey === 'godGundam' || selectedSpriteKey === 'spiegel'
     const previewSize = selectedShip.key === 'mesiah' ? 136 : selectedShip.key === 'coreLander' ? 122 : 106
     const trailClass = selectedCosmetics.trail ? 'raid-hangar__trail raid-hangar__trail--active' : 'raid-hangar__trail'
@@ -1400,9 +1402,9 @@ function App() {
                       className={`${trailClass} raid-hangar__trail--nozzle`}
                       key={`${x}:${y}`}
                       style={{
-                        left: `calc(50% + ${(previewSide ? -y : x) * previewSize}px)`,
-                        top: `calc(50% + ${(previewSide ? x : y) * previewSize}px)`,
-                        ...(previewSide ? { transform: 'translateX(-50%) rotate(90deg)', transformOrigin: 'top center' } : {}),
+                        left: `calc(50% + ${(bankedPreviewNozzles ? x : previewSide ? -y : x) * previewSize}px)`,
+                        top: `calc(50% + ${(bankedPreviewNozzles ? y : previewSide ? x : y) * previewSize}px)`,
+                        ...(previewSide && !bankedPreviewNozzles ? { transform: 'translateX(-50%) rotate(90deg)', transformOrigin: 'top center' } : {}),
                         width: width * previewSize,
                         height: previewSize * getRaidExhaustScale(selectedSpriteKey, previewNozzles.length) * (selectedCosmetics.trail ? .57 : .42),
                       }}
