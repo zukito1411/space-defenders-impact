@@ -99,6 +99,7 @@ export function RaidShipSprite({ shipKey, size, className = 'raid__ship-sprite',
         position: 'absolute', inset: 0, display: 'block',
         backgroundImage: `url("${atlasUrl}")`, backgroundRepeat: 'no-repeat',
         backgroundSize: '700% 200%', backgroundPosition: viewLandscape ? '50% 100%' : '50% 0%',
+        filter: 'brightness(0.86) contrast(0.97) saturate(0.84)',
       }} />}
     </span>
   )
