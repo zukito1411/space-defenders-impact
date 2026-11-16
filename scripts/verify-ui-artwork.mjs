@@ -4,7 +4,9 @@ import { join } from 'node:path'
 // Fail production builds before a Netlify deploy or signed Android release
 // if the shared menu artwork was not copied from public/ into dist/.
 const campaignBossAssets = JSON.parse(readFileSync('docs/campaign-boss-art-manifest.json', 'utf8')).assets
+const bankingRegistrations = JSON.parse(readFileSync('src/components/games/raid/bankingAnchors.json', 'utf8'))
 const required = [
+  ...Object.keys(bankingRegistrations).map(key => `assets/ships/banking/${key}-v1.webp`),
   'assets/raid-fx/planet-weather-atlas-v1.webp',
   'assets/raid-fx/celestial-detail-atlas-v1.webp',
   'audio/immersion/manifest.json',

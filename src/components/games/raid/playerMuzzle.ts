@@ -1,5 +1,6 @@
 import { getMechShotAnchor } from './mechFlight'
 import { HEIGHT, WIDTH } from './constants'
+import type { BankingPoint } from './bankingArt'
 import type { CoreLanderCombatModel, Shot, Vec } from './types'
 
 type PlayerShot = Omit<Shot, 'id'>
@@ -24,6 +25,7 @@ export function createRaidMainShotEmitter(
   landscape = false,
   sizeScale = 1,
   model: CoreLanderCombatModel | null = null,
+  wingTips?: readonly BankingPoint[],
 ) {
   const size = getRaidPlayerHullSize(shipKey, viewportWidth, landscape, sizeScale) * (combatModel ? 1.08 : 1)
   const sx = size * WIDTH / viewportWidth
@@ -33,7 +35,7 @@ export function createRaidMainShotEmitter(
   // Combat models fire from the head, ahead of the torso in both flight views.
   const nose = combatModel ? -.34 : shipKey === 'coreLander' ? -.40 : -.448
 
-  return (shot: PlayerShot, wingCannon = false) => {
+  return (shot: PlayerShot, wingCannon: boolean | 'inner' = false) => {
     const spread = shot.x - ship.x
     const side = Math.sign(spread)
     let x = Math.max(-.055, Math.min(.055, spread * .016))
@@ -41,8 +43,12 @@ export function createRaidMainShotEmitter(
     if (combatModel && model) { [x, y] = getMechShotAnchor(model, shot.kind, spread, landscape, shot.burning) }
 
     if (wingCannon && shipKey === 'xwing') {
-      x = side * .28
-      y = -.335
+      const tip = wingTips?.[(side > 0 ? 2 : 0) + (wingCannon === 'inner' ? 1 : 0)]
+      if (tip) [x, y] = tip
+      else if (wingCannon === true) {
+        x = side * .28
+        y = -.335
+      }
     } else if (!combatModel && (shot.kind === 'rocket' || shot.kind === 'homing') && side !== 0) {
       // Multi-missile launches stay on the hull's paired hardpoints.
       x = side * Math.min(.18, .07 + Math.abs(spread) * .015)

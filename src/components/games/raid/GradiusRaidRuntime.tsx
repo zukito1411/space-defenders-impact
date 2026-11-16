@@ -68,7 +68,8 @@ import type { RaidViewportMetrics } from './graphics'
 import { clearPickupLoadout, extendLoadoutForSuperBoss, getPowerScore, resetStageLoadout } from './loadout'
 import { acquireHomingTarget, animateStageClearPlayer, applyRiftPullToPlayer, applyStartingStageLevel, fullyBuffRaidPlayer, getCoreLanderFireInterval, getGodGundamBarrageBossDamage, getGodGundamBarrageDamageMultiplier, getGodGundamMeleeDamagePerSecond, getGodGundamMeleeRange, getGodGundamPassivePose, getGodGundamStageAttackBonus, getNukeBossDamage, getNukeCooldownSeconds, getPlayerBaseAttack, getRiftCenter, getSpiegelShadowCloneDamageMultiplier, hasSpiegelShadowClones, isCoreLanderBurning, levelUpPlayer, movePlayerWithInput, revivePlayerForBossClear, updatePlayerTimers } from './mechanics'
 import { clampNetworkVelocity, cloneAsteroid, cloneDerelictWreck, cloneEnemy, cloneIonStrike, cloneMeteor, cloneRaidRandomEvent, cloneVec, compactPlayer, compactVec, getBufferedAsteroidVisuals, getBufferedEnemyVisuals, getBufferedPlayerVisual, getConnectionLabel, getGuestShotTtlMs, getOwnCorrectionBlend, getPlayerPickupAudioKind, getRemoteInterpolationDelayMs, hasClearedRaidInProgress, isNetworkVisible, keepNetworkVisibleInPlace, reconcilePlayerVisual, updateDerelictWreckMotion } from './network'
-import { drawRaidOptions, drawRaidPlayer, getCoreBlastSprite, getRaidPlayerFlightBank, warmRaidSideCosmetics } from './playerRender'
+import { getRaidBankingFrame } from './bankingArt'
+import { drawRaidOptions, drawRaidPlayer, getCoreBlastSprite, getRaidPlayerFlightBank, warmRaidBankingArt, warmRaidSideCosmetics } from './playerRender'
 import { getRaidAssetPreloadInitialState, preloadGradiusRaidAssets, warmRaidGeneratedEffectSprites } from './preload'
 import { activateScoutSupportPickup, clonePlayer, getCheckpointStage, getDefaultPlayerVisualShipKey, getGodGundamGameplayRenderSize, getHighScore, getInitialPlayer, getOptionSupportStacks, getPlayerCoreLanderCombatModel, getRaidGundamName, getRaidPlayerVisualShipKey, getShipByKey, getUnlockedStage, isCoreLanderAoeShot, isGodGundamBarragePilot, normalizeMesiahDrones, normalizeMesiahScoutDrones, powerColor, sanitizePlayerVisualShipKey, saveCheckpointStage, saveHighScore, saveUnlockedStage } from './state'
 import type { AsteroidHazard, BossDefeatExplosionEvent, BossKind, BossMessage, CameraShakeState, CoreLanderCombatModel, DerelictWreck, Enemy, EnemySpawnProfile, GamePhase, GodGundamBarrage, GodGundamPassiveStrike, IonStrike, MeteorHazard, MiniBossKind, MirageBossKind, MultiplayerAsteroidSnapshot, MultiplayerConnectionQuality, MultiplayerEnemySnapshot, MultiplayerHostState, MultiplayerInput, MultiplayerPlayerSnapshot, NukeStrike, Player, PowerKind, PowerUp, RaidAssetPreloadState, RaidBgmMode, RaidDifficulty, RaidMode, RaidMultiplayerSession, RaidRandomEvent, RaidRandomEventKind, RelayGameMessage, Ripple, ShipOption, Shot, Snapshot, Spark, Vec, WeaponKey } from './types'
@@ -376,8 +377,10 @@ export function GradiusRaid({
   const stopRaidBgmRef = useRef<() => void>(() => {})
   const [selectedShipKey, setSelectedShipKey] = useState(initialShip.key)
   useEffect(() => {
-    if (!landscape) return
     const visualKey = getDefaultPlayerVisualShipKey(selectedShipKey, progressRef.current)
+    warmRaidBankingArt(visualKey, landscape)
+    if (visualKey === 'godGundam') warmRaidBankingArt('godGundamBurning', landscape)
+    if (!landscape) return
     const aura = getEquippedShipCosmetics(progressRef.current, selectedShipKey).aura
     warmRaidSideCosmetics(visualKey, aura)
     if (selectedShipKey === 'coreLander') {
@@ -3472,9 +3475,14 @@ export function GradiusRaid({
     const isSmallViewport = Boolean(viewport && viewport.cssWidth < 640)
     const ownPilot = player === (fireCaptureRef.current ? remotePlayerRef.current : playerRef.current)
     const pilotColor = player === devilAssistPlayerRef.current ? '#facc15' : ownPilot ? PLAYER_COLOR : ALLY_PLAYER_COLOR
+    const bank = shipKey === 'coreLander' ? 0 : getRaidPlayerFlightBank(pilotColor, player.x)
+    const wingTips = canFireMain && viewport && shipKey === 'xwing'
+      ? getRaidBankingFrame(getRaidPlayerVisualShipKey(player, progressRef.current), bank, landscapeRef.current,
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches)?.wing
+      : undefined
     const emitMainShot = canFireMain && viewport
       ? createRaidMainShotEmitter(pushShot, player, shipKey, Boolean(coreLanderCombatModel),
-        viewport.cssWidth, viewport.cssHeight, shipKey === 'coreLander' ? 0 : getRaidPlayerFlightBank(pilotColor, player.x), landscapeRef.current, player.sizeScale, coreLanderCombatModel)
+        viewport.cssWidth, viewport.cssHeight, bank, landscapeRef.current, player.sizeScale, coreLanderCombatModel, wingTips)
       : pushShot
     const defaultScoutOffset = isArk
       ? (isSmallViewport ? 14 : 7.4)
@@ -3918,8 +3926,8 @@ export function GradiusRaid({
         const innerOffset = emitter.main ? 1.65 : 1.05
         emitShot({ x: emitter.x - wingOffset, y: emitter.y - 4.4, vx: -1.5, vy: -118, damage: Math.ceil((baseDamage + 2) * emitter.scale), kind: 'laser', radius: 1.35, pierce: 1 + Math.floor(stacks.laser / 2) }, true)
         emitShot({ x: emitter.x + wingOffset, y: emitter.y - 4.4, vx: 1.5, vy: -118, damage: Math.ceil((baseDamage + 2) * emitter.scale), kind: 'laser', radius: 1.35, pierce: 1 + Math.floor(stacks.laser / 2) }, true)
-        emitShot({ x: emitter.x - innerOffset, y: emitter.y - 5.2, vx: -0.8, vy: -128, damage: Math.ceil((baseDamage + 1) * emitter.scale), kind: 'needle' as any, radius: 0.95 })
-        emitShot({ x: emitter.x + innerOffset, y: emitter.y - 5.2, vx: 0.8, vy: -128, damage: Math.ceil((baseDamage + 1) * emitter.scale), kind: 'needle' as any, radius: 0.95 })
+        emitShot({ x: emitter.x - innerOffset, y: emitter.y - 5.2, vx: -0.8, vy: -128, damage: Math.ceil((baseDamage + 1) * emitter.scale), kind: 'needle' as any, radius: 0.95 }, 'inner')
+        emitShot({ x: emitter.x + innerOffset, y: emitter.y - 5.2, vx: 0.8, vy: -128, damage: Math.ceil((baseDamage + 1) * emitter.scale), kind: 'needle' as any, radius: 0.95 }, 'inner')
         if (activeWeapons.spread) {
           const fan = stacks.spread >= 2 ? [-34, -18, 18, 34] : [-24, 24]
           fan.forEach((vx) => emitShot({ x: emitter.x, y: emitter.y - 2.8, vx, vy: -86, damage, kind: 'spread', radius: 1.35 }))

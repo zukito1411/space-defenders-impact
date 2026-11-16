@@ -1,4 +1,6 @@
 import { getRaidPlayerHullSize } from './playerMuzzle'
+import { drawRaidBankingCell, getBankingProtectionHull, getRaidBankingAtlas, getRaidBankingFrame } from './bankingArt'
+import type { RaidBankingFrame } from './bankingArt'
 import { drawShipProtection, warmShipProtection } from './shipProtection'
 import { drawPlayerCondition } from './playerCondition'
 import type { ProtectionHull } from './shipProtection'
@@ -834,24 +836,26 @@ export function getRaidPlayerFlightBank(color: string, x: number) {
   return pose && performance.now() - pose.time <= 150 && Math.abs(x - pose.x) <= 12 ? pose.bank : 0
 }
 
-const solarHullRims = new WeakMap<CanvasSpriteEntry, [HTMLCanvasElement | undefined, HTMLCanvasElement | undefined]>()
+const solarHullRims = new WeakMap<CanvasSpriteEntry, Map<number, HTMLCanvasElement>>()
 
-function drawSolarHullRim(ctx: CanvasRenderingContext2D, sprite: CanvasSpriteEntry, x: number, y: number, size: number, side: number, alpha: number, landscape = false) {
+function drawSolarHullRim(ctx: CanvasRenderingContext2D, sprite: CanvasSpriteEntry, x: number, y: number, size: number, side: number, alpha: number, landscape = false, frame?: number) {
   if (!sprite.loaded || typeof document === 'undefined') return
   const slot = side < 0 ? 0 : 1
+  const key = frame === undefined ? slot : (frame + 1) * 2 + slot
   let rims = solarHullRims.get(sprite)
   if (!rims) {
-    rims = [undefined, undefined]
+    rims = new Map()
     solarHullRims.set(sprite, rims)
   }
-  let rim = rims[slot]
+  let rim = rims.get(key)
   if (!rim) {
     rim = document.createElement('canvas')
     const edge = 96
     rim.width = rim.height = edge
     const bake = rim.getContext('2d')
     if (!bake) return
-    if (landscape) {
+    if (frame !== undefined) drawRaidBankingCell(bake, sprite, frame, edge / 2, edge / 2, edge)
+    else if (landscape) {
       const { source, width, height } = getCanvasSpriteDimensions(sprite)
       const fit = edge / Math.max(1, width, height)
       bake.save()
@@ -867,12 +871,21 @@ function drawSolarHullRim(ctx: CanvasRenderingContext2D, sprite: CanvasSpriteEnt
     ramp.addColorStop(.54, 'rgba(255,197,133,0)')
     bake.fillStyle = ramp
     bake.fillRect(0, 0, edge, edge)
-    rims[slot] = rim
+    rims.set(key, rim)
   }
   ctx.save()
   ctx.globalCompositeOperation = 'lighter'
   ctx.globalAlpha *= alpha
   ctx.drawImage(rim, x - size / 2, y - size / 2, size, size)
+  ctx.restore()
+}
+
+function drawBankedHull(ctx: CanvasRenderingContext2D, banking: RaidBankingFrame, x: number, y: number,
+  size: number, alpha: number, filter: string) {
+  ctx.save()
+  ctx.globalAlpha *= alpha
+  if (filter && filter !== 'none') ctx.filter = filter
+  drawRaidBankingCell(ctx, banking.sprite, banking.frame, x, y, size)
   ctx.restore()
 }
 
@@ -926,7 +939,6 @@ export function drawRaidPlayer(
   const dockReady=Boolean(dockPose&&coreLanderCombatModel&&getMechDockAtlas(coreLanderCombatModel).loaded)
   const cosmeticShipKey = coreLanderCombatModel ?? player.ship.key
   const remasteredHull = usesRaidRemasteredHullArt(sideVisualKey)
-  const nozzles = (landscape ? getRaidSideShipNozzles(sideVisualKey) : undefined) ?? getRaidShipNozzles(sideVisualKey)
   const masteryPaintColor = cosmetics.frame && !remasteredHull ? getMasteryPaintColor(cosmeticShipKey, color) : color
   const coreLanderBurningBlend = player.ship.key === 'coreLander'
     ? clamp(player.burningBlend ?? (coreLanderBurning ? 1 : 0), 0, 1)
@@ -937,18 +949,33 @@ export function drawRaidPlayer(
   const sideBurningSprite = landscape && player.ship.key === 'coreLander' && sideBurningKey && coreLanderBurningBlend > .01
     ? getRaidSideShipCanvasSprite(sideBurningKey) : null
 
+  const attackActive = !presentation?.hideCombatFx && !isDown && (phase === 'playing' || phase === 'paused') &&
+    (player.godMeleeCloak ?? 0) <= 0
+  const protectionAttackPose = coreLanderCombatModel && sideSprite?.loaded && attackActive
+    ? sampleMechAttack(coreLanderCombatModel, player.fireCooldown, getCoreLanderFireInterval(player), reducedMotion) : null
+  const mechAttackStage = protectionAttackPose?.stage
+  const mayBankMech = !protectionAttackPose || (Math.abs(bank) > .041 &&
+    (mechAttackStage === 'recover' || mechAttackStage === 'windup'))
+  const flightBank = phase === 'playing' ? bank : 0
+  const bankingKey = sideBurningKey && coreLanderBurningBlend >= .5 ? sideBurningKey : sideVisualKey
+  const banking = !presentation && !isDown && (phase === 'playing' || phase === 'paused') &&
+    (!coreLanderCombatModel || mayBankMech)
+    ? getRaidBankingFrame(bankingKey, flightBank, landscape, reducedMotion) : null
+  const nozzles = banking?.nozzles ?? (landscape ? getRaidSideShipNozzles(sideVisualKey) : undefined) ?? getRaidShipNozzles(sideVisualKey)
+
   if (!isDown && !coreLanderCombatModel && (presentation?.engine ?? 1) > 0) {
     ctx.save()
     ctx.globalAlpha *= presentation?.engine ?? 1
-    drawHullExhaust(ctx, x, y, renderSize, time, engineBoost, visualShipKey, undefined, trailColor, cosmeticShipKey, landscape && Boolean(sideSprite?.loaded))
+    drawHullExhaust(ctx, x, y, renderSize, time, engineBoost, visualShipKey, undefined, trailColor, cosmeticShipKey, landscape && Boolean(sideSprite?.loaded), banking?.nozzles)
     ctx.restore()
   }
   const sunSide = Math.sign(sunlight)
   const maneuverJet = pose.maneuverJet ?? 0
-  if (nozzles && player.ship.key !== 'coreLander' && !isDown && phase === 'playing' && !reducedMotion && Math.abs(maneuverJet) > .065) {
+  if (nozzles?.length && player.ship.key !== 'coreLander' && !isDown && phase === 'playing' && !reducedMotion && Math.abs(maneuverJet) > .065) {
     const side = Math.sign(maneuverJet)
     const power = Math.abs(maneuverJet)
-    const [ventX, ventY, aperture] = nozzles[side > 0 ? 0 : nozzles.length - 1]
+    const outlet = nozzles.reduce((outer, vent) => (vent[0] - outer[0]) * side < 0 ? vent : outer)
+    const [ventX, ventY, aperture] = outlet
     const jetSize = renderSize * (.24 + power * .12)
     ctx.save()
     ctx.translate(x + renderSize * (ventX - side * aperture * .33), y + renderSize * (ventY - aperture * .12))
@@ -1013,9 +1040,6 @@ export function drawRaidPlayer(
     }
   }
 
-  const protectionAttackPose = coreLanderCombatModel && sideSprite?.loaded && !presentation?.hideCombatFx && !isDown &&
-    (phase === 'playing' || phase === 'paused') && (player.godMeleeCloak ?? 0) <= 0
-    ? sampleMechAttack(coreLanderCombatModel, player.fireCooldown, getCoreLanderFireInterval(player), reducedMotion) : null
   let conditionHull: ProtectionHull | null = null
   let conditionSize = renderSize, conditionY = y
   if (!presentation?.hideCombatFx && (player.forceField > 0 || player.shield > 0 || player.feedback || player.hp <= player.maxHp * .35)) {
@@ -1024,7 +1048,9 @@ export function drawRaidPlayer(
     let protectionHull: ProtectionHull = sideSprite?.loaded
       ? { sprite: sideSprite, contain: true, rotation: -Math.PI / 2 }
       : { sprite: getShipCanvasSprite(sideVisualKey) }
-    if (coreLanderCombatModel && protectionAttackPose) {
+    if (banking) {
+      protectionHull = getBankingProtectionHull(banking.sprite, landscape)
+    } else if (coreLanderCombatModel && protectionAttackPose) {
       const atlas = getMechActionAtlas(coreLanderCombatModel, coreLanderBurning)
       if (atlas.loaded) protectionHull = { sprite: atlas, contain: true, rotation: -Math.PI / 2,
         columns: coreLanderCombatModel === 'godGundam' ? 3 : 2, rows: 2, frame: protectionAttackPose.frame }
@@ -1063,7 +1089,7 @@ export function drawRaidPlayer(
       'rgba(255,226,178,.27)', .62 * Math.abs(sunlight) * (1 - eclipse))
   }
   if (spriteGlow) drawSpriteGlow(ctx, x, y, renderSize, spriteGlow, 0.68)
-  else if (!isDown && !landscape && player.forceField <= 0 && player.shield <= 0) drawSpriteGlow(ctx, x, y, renderSize, environmentRim ?? hexToRgba(color, 0.09), 0.55)
+  else if (!isDown && (!landscape || banking) && player.forceField <= 0 && player.shield <= 0) drawSpriteGlow(ctx, x, y, renderSize, environmentRim ?? hexToRgba(color, 0.09), 0.55)
   if(dockReady&&dockPose&&coreLanderCombatModel){
     if((presentation?.engine??0)>0){
       const nozzle=getMechDockNozzles(coreLanderCombatModel,dockPose.frame),wake=renderSize*.55
@@ -1072,11 +1098,17 @@ export function drawRaidPlayer(
       ctx.restore()
     }
     drawMechDockPose(ctx,coreLanderCombatModel,dockPose,x,y,renderSize,alpha)
+  } else if (banking) {
+    const hullFilter = coreLanderCombatModel && !landscape && cosmetics.frame ? normalSpriteFilter : eclipseFilter
+    drawBankedHull(ctx, banking, x, y, renderSize, alpha, hullFilter)
+    if (ctx.canvas.dataset && import.meta.env.DEV) {
+      ctx.canvas.dataset.raidBankingFrame = String(banking.frame)
+      ctx.canvas.dataset.raidBankingShip = bankingKey
+    }
   } else if (sideSprite?.loaded) {
     // The playfield turns clockwise; rotate the right-facing art into its
     // logical upward flight direction before the camera transform.
-    const attackActive = !presentation?.hideCombatFx && !isDown && (phase === 'playing' || phase === 'paused') && (player.godMeleeCloak ?? 0) <= 0
-    const attackPose = attackActive ? protectionAttackPose : null
+    const attackPose = protectionAttackPose
     // Pick one form and one registered pose. Alpha crossfades between displaced arms
     // would draw a ghost arm, and would not correspond to the actual release point.
     const actionDrawn = coreLanderCombatModel && attackPose && drawMechAction(ctx, coreLanderCombatModel, coreLanderBurning, attackPose.frame, x, y, renderSize, alpha, rotation, scale)
@@ -1168,12 +1200,14 @@ export function drawRaidPlayer(
     )
   }
   if (sunSide && nozzles && player.ship.key !== 'coreLander' && !isDown && eclipse < .86) {
-    drawSolarHullRim(ctx, sideSprite?.loaded ? sideSprite : sprite, x, y, renderSize, sunSide, .56 * Math.abs(sunlight) * (1 - eclipse), Boolean(sideSprite?.loaded))
+    drawSolarHullRim(ctx, banking?.sprite ?? (sideSprite?.loaded ? sideSprite : sprite), x, y, renderSize, sunSide, .56 * Math.abs(sunlight) * (1 - eclipse), Boolean(sideSprite?.loaded), banking?.frame)
   }
   if (coreLanderCombatModel && !dockReady && !isDown && (presentation?.engine ?? 1) > 0) {
     ctx.save()
     ctx.globalAlpha *= .7 * (presentation?.engine ?? 1)
-    if (landscape && sideSprite?.loaded) {
+    if (banking) {
+      drawHullExhaust(ctx, x, y, renderSize, time, engineBoost, bankingKey, undefined, trailColor, cosmeticShipKey, landscape, banking.nozzles)
+    } else if (landscape && sideSprite?.loaded) {
       if (coreLanderCombatModel === 'godGundam' && coreLanderBurningBlend > .01) {
         drawCrossfadeExhaust(ctx, x, y, renderSize, sideVisualKey, y, renderSize, 'godGundamBurning', coreLanderBurningBlend, time, engineBoost, trailColor, cosmeticShipKey, true)
       } else drawHullExhaust(ctx, x, y, renderSize, time, engineBoost, sideVisualKey, undefined, trailColor, cosmeticShipKey, true)
@@ -1332,9 +1366,9 @@ export function getGodGundamBurningSpriteFilter(blend: number, rage: number) {
 }
 
 function drawHullExhaust(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, time: number,
-  boost: number, visualKey: string, wakeScale?: number, trailColor?: string, cosmeticKey = visualKey, landscape = false) {
-  const nozzles = (landscape ? getRaidSideShipNozzles(visualKey) : undefined) ?? getRaidShipNozzles(visualKey)
-  if (!nozzles) {
+  boost: number, visualKey: string, wakeScale?: number, trailColor?: string, cosmeticKey = visualKey, landscape = false, projectedNozzles?: RaidBankingFrame['nozzles']) {
+  const nozzles = projectedNozzles ?? (landscape ? getRaidSideShipNozzles(visualKey) : undefined) ?? getRaidShipNozzles(visualKey)
+  if (!nozzles?.length) {
     if (trailColor) drawSingleMasteryEngineTrail(ctx, x, y, size, time, trailColor, cosmeticKey, boost)
     else drawPlayerEngine(ctx, x, y + size * .02, size * (wakeScale ?? 1), time, boost)
     return
@@ -1501,6 +1535,11 @@ function getSideAuraSprite(sprite: CanvasSpriteEntry) {
   drawCanvasSpriteContain(bake, sprite, 256, 256, SIDE_AURA_SIZE * 1.08, 'blur(10.24px) brightness(1.55) saturate(1.8)', .28, -Math.PI / 2, 1, PLAYER_COLOR, false)
   sideAuraSprites.set(sprite, canvas)
   return canvas
+}
+
+export function warmRaidBankingArt(visualShipKey: string, landscape: boolean) {
+  const atlas = getRaidBankingAtlas(visualShipKey)
+  if (atlas) void atlas.ready.then(() => { warmShipProtection(getBankingProtectionHull(atlas, landscape)) })
 }
 
 export function warmRaidSideCosmetics(visualShipKey: string, aura = true) {

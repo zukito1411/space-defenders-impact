@@ -9,6 +9,8 @@ const code = ts.transpileModule([
   `
   const WIDTH = 100, HEIGHT = 100
   const useCallback = callback => callback
+  const window = { matchMedia: () => ({ matches: false }) };
+  const getRaidBankingFrame = () => null;
   const clamp = (value, low, high) => Math.max(low, Math.min(high, value))
   const activeShotOwnerRef={current:null};
   const playerRef = {}, remotePlayerRef = {}, devilAssistPlayerRef = {}, fireCaptureRef = {}, viewportMetricsRef = {}, landscapeRef = { current: false }
