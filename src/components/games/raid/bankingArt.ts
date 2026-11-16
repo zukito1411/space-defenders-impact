@@ -33,6 +33,14 @@ export function getRaidBankingAtlasUrl(shipKey: string) {
   return Object.prototype.hasOwnProperty.call(registrations, key) ? getPublicAssetUrl(`assets/ships/banking/${key}-v1.webp`) : null
 }
 
+// Hangar UI uses the same registered exhaust roots as the flight atlas.
+export function getRaidBankingNozzles(shipKey: string, landscape: boolean) {
+  const key = bankingKey(shipKey)
+  return Object.prototype.hasOwnProperty.call(registrations, key)
+    ? registrations[key].nozzles[raidBankingFrameIndex(0, landscape, false)]
+    : null
+}
+
 export function getRaidBankingAtlas(shipKey: string) {
   const url = getRaidBankingAtlasUrl(shipKey)
   if (!url) return null
@@ -43,7 +51,22 @@ export function getRaidBankingAtlas(shipKey: string) {
     atlases.delete(oldUrl)
     releaseCanvasSprite(oldAtlas)
   }
-  const sprite = makeImageCanvasSprite(`ship-banking:${url}`, url)
+  // Grade the atlas once rather than running a costly Canvas filter every frame.
+  // Keep engine emissives and sculpted panel detail while matching the darker
+  // cobalt/steel lighting of the playfield and the carrier hangar.
+  const sprite = makeImageCanvasSprite(`ship-banking:${url}`, url, (image) => {
+    if (typeof document === 'undefined') return null
+    const canvas = document.createElement('canvas')
+    canvas.width = image.naturalWidth
+    canvas.height = image.naturalHeight
+    const context = canvas.getContext('2d')
+    if (!context) return null
+    context.imageSmoothingEnabled = true
+    context.filter = 'brightness(0.86) contrast(0.97) saturate(0.84)'
+    context.drawImage(image, 0, 0)
+    context.filter = 'none'
+    return canvas
+  })
   atlases.set(url, sprite)
   return sprite
 }
