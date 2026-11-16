@@ -1,5 +1,6 @@
-import { useSyncExternalStore } from 'react'
+import { useState, useSyncExternalStore } from 'react'
 import { RAID_ELITE_FRAME_PATHS } from './raid/shipArtwork'
+import { getRaidBankingAtlasUrl } from './raid/bankingArt'
 import { getRaidSideShipSpriteUrl } from './raid/sideArtwork'
 import { getPublicAssetUrl } from './sound'
 import { LEGACY_FIGHTER_COUNT, RAID_FIGHTER_ASSETS } from './raid/stageEncounters'
@@ -72,15 +73,35 @@ export function getRaidEliteSpriteUrl(variant: number) {
 
 export function RaidShipSprite({ shipKey, size, className = 'raid__ship-sprite', sideView }: { shipKey: string; size: number; className?: string; sideView?: boolean }) {
   const landscape = useLandscapeScreen()
-  return (
+  const viewLandscape = sideView ?? landscape
+  const atlasUrl = getRaidBankingAtlasUrl(shipKey)
+  const [readyAtlasUrl, setReadyAtlasUrl] = useState<string | null>(null)
+  const ready = Boolean(atlasUrl && readyAtlasUrl === atlasUrl)
+  const fallback = (
     <img
-      className={className}
-      src={getRaidMenuShipSpriteUrl(shipKey, sideView ?? landscape)}
+      src={getRaidMenuShipSpriteUrl(shipKey, viewLandscape)}
       alt=""
-      aria-hidden="true"
       draggable={false}
-      style={{ width: size, height: size, objectFit: 'contain' }}
+      style={{ width: size, height: size, objectFit: 'contain', display: ready ? 'none' : 'block' }}
     />
+  )
+  if (!atlasUrl) return (
+    <span className={className} aria-hidden="true" style={{ display: 'inline-block', width: size, height: size, flexShrink: 0 }}>
+      {fallback}
+    </span>
+  )
+  return (
+    <span className={className} aria-hidden="true" style={{ position: 'relative', display: 'inline-block', width: size, height: size, flexShrink: 0 }}>
+      {fallback}
+      <img src={atlasUrl} alt="" aria-hidden="true" onLoad={() => setReadyAtlasUrl(atlasUrl)}
+        onError={() => setReadyAtlasUrl(null)} style={{ display: 'none' }} />
+      {ready && <span aria-hidden="true" style={{
+        position: 'absolute', inset: 0, display: 'block',
+        backgroundImage: `url("${atlasUrl}")`, backgroundRepeat: 'no-repeat',
+        backgroundSize: '700% 200%', backgroundPosition: viewLandscape ? '50% 100%' : '50% 0%',
+        filter: 'brightness(0.86) contrast(0.97) saturate(0.84)',
+      }} />}
+    </span>
   )
 }
 

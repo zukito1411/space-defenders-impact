@@ -68,7 +68,7 @@ import type { RaidViewportMetrics } from './graphics'
 import { clearPickupLoadout, extendLoadoutForSuperBoss, getPowerScore, resetStageLoadout } from './loadout'
 import { acquireHomingTarget, animateStageClearPlayer, applyRiftPullToPlayer, applyStartingStageLevel, fullyBuffRaidPlayer, getCoreLanderFireInterval, getGodGundamBarrageBossDamage, getGodGundamBarrageDamageMultiplier, getGodGundamMeleeDamagePerSecond, getGodGundamMeleeRange, getGodGundamPassivePose, getGodGundamStageAttackBonus, getNukeBossDamage, getNukeCooldownSeconds, getPlayerBaseAttack, getRiftCenter, getSpiegelShadowCloneDamageMultiplier, hasSpiegelShadowClones, isCoreLanderBurning, levelUpPlayer, movePlayerWithInput, revivePlayerForBossClear, updatePlayerTimers } from './mechanics'
 import { clampNetworkVelocity, cloneAsteroid, cloneDerelictWreck, cloneEnemy, cloneIonStrike, cloneMeteor, cloneRaidRandomEvent, cloneVec, compactPlayer, compactVec, getBufferedAsteroidVisuals, getBufferedEnemyVisuals, getBufferedPlayerVisual, getConnectionLabel, getGuestShotTtlMs, getOwnCorrectionBlend, getPlayerPickupAudioKind, getRemoteInterpolationDelayMs, hasClearedRaidInProgress, isNetworkVisible, keepNetworkVisibleInPlace, reconcilePlayerVisual, updateDerelictWreckMotion } from './network'
-import { getRaidBankingFrame } from './bankingArt'
+import { getRaidBankingAtlas, getRaidBankingFrame } from './bankingArt'
 import { drawRaidOptions, drawRaidPlayer, getCoreBlastSprite, getRaidPlayerFlightBank, warmRaidBankingArt, warmRaidSideCosmetics } from './playerRender'
 import { getRaidAssetPreloadInitialState, preloadGradiusRaidAssets, warmRaidGeneratedEffectSprites } from './preload'
 import { activateScoutSupportPickup, clonePlayer, getCheckpointStage, getDefaultPlayerVisualShipKey, getGodGundamGameplayRenderSize, getHighScore, getInitialPlayer, getOptionSupportStacks, getPlayerCoreLanderCombatModel, getRaidGundamName, getRaidPlayerVisualShipKey, getShipByKey, getUnlockedStage, isCoreLanderAoeShot, isGodGundamBarragePilot, normalizeMesiahDrones, normalizeMesiahScoutDrones, powerColor, sanitizePlayerVisualShipKey, saveCheckpointStage, saveHighScore, saveUnlockedStage } from './state'
@@ -380,6 +380,14 @@ export function GradiusRaid({
     const visualKey = getDefaultPlayerVisualShipKey(selectedShipKey, progressRef.current)
     warmRaidBankingArt(visualKey, landscape)
     if (visualKey === 'godGundam') warmRaidBankingArt('godGundamBurning', landscape)
+    // The support craft must have their 3D poses ready before they enter the
+    // playfield; warming their atlas does not perform shield geometry work.
+    if (selectedShipKey === 'mesiah') {
+      getRaidBankingAtlas(getRaidShipBaseVisualKey(visualKey) === 'mesiahWhite' ? 'mesiahRaptorWhite' : 'mesiahRaptorBlack')
+    } else if (selectedShipKey === 'dreadnought') {
+      getRaidBankingAtlas('rocket')
+      getRaidBankingAtlas('spaceEt')
+    }
     if (!landscape) return
     const aura = getEquippedShipCosmetics(progressRef.current, selectedShipKey).aura
     warmRaidSideCosmetics(visualKey, aura)
