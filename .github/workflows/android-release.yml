@@ -253,6 +253,9 @@ jobs:
           done
 
   publish-itch-android:
+    # The itch.io android channel now distributes Space-Impact-Defenders-3D-.
+    # Keep 2D GitHub releases, but never overwrite the 3D storefront download.
+    if: ${{ false }}
     name: Publish signed APK to itch.io
     needs: signed-android-release
     runs-on: ubuntu-latest
